@@ -6,7 +6,7 @@ Blender-based pipeline that generates labeled training data for Strata's AI mode
 
 Takes rigged 3D characters (.fbx) and produces:
 - **Color images** rendered in multiple art styles (flat, cel, pixel art, painterly, sketch, unlit)
-- **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–17)
+- **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–19)
 - **Joint position JSON** (bone heads projected to 2D screen coords)
 - **Weight map JSON** (per-vertex bone weights)
 
@@ -19,7 +19,7 @@ strata-training-data/
 ├── CLAUDE.md
 ├── generate_dataset.py        # Main entry point, orchestrates pipeline
 ├── importer.py                # Load FBX, normalize scale/position
-├── bone_mapper.py             # Map bones to Strata's 17 regions
+├── bone_mapper.py             # Map bones to Strata's 19 regions
 ├── pose_applicator.py         # Apply animation keyframes
 ├── renderer.py                # Render color + segmentation passes
 ├── style_augmentor.py         # Post-render style transforms (pixel art, painterly, sketch)
@@ -56,19 +56,20 @@ Requires Blender 4.0+ (uses bundled Python 3.10+). No GPU needed — EEVEE flat 
 
 ## Key Technical Details
 
-### Strata Standard Skeleton (17 body regions + background)
+### Strata Standard Skeleton (19 body regions + background)
 
 | ID | Region | ID | Region |
 |----|--------|----|--------|
-| 0 | background | 9 | upper_arm_r |
-| 1 | head | 10 | lower_arm_r |
-| 2 | neck | 11 | hand_r |
-| 3 | chest | 12 | upper_leg_l |
-| 4 | spine | 13 | lower_leg_l |
-| 5 | hips | 14 | foot_l |
-| 6 | upper_arm_l | 15 | upper_leg_r |
-| 7 | lower_arm_l | 16 | lower_leg_r |
-| 8 | hand_l | 17 | foot_r |
+| 0 | background | 10 | lower_arm_r |
+| 1 | head | 11 | hand_r |
+| 2 | neck | 12 | upper_leg_l |
+| 3 | chest | 13 | lower_leg_l |
+| 4 | spine | 14 | foot_l |
+| 5 | hips | 15 | upper_leg_r |
+| 6 | upper_arm_l | 16 | lower_leg_r |
+| 7 | lower_arm_l | 17 | foot_r |
+| 8 | hand_l | 18 | shoulder_l |
+| 9 | upper_arm_r | 19 | shoulder_r |
 
 ### Bone Mapping Priority
 
@@ -78,7 +79,7 @@ Mixamo characters should map 100% automatically. Non-Mixamo ~80% auto, ~20% manu
 
 ### Segmentation Mask Rendering
 
-- 18 Emission-only materials (one per region), no lighting
+- 20 Emission-only materials (one per region), no lighting
 - Each mesh face assigned to region by majority vote of vertex bone weights
 - No anti-aliasing, nearest-neighbor sampling — each pixel = exactly one region ID
 - Output: 8-bit single-channel grayscale PNG (pixel value = region ID)
@@ -126,7 +127,7 @@ Automated (run after every batch):
 - Every non-transparent pixel has a non-zero mask region
 - No mask is all-one-region
 - All joint positions within image bounds
-- 17 joints per pose
+- 19 joints per pose
 - Every image has a corresponding mask and joint file
 - All images exactly 512×512
 - No single region >60% of pixels

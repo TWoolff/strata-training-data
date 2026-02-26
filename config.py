@@ -13,7 +13,7 @@ RegionId = int
 RGB = tuple[int, int, int]
 
 # ---------------------------------------------------------------------------
-# Strata Standard Skeleton — 17 body regions + background (18 total)
+# Strata Standard Skeleton — 19 body regions + background (20 total)
 # ---------------------------------------------------------------------------
 
 REGION_NAMES: dict[RegionId, str] = {
@@ -35,6 +35,8 @@ REGION_NAMES: dict[RegionId, str] = {
     15: "upper_leg_r",
     16: "lower_leg_r",
     17: "foot_r",
+    18: "shoulder_l",
+    19: "shoulder_r",
 }
 
 REGION_COLORS: dict[RegionId, RGB] = {
@@ -56,9 +58,11 @@ REGION_COLORS: dict[RegionId, RGB] = {
     15: (64, 64, 0),      # upper_leg_r
     16: (64, 0, 64),      # lower_leg_r
     17: (0, 64, 64),      # foot_r
+    18: (192, 64, 0),     # shoulder_l
+    19: (0, 64, 192),     # shoulder_r
 }
 
-NUM_REGIONS: int = 18  # 0–17 inclusive
+NUM_REGIONS: int = 20  # 0–19 inclusive
 
 # ---------------------------------------------------------------------------
 # Mixamo bone name → region ID mapping
@@ -76,8 +80,8 @@ MIXAMO_BONE_MAP: dict[str, RegionId] = {
     "mixamorig:Spine1":            4,   # spine
     "mixamorig:Spine":             4,   # spine
     "mixamorig:Hips":              5,
-    # Left arm
-    "mixamorig:LeftShoulder":      6,
+    # Left shoulder / arm
+    "mixamorig:LeftShoulder":      18,
     "mixamorig:LeftArm":           6,
     "mixamorig:LeftForeArm":       7,
     "mixamorig:LeftHand":          8,
@@ -102,8 +106,8 @@ MIXAMO_BONE_MAP: dict[str, RegionId] = {
     "mixamorig:LeftHandPinky2":    8,
     "mixamorig:LeftHandPinky3":    8,
     "mixamorig:LeftHandPinky4":    8,
-    # Right arm
-    "mixamorig:RightShoulder":     9,
+    # Right shoulder / arm
+    "mixamorig:RightShoulder":     19,
     "mixamorig:RightArm":          9,
     "mixamorig:RightForeArm":      10,
     "mixamorig:RightHand":         11,
@@ -176,6 +180,16 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "Pelvis":           5,
     "root":             5,
     "Root":             5,
+    # --- Left shoulder ---
+    "LeftShoulder":     18,
+    "shoulder.L":       18,
+    "Shoulder.L":       18,
+    "clavicle.L":       18,
+    "Clavicle.L":       18,
+    "L_clavicle":       18,
+    "l_clavicle":       18,
+    "L_shoulder":       18,
+    "l_shoulder":       18,
     # --- Left arm ---
     "upper_arm.L":      6,
     "upperarm.L":       6,
@@ -183,8 +197,6 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "L_upperarm":       6,
     "l_upperarm":       6,
     "LeftArm":          6,
-    "LeftShoulder":     6,
-    "shoulder.L":       6,
     "forearm.L":        7,
     "Forearm.L":        7,
     "lower_arm.L":      7,
@@ -196,6 +208,16 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "L_hand":           8,
     "l_hand":           8,
     "LeftHand":         8,
+    # --- Right shoulder ---
+    "RightShoulder":    19,
+    "shoulder.R":       19,
+    "Shoulder.R":       19,
+    "clavicle.R":       19,
+    "Clavicle.R":       19,
+    "R_clavicle":       19,
+    "r_clavicle":       19,
+    "R_shoulder":       19,
+    "r_shoulder":       19,
     # --- Right arm ---
     "upper_arm.R":      9,
     "upperarm.R":       9,
@@ -203,8 +225,6 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "R_upperarm":       9,
     "r_upperarm":       9,
     "RightArm":         9,
-    "RightShoulder":    9,
-    "shoulder.R":       9,
     "forearm.R":        10,
     "Forearm.R":        10,
     "lower_arm.R":      10,
@@ -259,6 +279,122 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "toe.R":            17,
     "RightToeBase":     17,
 }
+
+# ---------------------------------------------------------------------------
+# Bone mapping: prefix stripping
+# ---------------------------------------------------------------------------
+# Common bone name prefixes to strip when attempting prefix-based matching.
+
+COMMON_PREFIXES: list[str] = [
+    "mixamorig:",
+    "Bip01_",
+    "Bip001_",
+    "Bip01 ",
+    "Bip001 ",
+    "DEF-",
+    "def_",
+    "ORG-",
+    "MCH-",
+    "CC_Base_",
+]
+
+# ---------------------------------------------------------------------------
+# Bone mapping: substring keywords
+# ---------------------------------------------------------------------------
+# Case-insensitive keyword tuples → region ID. Checked in order; first match
+# wins. More specific patterns (e.g., "forearm") must come before general
+# ones (e.g., "arm") to avoid false matches.
+
+SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
+    # Head / neck
+    (["head"],                              1),
+    (["skull"],                             1),
+    (["neck"],                              2),
+    # Torso
+    (["chest"],                             3),
+    (["spine2"],                            3),
+    (["spine1"],                            4),
+    (["spine"],                             4),
+    (["hip"],                               5),
+    (["pelvis"],                            5),
+    # Shoulders (before arm to avoid "shoulder" matching "arm")
+    (["shoulder", "left"],                  18),
+    (["shoulder", "l"],                     18),
+    (["clavicle", "left"],                  18),
+    (["clavicle", "l"],                     18),
+    (["shoulder", "right"],                 19),
+    (["shoulder", "r"],                     19),
+    (["clavicle", "right"],                 19),
+    (["clavicle", "r"],                     19),
+    # Left arm (forearm before arm to avoid false match)
+    (["forearm", "left"],                   7),
+    (["forearm", "l"],                      7),
+    (["lower", "arm", "left"],              7),
+    (["lower", "arm", "l"],                 7),
+    (["arm", "left", "up"],                 6),
+    (["arm", "left"],                       6),
+    (["arm", "l", "up"],                    6),
+    (["upper", "arm", "l"],                 6),
+    # Left hand / fingers
+    (["hand", "left"],                      8),
+    (["hand", "l"],                         8),
+    (["finger", "left"],                    8),
+    (["finger", "l"],                       8),
+    (["thumb", "left"],                     8),
+    (["thumb", "l"],                        8),
+    # Right arm
+    (["forearm", "right"],                  10),
+    (["forearm", "r"],                      10),
+    (["lower", "arm", "right"],             10),
+    (["lower", "arm", "r"],                 10),
+    (["arm", "right", "up"],                9),
+    (["arm", "right"],                      9),
+    (["arm", "r", "up"],                    9),
+    (["upper", "arm", "r"],                 9),
+    # Right hand / fingers
+    (["hand", "right"],                     11),
+    (["hand", "r"],                         11),
+    (["finger", "right"],                   11),
+    (["finger", "r"],                       11),
+    (["thumb", "right"],                    11),
+    (["thumb", "r"],                        11),
+    # Left leg (shin/calf before generic leg)
+    (["shin", "left"],                      13),
+    (["shin", "l"],                         13),
+    (["calf", "left"],                      13),
+    (["calf", "l"],                         13),
+    (["lower", "leg", "left"],              13),
+    (["lower", "leg", "l"],                 13),
+    (["thigh", "left"],                     12),
+    (["thigh", "l"],                        12),
+    (["upper", "leg", "left"],              12),
+    (["upper", "leg", "l"],                 12),
+    (["leg", "left", "up"],                 12),
+    (["leg", "l", "up"],                    12),
+    # Left foot / toes
+    (["foot", "left"],                      14),
+    (["foot", "l"],                         14),
+    (["toe", "left"],                       14),
+    (["toe", "l"],                          14),
+    # Right leg
+    (["shin", "right"],                     16),
+    (["shin", "r"],                         16),
+    (["calf", "right"],                     16),
+    (["calf", "r"],                         16),
+    (["lower", "leg", "right"],             16),
+    (["lower", "leg", "r"],                 16),
+    (["thigh", "right"],                    15),
+    (["thigh", "r"],                        15),
+    (["upper", "leg", "right"],             15),
+    (["upper", "leg", "r"],                 15),
+    (["leg", "right", "up"],                15),
+    (["leg", "r", "up"],                    15),
+    # Right foot / toes
+    (["foot", "right"],                     17),
+    (["foot", "r"],                         17),
+    (["toe", "right"],                      17),
+    (["toe", "r"],                          17),
+]
 
 # ---------------------------------------------------------------------------
 # Character normalization
