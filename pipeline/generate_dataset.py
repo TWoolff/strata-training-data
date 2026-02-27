@@ -1,31 +1,35 @@
 """Main entry point: orchestrate the full synthetic data pipeline.
 
-Phase 1 scope: single character, T-pose only, flat style only.
-Wires together all pipeline modules: import → bone map → materials →
-camera → render (seg + color) → extract joints → export.
+Processes multiple characters from an input directory, iterates all poses
+per character, logs progress, handles errors gracefully, and supports
+incremental processing.
 
 Usage::
 
     blender --background --python run_pipeline.py -- \\
       --input_dir ./data/fbx/ \\
+      --pose_dir ./data/poses/ \\
       --output_dir ./output/segmentation/ \\
-      --styles flat \\
-      --resolution 512
+      --styles flat,cel,pixel,painterly,sketch,unlit \\
+      --resolution 512 \\
+      --poses_per_character 20
 """
 
 from __future__ import annotations
 
 import argparse
+import gc
 import logging
 import sys
 import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
 from PIL import Image  # type: ignore[import-untyped]
 
-from .bone_mapper import map_bones
+from .bone_mapper import BoneMapping, map_bones
 from .config import ENABLE_FLIP, ENABLE_SCALE, RENDER_RESOLUTION, SCALE_FACTORS
 from .exporter import (
     ensure_output_dirs,
@@ -34,14 +38,18 @@ from .exporter import (
     save_source_metadata,
     save_weights,
 )
-from .importer import import_character
+from .importer import clear_scene, import_character
 from .joint_extractor import extract_joints
 from .pose_applicator import (
     AugmentationInfo,
+    PoseInfo,
+    apply_pose,
     apply_scale,
     flip_image,
     flip_joints,
     flip_mask,
+    list_poses,
+    reset_pose,
     restore_scale,
 )
 from .renderer import (
@@ -61,8 +69,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # CLI argument parsing
 # ---------------------------------------------------------------------------
-
-POSE_INDEX = 0  # Phase 1: T-pose only
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,6 +95,12 @@ def parse_args() -> argparse.Namespace:
         help="Directory containing .fbx source characters.",
     )
     parser.add_argument(
+        "--pose_dir",
+        type=Path,
+        default=Path("./data/poses"),
+        help="Directory containing .fbx animation files for poses.",
+    )
+    parser.add_argument(
         "--output_dir",
         type=Path,
         default=Path("./output/segmentation"),
@@ -98,7 +110,7 @@ def parse_args() -> argparse.Namespace:
         "--styles",
         type=str,
         default="flat",
-        help="Comma-separated art style names (Phase 1: flat only).",
+        help="Comma-separated art style names.",
     )
     parser.add_argument(
         "--resolution",
@@ -124,6 +136,24 @@ def parse_args() -> argparse.Namespace:
         default=ENABLE_SCALE,
         help="Enable scale variation augmentation.",
     )
+    parser.add_argument(
+        "--only_new",
+        action="store_true",
+        default=False,
+        help="Skip already-processed character+pose combinations.",
+    )
+    parser.add_argument(
+        "--max_characters",
+        type=int,
+        default=0,
+        help="Limit number of characters to process (0 = all).",
+    )
+    parser.add_argument(
+        "--poses_per_character",
+        type=int,
+        default=0,
+        help="Limit number of poses per character (0 = all).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -137,10 +167,7 @@ def _backup_materials(
     meshes: list[bpy.types.Object],
 ) -> list[list[bpy.types.Material | None]]:
     """Store each mesh's current material slot list for later restoration."""
-    return [
-        [slot.material for slot in mesh_obj.material_slots]
-        for mesh_obj in meshes
-    ]
+    return [[slot.material for slot in mesh_obj.material_slots] for mesh_obj in meshes]
 
 
 def _restore_materials(
@@ -148,14 +175,14 @@ def _restore_materials(
     backup: list[list[bpy.types.Material | None]],
 ) -> None:
     """Restore previously backed-up materials to each mesh."""
-    for mesh_obj, saved_mats in zip(meshes, backup):
+    for mesh_obj, saved_mats in zip(meshes, backup, strict=True):
         mesh_obj.data.materials.clear()
         for mat in saved_mats:
             mesh_obj.data.materials.append(mat)
 
 
 # ---------------------------------------------------------------------------
-# Per-character pipeline
+# Augmentation helpers
 # ---------------------------------------------------------------------------
 
 
@@ -195,48 +222,110 @@ def _build_augmentation_list(
     return augmentations
 
 
+# ---------------------------------------------------------------------------
+# Already-processed check
+# ---------------------------------------------------------------------------
+
+
+def _is_already_processed(
+    output_dir: Path,
+    char_id: str,
+    pose_index: int,
+) -> bool:
+    """Check if a character+pose combination has already been processed.
+
+    Uses mask file existence as the indicator.
+
+    Args:
+        output_dir: Root dataset output directory.
+        char_id: Character identifier.
+        pose_index: Zero-based pose index.
+
+    Returns:
+        True if the mask file already exists.
+    """
+    mask_path = output_dir / "masks" / f"{char_id}_pose_{pose_index:02d}.png"
+    return mask_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# Per-character result tracking
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class CharacterResult:
+    """Tracks processing results for a single character."""
+
+    char_id: str
+    poses_succeeded: int = 0
+    poses_failed: int = 0
+    poses_skipped: int = 0
+    elapsed: float = 0.0
+    error: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Per-character pipeline
+# ---------------------------------------------------------------------------
+
+
 def process_character(
     fbx_path: Path,
     output_dir: Path,
+    poses: list[PoseInfo],
+    pose_dir: Path,
     styles: list[str],
     resolution: int,
     *,
+    char_num: int = 1,
+    total_chars: int = 1,
     enable_flip: bool = False,
     enable_scale: bool = False,
     scale_factors: list[float] | None = None,
-) -> bool:
-    """Run the full pipeline for a single character.
+    only_new: bool = False,
+) -> CharacterResult:
+    """Run the full pipeline for a single character across all poses.
 
     Args:
         fbx_path: Path to the .fbx file.
         output_dir: Root dataset output directory.
+        poses: List of poses to apply.
+        pose_dir: Directory containing animation FBX files.
         styles: List of art style names to render.
         resolution: Render resolution in pixels.
+        char_num: Current character number (1-based, for progress).
+        total_chars: Total number of characters (for progress).
         enable_flip: Generate horizontally flipped augmentation variants.
         enable_scale: Generate scale variation augmentation variants.
         scale_factors: Scale factors for scale augmentation.
+        only_new: Skip already-processed character+pose combinations.
 
     Returns:
-        True if processing succeeded, False otherwise.
+        CharacterResult with per-pose success/failure/skip counts.
     """
     if scale_factors is None:
         scale_factors = [1.0]
 
     t_start = time.monotonic()
     char_id = fbx_path.stem
+    result = CharacterResult(char_id=char_id)
+    total_poses = len(poses)
 
-    print(f"[{char_id}] Importing...")
-    result = import_character(fbx_path)
-    if result is None:
-        print(f"[{char_id}] FAILED — import returned None (no armature or mesh)")
-        return False
+    print(f"[{char_num}/{total_chars}] Importing {char_id}...")
+    import_result = import_character(fbx_path)
+    if import_result is None:
+        result.error = "import failed (no armature or mesh)"
+        result.elapsed = time.monotonic() - t_start
+        print(f"[{char_num}/{total_chars}] {char_id} FAILED — {result.error}")
+        return result
 
-    armature = result.armature
-    meshes = result.meshes
+    armature = import_result.armature
+    meshes = import_result.meshes
     scene = bpy.context.scene
 
     # --- Bone mapping ---
-    print(f"[{char_id}] Mapping bones...")
+    print(f"[{char_num}/{total_chars}] {char_id} — mapping bones...")
     mapping = map_bones(
         armature,
         meshes,
@@ -245,68 +334,184 @@ def process_character(
     )
     if mapping.unmapped_bones:
         print(
-            f"[{char_id}] WARNING: {len(mapping.unmapped_bones)} unmapped bones: "
-            f"{mapping.unmapped_bones}"
+            f"[{char_num}/{total_chars}] {char_id} WARNING: "
+            f"{len(mapping.unmapped_bones)} unmapped bones: {mapping.unmapped_bones}"
         )
 
     # --- Store original materials for color pass ---
     original_materials = _backup_materials(meshes)
 
-    # --- Assign segmentation materials ---
-    print(f"[{char_id}] Assigning segmentation materials...")
+    # --- Create segmentation materials (reused across poses) ---
     region_materials = create_region_materials()
-    for mesh_idx, mesh_obj in enumerate(meshes):
-        assign_region_materials(
-            mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
-        )
-
-    # --- Extract weights (T-pose only, once per character) ---
-    # Vertex groups are independent of materials, so extraction works
-    # regardless of whether segmentation materials are currently assigned.
-    print(f"[{char_id}] Extracting vertex weights...")
-    old_cam = bpy.data.objects.get("strata_camera")
-    if old_cam is not None:
-        bpy.data.objects.remove(old_cam, do_unlink=True)
-    weight_camera = setup_camera(scene, meshes)
-    scene.render.resolution_x = resolution
-    scene.render.resolution_y = resolution
-
-    weight_data = extract_weights(
-        scene, weight_camera, meshes, mapping.bone_to_region,
-    )
-    weight_data["character_id"] = char_id
-    save_weights(weight_data, output_dir, char_id, POSE_INDEX)
-
-    # Clean up weight camera (augmentation loop creates its own)
-    bpy.data.objects.remove(weight_camera, do_unlink=True)
 
     # --- Build augmentation variants ---
     augmentations = _build_augmentation_list(
-        enable_flip, enable_scale, scale_factors,
+        enable_flip,
+        enable_scale,
+        scale_factors,
     )
-    print(f"[{char_id}] Augmentation variants: {len(augmentations)}")
+
+    # --- Iterate poses ---
+    for pose_idx, pose in enumerate(poses):
+        pose_num = pose_idx + 1
+        progress = f"[{char_num}/{total_chars}] {char_id} — {pose.name} ({pose_num}/{total_poses})"
+
+        # --- Skip if already processed ---
+        if only_new and _is_already_processed(output_dir, char_id, pose_idx):
+            print(f"{progress} SKIPPED (already exists)")
+            result.poses_skipped += 1
+            continue
+
+        try:
+            _process_single_pose(
+                scene=scene,
+                armature=armature,
+                meshes=meshes,
+                mapping=mapping,
+                original_materials=original_materials,
+                region_materials=region_materials,
+                augmentations=augmentations,
+                pose=pose,
+                pose_idx=pose_idx,
+                pose_dir=pose_dir,
+                output_dir=output_dir,
+                char_id=char_id,
+                styles=styles,
+                resolution=resolution,
+            )
+            result.poses_succeeded += 1
+            print(f"{progress} OK")
+        except Exception:
+            logger.exception("Error processing %s pose %s", char_id, pose.name)
+            result.poses_failed += 1
+            print(f"{progress} FAILED")
+            # Reset pose to clean state before next attempt
+            try:
+                reset_pose(armature)
+            except Exception:
+                logger.debug("Failed to reset pose after error", exc_info=True)
+
+    # --- Extract weights (T-pose, once per character) ---
+    try:
+        print(f"[{char_num}/{total_chars}] {char_id} — extracting weights...")
+        # Ensure T-pose for weight extraction
+        reset_pose(armature)
+
+        # Assign seg materials for consistent state
+        for mesh_idx, mesh_obj in enumerate(meshes):
+            assign_region_materials(
+                mesh_obj,
+                mesh_idx,
+                mapping.vertex_to_region,
+                region_materials,
+            )
+
+        old_cam = bpy.data.objects.get("strata_camera")
+        if old_cam is not None:
+            bpy.data.objects.remove(old_cam, do_unlink=True)
+        weight_camera = setup_camera(scene, meshes)
+        scene.render.resolution_x = resolution
+        scene.render.resolution_y = resolution
+
+        weight_data = extract_weights(
+            scene,
+            weight_camera,
+            meshes,
+            mapping.bone_to_region,
+        )
+        weight_data["character_id"] = char_id
+        save_weights(weight_data, output_dir, char_id, 0, only_new=only_new)
+
+        bpy.data.objects.remove(weight_camera, do_unlink=True)
+    except Exception:
+        logger.exception("Error extracting weights for %s", char_id)
+
+    # --- Save source metadata (once per character) ---
+    print(f"[{char_num}/{total_chars}] {char_id} — saving metadata...")
+    has_overrides = mapping.mapping_stats.override > 0
+    save_source_metadata(
+        output_dir,
+        char_id,
+        source=_infer_source(char_id),
+        name=char_id,
+        bone_mapping="manual" if has_overrides else "auto",
+        unmapped_bones=mapping.unmapped_bones,
+        only_new=only_new,
+    )
+
+    result.elapsed = time.monotonic() - t_start
+    print(
+        f"[{char_num}/{total_chars}] {char_id} DONE — "
+        f"{result.poses_succeeded} OK, {result.poses_failed} failed, "
+        f"{result.poses_skipped} skipped ({result.elapsed:.1f}s)"
+    )
+    return result
+
+
+def _process_single_pose(
+    *,
+    scene: bpy.types.Scene,
+    armature: bpy.types.Object,
+    meshes: list[bpy.types.Object],
+    mapping: BoneMapping,
+    original_materials: list[list[bpy.types.Material | None]],
+    region_materials: list[bpy.types.Material],
+    augmentations: list[AugmentationInfo],
+    pose: PoseInfo,
+    pose_idx: int,
+    pose_dir: Path,
+    output_dir: Path,
+    char_id: str,
+    styles: list[str],
+    resolution: int,
+) -> None:
+    """Process a single pose for a character (all augmentation variants).
+
+    Args:
+        scene: The Blender scene.
+        armature: The character's armature object.
+        meshes: Character mesh objects.
+        mapping: BoneMapping from bone_mapper.
+        original_materials: Backed-up original materials.
+        region_materials: Segmentation region materials.
+        augmentations: List of augmentation variants.
+        pose: The pose to apply.
+        pose_idx: Zero-based pose index (for filenames).
+        pose_dir: Directory containing animation FBX files.
+        output_dir: Root dataset output directory.
+        char_id: Character identifier.
+        styles: Art style names.
+        resolution: Render resolution.
+    """
+    # Apply the pose (handles built-in T-pose/A-pose and animation FBX poses)
+    if not apply_pose(armature, pose, pose_dir):
+        raise RuntimeError(f"Failed to apply pose {pose.name} from {pose.source}")
+
+    # Assign segmentation materials
+    for mesh_idx, mesh_obj in enumerate(meshes):
+        assign_region_materials(
+            mesh_obj,
+            mesh_idx,
+            mapping.vertex_to_region,
+            region_materials,
+        )
 
     for aug in augmentations:
-        aug_label = aug.suffix or " (original)"
-        print(f"[{char_id}] Processing variant{aug_label}...")
-
         # --- Apply scale if needed ---
         if aug.scale_factor != 1.0:
             apply_scale(armature, meshes, aug.scale_factor)
 
-        # --- Camera (recompute for each scale variant) ---
-        # Remove previous camera if it exists
+        # --- Camera (recompute for each scale/pose variant) ---
         old_cam = bpy.data.objects.get("strata_camera")
         if old_cam is not None:
             bpy.data.objects.remove(old_cam, do_unlink=True)
         camera = setup_camera(scene, meshes)
 
-        # Override resolution if specified
         scene.render.resolution_x = resolution
         scene.render.resolution_y = resolution
 
         # Pose name suffix for file naming
-        pose_suffix = f"_pose_{POSE_INDEX:02d}{aug.suffix}"
+        pose_suffix = f"_pose_{pose_idx:02d}{aug.suffix}"
 
         # --- Segmentation render (RGB → grayscale mask) ---
         setup_segmentation_render(scene)
@@ -322,7 +527,11 @@ def process_character(
 
         # --- Extract joints ---
         joint_data = extract_joints(
-            scene, camera, armature, meshes, mapping.bone_to_region,
+            scene,
+            camera,
+            armature,
+            meshes,
+            mapping.bone_to_region,
         )
 
         # --- Restore original materials for color pass ---
@@ -332,36 +541,34 @@ def process_character(
         setup_color_render(scene)
         color_paths: dict[str, Path] = {}
         for style in styles:
-            image_out_path = (
-                output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-            )
+            image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
             render_color(scene, image_out_path)
             color_paths[style] = image_out_path
 
         # --- Re-assign segmentation materials for next variant ---
         for mesh_idx, mesh_obj in enumerate(meshes):
             assign_region_materials(
-                mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
+                mesh_obj,
+                mesh_idx,
+                mapping.vertex_to_region,
+                region_materials,
             )
 
         # --- Save metadata (with augmentation info) ---
         joint_data["augmentation"] = aug.to_dict()
-        save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+        joint_data["pose_name"] = pose.name
+        joint_data["pose_source"] = pose.source
+        joint_data["pose_frame"] = pose.frame
+        save_joints(joint_data, output_dir, char_id, pose_idx)
 
         # --- Generate flip variant from the rendered outputs ---
         if aug.flipped:
-            print(f"[{char_id}] Applying 2D flip...")
-
-            # Flip mask and swap L/R region IDs
             flip_mask(mask_out_path, mask_out_path)
-
-            # Flip joint positions and swap L/R names
             joint_data = flip_joints(joint_data, resolution)
             joint_data["augmentation"] = aug.to_dict()
-            save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+            save_joints(joint_data, output_dir, char_id, pose_idx)
 
-            # Flip color images
-            for style, img_path in color_paths.items():
+            for _style, img_path in color_paths.items():
                 img = Image.open(img_path)
                 flipped_img = flip_image(img)
                 flipped_img.save(img_path, format="PNG")
@@ -370,21 +577,8 @@ def process_character(
         if aug.scale_factor != 1.0:
             restore_scale(armature, meshes)
 
-    # --- Save source metadata (once per character) ---
-    print(f"[{char_id}] Saving source metadata...")
-    has_overrides = mapping.mapping_stats.override > 0
-    save_source_metadata(
-        output_dir,
-        char_id,
-        source=_infer_source(char_id),
-        name=char_id,
-        bone_mapping="manual" if has_overrides else "auto",
-        unmapped_bones=mapping.unmapped_bones,
-    )
-
-    elapsed = time.monotonic() - t_start
-    print(f"[{char_id}] DONE in {elapsed:.1f}s")
-    return True
+    # Reset pose for next iteration
+    reset_pose(armature)
 
 
 def _infer_source(char_id: str) -> str:
@@ -413,12 +607,16 @@ def main() -> None:
 
     args = parse_args()
     input_dir: Path = args.input_dir
+    pose_dir: Path = args.pose_dir
     output_dir: Path = args.output_dir
     styles = [s.strip() for s in args.styles.split(",")]
     resolution: int = args.resolution
     enable_flip: bool = args.enable_flip
     enable_scale: bool = args.enable_scale
     scale_factors = [float(s.strip()) for s in args.scale_factors.split(",")]
+    only_new: bool = args.only_new
+    max_characters: int = args.max_characters
+    poses_per_character: int = args.poses_per_character
 
     if not input_dir.is_dir():
         print(f"ERROR: Input directory does not exist: {input_dir}")
@@ -430,12 +628,32 @@ def main() -> None:
         print(f"ERROR: No .fbx files found in {input_dir}")
         sys.exit(1)
 
-    print(f"Found {len(fbx_files)} character(s) in {input_dir}")
-    print(f"Output directory: {output_dir}")
-    print(f"Styles: {styles}")
-    print(f"Resolution: {resolution}x{resolution}")
-    print(f"Flip augmentation: {enable_flip}")
-    print(f"Scale augmentation: {enable_scale} (factors: {scale_factors})")
+    # Apply --max_characters limit
+    if max_characters > 0:
+        fbx_files = fbx_files[:max_characters]
+
+    # Discover poses
+    print("Indexing pose library...")
+    poses = list_poses(pose_dir)
+
+    # Apply --poses_per_character limit
+    if poses_per_character > 0:
+        poses = poses[:poses_per_character]
+
+    total_chars = len(fbx_files)
+    total_poses = len(poses)
+
+    print()
+    print("=" * 60)
+    print(f"Characters:  {total_chars} (from {input_dir})")
+    print(f"Poses:       {total_poses} (from {pose_dir})")
+    print(f"Styles:      {styles}")
+    print(f"Resolution:  {resolution}x{resolution}")
+    print(f"Flip:        {enable_flip}")
+    print(f"Scale:       {enable_scale} (factors: {scale_factors})")
+    print(f"Only new:    {only_new}")
+    print(f"Output:      {output_dir}")
+    print("=" * 60)
     print()
 
     # Create output directories
@@ -445,32 +663,98 @@ def main() -> None:
     save_class_map(output_dir)
 
     # Process each character
-    succeeded = 0
-    failed = 0
+    results: list[CharacterResult] = []
     t_total = time.monotonic()
 
-    for fbx_path in fbx_files:
+    for char_idx, fbx_path in enumerate(fbx_files):
+        char_num = char_idx + 1
+
         try:
-            ok = process_character(
-                fbx_path, output_dir, styles, resolution,
+            char_result = process_character(
+                fbx_path,
+                output_dir,
+                poses,
+                pose_dir,
+                styles,
+                resolution,
+                char_num=char_num,
+                total_chars=total_chars,
                 enable_flip=enable_flip,
                 enable_scale=enable_scale,
                 scale_factors=scale_factors,
+                only_new=only_new,
             )
-            if ok:
-                succeeded += 1
-            else:
-                failed += 1
         except Exception:
             logger.exception("Unhandled error processing %s", fbx_path.name)
-            failed += 1
+            char_result = CharacterResult(
+                char_id=fbx_path.stem,
+                error="unhandled exception",
+            )
+
+        results.append(char_result)
+
+        # Scene cleanup between characters
+        try:
+            clear_scene()
+        except Exception:
+            logger.debug("Scene cleanup failed between characters", exc_info=True)
+
+        # Force garbage collection to free memory
+        gc.collect()
 
     elapsed_total = time.monotonic() - t_total
 
-    # Summary
+    # --- Summary ---
+    _print_summary(results, elapsed_total)
+
+    # Exit code: 1 if any character had failures
+    any_failed = any(r.error or r.poses_failed > 0 for r in results)
+    if any_failed:
+        sys.exit(1)
+
+
+def _print_summary(results: list[CharacterResult], elapsed_total: float) -> None:
+    """Print a final summary table of processing results.
+
+    Args:
+        results: Per-character results.
+        elapsed_total: Total wall-clock time in seconds.
+    """
+    total_succeeded = sum(r.poses_succeeded for r in results)
+    total_failed = sum(r.poses_failed for r in results)
+    total_skipped = sum(r.poses_skipped for r in results)
+    chars_with_errors = sum(1 for r in results if r.error or r.poses_failed > 0)
+    chars_ok = len(results) - chars_with_errors
+
     print()
     print("=" * 60)
-    print(f"Pipeline complete: {succeeded} succeeded, {failed} failed")
+    print("BATCH SUMMARY")
+    print("=" * 60)
+    print()
+
+    # Per-character table
+    print(f"{'Character':<30} {'OK':>5} {'Fail':>5} {'Skip':>5} {'Time':>8}  Status")
+    print("-" * 75)
+    for r in results:
+        if r.error:
+            status = f"ERROR: {r.error}"
+        elif r.poses_failed > 0:
+            status = "PARTIAL"
+        else:
+            status = "OK"
+        print(
+            f"{r.char_id:<30} {r.poses_succeeded:>5} {r.poses_failed:>5} "
+            f"{r.poses_skipped:>5} {r.elapsed:>7.1f}s  {status}"
+        )
+
+    print("-" * 75)
+    print(
+        f"{'TOTAL':<30} {total_succeeded:>5} {total_failed:>5} "
+        f"{total_skipped:>5} {elapsed_total:>7.1f}s"
+    )
+    print()
+    print(f"Characters: {chars_ok} succeeded, {chars_with_errors} with errors")
+    print(f"Poses:      {total_succeeded} rendered, {total_failed} failed, {total_skipped} skipped")
     print(f"Total time: {elapsed_total:.1f}s")
     print("=" * 60)
 
