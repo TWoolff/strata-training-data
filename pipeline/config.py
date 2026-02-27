@@ -519,6 +519,18 @@ WEIGHT_THRESHOLD: float = 0.01  # Minimum bone weight to include (noise reductio
 # Post-render (Python/PIL/OpenCV): pixel, painterly, sketch
 
 ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit"]
+RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit"}
+
+# Cel/toon shading parameters
+CEL_RAMP_STOPS: list[tuple[float, float]] = [
+    (0.0, 0.3),  # shadow tone (position, brightness factor)
+    (0.4, 0.7),  # mid tone
+    (0.7, 1.0),  # highlight tone
+]
+CEL_OUTLINE_THICKNESS: float = 2.0  # Freestyle line thickness in pixels
+
+# Fallback base color when material has no Principled BSDF or texture
+DEFAULT_BASE_COLOR: tuple[float, float, float, float] = (0.6, 0.6, 0.6, 1.0)
 
 # ---------------------------------------------------------------------------
 # Dataset splits
