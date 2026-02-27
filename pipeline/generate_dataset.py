@@ -23,7 +23,8 @@ import logging
 import sys
 import tempfile
 import time
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
@@ -34,10 +35,10 @@ from .bone_mapper import BoneMapping, map_bones
 from .config import (
     ENABLE_FLIP,
     ENABLE_SCALE,
-    POST_RENDER_STYLES,
+    POST_RENDER_BASE_STYLE,
     RENDER_RESOLUTION,
-    RENDER_TIME_STYLES,
     SCALE_FACTORS,
+    STYLE_REGISTRY,
 )
 from .draw_order_extractor import extract_draw_order
 from .exporter import (
@@ -273,6 +274,7 @@ class CharacterResult:
     poses_succeeded: int = 0
     poses_failed: int = 0
     poses_skipped: int = 0
+    style_counts: Counter = field(default_factory=Counter)
     elapsed: float = 0.0
     error: str = ""
 
@@ -375,7 +377,7 @@ def process_character(
             continue
 
         try:
-            _process_single_pose(
+            pose_style_counts = _process_single_pose(
                 scene=scene,
                 armature=armature,
                 meshes=meshes,
@@ -392,7 +394,8 @@ def process_character(
                 resolution=resolution,
             )
             result.poses_succeeded += 1
-            print(f"{progress} OK")
+            result.style_counts += pose_style_counts
+            print(f"{progress} OK ({sum(pose_style_counts.values())} images)")
         except Exception:
             logger.exception("Error processing %s pose %s", char_id, pose.name)
             result.poses_failed += 1
@@ -476,7 +479,7 @@ def _process_single_pose(
     char_id: str,
     styles: list[str],
     resolution: int,
-) -> None:
+) -> Counter:
     """Process a single pose for a character (all augmentation variants).
 
     Args:
@@ -494,7 +497,12 @@ def _process_single_pose(
         char_id: Character identifier.
         styles: Art style names.
         resolution: Render resolution.
+
+    Returns:
+        Counter of style images produced (style_name → count).
     """
+    style_counts: Counter = Counter()
+
     # Apply the pose (handles built-in T-pose/A-pose and animation FBX poses)
     if not apply_pose(armature, pose, pose_dir):
         raise RuntimeError(f"Failed to apply pose {pose.name} from {pose.source}")
@@ -507,6 +515,10 @@ def _process_single_pose(
             mapping.vertex_to_region,
             region_materials,
         )
+
+    # Partition styles by type for the base-image optimization
+    render_styles = [s for s in styles if STYLE_REGISTRY.get(s) == "render"]
+    post_styles = [s for s in styles if STYLE_REGISTRY.get(s) == "post"]
 
     for aug in augmentations:
         # --- Apply scale if needed ---
@@ -561,32 +573,55 @@ def _process_single_pose(
             draw_order_data["draw_order_map"].astype(np.uint8), mode="L"
         ).save(draw_order_out_path, format="PNG", compress_level=9)
 
-        # --- Color render (one pass per style) ---
+        # --- Color render ---
         setup_color_render(scene)
         color_paths: dict[str, Path] = {}
-        for style in styles:
-            # Restore original materials before each style application
-            _restore_materials(meshes, original_materials)
+        style_seed = hash((char_id, pose_idx)) & 0xFFFFFFFF
 
-            # Apply render-time style (no-op for post-render styles)
-            if style in RENDER_TIME_STYLES:
-                apply_style(scene, meshes, style)
+        # --- Render-time styles (flat, cel, unlit): each needs its own Blender render ---
+        base_image: Image.Image | None = None
+        for style in render_styles:
+            print(f"    rendering {style}...")
+            _restore_materials(meshes, original_materials)
+            apply_style(scene, meshes, style)
 
             image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
             render_color(scene, image_out_path)
-
-            # Apply post-render style transform (pixel art, painterly, sketch)
-            if style in POST_RENDER_STYLES:
-                img = Image.open(image_out_path)
-                style_seed = hash((char_id, pose_idx)) & 0xFFFFFFFF
-                img = apply_post_render_style(img, style, seed=style_seed)
-                img.save(image_out_path, format="PNG")
-
             color_paths[style] = image_out_path
+            style_counts[style] += 1
 
-            # Clean up scene-level style state
-            if style in RENDER_TIME_STYLES:
-                restore_style(scene, style)
+            # Cache the flat render as the base for post-render styles
+            if style == POST_RENDER_BASE_STYLE and post_styles:
+                base_image = Image.open(image_out_path).copy()
+
+            restore_style(scene, style)
+
+        # --- Post-render styles: render flat base once, apply Python transforms ---
+        if post_styles:
+            # If flat wasn't in the requested render styles, render it now as a
+            # temporary base image for the post-render transforms
+            if base_image is None:
+                print(f"    rendering {POST_RENDER_BASE_STYLE} (base for post-render)...")
+                _restore_materials(meshes, original_materials)
+                apply_style(scene, meshes, POST_RENDER_BASE_STYLE)
+
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_base_path = Path(tmp.name)
+                render_color(scene, tmp_base_path)
+                base_image = Image.open(tmp_base_path).copy()
+                tmp_base_path.unlink(missing_ok=True)
+
+                restore_style(scene, POST_RENDER_BASE_STYLE)
+
+            for style in post_styles:
+                print(f"    applying {style} post-render transform...")
+                image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
+                styled_image = apply_post_render_style(
+                    base_image.copy(), style, seed=style_seed
+                )
+                styled_image.save(image_out_path, format="PNG")
+                color_paths[style] = image_out_path
+                style_counts[style] += 1
 
         # --- Re-assign segmentation materials for next variant ---
         for mesh_idx, mesh_obj in enumerate(meshes):
@@ -628,6 +663,8 @@ def _process_single_pose(
 
     # Reset pose for next iteration
     reset_pose(armature)
+
+    return style_counts
 
 
 def _infer_source(char_id: str) -> str:
@@ -775,6 +812,12 @@ def _print_summary(results: list[CharacterResult], elapsed_total: float) -> None
     chars_with_errors = sum(1 for r in results if r.error or r.poses_failed > 0)
     chars_ok = len(results) - chars_with_errors
 
+    # Aggregate style distribution across all characters
+    total_style_counts: Counter = Counter()
+    for r in results:
+        total_style_counts += r.style_counts
+    total_images = sum(total_style_counts.values())
+
     print()
     print("=" * 60)
     print("BATCH SUMMARY")
@@ -804,7 +847,17 @@ def _print_summary(results: list[CharacterResult], elapsed_total: float) -> None
     print()
     print(f"Characters: {chars_ok} succeeded, {chars_with_errors} with errors")
     print(f"Poses:      {total_succeeded} rendered, {total_failed} failed, {total_skipped} skipped")
-    print(f"Total time: {elapsed_total:.1f}s")
+    print(f"Images:     {total_images} total")
+
+    # Style distribution
+    if total_style_counts:
+        print()
+        print("Style distribution:")
+        for style in sorted(total_style_counts):
+            count = total_style_counts[style]
+            print(f"  {style:<12} {count:>6} images")
+
+    print(f"\nTotal time: {elapsed_total:.1f}s")
     print("=" * 60)
 
 
