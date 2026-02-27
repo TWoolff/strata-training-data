@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from animation.scripts.bvh_parser import parse_bvh
-from animation.scripts.bvh_to_strata import STRATA_BONES, retarget
+from animation.scripts.bvh_to_strata import (
+    STRATA_BONES,
+    check_strata_compatibility,
+    retarget,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures: synthetic BVH content
@@ -383,3 +387,249 @@ class TestEmptyMotion:
         result = retarget(bvh)
         assert result.frame_count == 0
         assert result.frames == []
+
+
+# ---------------------------------------------------------------------------
+# BVH with finger bones that have significant motion (incompatible)
+# ---------------------------------------------------------------------------
+
+FINGER_MOTION_BVH = textwrap.dedent("""\
+    HIERARCHY
+    ROOT Hips
+    {
+        OFFSET 0.0 0.0 0.0
+        CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+        JOINT Spine
+        {
+            OFFSET 0.0 10.0 0.0
+            CHANNELS 3 Zrotation Xrotation Yrotation
+            JOINT Neck
+            {
+                OFFSET 0.0 8.0 0.0
+                CHANNELS 3 Zrotation Xrotation Yrotation
+                JOINT Head
+                {
+                    OFFSET 0.0 4.0 0.0
+                    CHANNELS 3 Zrotation Xrotation Yrotation
+                    End Site
+                    {
+                        OFFSET 0.0 3.0 0.0
+                    }
+                }
+            }
+        }
+        JOINT LeftUpLeg
+        {
+            OFFSET -4.0 0.0 0.0
+            CHANNELS 3 Zrotation Xrotation Yrotation
+            JOINT LeftLeg
+            {
+                OFFSET 0.0 -18.0 0.0
+                CHANNELS 3 Zrotation Xrotation Yrotation
+                JOINT LeftFoot
+                {
+                    OFFSET 0.0 -17.0 0.0
+                    CHANNELS 3 Zrotation Xrotation Yrotation
+                    End Site
+                    {
+                        OFFSET 0.0 -3.0 5.0
+                    }
+                }
+            }
+        }
+        JOINT LeftShoulder
+        {
+            OFFSET -2.0 5.0 0.0
+            CHANNELS 3 Zrotation Xrotation Yrotation
+            JOINT LeftArm
+            {
+                OFFSET -5.0 0.0 0.0
+                CHANNELS 3 Zrotation Xrotation Yrotation
+                JOINT LeftForeArm
+                {
+                    OFFSET -10.0 0.0 0.0
+                    CHANNELS 3 Zrotation Xrotation Yrotation
+                    JOINT LeftHand
+                    {
+                        OFFSET -8.0 0.0 0.0
+                        CHANNELS 3 Zrotation Xrotation Yrotation
+                        JOINT LThumb
+                        {
+                            OFFSET -1.0 0.0 1.0
+                            CHANNELS 3 Zrotation Xrotation Yrotation
+                            End Site
+                            {
+                                OFFSET -0.5 0.0 0.5
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    MOTION
+    Frames: 3
+    Frame Time: 0.0333333
+    0.0 90.0 0.0 0.0 0.0 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 17.0 18.0 19.0 20.0 21.0 22.0 23.0 24.0 25.0 26.0 27.0 28.0 29.0 30.0 5.0 10.0 15.0
+    0.5 90.5 0.5 0.5 0.5 0.5 1.5 2.5 3.5 4.5 5.5 6.5 7.5 8.5 9.5 10.5 11.5 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 20.5 21.5 22.5 23.5 24.5 25.5 26.5 27.5 28.5 29.5 30.5 55.0 60.0 65.0
+    1.0 91.0 1.0 1.0 1.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 17.0 18.0 19.0 20.0 21.0 22.0 23.0 24.0 25.0 26.0 27.0 28.0 29.0 30.0 31.0 85.0 90.0 95.0
+""")
+
+# BVH with a custom unmapped bone that has NO significant motion (compatible)
+INACTIVE_CUSTOM_BONE_BVH = textwrap.dedent("""\
+    HIERARCHY
+    ROOT Hips
+    {
+        OFFSET 0.0 0.0 0.0
+        CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+        JOINT Spine
+        {
+            OFFSET 0.0 10.0 0.0
+            CHANNELS 3 Zrotation Xrotation Yrotation
+            JOINT Head
+            {
+                OFFSET 0.0 8.0 0.0
+                CHANNELS 3 Zrotation Xrotation Yrotation
+                JOINT FacialJaw
+                {
+                    OFFSET 0.0 1.0 0.5
+                    CHANNELS 3 Zrotation Xrotation Yrotation
+                    End Site
+                    {
+                        OFFSET 0.0 -0.5 0.5
+                    }
+                }
+                End Site
+                {
+                    OFFSET 0.0 3.0 0.0
+                }
+            }
+        }
+    }
+    MOTION
+    Frames: 3
+    Frame Time: 0.0333333
+    0.0 90.0 0.0 0.0 0.0 0.0 1.0 2.0 3.0 4.0 5.0 6.0 10.0 20.0 30.0
+    0.5 90.5 0.5 0.5 0.5 0.5 1.5 2.5 3.5 4.5 5.5 6.5 10.0 20.0 30.0
+    1.0 91.0 1.0 1.0 1.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 10.0 20.0 30.0
+""")
+
+# BVH with a custom unmapped bone that HAS significant motion (incompatible)
+ACTIVE_CUSTOM_BONE_BVH = textwrap.dedent("""\
+    HIERARCHY
+    ROOT Hips
+    {
+        OFFSET 0.0 0.0 0.0
+        CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+        JOINT Spine
+        {
+            OFFSET 0.0 10.0 0.0
+            CHANNELS 3 Zrotation Xrotation Yrotation
+            JOINT Head
+            {
+                OFFSET 0.0 8.0 0.0
+                CHANNELS 3 Zrotation Xrotation Yrotation
+                JOINT FacialJaw
+                {
+                    OFFSET 0.0 1.0 0.5
+                    CHANNELS 3 Zrotation Xrotation Yrotation
+                    End Site
+                    {
+                        OFFSET 0.0 -0.5 0.5
+                    }
+                }
+                End Site
+                {
+                    OFFSET 0.0 3.0 0.0
+                }
+            }
+        }
+    }
+    MOTION
+    Frames: 3
+    Frame Time: 0.0333333
+    0.0 90.0 0.0 0.0 0.0 0.0 1.0 2.0 3.0 4.0 5.0 6.0 0.0 0.0 0.0
+    0.5 90.5 0.5 0.5 0.5 0.5 1.5 2.5 3.5 4.5 5.5 6.5 30.0 45.0 10.0
+    1.0 91.0 1.0 1.0 1.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 60.0 90.0 20.0
+""")
+
+
+# ---------------------------------------------------------------------------
+# Compatibility check tests
+# ---------------------------------------------------------------------------
+
+
+class TestStrataCompatibility:
+    """Tests for check_strata_compatibility()."""
+
+    def test_full_cmu_skeleton_is_compatible(self, tmp_path: Path) -> None:
+        """A standard CMU walk skeleton with only mapped bones is compatible."""
+        bvh = parse_bvh(_write_bvh(tmp_path, CMU_WALK_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is True
+        assert result.active_unmapped == []
+
+    def test_skeleton_only_is_compatible(self, tmp_path: Path) -> None:
+        """A BVH with no motion data should be compatible by default."""
+        skeleton_only = textwrap.dedent("""\
+            HIERARCHY
+            ROOT Hips
+            {
+                OFFSET 0.0 0.0 0.0
+                CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+                End Site
+                {
+                    OFFSET 0.0 5.0 0.0
+                }
+            }
+        """)
+        bvh = parse_bvh(_write_bvh(tmp_path, skeleton_only))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is True
+        assert result.reason == "No motion data — skeleton-only file"
+
+    def test_finger_motion_is_incompatible(self, tmp_path: Path) -> None:
+        """A clip with active finger bones should be incompatible."""
+        bvh = parse_bvh(_write_bvh(tmp_path, FINGER_MOTION_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is False
+        assert "LThumb" in result.active_unmapped
+
+    def test_inactive_unmapped_bone_is_compatible(self, tmp_path: Path) -> None:
+        """Unmapped bones with no significant motion should not block compat."""
+        bvh = parse_bvh(_write_bvh(tmp_path, INACTIVE_CUSTOM_BONE_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is True
+        assert result.active_unmapped == []
+        assert result.unmapped_count > 0
+
+    def test_active_custom_bone_is_incompatible(self, tmp_path: Path) -> None:
+        """Unmapped bones with significant motion should block compat."""
+        bvh = parse_bvh(_write_bvh(tmp_path, ACTIVE_CUSTOM_BONE_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is False
+        assert "FacialJaw" in result.active_unmapped
+
+    def test_custom_threshold(self, tmp_path: Path) -> None:
+        """A very high threshold should make everything compatible."""
+        bvh = parse_bvh(_write_bvh(tmp_path, ACTIVE_CUSTOM_BONE_BVH))
+        result = check_strata_compatibility(bvh, threshold=1000.0)
+        assert result.compatible is True
+
+    def test_mapped_count(self, tmp_path: Path) -> None:
+        """Mapped count should reflect how many bones were successfully mapped."""
+        bvh = parse_bvh(_write_bvh(tmp_path, CMU_WALK_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.mapped_count > 0
+
+    def test_reason_mentions_compatible(self, tmp_path: Path) -> None:
+        """Reason string should indicate compatibility status."""
+        bvh = parse_bvh(_write_bvh(tmp_path, CMU_WALK_BVH))
+        result = check_strata_compatibility(bvh)
+        assert "Compatible" in result.reason
+
+    def test_reason_mentions_incompatible(self, tmp_path: Path) -> None:
+        """Reason string should indicate incompatibility status."""
+        bvh = parse_bvh(_write_bvh(tmp_path, FINGER_MOTION_BVH))
+        result = check_strata_compatibility(bvh)
+        assert "Incompatible" in result.reason

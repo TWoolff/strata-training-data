@@ -4,15 +4,22 @@ Maps CMU/SFU bone names to Strata region names, collapses multi-spine
 hierarchies, and produces per-frame rotation data ready for proportion
 normalization and blueprint export.
 
+Also provides Strata-compatibility checking: evaluates whether a BVH clip
+uses only bones present in Strata's 19-bone skeleton or depends heavily on
+unmapped bones (fingers, facial).
+
 No Blender dependency — pure Python + numpy.
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from animation.scripts.bvh_parser import BVHFile, BVHSkeleton
+from animation.scripts.bvh_parser import BVHFile, BVHSkeleton, parse_bvh
 
 logger = logging.getLogger(__name__)
 
@@ -347,3 +354,204 @@ def retarget(bvh: BVHFile) -> RetargetedAnimation:
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Strata compatibility checking
+# ---------------------------------------------------------------------------
+
+# Minimum rotation delta (degrees) for a bone to count as "active"
+ROTATION_DELTA_THRESHOLD: float = 1.0
+
+
+@dataclass
+class CompatibilityResult:
+    """Result of evaluating a BVH clip for Strata skeleton compatibility.
+
+    Attributes:
+        compatible: True if the clip maps cleanly to Strata's 19-bone skeleton.
+        mapped_count: Number of source bones that mapped to Strata bones.
+        unmapped_count: Number of source bones with no Strata equivalent.
+        active_unmapped: Unmapped bones that have significant rotation data.
+        reason: Human-readable explanation of the verdict.
+    """
+
+    compatible: bool
+    mapped_count: int
+    unmapped_count: int
+    active_unmapped: list[str] = field(default_factory=list)
+    reason: str = ""
+
+
+def check_strata_compatibility(
+    bvh: BVHFile,
+    threshold: float = ROTATION_DELTA_THRESHOLD,
+) -> CompatibilityResult:
+    """Evaluate whether a BVH clip maps cleanly to Strata's 19-bone skeleton.
+
+    A clip is compatible if all bones with significant rotation data map to
+    Strata bones.  Bones with rotation deltas below *threshold* degrees
+    (across all frames) are considered inactive and ignored.  This includes
+    bones silently ignored by the retargeter (fingers, toes) — if they
+    carry significant motion, the clip is flagged as incompatible.
+
+    Args:
+        bvh: Parsed BVH file from ``bvh_parser.parse_bvh()``.
+        threshold: Minimum rotation delta (degrees) for a bone to be
+            considered "active".  Defaults to ``ROTATION_DELTA_THRESHOLD``.
+
+    Returns:
+        CompatibilityResult with verdict and details.
+    """
+    bone_map, unmapped = _build_bone_map(bvh.skeleton)
+    mapped_names = set(bone_map.keys())
+
+    # Collect ALL non-Strata bones (including silently-ignored fingers/toes)
+    non_strata: list[str] = list(unmapped)
+    seen = set(non_strata)
+    for joint_name in bvh.skeleton.joint_order:
+        if joint_name in mapped_names or joint_name in seen:
+            continue
+        if not bvh.skeleton.joints[joint_name].channels:
+            continue
+        non_strata.append(joint_name)
+        seen.add(joint_name)
+
+    # No motion data → compatible by default (skeleton-only file)
+    if not bvh.motion.frames:
+        return CompatibilityResult(
+            compatible=True,
+            mapped_count=len(bone_map),
+            unmapped_count=len(non_strata),
+            reason="No motion data — skeleton-only file",
+        )
+
+    # Find non-Strata bones that have significant rotation across frames
+    active_unmapped: list[str] = []
+    for bone_name in non_strata:
+        if _bone_has_significant_rotation(bvh, bone_name, threshold):
+            active_unmapped.append(bone_name)
+
+    compatible = len(active_unmapped) == 0
+
+    if compatible:
+        if non_strata:
+            reason = (
+                f"Compatible: {len(bone_map)} bones mapped, "
+                f"{len(non_strata)} extra bones inactive"
+            )
+        else:
+            reason = f"Compatible: all {len(bone_map)} bones mapped"
+    else:
+        reason = (
+            f"Incompatible: {len(active_unmapped)} non-Strata bones have "
+            f"significant motion ({', '.join(active_unmapped)})"
+        )
+
+    result = CompatibilityResult(
+        compatible=compatible,
+        mapped_count=len(bone_map),
+        unmapped_count=len(non_strata),
+        active_unmapped=active_unmapped,
+        reason=reason,
+    )
+
+    logger.info("Compatibility check: %s", result.reason)
+    return result
+
+
+def _bone_has_significant_rotation(
+    bvh: BVHFile,
+    bone_name: str,
+    threshold: float,
+) -> bool:
+    """Check if a bone has rotation deltas above the threshold across frames.
+
+    Compares each frame's rotation to the first frame. If any axis delta
+    exceeds the threshold on any frame, the bone is considered active.
+
+    Args:
+        bvh: Parsed BVH file.
+        bone_name: Name of the bone to check.
+        threshold: Minimum delta in degrees.
+
+    Returns:
+        True if the bone has significant rotation data.
+    """
+    joint = bvh.skeleton.joints.get(bone_name)
+    if joint is None or not joint.channels:
+        return False
+
+    frames = bvh.motion.frames
+    if len(frames) < 2:
+        return False
+
+    # Get first frame rotation as baseline
+    if bone_name not in frames[0]:
+        return False
+
+    baseline = _extract_rotation(joint.channels, frames[0][bone_name])
+
+    for frame_data in frames[1:]:
+        if bone_name not in frame_data:
+            continue
+        rot = _extract_rotation(joint.channels, frame_data[bone_name])
+        for b, r in zip(baseline, rot, strict=True):
+            if abs(r - b) > threshold:
+                return True
+
+    return False
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+
+def _cli_check_compat(args: argparse.Namespace) -> None:
+    """CLI handler for --check-compat."""
+    for path_str in args.files:
+        path = Path(path_str)
+        try:
+            bvh = parse_bvh(path)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"{path.name}: ERROR — {exc}", file=sys.stderr)
+            continue
+
+        result = check_strata_compatibility(bvh, threshold=args.threshold)
+        compat_str = "yes" if result.compatible else "no"
+        print(f"{path.name}: {compat_str} — {result.reason}")
+
+
+def main() -> None:
+    """CLI entry point for BVH-to-Strata retargeting utilities."""
+    parser = argparse.ArgumentParser(
+        description="BVH-to-Strata retargeting utilities",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    compat_parser = sub.add_parser(
+        "check-compat",
+        help="Evaluate BVH files for Strata skeleton compatibility",
+    )
+    compat_parser.add_argument(
+        "files",
+        nargs="+",
+        help="BVH file paths to evaluate",
+    )
+    compat_parser.add_argument(
+        "--threshold",
+        type=float,
+        default=ROTATION_DELTA_THRESHOLD,
+        help=f"Rotation delta threshold in degrees (default: {ROTATION_DELTA_THRESHOLD})",
+    )
+
+    args = parser.parse_args()
+    if args.command == "check-compat":
+        _cli_check_compat(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
