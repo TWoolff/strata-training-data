@@ -287,6 +287,77 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
 }
 
 # ---------------------------------------------------------------------------
+# VRM humanoid bone name → region ID mapping
+# ---------------------------------------------------------------------------
+# VRM/VRoid models use standardized camelCase humanoid bone names.
+# These map directly to Strata regions with near-100% coverage.
+# Finger bones map to the corresponding hand region.
+# Reference: https://vrm.dev/en/univrm/humanoid/humanoid_overview
+
+VRM_BONE_ALIASES: dict[str, RegionId] = {
+    # Head / neck
+    "head": 1,
+    "neck": 2,
+    # Torso
+    "upperChest": 3,
+    "chest": 3,
+    "spine": 4,
+    "hips": 5,
+    # Left shoulder / arm
+    "leftShoulder": 18,
+    "leftUpperArm": 6,
+    "leftLowerArm": 7,
+    "leftHand": 8,
+    # Left fingers → hand_l
+    "leftThumbMetacarpal": 8,
+    "leftThumbProximal": 8,
+    "leftThumbDistal": 8,
+    "leftIndexProximal": 8,
+    "leftIndexIntermediate": 8,
+    "leftIndexDistal": 8,
+    "leftMiddleProximal": 8,
+    "leftMiddleIntermediate": 8,
+    "leftMiddleDistal": 8,
+    "leftRingProximal": 8,
+    "leftRingIntermediate": 8,
+    "leftRingDistal": 8,
+    "leftLittleProximal": 8,
+    "leftLittleIntermediate": 8,
+    "leftLittleDistal": 8,
+    # Right shoulder / arm
+    "rightShoulder": 19,
+    "rightUpperArm": 9,
+    "rightLowerArm": 10,
+    "rightHand": 11,
+    # Right fingers → hand_r
+    "rightThumbMetacarpal": 11,
+    "rightThumbProximal": 11,
+    "rightThumbDistal": 11,
+    "rightIndexProximal": 11,
+    "rightIndexIntermediate": 11,
+    "rightIndexDistal": 11,
+    "rightMiddleProximal": 11,
+    "rightMiddleIntermediate": 11,
+    "rightMiddleDistal": 11,
+    "rightRingProximal": 11,
+    "rightRingIntermediate": 11,
+    "rightRingDistal": 11,
+    "rightLittleProximal": 11,
+    "rightLittleIntermediate": 11,
+    "rightLittleDistal": 11,
+    # Left leg
+    "leftUpperLeg": 12,
+    "leftLowerLeg": 13,
+    "leftFoot": 14,
+    "leftToes": 14,
+    # Right leg
+    "rightUpperLeg": 15,
+    "rightLowerLeg": 16,
+    "rightFoot": 17,
+    "rightToes": 17,
+}
+
+# ---------------------------------------------------------------------------
 # Bone mapping: prefix stripping
 # ---------------------------------------------------------------------------
 # Common bone name prefixes to strip when attempting prefix-based matching.

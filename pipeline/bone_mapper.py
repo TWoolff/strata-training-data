@@ -4,9 +4,10 @@ Mapping priority chain:
 1. Per-character override JSON (manual assignments)
 2. Exact match against MIXAMO_BONE_MAP
 3. Exact match against COMMON_BONE_ALIASES
-4. Prefix-stripped match (strip known prefixes, retry exact + alias)
-5. Substring keyword match (case-insensitive)
-6. Fuzzy keyword match (normalized tokens, scored against keyword patterns)
+4. Exact match against VRM_BONE_ALIASES (VRM humanoid skeleton)
+5. Prefix-stripped match (strip known prefixes, retry exact + alias)
+6. Substring keyword match (case-insensitive)
+7. Fuzzy keyword match (normalized tokens, scored against keyword patterns)
 
 Unmapped bones are tracked separately and logged as warnings.
 """
@@ -29,6 +30,7 @@ from .config import (
     LATERALITY_ALIASES,
     MIXAMO_BONE_MAP,
     SUBSTRING_KEYWORDS,
+    VRM_BONE_ALIASES,
     RegionId,
 )
 
@@ -353,21 +355,28 @@ def _map_all_bones(
             stats.alias += 1
             continue
 
-        # 4. Prefix strip + retry
+        # 4. VRM humanoid bone alias
+        region = VRM_BONE_ALIASES.get(name)
+        if region is not None:
+            bone_to_region[name] = region
+            stats.alias += 1
+            continue
+
+        # 5. Prefix strip + retry
         region = _try_prefix_strip(name)
         if region is not None:
             bone_to_region[name] = region
             stats.prefix += 1
             continue
 
-        # 5. Substring match
+        # 6. Substring match
         region = _try_substring(name)
         if region is not None:
             bone_to_region[name] = region
             stats.substring += 1
             continue
 
-        # 6. Fuzzy keyword match
+        # 7. Fuzzy keyword match
         region, score = _try_fuzzy_keyword(name)
         if region is not None:
             bone_to_region[name] = region
