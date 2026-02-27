@@ -51,6 +51,7 @@ from .exporter import (
 )
 from .importer import clear_scene, import_character
 from .joint_extractor import extract_joints
+from .manifest import generate_manifest
 from .pose_applicator import (
     AugmentationInfo,
     PoseInfo,
@@ -865,6 +866,16 @@ def main() -> None:
 
     # --- Summary ---
     _print_summary(results, elapsed_total)
+
+    # --- Generate manifest ---
+    manifest_path = generate_manifest(
+        output_dir,
+        results=results,
+        styles=styles,
+        resolution=resolution,
+        poses_per_character=poses_per_character,
+    )
+    print(f"\nManifest written to {manifest_path}")
 
     # Exit code: 1 if any character had failures
     any_failed = any(r.error or r.poses_failed > 0 for r in results)
