@@ -105,7 +105,7 @@ def _try_prefix_strip(bone_name: str) -> RegionId | None:
     """Strip known prefixes and retry exact + alias match."""
     for prefix in COMMON_PREFIXES:
         if bone_name.startswith(prefix):
-            stripped = bone_name[len(prefix):]
+            stripped = bone_name[len(prefix) :]
             region = MIXAMO_BONE_MAP.get(stripped) or COMMON_BONE_ALIASES.get(stripped)
             if region is not None:
                 return region
@@ -222,9 +222,7 @@ def _assign_vertices(
         mesh_data = mesh_obj.data
 
         # Build group index → group name lookup
-        group_names: dict[int, str] = {
-            g.index: g.name for g in mesh_obj.vertex_groups
-        }
+        group_names: dict[int, str] = {g.index: g.name for g in mesh_obj.vertex_groups}
 
         base_id = mesh_idx * 10_000_000
 
@@ -283,9 +281,7 @@ def map_bones(
     if source_dir is not None:
         overrides = _load_overrides(character_id, source_dir)
         if overrides:
-            logger.info(
-                "Loaded %d bone override(s) for %s", len(overrides), character_id
-            )
+            logger.info("Loaded %d bone override(s) for %s", len(overrides), character_id)
 
     # Map bones
     bone_to_region, unmapped, stats = _map_all_bones(armature, overrides)

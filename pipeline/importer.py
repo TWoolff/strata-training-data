@@ -72,10 +72,7 @@ def _combined_bounding_box(meshes: list[bpy.types.Object]) -> tuple[Vector, Vect
     """
     all_corners: list[Vector] = []
     for mesh_obj in meshes:
-        all_corners.extend(
-            mesh_obj.matrix_world @ Vector(corner)
-            for corner in mesh_obj.bound_box
-        )
+        all_corners.extend(mesh_obj.matrix_world @ Vector(corner) for corner in mesh_obj.bound_box)
 
     xs = [v.x for v in all_corners]
     ys = [v.y for v in all_corners]
@@ -119,7 +116,9 @@ def _normalize_transforms(
     height = bbox_max.z - bbox_min.z
 
     if height < 1e-6:
-        logger.warning("Character has near-zero height (%.6f) — skipping scale normalization", height)
+        logger.warning(
+            "Character has near-zero height (%.6f) — skipping scale normalization", height
+        )
         return
 
     # --- Scale ---

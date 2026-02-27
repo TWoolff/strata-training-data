@@ -47,9 +47,7 @@ def _extract_vertex_weights(
     res_y = scene.render.resolution_y
 
     # Build group index → group name lookup
-    group_names: dict[int, str] = {
-        g.index: g.name for g in mesh_obj.vertex_groups
-    }
+    group_names: dict[int, str] = {g.index: g.name for g in mesh_obj.vertex_groups}
 
     vertices: list[dict] = []
 
@@ -91,14 +89,14 @@ def _extract_vertex_weights(
             region_weights[region_name] = region_weights.get(region_name, 0.0) + weight
 
         # Round weights to 4 decimal places for cleaner JSON
-        region_weights = {
-            k: round(v, 4) for k, v in region_weights.items()
-        }
+        region_weights = {k: round(v, 4) for k, v in region_weights.items()}
 
-        vertices.append({
-            "position": [px_x, px_y],
-            "weights": region_weights,
-        })
+        vertices.append(
+            {
+                "position": [px_x, px_y],
+                "weights": region_weights,
+            }
+        )
 
     return vertices
 

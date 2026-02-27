@@ -225,9 +225,7 @@ def _import_animation_fbx(fbx_path: Path) -> bpy.types.Object | None:
 
     # Find newly imported armature(s)
     new_armatures = [
-        obj
-        for obj in bpy.data.objects
-        if obj not in existing_objects and obj.type == "ARMATURE"
+        obj for obj in bpy.data.objects if obj not in existing_objects and obj.type == "ARMATURE"
     ]
 
     if not new_armatures:

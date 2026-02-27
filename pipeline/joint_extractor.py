@@ -153,7 +153,9 @@ def _check_occlusion(
 
     # Cast ray through the scene
     hit, location, _normal, _index, hit_obj, _matrix = scene.ray_cast(
-        depsgraph, ray_origin, ray_direction,
+        depsgraph,
+        ray_origin,
+        ray_direction,
     )
 
     if not hit:
@@ -200,7 +202,8 @@ def _compute_bbox(
         visible joints.
     """
     visible_points = [
-        pos for name, pos in joint_positions.items()
+        pos
+        for name, pos in joint_positions.items()
         if visible_flags.get(name, False) and pos != (-1, -1)
     ]
 
@@ -301,7 +304,10 @@ def extract_joints(
 
         # Project to 2D
         (px_x, px_y), depth = _project_bone_to_2d(
-            scene, camera, armature, primary_bone,
+            scene,
+            camera,
+            armature,
+            primary_bone,
         )
 
         # Check if within image bounds
@@ -309,7 +315,12 @@ def extract_joints(
 
         # Check occlusion
         visible = in_bounds and _check_occlusion(
-            scene, camera, armature, primary_bone, meshes, depth,
+            scene,
+            camera,
+            armature,
+            primary_bone,
+            meshes,
+            depth,
         )
 
         # Clamp to image bounds for the output position
