@@ -522,6 +522,21 @@ ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit"]
 RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit"}
 POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
 
+# Style routing registry: maps style name → type ("render" or "post")
+# Render-time styles modify Blender materials before bpy.ops.render.render()
+# Post-render styles take a PIL Image and return a PIL Image
+STYLE_REGISTRY: dict[str, str] = {
+    "flat": "render",
+    "cel": "render",
+    "unlit": "render",
+    "pixel": "post",
+    "painterly": "post",
+    "sketch": "post",
+}
+
+# The base style used as input for all post-render transforms
+POST_RENDER_BASE_STYLE: str = "flat"
+
 # Pixel art style parameters
 PIXEL_ART_DOWNSCALE_SIZE: int = 64  # downscale target (64 or 128)
 PIXEL_ART_PALETTE_SIZE: int = 16  # number of colors after quantization (16–32)
