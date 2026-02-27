@@ -32,6 +32,7 @@ from exporter import (
     save_class_map,
     save_joints,
     save_source_metadata,
+    save_weights,
 )
 from importer import import_character
 from joint_extractor import extract_joints
@@ -53,6 +54,7 @@ from renderer import (
     setup_color_render,
     setup_segmentation_render,
 )
+from weight_extractor import extract_weights
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +259,26 @@ def process_character(
         assign_region_materials(
             mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
         )
+
+    # --- Extract weights (T-pose only, once per character) ---
+    # Vertex groups are independent of materials, so extraction works
+    # regardless of whether segmentation materials are currently assigned.
+    print(f"[{char_id}] Extracting vertex weights...")
+    old_cam = bpy.data.objects.get("strata_camera")
+    if old_cam is not None:
+        bpy.data.objects.remove(old_cam, do_unlink=True)
+    weight_camera = setup_camera(scene, meshes)
+    scene.render.resolution_x = resolution
+    scene.render.resolution_y = resolution
+
+    weight_data = extract_weights(
+        scene, weight_camera, meshes, mapping.bone_to_region,
+    )
+    weight_data["character_id"] = char_id
+    save_weights(weight_data, output_dir, char_id, POSE_INDEX)
+
+    # Clean up weight camera (augmentation loop creates its own)
+    bpy.data.objects.remove(weight_camera, do_unlink=True)
 
     # --- Build augmentation variants ---
     augmentations = _build_augmentation_list(
