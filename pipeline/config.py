@@ -296,6 +296,10 @@ COMMON_PREFIXES: list[str] = [
     "ORG-",
     "MCH-",
     "CC_Base_",
+    "Bone_",
+    "bone_",
+    "RIG_",
+    "rig_",
 ]
 
 # ---------------------------------------------------------------------------
@@ -431,6 +435,93 @@ SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
     (["toe", "right"], 17),
     (["toe", "r"], 17),
 ]
+
+# ---------------------------------------------------------------------------
+# Bone mapping: fuzzy keyword matching
+# ---------------------------------------------------------------------------
+# Used after substring matching fails. Bone names are normalized (prefix-stripped,
+# camelCase-split, tokenized) before matching. Score = matched keywords / total
+# keywords in pattern; minimum FUZZY_MIN_SCORE required.
+#
+# Each entry: (keyword_tuple, region_id). Keywords are matched against normalized
+# tokens. Laterality keywords ("left"/"right"/"l"/"r") are handled separately
+# via token-boundary detection to avoid "leg" matching "l".
+
+FUZZY_MIN_SCORE: float = 0.6
+
+FUZZY_KEYWORD_PATTERNS: list[tuple[tuple[str, ...], RegionId]] = [
+    # Head / neck
+    (("head",), 1),
+    (("skull",), 1),
+    (("cranium",), 1),
+    (("neck",), 2),
+    # Torso
+    (("chest",), 3),
+    (("upper", "body"), 3),
+    (("upper", "torso"), 3),
+    (("spine",), 4),
+    (("torso",), 4),
+    (("abdomen",), 4),
+    (("hip",), 5),
+    (("hips",), 5),
+    (("pelvis",), 5),
+    (("root",), 5),
+    # Left shoulder
+    (("shoulder", "left"), 18),
+    (("clavicle", "left"), 18),
+    # Right shoulder
+    (("shoulder", "right"), 19),
+    (("clavicle", "right"), 19),
+    # Left arm — forearm/lower before upper to avoid false match
+    (("forearm", "left"), 7),
+    (("lower", "arm", "left"), 7),
+    (("upper", "arm", "left"), 6),
+    (("arm", "upper", "left"), 6),
+    (("bicep", "left"), 6),
+    # Left hand
+    (("hand", "left"), 8),
+    (("finger", "left"), 8),
+    (("thumb", "left"), 8),
+    (("wrist", "left"), 8),
+    # Right arm
+    (("forearm", "right"), 10),
+    (("lower", "arm", "right"), 10),
+    (("upper", "arm", "right"), 9),
+    (("arm", "upper", "right"), 9),
+    (("bicep", "right"), 9),
+    # Right hand
+    (("hand", "right"), 11),
+    (("finger", "right"), 11),
+    (("thumb", "right"), 11),
+    (("wrist", "right"), 11),
+    # Left leg — lower before upper
+    (("shin", "left"), 13),
+    (("calf", "left"), 13),
+    (("lower", "leg", "left"), 13),
+    (("thigh", "left"), 12),
+    (("upper", "leg", "left"), 12),
+    # Left foot
+    (("foot", "left"), 14),
+    (("toe", "left"), 14),
+    (("ankle", "left"), 14),
+    # Right leg
+    (("shin", "right"), 16),
+    (("calf", "right"), 16),
+    (("lower", "leg", "right"), 16),
+    (("thigh", "right"), 15),
+    (("upper", "leg", "right"), 15),
+    # Right foot
+    (("foot", "right"), 17),
+    (("toe", "right"), 17),
+    (("ankle", "right"), 17),
+]
+
+# Laterality aliases: map short/long forms to canonical "left" / "right".
+# Only matched at token boundaries (whole tokens) to avoid "leg" → "l".
+LATERALITY_ALIASES: dict[str, str] = {
+    "l": "left",
+    "r": "right",
+}
 
 # ---------------------------------------------------------------------------
 # Character normalization

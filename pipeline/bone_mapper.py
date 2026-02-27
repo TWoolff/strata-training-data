@@ -6,6 +6,7 @@ Mapping priority chain:
 3. Exact match against COMMON_BONE_ALIASES
 4. Prefix-stripped match (strip known prefixes, retry exact + alias)
 5. Substring keyword match (case-insensitive)
+6. Fuzzy keyword match (normalized tokens, scored against keyword patterns)
 
 Unmapped bones are tracked separately and logged as warnings.
 """
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,6 +24,9 @@ import bpy  # type: ignore[import-untyped]
 from .config import (
     COMMON_BONE_ALIASES,
     COMMON_PREFIXES,
+    FUZZY_KEYWORD_PATTERNS,
+    FUZZY_MIN_SCORE,
+    LATERALITY_ALIASES,
     MIXAMO_BONE_MAP,
     SUBSTRING_KEYWORDS,
     RegionId,
@@ -43,6 +48,7 @@ class MappingStats:
     alias: int = 0
     prefix: int = 0
     substring: int = 0
+    fuzzy: int = 0
     override: int = 0
 
 
@@ -126,6 +132,108 @@ def _try_substring(bone_name: str) -> RegionId | None:
 
 
 # ---------------------------------------------------------------------------
+# Fuzzy keyword matching
+# ---------------------------------------------------------------------------
+
+# Regex to insert an underscore at camelCase boundaries: "LeftArm" → "Left_Arm"
+_CAMEL_RE = re.compile(r"([a-z])([A-Z])")
+# Regex to strip trailing numeric suffixes: "spine.001" → "spine"
+_NUMERIC_SUFFIX_RE = re.compile(r"[._]\d+$")
+
+
+def _normalize_bone_name(name: str) -> list[str]:
+    """Normalize a bone name into lowercase tokens for fuzzy matching.
+
+    Steps:
+        1. Strip known prefixes (COMMON_PREFIXES).
+        2. Strip trailing numeric suffixes (.001, _02, etc.).
+        3. Split camelCase boundaries.
+        4. Split on ``_``, ``.``, ``-``, and whitespace.
+        5. Lowercase all tokens.
+        6. Drop empty tokens.
+
+    Args:
+        name: Raw bone name from armature.
+
+    Returns:
+        List of lowercase string tokens.
+    """
+    # 1. Strip known prefixes
+    for prefix in COMMON_PREFIXES:
+        if name.lower().startswith(prefix.lower()):
+            name = name[len(prefix) :]
+            break
+
+    # 2. Strip trailing numeric suffix
+    name = _NUMERIC_SUFFIX_RE.sub("", name)
+
+    # 3. Split camelCase
+    name = _CAMEL_RE.sub(r"\1_\2", name)
+
+    # 4. Split on delimiters and lowercase
+    tokens = re.split(r"[_.\-\s]+", name.lower())
+
+    # 5. Drop empty
+    return [t for t in tokens if t]
+
+
+def _canonicalize_laterality(tokens: list[str]) -> list[str]:
+    """Replace laterality aliases with canonical 'left'/'right'.
+
+    Only replaces whole tokens that are exact laterality markers. This avoids
+    turning ``"leg"`` into ``"lefteg"`` — the token ``"l"`` is only replaced
+    when it appears as a standalone token (i.e., after splitting on delimiters).
+
+    Args:
+        tokens: Normalized tokens from ``_normalize_bone_name``.
+
+    Returns:
+        New token list with laterality aliases replaced.
+    """
+    return [LATERALITY_ALIASES.get(t, t) for t in tokens]
+
+
+def _try_fuzzy_keyword(bone_name: str) -> tuple[RegionId | None, float]:
+    """Score-based fuzzy keyword matching against FUZZY_KEYWORD_PATTERNS.
+
+    Normalizes the bone name into tokens, canonicalizes laterality markers,
+    then scores each pattern. A match requires all keywords to appear in the
+    token set and the score (matched / total keywords) to meet FUZZY_MIN_SCORE.
+
+    Args:
+        bone_name: Raw bone name from the armature.
+
+    Returns:
+        Tuple of (region_id, score) for the best match, or (None, 0.0).
+    """
+    tokens = _normalize_bone_name(bone_name)
+    tokens = _canonicalize_laterality(tokens)
+    token_set = set(tokens)
+
+    best_region: RegionId | None = None
+    best_score: float = 0.0
+    best_keyword_count: int = 0
+
+    for keywords, region_id in FUZZY_KEYWORD_PATTERNS:
+        matched = sum(1 for kw in keywords if kw in token_set)
+        total = len(keywords)
+        if total == 0:
+            continue
+
+        score = matched / total
+        if score < FUZZY_MIN_SCORE:
+            continue
+
+        # Prefer higher score, then more-specific pattern (more keywords)
+        if score > best_score or (score == best_score and total > best_keyword_count):
+            best_region = region_id
+            best_score = score
+            best_keyword_count = total
+
+    return best_region, best_score
+
+
+# ---------------------------------------------------------------------------
 # Bone mapping
 # ---------------------------------------------------------------------------
 
@@ -182,6 +290,16 @@ def _map_all_bones(
         if region is not None:
             bone_to_region[name] = region
             stats.substring += 1
+            continue
+
+        # 6. Fuzzy keyword match
+        region, score = _try_fuzzy_keyword(name)
+        if region is not None:
+            bone_to_region[name] = region
+            stats.fuzzy += 1
+            logger.debug(
+                "Fuzzy match: %r → region %d (score=%.2f)", name, region, score
+            )
             continue
 
         # Unmapped
@@ -290,7 +408,7 @@ def map_bones(
     total = len(bone_to_region) + len(unmapped)
     logger.info(
         "Bone mapping for %s: %d/%d mapped "
-        "(exact=%d, alias=%d, prefix=%d, substring=%d, override=%d), "
+        "(exact=%d, alias=%d, prefix=%d, substring=%d, fuzzy=%d, override=%d), "
         "%d unmapped",
         character_id,
         len(bone_to_region),
@@ -299,6 +417,7 @@ def map_bones(
         stats.alias,
         stats.prefix,
         stats.substring,
+        stats.fuzzy,
         stats.override,
         len(unmapped),
     )
