@@ -86,10 +86,77 @@ def _load_overrides(character_id: str, source_dir: Path) -> dict[str, RegionId]:
         if not isinstance(data, dict):
             logger.warning("Override file %s is not a JSON object — skipping", override_path)
             return {}
-        return {str(k): int(v) for k, v in data.items()}
+
+        overrides: dict[str, RegionId] = {}
+        for bone_name, region_id in data.items():
+            # Skip null placeholders (template file format)
+            if region_id is None:
+                continue
+            try:
+                rid = int(region_id)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Override %s: bone %r has non-integer region ID %r — skipping",
+                    override_path.name, bone_name, region_id,
+                )
+                continue
+            if rid < 1 or rid > 19:
+                logger.warning(
+                    "Override %s: bone %r has invalid region ID %d (must be 1-19) -- skipping",
+                    override_path.name, bone_name, rid,
+                )
+                continue
+            overrides[str(bone_name)] = rid
+
+        return overrides
     except (json.JSONDecodeError, ValueError) as exc:
         logger.warning("Failed to parse override file %s: %s", override_path, exc)
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Template generation
+# ---------------------------------------------------------------------------
+
+
+def generate_override_template(
+    character_id: str,
+    unmapped_bones: list[str],
+    source_dir: Path,
+) -> Path | None:
+    """Generate a template override JSON for a character's unmapped bones.
+
+    Writes a JSON file with each unmapped bone name mapped to ``null``,
+    ready for manual editing. Skips generation if there are no unmapped bones.
+
+    Args:
+        character_id: Character identifier (filename stem).
+        unmapped_bones: List of bone names that weren't auto-mapped.
+        source_dir: Directory to write the template file into.
+
+    Returns:
+        Path to the generated template file, or None if no unmapped bones.
+    """
+    if not unmapped_bones:
+        return None
+
+    template_path = source_dir / f"{character_id}_overrides.json"
+    if template_path.exists():
+        logger.info(
+            "Override file already exists for %s — skipping template generation",
+            character_id,
+        )
+        return None
+
+    template = {bone: None for bone in sorted(unmapped_bones)}
+    template_path.write_text(
+        json.dumps(template, indent=2) + "\n", encoding="utf-8"
+    )
+    logger.info(
+        "Generated override template for %s with %d unmapped bones: %s",
+        character_id, len(unmapped_bones), template_path,
+    )
+    return template_path
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +321,14 @@ def _map_all_bones(
     bone_to_region: dict[str, RegionId] = {}
     unmapped: list[str] = []
     stats = MappingStats()
+
+    # Warn about overrides that reference nonexistent bones
+    armature_bone_names = {bone.name for bone in armature.data.bones}
+    for override_name in overrides:
+        if override_name not in armature_bone_names:
+            logger.warning(
+                "Override bone %r not found in armature — will be ignored", override_name
+            )
 
     for bone in armature.data.bones:
         name = bone.name

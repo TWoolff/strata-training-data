@@ -18,6 +18,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import contextlib
 import gc
 import logging
 import sys
@@ -31,7 +32,7 @@ import bpy  # type: ignore[import-untyped]
 import numpy as np
 from PIL import Image  # type: ignore[import-untyped]
 
-from .bone_mapper import BoneMapping, map_bones
+from .bone_mapper import BoneMapping, generate_override_template, map_bones
 from .config import (
     ENABLE_FLIP,
     ENABLE_SCALE,
@@ -166,6 +167,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Limit number of poses per character (0 = all).",
+    )
+    parser.add_argument(
+        "--generate_overrides",
+        action="store_true",
+        default=False,
+        help="Generate template override JSONs for characters with unmapped bones, then exit.",
     )
 
     return parser.parse_args(script_args)
@@ -680,6 +687,66 @@ def _infer_source(char_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Override template generation
+# ---------------------------------------------------------------------------
+
+
+def _generate_override_templates(fbx_files: list[Path]) -> None:
+    """Import each character, run bone mapping, and generate override templates.
+
+    For characters with unmapped bones that don't already have an override file,
+    writes a template JSON with bone names mapped to null.
+
+    Args:
+        fbx_files: List of FBX file paths to process.
+    """
+    total = len(fbx_files)
+    templates_created = 0
+
+    for idx, fbx_path in enumerate(fbx_files, 1):
+        char_id = fbx_path.stem
+        print(f"[{idx}/{total}] Scanning {char_id}...")
+
+        try:
+            import_result = import_character(fbx_path)
+            if import_result is None:
+                print(f"[{idx}/{total}] {char_id} — import failed, skipping")
+                continue
+
+            mapping = map_bones(
+                import_result.armature,
+                import_result.meshes,
+                character_id=char_id,
+                source_dir=fbx_path.parent,
+            )
+
+            if mapping.unmapped_bones:
+                result = generate_override_template(
+                    char_id, mapping.unmapped_bones, fbx_path.parent,
+                )
+                if result is not None:
+                    templates_created += 1
+                    print(
+                        f"[{idx}/{total}] {char_id} — generated template "
+                        f"({len(mapping.unmapped_bones)} unmapped bones)"
+                    )
+                else:
+                    print(f"[{idx}/{total}] {char_id} — override file already exists")
+            else:
+                print(f"[{idx}/{total}] {char_id} — all bones mapped, no template needed")
+
+        except Exception:
+            logger.exception("Error scanning %s", char_id)
+            print(f"[{idx}/{total}] {char_id} — ERROR")
+        finally:
+            with contextlib.suppress(Exception):
+                clear_scene()
+            gc.collect()
+
+    print(f"\nDone — {templates_created} template(s) created out of {total} characters.")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -703,6 +770,7 @@ def main() -> None:
     only_new: bool = args.only_new
     max_characters: int = args.max_characters
     poses_per_character: int = args.poses_per_character
+    do_generate_overrides: bool = args.generate_overrides
 
     if not input_dir.is_dir():
         print(f"ERROR: Input directory does not exist: {input_dir}")
@@ -717,6 +785,11 @@ def main() -> None:
     # Apply --max_characters limit
     if max_characters > 0:
         fbx_files = fbx_files[:max_characters]
+
+    # --- Generate override templates and exit ---
+    if do_generate_overrides:
+        _generate_override_templates(fbx_files)
+        return
 
     # Discover poses
     print("Indexing pose library...")
