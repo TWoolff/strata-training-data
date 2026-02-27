@@ -1,20 +1,31 @@
-"""Segmentation material assignment and render-pass configuration.
+"""Camera setup, segmentation material assignment, and render-pass configuration.
 
-Creates per-region Emission materials and assigns each mesh face to the
-material corresponding to its dominant body region (majority vote of vertex
-assignments from the bone mapper).
+Sets up an orthographic camera with auto-framing, creates per-region Emission
+materials, and assigns each mesh face to the material corresponding to its
+dominant body region (majority vote of vertex assignments from the bone mapper).
 """
 
 from __future__ import annotations
 
 import logging
 from collections import Counter
+from math import radians
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
 from mathutils import Vector  # type: ignore[import-untyped]
 
-from config import NUM_REGIONS, REGION_COLORS, RENDER_RESOLUTION, RegionId
+from config import (
+    CAMERA_CLIP_END,
+    CAMERA_CLIP_START,
+    CAMERA_DISTANCE,
+    CAMERA_PADDING,
+    CAMERA_TYPE,
+    NUM_REGIONS,
+    REGION_COLORS,
+    RENDER_RESOLUTION,
+    RegionId,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +94,102 @@ def create_region_materials() -> list[bpy.types.Material]:
 
     logger.info("Created %d segmentation materials", len(materials))
     return materials
+
+
+# ---------------------------------------------------------------------------
+# Orthographic camera setup
+# ---------------------------------------------------------------------------
+
+
+def _combined_bounding_box(
+    meshes: list[bpy.types.Object],
+) -> tuple[Vector, Vector]:
+    """Compute the world-space axis-aligned bounding box of multiple meshes.
+
+    Args:
+        meshes: List of mesh objects (must have at least one).
+
+    Returns:
+        (bbox_min, bbox_max) as mathutils.Vector.
+    """
+    all_corners: list[Vector] = []
+    for mesh_obj in meshes:
+        all_corners.extend(
+            mesh_obj.matrix_world @ Vector(corner)
+            for corner in mesh_obj.bound_box
+        )
+
+    xs = [v.x for v in all_corners]
+    ys = [v.y for v in all_corners]
+    zs = [v.z for v in all_corners]
+
+    return Vector((min(xs), min(ys), min(zs))), Vector((max(xs), max(ys), max(zs)))
+
+
+def setup_camera(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+) -> bpy.types.Object:
+    """Create an orthographic camera that auto-frames the character.
+
+    The camera faces front-on (looking along +Y), centered on the character's
+    bounding box with padding so the character fills ~80% of the frame.
+
+    Args:
+        scene: The Blender scene to add the camera to.
+        meshes: Character mesh objects to frame.
+
+    Returns:
+        The camera object (already set as the scene's active camera).
+    """
+    bbox_min, bbox_max = _combined_bounding_box(meshes)
+    bbox_center = (bbox_min + bbox_max) / 2
+
+    width = bbox_max.x - bbox_min.x
+    height = bbox_max.z - bbox_min.z
+
+    # Orthographic scale: fit the larger dimension with padding
+    ortho_scale = max(width, height) * (1.0 + 2.0 * CAMERA_PADDING)
+
+    # Create camera data block
+    cam_data = bpy.data.cameras.new(name="strata_camera")
+    cam_data.type = CAMERA_TYPE
+    cam_data.ortho_scale = ortho_scale
+    cam_data.clip_start = CAMERA_CLIP_START
+    cam_data.clip_end = CAMERA_CLIP_END
+
+    # Create camera object and link to scene
+    cam_obj = bpy.data.objects.new(name="strata_camera", object_data=cam_data)
+    scene.collection.objects.link(cam_obj)
+
+    # Position: centered on character, offset along -Y
+    cam_obj.location = (bbox_center.x, -CAMERA_DISTANCE, bbox_center.z)
+
+    # Rotation: face along +Y (camera looks down its local -Z axis,
+    # so we rotate 90° around X to point it forward)
+    cam_obj.rotation_euler = (radians(90), 0, 0)
+
+    # Set as active camera
+    scene.camera = cam_obj
+
+    # Render resolution
+    scene.render.resolution_x = RENDER_RESOLUTION
+    scene.render.resolution_y = RENDER_RESOLUTION
+    scene.render.resolution_percentage = 100
+
+    # Transparent background
+    scene.render.film_transparent = True
+
+    logger.info(
+        "Camera setup: ortho_scale=%.3f, center=(%.2f, %.2f), resolution=%dx%d",
+        ortho_scale,
+        bbox_center.x,
+        bbox_center.z,
+        RENDER_RESOLUTION,
+        RENDER_RESOLUTION,
+    )
+
+    return cam_obj
 
 
 # ---------------------------------------------------------------------------
