@@ -16,6 +16,7 @@ output/
 !data/sprites/README.md
 !data/live2d/README.md
 !data/live2d/labels/
+!data/live2d/labels/**
 !data/psd/README.md
 
 # Python
