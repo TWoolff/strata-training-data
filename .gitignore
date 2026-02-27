@@ -3,6 +3,8 @@ data/fbx/**
 data/poses/**
 data/mocap/**
 data/sprites/**
+data/live2d/**
+data/psd/**
 
 # Generated output (reproducible)
 output/
@@ -12,6 +14,9 @@ output/
 !data/poses/README.md
 !data/mocap/README.md
 !data/sprites/README.md
+!data/live2d/README.md
+!data/live2d/labels/
+!data/psd/README.md
 
 # Python
 __pycache__/
