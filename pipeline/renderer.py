@@ -26,6 +26,9 @@ from .config import (
     CAMERA_DISTANCE,
     CAMERA_PADDING,
     CAMERA_TYPE,
+    CEL_OUTLINE_THICKNESS,
+    CEL_RAMP_STOPS,
+    DEFAULT_BASE_COLOR,
     NUM_REGIONS,
     REGION_COLORS,
     RENDER_RESOLUTION,
@@ -546,3 +549,342 @@ def render_color(scene: bpy.types.Scene, output_path: Path) -> Path:
 
     logger.info("Color render saved to %s", output_path)
     return output_path
+
+
+# ---------------------------------------------------------------------------
+# Render-time style helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_base_color(
+    material: bpy.types.Material | None,
+) -> tuple[float, float, float, float]:
+    """Extract the base color from a material's Principled BSDF node.
+
+    Falls back to DEFAULT_BASE_COLOR if no Principled BSDF is found or
+    if the material is None.
+
+    Args:
+        material: A Blender material (may be None).
+
+    Returns:
+        RGBA tuple with float values in [0, 1].
+    """
+    if material is None or not material.use_nodes:
+        return DEFAULT_BASE_COLOR
+
+    for node in material.node_tree.nodes:
+        if node.type == "BSDF_PRINCIPLED":
+            color_input = node.inputs.get("Base Color")
+            if color_input is not None:
+                val = color_input.default_value
+                return (val[0], val[1], val[2], val[3])
+
+    return DEFAULT_BASE_COLOR
+
+
+def _get_image_texture_node(
+    material: bpy.types.Material | None,
+) -> bpy.types.ShaderNodeTexImage | None:
+    """Find the first Image Texture node connected to a Principled BSDF Base Color.
+
+    Args:
+        material: A Blender material (may be None).
+
+    Returns:
+        The Image Texture node, or None if not found.
+    """
+    if material is None or not material.use_nodes:
+        return None
+
+    for node in material.node_tree.nodes:
+        if node.type == "BSDF_PRINCIPLED":
+            color_input = node.inputs.get("Base Color")
+            if color_input is not None and color_input.is_linked:
+                linked_node = color_input.links[0].from_node
+                if linked_node.type == "TEX_IMAGE" and linked_node.image:
+                    return linked_node
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Render-time style application
+# ---------------------------------------------------------------------------
+
+
+def _wire_color_source(
+    nodes: bpy.types.NodeTree,
+    links: bpy.types.NodeLinks,
+    target_input: bpy.types.NodeSocketColor,
+    tex_node: bpy.types.ShaderNodeTexImage | None,
+    base_color: tuple[float, float, float, float],
+    tex_location: tuple[int, int] = (-300, 0),
+) -> None:
+    """Wire a texture or solid color into a shader input.
+
+    If the original material had an image texture connected to its
+    Principled BSDF, creates a new Image Texture node referencing the
+    same image. Otherwise sets the input's default value to base_color.
+
+    Args:
+        nodes: The node tree's node collection.
+        links: The node tree's link collection.
+        target_input: The shader input socket to connect to.
+        tex_node: Original Image Texture node (or None).
+        base_color: Fallback RGBA color.
+        tex_location: Node position for the texture node.
+    """
+    if tex_node is not None and tex_node.image:
+        img_tex = nodes.new(type="ShaderNodeTexImage")
+        img_tex.image = tex_node.image
+        img_tex.location = tex_location
+        links.new(img_tex.outputs["Color"], target_input)
+    else:
+        target_input.default_value = base_color
+
+
+def apply_flat_style(meshes: list[bpy.types.Object]) -> None:
+    """Apply flat shading style: Diffuse BSDF with no specular, flat face shading.
+
+    Overrides each material slot with a Diffuse BSDF using the original
+    material's base color. Sets mesh shading to flat (no smooth normals).
+
+    Args:
+        meshes: Character mesh objects whose materials to override.
+    """
+    for mesh_obj in meshes:
+        mesh_data = mesh_obj.data
+
+        # Set flat shading on all faces
+        for polygon in mesh_data.polygons:
+            polygon.use_smooth = False
+
+        for slot in mesh_obj.material_slots:
+            original_mat = slot.material
+            base_color = _extract_base_color(original_mat)
+            tex_node = _get_image_texture_node(original_mat)
+
+            mat = bpy.data.materials.new(name=f"strata_flat_{slot.name}")
+            mat.use_nodes = True
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+            nodes.clear()
+
+            output = nodes.new(type="ShaderNodeOutputMaterial")
+            output.location = (400, 0)
+
+            diffuse = nodes.new(type="ShaderNodeBsdfDiffuse")
+            diffuse.location = (0, 0)
+
+            _wire_color_source(nodes, links, diffuse.inputs["Color"], tex_node, base_color)
+
+            diffuse.inputs["Roughness"].default_value = 1.0
+            links.new(diffuse.outputs["BSDF"], output.inputs["Surface"])
+
+            slot.material = mat
+
+    logger.info("Applied flat style to %d meshes", len(meshes))
+
+
+def apply_cel_style(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+) -> None:
+    """Apply cel/toon shading: quantized color ramp with Freestyle outlines.
+
+    Builds a node tree per material: Diffuse BSDF -> Shader to RGB ->
+    ColorRamp (constant interpolation, 3 stops) -> Material Output.
+    Enables Freestyle line rendering for black outlines.
+
+    Args:
+        scene: The Blender scene (for Freestyle configuration).
+        meshes: Character mesh objects whose materials to override.
+    """
+    # Enable Freestyle outlines
+    scene.render.use_freestyle = True
+    view_layer = scene.view_layers[0]
+    view_layer.use_freestyle = True
+
+    # Configure Freestyle line set
+    if view_layer.freestyle_settings.linesets:
+        lineset = view_layer.freestyle_settings.linesets[0]
+    else:
+        lineset = view_layer.freestyle_settings.linesets.new("outline")
+
+    lineset.linestyle.thickness = CEL_OUTLINE_THICKNESS
+    lineset.linestyle.color = (0.0, 0.0, 0.0)  # black outlines
+
+    for mesh_obj in meshes:
+        for slot in mesh_obj.material_slots:
+            original_mat = slot.material
+            base_color = _extract_base_color(original_mat)
+            tex_node = _get_image_texture_node(original_mat)
+
+            mat = bpy.data.materials.new(name=f"strata_cel_{slot.name}")
+            mat.use_nodes = True
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+            nodes.clear()
+
+            output = nodes.new(type="ShaderNodeOutputMaterial")
+            output.location = (900, 0)
+
+            # Diffuse BSDF captures lighting response
+            diffuse = nodes.new(type="ShaderNodeBsdfDiffuse")
+            diffuse.location = (0, 0)
+            diffuse.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+
+            # Shader to RGB (EEVEE only) — converts lighting to color data
+            shader_to_rgb = nodes.new(type="ShaderNodeShaderToRGB")
+            shader_to_rgb.location = (200, 0)
+            links.new(diffuse.outputs["BSDF"], shader_to_rgb.inputs["Shader"])
+
+            # ColorRamp quantizes the lighting into hard toon steps
+            color_ramp = nodes.new(type="ShaderNodeValToRGB")
+            color_ramp.location = (400, 0)
+            color_ramp.color_ramp.interpolation = "CONSTANT"
+
+            ramp = color_ramp.color_ramp
+            while len(ramp.elements) > len(CEL_RAMP_STOPS):
+                ramp.elements.remove(ramp.elements[-1])
+            while len(ramp.elements) < len(CEL_RAMP_STOPS):
+                ramp.elements.new(0.5)
+
+            for i, (position, brightness) in enumerate(CEL_RAMP_STOPS):
+                ramp.elements[i].position = position
+                ramp.elements[i].color = (brightness, brightness, brightness, 1.0)
+
+            links.new(shader_to_rgb.outputs["Color"], color_ramp.inputs["Fac"])
+
+            # MixRGB (Multiply) — toon shading * base color
+            mix_rgb = nodes.new(type="ShaderNodeMixRGB")
+            mix_rgb.blend_type = "MULTIPLY"
+            mix_rgb.location = (600, 0)
+            mix_rgb.inputs["Fac"].default_value = 1.0
+
+            _wire_color_source(
+                nodes, links, mix_rgb.inputs["Color1"], tex_node, base_color, (-300, -200)
+            )
+
+            links.new(color_ramp.outputs["Color"], mix_rgb.inputs["Color2"])
+
+            # Emission shader to output the result without additional lighting
+            emission = nodes.new(type="ShaderNodeEmission")
+            emission.location = (750, 0)
+            emission.inputs["Strength"].default_value = 1.0
+            links.new(mix_rgb.outputs["Color"], emission.inputs["Color"])
+            links.new(emission.outputs["Emission"], output.inputs["Surface"])
+
+            slot.material = mat
+
+    logger.info(
+        "Applied cel style to %d meshes (outline=%.1fpx)", len(meshes), CEL_OUTLINE_THICKNESS
+    )
+
+
+def apply_unlit_style(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+) -> None:
+    """Apply unlit/color-only style: Emission shader with no lighting.
+
+    Replaces all materials with Emission BSDF using the character's
+    base color. Disables the sun lamp to ensure zero lighting influence.
+
+    Args:
+        scene: The Blender scene (to disable lights).
+        meshes: Character mesh objects whose materials to override.
+    """
+    # Disable all lights in the scene
+    for obj in scene.objects:
+        if obj.type == "LIGHT":
+            obj.hide_render = True
+
+    for mesh_obj in meshes:
+        for slot in mesh_obj.material_slots:
+            original_mat = slot.material
+            base_color = _extract_base_color(original_mat)
+            tex_node = _get_image_texture_node(original_mat)
+
+            mat = bpy.data.materials.new(name=f"strata_unlit_{slot.name}")
+            mat.use_nodes = True
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+            nodes.clear()
+
+            output = nodes.new(type="ShaderNodeOutputMaterial")
+            output.location = (400, 0)
+
+            emission = nodes.new(type="ShaderNodeEmission")
+            emission.location = (0, 0)
+            emission.inputs["Strength"].default_value = 1.0
+
+            _wire_color_source(nodes, links, emission.inputs["Color"], tex_node, base_color)
+
+            links.new(emission.outputs["Emission"], output.inputs["Surface"])
+
+            slot.material = mat
+
+    logger.info("Applied unlit style to %d meshes", len(meshes))
+
+
+def restore_style(
+    scene: bpy.types.Scene,
+    style: str,
+) -> None:
+    """Clean up scene-level state modified by a render-time style.
+
+    Removes temporary style materials from bpy.data and resets any
+    scene-level settings (e.g., Freestyle, light visibility).
+
+    Note: Material slot restoration is handled by the caller via
+    ``_restore_materials`` / ``_backup_materials`` in generate_dataset.py.
+
+    Args:
+        scene: The Blender scene.
+        style: The style name that was applied ("flat", "cel", or "unlit").
+    """
+    # Clean up temporary materials
+    prefix = f"strata_{style}_"
+    to_remove = [m for m in bpy.data.materials if m.name.startswith(prefix)]
+    for mat in to_remove:
+        bpy.data.materials.remove(mat)
+
+    if style == "cel":
+        # Disable Freestyle
+        scene.render.use_freestyle = False
+        view_layer = scene.view_layers[0]
+        view_layer.use_freestyle = False
+
+    if style == "unlit":
+        # Re-enable all lights
+        for obj in scene.objects:
+            if obj.type == "LIGHT":
+                obj.hide_render = False
+
+    logger.info("Restored scene after '%s' style", style)
+
+
+def apply_style(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+    style: str,
+) -> None:
+    """Apply a render-time art style to the character's materials.
+
+    Dispatches to the appropriate style function. For styles that are
+    not render-time (e.g., "pixel", "painterly", "sketch"), this is a no-op.
+
+    Args:
+        scene: The Blender scene.
+        meshes: Character mesh objects.
+        style: Style name ("flat", "cel", "unlit", or post-render styles).
+    """
+    if style == "flat":
+        apply_flat_style(meshes)
+    elif style == "cel":
+        apply_cel_style(scene, meshes)
+    elif style == "unlit":
+        apply_unlit_style(scene, meshes)
+    # Post-render styles (pixel, painterly, sketch) are no-ops here

@@ -30,7 +30,13 @@ import bpy  # type: ignore[import-untyped]
 from PIL import Image  # type: ignore[import-untyped]
 
 from .bone_mapper import BoneMapping, map_bones
-from .config import ENABLE_FLIP, ENABLE_SCALE, RENDER_RESOLUTION, SCALE_FACTORS
+from .config import (
+    ENABLE_FLIP,
+    ENABLE_SCALE,
+    RENDER_RESOLUTION,
+    RENDER_TIME_STYLES,
+    SCALE_FACTORS,
+)
 from .exporter import (
     ensure_output_dirs,
     save_class_map,
@@ -53,11 +59,13 @@ from .pose_applicator import (
     restore_scale,
 )
 from .renderer import (
+    apply_style,
     assign_region_materials,
     convert_rgb_to_grayscale_mask,
     create_region_materials,
     render_color,
     render_segmentation,
+    restore_style,
     setup_camera,
     setup_color_render,
     setup_segmentation_render,
@@ -534,16 +542,24 @@ def _process_single_pose(
             mapping.bone_to_region,
         )
 
-        # --- Restore original materials for color pass ---
-        _restore_materials(meshes, original_materials)
-
-        # --- Color render ---
+        # --- Color render (one pass per style) ---
         setup_color_render(scene)
         color_paths: dict[str, Path] = {}
         for style in styles:
+            # Restore original materials before each style application
+            _restore_materials(meshes, original_materials)
+
+            # Apply render-time style (no-op for post-render styles)
+            if style in RENDER_TIME_STYLES:
+                apply_style(scene, meshes, style)
+
             image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
             render_color(scene, image_out_path)
             color_paths[style] = image_out_path
+
+            # Clean up scene-level style state
+            if style in RENDER_TIME_STYLES:
+                restore_style(scene, style)
 
         # --- Re-assign segmentation materials for next variant ---
         for mesh_idx, mesh_obj in enumerate(meshes):
