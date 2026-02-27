@@ -541,6 +541,15 @@ PAINTERLY_SAT_JITTER: int = 25  # max saturation shift (0–255 scale)
 PAINTERLY_VAL_JITTER: int = 25  # max value/brightness shift (0–255 scale)
 PAINTERLY_NOISE_SIGMA: float = 0.02  # Gaussian noise σ (fraction of 255)
 
+# Sketch/lineart style parameters
+SKETCH_BLUR_KSIZE: int = 5  # Gaussian blur kernel size (must be odd)
+SKETCH_CANNY_THRESHOLD1: int = 50  # Canny lower threshold
+SKETCH_CANNY_THRESHOLD2: int = 150  # Canny upper threshold
+SKETCH_LINE_THICKNESS: int = 3  # Dilation kernel size (controls line width ~2-4px)
+SKETCH_BG_COLOR: RGB = (252, 248, 240)  # Cream background
+SKETCH_WOBBLE_RANGE: int = 1  # Max pixel displacement for hand-drawn wobble
+SKETCH_ENABLE_WOBBLE: bool = True  # Whether to apply wobble effect
+
 # Cel/toon shading parameters
 CEL_RAMP_STOPS: list[tuple[float, float]] = [
     (0.0, 0.3),  # shadow tone (position, brightness factor)
