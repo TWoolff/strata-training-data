@@ -10,6 +10,10 @@ Animation retargeting works by bone name matching. Mixamo-to-Mixamo is
 automatic. For non-Mixamo rigs, bone name prefixes are stripped to improve
 matching (reuses ``config.COMMON_PREFIXES``).
 
+Pose augmentation (§6.3):
+- **Y-axis flip**: Horizontal mirror via 2D image/mask flip + L/R label swap.
+- **Scale variation**: Uniform scale on the armature object (0.8x–1.2x).
+
 Usage::
 
     from pose_applicator import list_poses, apply_pose, reset_pose
@@ -29,9 +33,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
+import numpy as np
 from mathutils import Euler  # type: ignore[import-untyped]
+from PIL import Image
 
-from config import A_POSE_SHOULDER_ANGLE, COMMON_PREFIXES, KEYFRAMES_PER_CLIP
+from config import (
+    A_POSE_SHOULDER_ANGLE,
+    COMMON_PREFIXES,
+    FLIP_JOINT_SWAP,
+    FLIP_REGION_SWAP,
+    KEYFRAMES_PER_CLIP,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +65,39 @@ class PoseInfo:
 
     frame: int
     """Source frame number within the animation clip (0 for built-in poses)."""
+
+
+@dataclass
+class AugmentationInfo:
+    """Metadata describing augmentations applied to a pose.
+
+    Stored in output JSON so downstream consumers know what transforms
+    were applied.
+    """
+
+    flipped: bool = False
+    """Whether the pose was horizontally flipped (Y-axis mirror)."""
+
+    scale_factor: float = 1.0
+    """Uniform scale factor applied to the character (1.0 = no change)."""
+
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-compatible dict."""
+        return {"flipped": self.flipped, "scale_factor": self.scale_factor}
+
+    @property
+    def suffix(self) -> str:
+        """Filename suffix encoding the augmentation state.
+
+        Examples: ``""`` (no augmentation), ``"_flip"``, ``"_s085"``,
+        ``"_flip_s115"``.
+        """
+        parts: list[str] = []
+        if self.flipped:
+            parts.append("flip")
+        if self.scale_factor != 1.0:
+            parts.append(f"s{self.scale_factor:.2f}".replace(".", ""))
+        return "_" + "_".join(parts) if parts else ""
 
 
 # ---------------------------------------------------------------------------
@@ -526,3 +571,149 @@ def reset_pose(armature: bpy.types.Object) -> None:
     """
     _apply_tpose(armature)
     logger.debug("Reset armature %s to rest pose", armature.name)
+
+
+# ---------------------------------------------------------------------------
+# Scale augmentation (Blender-side)
+# ---------------------------------------------------------------------------
+
+
+def apply_scale(
+    armature: bpy.types.Object,
+    meshes: list[bpy.types.Object],
+    factor: float,
+) -> None:
+    """Apply a uniform scale factor to the character.
+
+    Scales the armature and all child meshes uniformly. The caller must
+    recompute camera framing after this call.
+
+    Args:
+        armature: The character's armature object.
+        meshes: Character mesh objects.
+        factor: Uniform scale multiplier (e.g. 0.85 or 1.15).
+    """
+    armature.scale = (factor, factor, factor)
+    for mesh_obj in meshes:
+        mesh_obj.scale = (factor, factor, factor)
+
+    bpy.context.view_layer.update()
+    logger.debug("Applied scale factor %.2f to armature %s", factor, armature.name)
+
+
+def restore_scale(
+    armature: bpy.types.Object,
+    meshes: list[bpy.types.Object],
+) -> None:
+    """Restore the character to its original scale (1.0).
+
+    Args:
+        armature: The character's armature object.
+        meshes: Character mesh objects.
+    """
+    armature.scale = (1.0, 1.0, 1.0)
+    for mesh_obj in meshes:
+        mesh_obj.scale = (1.0, 1.0, 1.0)
+
+    bpy.context.view_layer.update()
+    logger.debug("Restored scale on armature %s", armature.name)
+
+
+# ---------------------------------------------------------------------------
+# Flip augmentation (2D post-render)
+# ---------------------------------------------------------------------------
+
+
+def flip_image(img: Image.Image) -> Image.Image:
+    """Horizontally flip an image (left-right mirror).
+
+    Args:
+        img: PIL Image to flip.
+
+    Returns:
+        A new horizontally flipped image.
+    """
+    return img.transpose(Image.FLIP_LEFT_RIGHT)
+
+
+def flip_mask(mask_path: Path, output_path: Path) -> Path:
+    """Horizontally flip a grayscale mask and swap left/right region IDs.
+
+    Reads the 8-bit grayscale mask, flips it horizontally, then replaces
+    each left-side region ID with its right-side counterpart and vice versa.
+
+    Args:
+        mask_path: Path to the original grayscale mask PNG.
+        output_path: Path for the flipped + swapped mask.
+
+    Returns:
+        The output path.
+    """
+    img = Image.open(mask_path).convert("L")
+    # Horizontal flip
+    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+
+    mask_array = np.array(img, dtype=np.uint8)
+
+    # Swap left/right region IDs
+    swapped = mask_array.copy()
+    for src_id, dst_id in FLIP_REGION_SWAP.items():
+        swapped[mask_array == src_id] = dst_id
+
+    out_img = Image.fromarray(swapped, mode="L")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    out_img.save(output_path, format="PNG", compress_level=9)
+
+    logger.debug("Flipped mask saved to %s", output_path)
+    return output_path
+
+
+def flip_joints(joint_data: dict, image_width: int) -> dict:
+    """Flip joint positions horizontally and swap left/right joint names.
+
+    Creates a new joint data dict with:
+    - X coordinates mirrored: ``new_x = image_width - 1 - old_x``
+    - Left/right joint names swapped (e.g. ``upper_arm_l`` ↔ ``upper_arm_r``)
+
+    Args:
+        joint_data: Original joint data dict from ``extract_joints()``.
+        image_width: Image width in pixels (for X-axis mirroring).
+
+    Returns:
+        New joint data dict with flipped positions and swapped names.
+    """
+    flipped = {
+        "joints": {},
+        "bbox": list(joint_data["bbox"]),
+        "image_size": list(joint_data["image_size"]),
+    }
+
+    # Flip bbox X coordinates
+    if flipped["bbox"] and len(flipped["bbox"]) == 4:
+        x_min, y_min, x_max, y_max = flipped["bbox"]
+        flipped["bbox"] = [
+            image_width - 1 - x_max,
+            y_min,
+            image_width - 1 - x_min,
+            y_max,
+        ]
+
+    # Flip and swap joints
+    original_joints = joint_data.get("joints", {})
+    for joint_name, joint_info in original_joints.items():
+        # Determine the target name (swap L/R)
+        target_name = FLIP_JOINT_SWAP.get(joint_name, joint_name)
+
+        pos = joint_info.get("position", [-1, -1])
+        if pos[0] >= 0:
+            flipped_x = image_width - 1 - pos[0]
+        else:
+            flipped_x = pos[0]
+
+        flipped["joints"][target_name] = {
+            "position": [flipped_x, pos[1]],
+            "confidence": joint_info.get("confidence", 0.0),
+            "visible": joint_info.get("visible", False),
+        }
+
+    return flipped

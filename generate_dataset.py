@@ -23,9 +23,10 @@ import time
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
+from PIL import Image  # type: ignore[import-untyped]
 
 from bone_mapper import map_bones
-from config import RENDER_RESOLUTION
+from config import ENABLE_FLIP, ENABLE_SCALE, RENDER_RESOLUTION, SCALE_FACTORS
 from exporter import (
     ensure_output_dirs,
     save_class_map,
@@ -34,6 +35,14 @@ from exporter import (
 )
 from importer import import_character
 from joint_extractor import extract_joints
+from pose_applicator import (
+    AugmentationInfo,
+    apply_scale,
+    flip_image,
+    flip_joints,
+    flip_mask,
+    restore_scale,
+)
 from renderer import (
     assign_region_materials,
     convert_rgb_to_grayscale_mask,
@@ -95,6 +104,24 @@ def parse_args() -> argparse.Namespace:
         default=RENDER_RESOLUTION,
         help="Render resolution in pixels (square).",
     )
+    parser.add_argument(
+        "--enable_flip",
+        action="store_true",
+        default=ENABLE_FLIP,
+        help="Enable Y-axis (horizontal) flip augmentation.",
+    )
+    parser.add_argument(
+        "--scale_factors",
+        type=str,
+        default=",".join(str(s) for s in SCALE_FACTORS),
+        help="Comma-separated scale factors for scale augmentation (e.g. '0.85,1.0,1.15').",
+    )
+    parser.add_argument(
+        "--enable_scale",
+        action="store_true",
+        default=ENABLE_SCALE,
+        help="Enable scale variation augmentation.",
+    )
 
     return parser.parse_args(script_args)
 
@@ -130,11 +157,51 @@ def _restore_materials(
 # ---------------------------------------------------------------------------
 
 
+def _build_augmentation_list(
+    enable_flip: bool,
+    enable_scale: bool,
+    scale_factors: list[float],
+) -> list[AugmentationInfo]:
+    """Build the list of augmentation variants to render per pose.
+
+    Always includes the identity (no augmentation). Optionally adds
+    flipped, scaled, and flipped+scaled variants.
+
+    Args:
+        enable_flip: Whether to generate flipped variants.
+        enable_scale: Whether to generate scaled variants.
+        scale_factors: Scale factors to apply (1.0 is identity, kept once).
+
+    Returns:
+        List of AugmentationInfo describing each variant.
+    """
+    augmentations: list[AugmentationInfo] = [AugmentationInfo()]  # identity
+
+    # Non-identity scale factors
+    extra_scales = [s for s in scale_factors if s != 1.0]
+
+    if enable_scale:
+        for sf in extra_scales:
+            augmentations.append(AugmentationInfo(scale_factor=sf))
+
+    if enable_flip:
+        augmentations.append(AugmentationInfo(flipped=True))
+        if enable_scale:
+            for sf in extra_scales:
+                augmentations.append(AugmentationInfo(flipped=True, scale_factor=sf))
+
+    return augmentations
+
+
 def process_character(
     fbx_path: Path,
     output_dir: Path,
     styles: list[str],
     resolution: int,
+    *,
+    enable_flip: bool = False,
+    enable_scale: bool = False,
+    scale_factors: list[float] | None = None,
 ) -> bool:
     """Run the full pipeline for a single character.
 
@@ -143,10 +210,16 @@ def process_character(
         output_dir: Root dataset output directory.
         styles: List of art style names to render.
         resolution: Render resolution in pixels.
+        enable_flip: Generate horizontally flipped augmentation variants.
+        enable_scale: Generate scale variation augmentation variants.
+        scale_factors: Scale factors for scale augmentation.
 
     Returns:
         True if processing succeeded, False otherwise.
     """
+    if scale_factors is None:
+        scale_factors = [1.0]
+
     t_start = time.monotonic()
     char_id = fbx_path.stem
 
@@ -185,53 +258,98 @@ def process_character(
             mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
         )
 
-    # --- Camera ---
-    print(f"[{char_id}] Setting up camera...")
-    camera = setup_camera(scene, meshes)
-
-    # Override resolution if specified
-    scene.render.resolution_x = resolution
-    scene.render.resolution_y = resolution
-
-    # --- Segmentation render (RGB → grayscale mask) ---
-    print(f"[{char_id}] Rendering segmentation mask...")
-    setup_segmentation_render(scene)
-
-    mask_out_path = output_dir / "masks" / f"{char_id}_pose_{POSE_INDEX:02d}.png"
-
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-        tmp_rgb_path = Path(tmp.name)
-
-    render_segmentation(scene, tmp_rgb_path)
-    convert_rgb_to_grayscale_mask(tmp_rgb_path, mask_out_path)
-    tmp_rgb_path.unlink(missing_ok=True)
-
-    # --- Extract joints (while seg materials are still assigned — doesn't matter,
-    # joint extraction uses bone positions not materials) ---
-    print(f"[{char_id}] Extracting joint positions...")
-    joint_data = extract_joints(
-        scene, camera, armature, meshes, mapping.bone_to_region,
+    # --- Build augmentation variants ---
+    augmentations = _build_augmentation_list(
+        enable_flip, enable_scale, scale_factors,
     )
+    print(f"[{char_id}] Augmentation variants: {len(augmentations)}")
 
-    # --- Restore original materials for color pass ---
-    _restore_materials(meshes, original_materials)
+    for aug in augmentations:
+        aug_label = aug.suffix or " (original)"
+        print(f"[{char_id}] Processing variant{aug_label}...")
 
-    # --- Color render ---
-    setup_color_render(scene)
-    for style in styles:
-        print(f"[{char_id}] Rendering color ({style})...")
-        image_out_path = (
-            output_dir / "images" / f"{char_id}_pose_{POSE_INDEX:02d}_{style}.png"
+        # --- Apply scale if needed ---
+        if aug.scale_factor != 1.0:
+            apply_scale(armature, meshes, aug.scale_factor)
+
+        # --- Camera (recompute for each scale variant) ---
+        # Remove previous camera if it exists
+        old_cam = bpy.data.objects.get("strata_camera")
+        if old_cam is not None:
+            bpy.data.objects.remove(old_cam, do_unlink=True)
+        camera = setup_camera(scene, meshes)
+
+        # Override resolution if specified
+        scene.render.resolution_x = resolution
+        scene.render.resolution_y = resolution
+
+        # Pose name suffix for file naming
+        pose_suffix = f"_pose_{POSE_INDEX:02d}{aug.suffix}"
+
+        # --- Segmentation render (RGB → grayscale mask) ---
+        setup_segmentation_render(scene)
+
+        mask_out_path = output_dir / "masks" / f"{char_id}{pose_suffix}.png"
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_rgb_path = Path(tmp.name)
+
+        render_segmentation(scene, tmp_rgb_path)
+        convert_rgb_to_grayscale_mask(tmp_rgb_path, mask_out_path)
+        tmp_rgb_path.unlink(missing_ok=True)
+
+        # --- Extract joints ---
+        joint_data = extract_joints(
+            scene, camera, armature, meshes, mapping.bone_to_region,
         )
-        render_color(scene, image_out_path)
 
-    # --- Export metadata ---
-    print(f"[{char_id}] Saving metadata...")
+        # --- Restore original materials for color pass ---
+        _restore_materials(meshes, original_materials)
 
-    # Save joints via exporter
-    save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+        # --- Color render ---
+        setup_color_render(scene)
+        color_paths: dict[str, Path] = {}
+        for style in styles:
+            image_out_path = (
+                output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
+            )
+            render_color(scene, image_out_path)
+            color_paths[style] = image_out_path
 
-    # Save source metadata
+        # --- Re-assign segmentation materials for next variant ---
+        for mesh_idx, mesh_obj in enumerate(meshes):
+            assign_region_materials(
+                mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
+            )
+
+        # --- Save metadata (with augmentation info) ---
+        joint_data["augmentation"] = aug.to_dict()
+        save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+
+        # --- Generate flip variant from the rendered outputs ---
+        if aug.flipped:
+            print(f"[{char_id}] Applying 2D flip...")
+
+            # Flip mask and swap L/R region IDs
+            flip_mask(mask_out_path, mask_out_path)
+
+            # Flip joint positions and swap L/R names
+            joint_data = flip_joints(joint_data, resolution)
+            joint_data["augmentation"] = aug.to_dict()
+            save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+
+            # Flip color images
+            for style, img_path in color_paths.items():
+                img = Image.open(img_path)
+                flipped_img = flip_image(img)
+                flipped_img.save(img_path, format="PNG")
+
+        # --- Restore scale ---
+        if aug.scale_factor != 1.0:
+            restore_scale(armature, meshes)
+
+    # --- Save source metadata (once per character) ---
+    print(f"[{char_id}] Saving source metadata...")
     has_overrides = mapping.mapping_stats.override > 0
     save_source_metadata(
         output_dir,
@@ -276,6 +394,9 @@ def main() -> None:
     output_dir: Path = args.output_dir
     styles = [s.strip() for s in args.styles.split(",")]
     resolution: int = args.resolution
+    enable_flip: bool = args.enable_flip
+    enable_scale: bool = args.enable_scale
+    scale_factors = [float(s.strip()) for s in args.scale_factors.split(",")]
 
     if not input_dir.is_dir():
         print(f"ERROR: Input directory does not exist: {input_dir}")
@@ -291,6 +412,8 @@ def main() -> None:
     print(f"Output directory: {output_dir}")
     print(f"Styles: {styles}")
     print(f"Resolution: {resolution}x{resolution}")
+    print(f"Flip augmentation: {enable_flip}")
+    print(f"Scale augmentation: {enable_scale} (factors: {scale_factors})")
     print()
 
     # Create output directories
@@ -306,7 +429,12 @@ def main() -> None:
 
     for fbx_path in fbx_files:
         try:
-            ok = process_character(fbx_path, output_dir, styles, resolution)
+            ok = process_character(
+                fbx_path, output_dir, styles, resolution,
+                enable_flip=enable_flip,
+                enable_scale=enable_scale,
+                scale_factors=scale_factors,
+            )
             if ok:
                 succeeded += 1
             else:
