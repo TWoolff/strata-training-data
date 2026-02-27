@@ -305,6 +305,42 @@ COMMON_PREFIXES: list[str] = [
 # wins. More specific patterns (e.g., "forearm") must come before general
 # ones (e.g., "arm") to avoid false matches.
 
+# ---------------------------------------------------------------------------
+# Primary bone per region (for joint extraction)
+# ---------------------------------------------------------------------------
+# When multiple bones map to the same region, the joint extractor picks the
+# bone whose name contains one of these substrings (checked in order, case-
+# insensitive). The first matching bone wins.  If none match, the first bone
+# encountered for that region is used.
+
+PRIMARY_BONE_KEYWORDS: dict[RegionId, list[str]] = {
+    1:  ["Head"],                # head (not HeadTop_End)
+    2:  ["Neck"],
+    3:  ["Spine2"],              # chest — Spine2 is upper torso
+    4:  ["Spine1"],              # spine — Spine1 is mid-torso
+    5:  ["Hips"],
+    6:  ["LeftArm", "upper_arm.L", "L_upperarm"],
+    7:  ["LeftForeArm", "forearm.L", "L_forearm"],
+    8:  ["LeftHand", "hand.L", "L_hand"],
+    9:  ["RightArm", "upper_arm.R", "R_upperarm"],
+    10: ["RightForeArm", "forearm.R", "R_forearm"],
+    11: ["RightHand", "hand.R", "R_hand"],
+    12: ["LeftUpLeg", "thigh.L", "L_thigh"],
+    13: ["LeftLeg", "shin.L", "L_calf"],
+    14: ["LeftFoot", "foot.L", "L_foot"],
+    15: ["RightUpLeg", "thigh.R", "R_thigh"],
+    16: ["RightLeg", "shin.R", "R_calf"],
+    17: ["RightFoot", "foot.R", "R_foot"],
+    18: ["LeftShoulder", "shoulder.L", "clavicle.L"],
+    19: ["RightShoulder", "shoulder.R", "clavicle.R"],
+}
+
+# Number of joint regions (body regions only, excluding background)
+NUM_JOINT_REGIONS: int = 19  # regions 1–19
+
+# Bounding box padding for joint extraction (fraction of bbox dimension)
+JOINT_BBOX_PADDING: float = 0.05
+
 SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
     # Head / neck
     (["head"],                              1),
