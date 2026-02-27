@@ -19,7 +19,7 @@ import numpy as np
 from mathutils import Vector  # type: ignore[import-untyped]
 from PIL import Image
 
-from config import (
+from .config import (
     AMBIENT_COLOR,
     CAMERA_CLIP_END,
     CAMERA_CLIP_START,

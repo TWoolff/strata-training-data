@@ -1,0 +1,5 @@
+# Runtime dependencies (installed into Blender's Python)
+# Blender 4.0+ bundles Python 3.10+ with numpy pre-installed
+Pillow>=10.0
+opencv-python>=4.8
+numpy>=1.24

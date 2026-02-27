@@ -37,7 +37,7 @@ import numpy as np
 from mathutils import Euler  # type: ignore[import-untyped]
 from PIL import Image
 
-from config import (
+from .config import (
     A_POSE_SHOULDER_ANGLE,
     COMMON_PREFIXES,
     FLIP_JOINT_SWAP,

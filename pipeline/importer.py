@@ -14,7 +14,7 @@ from pathlib import Path
 import bpy  # type: ignore[import-untyped]
 from mathutils import Vector  # type: ignore[import-untyped]
 
-from config import TARGET_CHARACTER_HEIGHT
+from .config import TARGET_CHARACTER_HEIGHT
 
 logger = logging.getLogger(__name__)
 

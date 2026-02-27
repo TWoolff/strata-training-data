@@ -15,7 +15,7 @@ import logging
 import bpy  # type: ignore[import-untyped]
 from bpy_extras.object_utils import world_to_camera_view  # type: ignore[import-untyped]
 
-from config import REGION_NAMES, WEIGHT_THRESHOLD, RegionId
+from .config import REGION_NAMES, WEIGHT_THRESHOLD, RegionId
 
 logger = logging.getLogger(__name__)
 

@@ -1,1 +1,19 @@
-__pycache__
+# Raw data (large, downloadable from source)
+data/fbx/**
+data/poses/**
+data/mocap/**
+data/sprites/**
+
+# Generated output (reproducible)
+output/
+
+# Keep README files inside ignored directories
+!data/fbx/README.md
+!data/poses/README.md
+!data/mocap/README.md
+!data/sprites/README.md
+
+# Python
+__pycache__/
+*.pyc
+.ruff_cache/

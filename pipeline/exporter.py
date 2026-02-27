@@ -25,7 +25,7 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from config import REGION_NAMES
+from .config import REGION_NAMES
 
 logger = logging.getLogger(__name__)
 

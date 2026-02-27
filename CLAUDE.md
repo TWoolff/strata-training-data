@@ -1,10 +1,10 @@
 # Strata Synthetic Data Pipeline
 
-Blender-based pipeline that generates labeled training data for Strata's AI models (semantic segmentation, joint prediction, weight prediction, drawn pose estimation). Runs independently of the Strata codebase.
+Blender-based pipeline that generates labeled training data for Strata's AI models (semantic segmentation, joint prediction, weight prediction, drawn pose estimation). Also houses animation intelligence scripts and curated metadata for animation training. Runs independently of the Strata codebase.
 
 ## What This Project Does
 
-Takes rigged 3D characters (.fbx) and produces:
+**Segmentation pipeline** — Takes rigged 3D characters (.fbx) and produces:
 - **Color images** rendered in multiple art styles (flat, cel, pixel art, painterly, sketch, unlit)
 - **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–19)
 - **Joint position JSON** (bone heads projected to 2D screen coords)
@@ -12,41 +12,75 @@ Takes rigged 3D characters (.fbx) and produces:
 
 One character × 20 poses × 6 styles = 120 training examples. Target: 300+ characters → 36,000+ images.
 
+**Animation intelligence** — Scripts and curated metadata for animation training data:
+- BVH mocap parsing, action labeling, timing extraction
+- Hand-annotated labels, breakdowns, and timing norms (tracked in Git)
+
 ## Project Structure
 
 ```
 strata-training-data/
+├── README.md
 ├── CLAUDE.md
-├── generate_dataset.py        # Main entry point, orchestrates pipeline
-├── importer.py                # Load FBX, normalize scale/position
-├── bone_mapper.py             # Map bones to Strata's 19 regions
-├── pose_applicator.py         # Apply animation keyframes
-├── renderer.py                # Render color + segmentation passes
-├── style_augmentor.py         # Post-render style transforms (pixel art, painterly, sketch)
-├── joint_extractor.py         # Project bone positions to 2D → JSON
-├── weight_extractor.py        # Extract per-vertex bone weights → JSON
-├── exporter.py                # Save images, masks, JSON metadata
-├── config.py                  # Region colors, bone mappings, defaults
-├── source_characters/         # Input .fbx files
-├── pose_library/              # Animation .fbx clips
-└── dataset/                   # Generated output
-    ├── manifest.json
-    ├── class_map.json
-    ├── splits.json
-    ├── images/                # {char}_{pose}_{style}.png (512×512)
-    ├── masks/                 # {char}_{pose}.png (shared across styles)
-    ├── joints/                # {char}_{pose}.json
-    ├── weights/               # {char}_{pose}.json
-    └── sources/               # Per-character metadata + license info
+├── requirements.txt
+├── .gitignore
+│
+├── pipeline/                          # Blender/Python segmentation pipeline
+│   ├── bone_mapper.py                 # Map bones to Strata's 19 regions
+│   ├── config.py                      # Region colors, bone mappings, defaults
+│   ├── exporter.py                    # Save images, masks, JSON metadata
+│   ├── generate_dataset.py            # Main entry point, orchestrates pipeline
+│   ├── importer.py                    # Load FBX, normalize scale/position
+│   ├── joint_extractor.py             # Project bone positions to 2D → JSON
+│   ├── pose_applicator.py             # Apply animation keyframes
+│   ├── renderer.py                    # Render color + segmentation passes
+│   └── weight_extractor.py            # Extract per-vertex bone weights → JSON
+│
+├── data/                              # ALL raw data (mostly .gitignored)
+│   ├── fbx/                           # Mixamo FBX characters
+│   ├── poses/                         # FBX pose files from Mixamo
+│   ├── mocap/                         # CMU BVH, SFU, other mocap
+│   └── sprites/                       # Downloaded sprite sheets
+│
+├── output/                            # Generated renders, masks, datasets
+│   ├── segmentation/                  # Rendered images + segmentation masks
+│   └── animation/                     # Processed mocap, extracted features
+│
+├── animation/                         # Animation intelligence scripts + tracked metadata
+│   ├── scripts/
+│   │   ├── bvh_parser.py              # Parse BVH into Strata bone format
+│   │   ├── label_actions.py           # CLI tool for tagging mocap clips by action type
+│   │   ├── extract_timing.py          # Extract frame spacing/velocity from labeled clips
+│   │   └── degrade_animation.py       # Strip principles from good animations (synthetic pairs)
+│   ├── labels/                        # ✅ Tracked — action type CSVs, quality annotations
+│   ├── breakdowns/                    # ✅ Tracked — transcribed YouTube/book analyses
+│   └── timing-norms/                  # ✅ Tracked — extracted from Williams/Thomas books
+│
+└── docs/                              # Reference documentation
+    ├── data-sources.md                # Master list of all data sources with URLs + licenses
+    └── labeling-guide.md              # How to annotate action types, quality, principles
 ```
+
+### What Gets Tracked vs. Ignored
+
+| Directory | Tracked | Why |
+|-----------|---------|-----|
+| `pipeline/` | ✅ Yes | Code — small, text, irreplaceable |
+| `animation/scripts/` | ✅ Yes | Code |
+| `animation/labels/` | ✅ Yes | Hand-annotated metadata — small CSV/JSON, irreplaceable |
+| `animation/breakdowns/` | ✅ Yes | Transcribed analyses — small JSON, irreplaceable |
+| `animation/timing-norms/` | ✅ Yes | Extracted reference data — small, irreplaceable |
+| `docs/` | ✅ Yes | Documentation |
+| `data/**` | ⛔ No | Large binaries, re-downloadable from source |
+| `output/` | ⛔ No | Generated — reproducible by running pipeline |
 
 ## Running the Pipeline
 
 ```bash
-blender --background --python generate_dataset.py -- \
-  --input_dir ./source_characters/ \
-  --pose_dir ./pose_library/ \
-  --output_dir ./dataset/ \
+blender --background --python run_pipeline.py -- \
+  --input_dir ./data/fbx/ \
+  --pose_dir ./data/poses/ \
+  --output_dir ./output/segmentation/ \
   --styles flat,cel,pixel,painterly,sketch,unlit \
   --resolution 512 \
   --poses_per_character 20
@@ -118,8 +152,10 @@ For model training (separate from generation):
 - **Sketchfab CC0/CC-BY**: ~100–200 curated characters. More variety, quality varies.
 - **Quaternius/Kenney**: ~50 CC0 low-poly game assets.
 - **Blender community**: ~30–50 various CC rigs.
+- **CMU Graphics Lab**: 2,548 mocap clips (BVH) — for animation intelligence.
+- **SFU Motion Capture**: BVH mocap data.
 
-Only use CC0, CC-BY, or CC-BY-SA licenses. Never CC-NC. Log every asset's license in `dataset/sources/`.
+Only use CC0, CC-BY, or CC-BY-SA licenses. Never CC-NC. Full source list in `docs/data-sources.md`. Log every asset's license in output metadata.
 
 ## Validation Checks
 

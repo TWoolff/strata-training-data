@@ -6,9 +6,9 @@ camera → render (seg + color) → extract joints → export.
 
 Usage::
 
-    blender --background --python generate_dataset.py -- \\
-      --input_dir ./source_characters/ \\
-      --output_dir ./dataset/ \\
+    blender --background --python run_pipeline.py -- \\
+      --input_dir ./data/fbx/ \\
+      --output_dir ./output/segmentation/ \\
       --styles flat \\
       --resolution 512
 """
@@ -25,18 +25,18 @@ from pathlib import Path
 import bpy  # type: ignore[import-untyped]
 from PIL import Image  # type: ignore[import-untyped]
 
-from bone_mapper import map_bones
-from config import ENABLE_FLIP, ENABLE_SCALE, RENDER_RESOLUTION, SCALE_FACTORS
-from exporter import (
+from .bone_mapper import map_bones
+from .config import ENABLE_FLIP, ENABLE_SCALE, RENDER_RESOLUTION, SCALE_FACTORS
+from .exporter import (
     ensure_output_dirs,
     save_class_map,
     save_joints,
     save_source_metadata,
     save_weights,
 )
-from importer import import_character
-from joint_extractor import extract_joints
-from pose_applicator import (
+from .importer import import_character
+from .joint_extractor import extract_joints
+from .pose_applicator import (
     AugmentationInfo,
     apply_scale,
     flip_image,
@@ -44,7 +44,7 @@ from pose_applicator import (
     flip_mask,
     restore_scale,
 )
-from renderer import (
+from .renderer import (
     assign_region_materials,
     convert_rgb_to_grayscale_mask,
     create_region_materials,
@@ -54,7 +54,7 @@ from renderer import (
     setup_color_render,
     setup_segmentation_render,
 )
-from weight_extractor import extract_weights
+from .weight_extractor import extract_weights
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +85,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input_dir",
         type=Path,
-        default=Path("./source_characters"),
+        default=Path("./data/fbx"),
         help="Directory containing .fbx source characters.",
     )
     parser.add_argument(
         "--output_dir",
         type=Path,
-        default=Path("./dataset"),
+        default=Path("./output/segmentation"),
         help="Root output directory for the generated dataset.",
     )
     parser.add_argument(

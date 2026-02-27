@@ -18,7 +18,7 @@ import bpy  # type: ignore[import-untyped]
 from bpy_extras.object_utils import world_to_camera_view  # type: ignore[import-untyped]
 from mathutils import Vector  # type: ignore[import-untyped]
 
-from config import (
+from .config import (
     JOINT_BBOX_PADDING,
     NUM_JOINT_REGIONS,
     PRIMARY_BONE_KEYWORDS,

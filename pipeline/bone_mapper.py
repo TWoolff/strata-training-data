@@ -19,7 +19,7 @@ from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
 
-from config import (
+from .config import (
     COMMON_BONE_ALIASES,
     COMMON_PREFIXES,
     MIXAMO_BONE_MAP,
