@@ -76,6 +76,7 @@ from .renderer import (
     setup_color_render,
     setup_segmentation_render,
 )
+from .splitter import generate_splits
 from .style_augmentor import apply_post_render_style
 from .weight_extractor import extract_weights
 
@@ -577,9 +578,9 @@ def _process_single_pose(
             seg_mask_arr,
         )
         draw_order_out_path = output_dir / "draw_order" / f"{char_id}{pose_suffix}.png"
-        Image.fromarray(
-            draw_order_data["draw_order_map"].astype(np.uint8), mode="L"
-        ).save(draw_order_out_path, format="PNG", compress_level=9)
+        Image.fromarray(draw_order_data["draw_order_map"].astype(np.uint8), mode="L").save(
+            draw_order_out_path, format="PNG", compress_level=9
+        )
 
         # --- Color render ---
         setup_color_render(scene)
@@ -624,9 +625,7 @@ def _process_single_pose(
             for style in post_styles:
                 print(f"    applying {style} post-render transform...")
                 image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-                styled_image = apply_post_render_style(
-                    base_image.copy(), style, seed=style_seed
-                )
+                styled_image = apply_post_render_style(base_image.copy(), style, seed=style_seed)
                 styled_image.save(image_out_path, format="PNG")
                 color_paths[style] = image_out_path
                 style_counts[style] += 1
@@ -656,9 +655,7 @@ def _process_single_pose(
 
             # Flip draw order map (horizontal mirror, no region ID swap needed)
             do_img = Image.open(draw_order_out_path)
-            do_img.transpose(Image.FLIP_LEFT_RIGHT).save(
-                draw_order_out_path, format="PNG"
-            )
+            do_img.transpose(Image.FLIP_LEFT_RIGHT).save(draw_order_out_path, format="PNG")
 
             for _style, img_path in color_paths.items():
                 img = Image.open(img_path)
@@ -723,7 +720,9 @@ def _generate_override_templates(fbx_files: list[Path]) -> None:
 
             if mapping.unmapped_bones:
                 result = generate_override_template(
-                    char_id, mapping.unmapped_bones, fbx_path.parent,
+                    char_id,
+                    mapping.unmapped_bones,
+                    fbx_path.parent,
                 )
                 if result is not None:
                     templates_created += 1
@@ -876,6 +875,10 @@ def main() -> None:
         poses_per_character=poses_per_character,
     )
     print(f"\nManifest written to {manifest_path}")
+
+    # --- Generate splits ---
+    splits_path = generate_splits(output_dir)
+    print(f"Splits written to {splits_path}")
 
     # Exit code: 1 if any character had failures
     any_failed = any(r.error or r.poses_failed > 0 for r in results)
