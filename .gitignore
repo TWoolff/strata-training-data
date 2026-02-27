@@ -4,6 +4,7 @@ data/poses/**
 data/mocap/**
 data/sprites/**
 data/live2d/**
+data/vroid/**
 data/psd/**
 
 # Generated output (reproducible)
@@ -17,6 +18,9 @@ output/
 !data/live2d/README.md
 !data/live2d/labels/
 !data/live2d/labels/**
+!data/vroid/README.md
+!data/vroid/labels/
+!data/vroid/labels/**
 !data/psd/README.md
 
 # Python
