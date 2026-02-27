@@ -456,6 +456,13 @@ SUN_ENERGY: float = 1.0
 AMBIENT_COLOR: tuple[float, float, float, float] = (0.7, 0.7, 0.7, 1.0)
 
 # ---------------------------------------------------------------------------
+# Pose library
+# ---------------------------------------------------------------------------
+
+KEYFRAMES_PER_CLIP: int = 4  # number of evenly-spaced keyframes to sample per animation
+A_POSE_SHOULDER_ANGLE: float = 45.0  # degrees downward rotation for A-pose upper arms
+
+# ---------------------------------------------------------------------------
 # Art styles
 # ---------------------------------------------------------------------------
 # Render-time (Blender shaders): flat, cel, unlit
