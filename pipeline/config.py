@@ -676,3 +676,57 @@ SPLIT_RATIOS: dict[str, float] = {
     "val": 0.1,
     "test": 0.1,
 }
+
+# ---------------------------------------------------------------------------
+# Reverse lookup: region name → region ID
+# ---------------------------------------------------------------------------
+
+REGION_NAME_TO_ID: dict[str, RegionId] = {name: rid for rid, name in REGION_NAMES.items()}
+
+# ---------------------------------------------------------------------------
+# Live2D fragment-to-Strata label mapping
+# ---------------------------------------------------------------------------
+# Ordered list of (regex_pattern, strata_region_name) tuples.
+# Patterns are matched case-insensitively against Live2D ArtMesh fragment names.
+# First match wins — place specific patterns before general ones.
+# Covers English, Japanese romaji, and common Live2D naming conventions.
+
+LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
+    # --- Head (facial features, hair) ---
+    (r"eye|me_[lr]|hitomi", "head"),
+    (r"brow|mayu", "head"),
+    (r"mouth|kuchi|lip", "head"),
+    (r"nose|hana", "head"),
+    (r"\bear\b|mimi", "head"),
+    (r"hair|bangs|maegami|ushirogami|kami", "head"),
+    (r"face|kao", "head"),
+    (r"head|atama", "head"),
+    # --- Neck ---
+    (r"neck|kubi", "neck"),
+    # --- Shoulders (before arms to avoid false matches) ---
+    (r"shoulder.*[lL]|kata.*[lL]|shoulder.*left|kata.*hidari", "shoulder_l"),
+    (r"shoulder.*[rR]|kata.*[rR]|shoulder.*right|kata.*migi", "shoulder_r"),
+    # --- Left arm (forearm/lower before upper to avoid substring clash) ---
+    (r"arm.*(?:lower|fore).*[lL]|arm.*(?:lower|fore).*left|forearm.*[lL]|forearm.*left", "lower_arm_l"),
+    (r"arm.*upper.*[lL]|arm.*upper.*left|ude.*ue.*[lL]|ude.*ue.*left|upper.*arm.*[lL]", "upper_arm_l"),
+    (r"hand.*[lL]|hand.*left|te_[lL]|te.*hidari", "hand_l"),
+    # --- Right arm ---
+    (r"arm.*(?:lower|fore).*[rR]|arm.*(?:lower|fore).*right|forearm.*[rR]|forearm.*right", "lower_arm_r"),
+    (r"arm.*upper.*[rR]|arm.*upper.*right|ude.*ue.*[rR]|ude.*ue.*right|upper.*arm.*[rR]", "upper_arm_r"),
+    (r"hand.*[rR]|hand.*right|te_[rR]|te.*migi", "hand_r"),
+    # --- Left leg (lower/shin before upper to avoid substring clash) ---
+    (r"leg.*(?:lower|shin).*[lL]|leg.*(?:lower|shin).*left|shin.*[lL]|shin.*left|sune.*[lL]", "lower_leg_l"),
+    (r"leg.*upper.*[lL]|leg.*upper.*left|thigh.*[lL]|thigh.*left|momo.*[lL]|momo.*left|upper.*leg.*[lL]", "upper_leg_l"),
+    (r"foot.*[lL]|foot.*left|ashi.*[lL]|ashi.*hidari", "foot_l"),
+    # --- Right leg ---
+    (r"leg.*(?:lower|shin).*[rR]|leg.*(?:lower|shin).*right|shin.*[rR]|shin.*right|sune.*[rR]", "lower_leg_r"),
+    (r"leg.*upper.*[rR]|leg.*upper.*right|thigh.*[rR]|thigh.*right|momo.*[rR]|momo.*right|upper.*leg.*[rR]", "upper_leg_r"),
+    (r"foot.*[rR]|foot.*right|ashi.*[rR]|ashi.*migi", "foot_r"),
+    # --- Hips ---
+    (r"hip|pelvis|koshi|waist", "hips"),
+    # --- Accessories → background (region 0) — before torso to avoid "armor_chest" matching "chest" ---
+    (r"cloth|dress|skirt|hat|ribbon|accessory|cape|armor|weapon|shield|bow|jewel|ornament|belt|glove|boot|scarf", "background"),
+    # --- Torso / body (general — after specific regions and accessories) ---
+    (r"body|torso|karada|chest|mune|bust", "chest"),
+    (r"spine|senaka|back(?!ground)", "spine"),
+]
