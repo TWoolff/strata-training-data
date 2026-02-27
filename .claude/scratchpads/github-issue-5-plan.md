@@ -30,3 +30,11 @@
 
 ## Open Questions
 - None — requirements are clear from the issue and PRD §5.1
+
+## Implementation Notes
+- Added `setup_camera()` to `renderer.py` (lines 128–192) — creates ortho camera, auto-frames to mesh bounding box, sets as active camera
+- Added `_combined_bounding_box()` helper in `renderer.py` — duplicates the one in `importer.py` intentionally (both are private, avoids cross-module coupling for an internal helper)
+- Added three new constants to `config.py`: `CAMERA_DISTANCE` (10.0), `CAMERA_CLIP_START` (0.1), `CAMERA_CLIP_END` (100.0)
+- Camera rotation: `radians(90)` around X axis makes Blender camera look along +Y (since cameras look down their local -Z)
+- `setup_camera()` also sets render resolution and transparent background — these overlap with `setup_segmentation_render()` but that's fine since the camera setup establishes baseline settings and the segmentation setup layers on mask-specific config (no AA, raw color, EEVEE engine)
+- Code simplifier found no changes needed — both files already follow project conventions
