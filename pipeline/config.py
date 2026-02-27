@@ -791,3 +791,58 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"body|torso|karada|chest|mune|bust", "chest"),
     (r"spine|senaka|back(?!ground)", "spine"),
 ]
+
+# ---------------------------------------------------------------------------
+# Spine bone/slot-to-Strata label mapping
+# ---------------------------------------------------------------------------
+# Ordered list of (regex_pattern, strata_region_name) tuples.
+# Patterns are matched case-insensitively against Spine bone or slot names.
+# First match wins — place specific patterns before general ones.
+# Covers common Spine naming conventions (hyphenated and underscore variants).
+
+SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
+    # --- Head (facial features, hair) ---
+    (r"eye|brow|mouth|lip|nose|jaw|hair|bangs|goggles", "head"),
+    (r"\bhead\b", "head"),
+    # --- Neck ---
+    (r"\bneck\b", "neck"),
+    # --- Shoulders (before arms to avoid false matches) ---
+    (r"shoulder.*(?:left|[-_]l\b)|(?:left|l[-_]).*shoulder|clavicle.*(?:left|[-_]l\b)", "shoulder_l"),
+    (r"shoulder.*(?:right|[-_]r\b)|(?:right|r[-_]).*shoulder|clavicle.*(?:right|[-_]r\b)", "shoulder_r"),
+    # --- Left arm (forearm/lower before upper) ---
+    (r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_l"),
+    (r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:left|[-_]l\b)|(?:left|l[-_]).*upper[-_]?arm", "upper_arm_l"),
+    (r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fist|hand|finger|thumb)", "hand_l"),
+    # --- Right arm ---
+    (r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_r"),
+    (r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:right|[-_]r\b)|(?:right|r[-_]).*upper[-_]?arm", "upper_arm_r"),
+    (r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fist|hand|finger|thumb)", "hand_r"),
+    # --- Left leg (lower/shin before upper) ---
+    (r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
+    (r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:thigh|upper[-_]?leg)", "upper_leg_l"),
+    (r"(?:front|rear)?[-_]?(?:foot|toe).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:foot|toe)", "foot_l"),
+    # --- Right leg ---
+    (r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_r"),
+    (r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:thigh|upper[-_]?leg)", "upper_leg_r"),
+    (r"(?:front|rear)?[-_]?(?:foot|toe).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:foot|toe)", "foot_r"),
+    # --- Front/rear without explicit side (Spine convention: front=left, rear=right) ---
+    (r"\bfront[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_l"),
+    (r"\bfront[-_]?upper[-_]?arm", "upper_arm_l"),
+    (r"\bfront[-_]?(?:fist|hand|finger|thumb)", "hand_l"),
+    (r"\brear[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_r"),
+    (r"\brear[-_]?upper[-_]?arm", "upper_arm_r"),
+    (r"\brear[-_]?(?:fist|hand|finger|thumb)", "hand_r"),
+    (r"\bfront[-_]?(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
+    (r"\bfront[-_]?(?:thigh|upper[-_]?leg)", "upper_leg_l"),
+    (r"\bfront[-_]?(?:foot|toe)", "foot_l"),
+    (r"\brear[-_]?(?:shin|lower[-_]?leg|calf)", "lower_leg_r"),
+    (r"\brear[-_]?(?:thigh|upper[-_]?leg)", "upper_leg_r"),
+    (r"\brear[-_]?(?:foot|toe)", "foot_r"),
+    # --- Hips / pelvis ---
+    (r"\bhip|pelvis|waist", "hips"),
+    # --- Accessories → background ---
+    (r"weapon|sword|shield|bow|staff|gun|crosshair|muzzle|hover|portal|dust|cloak|cape|armor|helmet|hat|crown", "background"),
+    # --- Torso / body (general — after specific regions) ---
+    (r"\btorso\b|\bchest\b|\bbody\b", "chest"),
+    (r"\bspine\b|\bback\b", "spine"),
+]
