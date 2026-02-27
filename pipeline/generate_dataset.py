@@ -55,7 +55,7 @@ from .exporter import (
     save_source_metadata,
     save_weights,
 )
-from .importer import clear_scene, import_character
+from .importer import ImportResult, clear_scene, import_character
 from .joint_extractor import extract_joints
 from .manifest import generate_manifest
 from .measurement_ground_truth import extract_mesh_measurements
@@ -198,6 +198,12 @@ def parse_args() -> argparse.Namespace:
             f"Available: {', '.join(ALL_CAMERA_ANGLES)}. Default: front."
         ),
     )
+    parser.add_argument(
+        "--vroid_dir",
+        type=Path,
+        default=None,
+        help="Directory containing VRM/VRoid character files (.vrm).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -331,11 +337,12 @@ def process_character(
     scale_factors: list[float] | None = None,
     only_new: bool = False,
     camera_angles: list[str] | None = None,
+    import_result: ImportResult | None = None,
 ) -> CharacterResult:
     """Run the full pipeline for a single character across all poses.
 
     Args:
-        fbx_path: Path to the .fbx file.
+        fbx_path: Path to the source file (.fbx or .vrm).
         output_dir: Root dataset output directory.
         poses: List of poses to apply.
         pose_dir: Directory containing animation FBX files.
@@ -348,6 +355,8 @@ def process_character(
         scale_factors: Scale factors for scale augmentation.
         only_new: Skip already-processed character+pose combinations.
         camera_angles: Camera angle names to render (default: front only).
+        import_result: Pre-imported character (e.g. from VRM importer).
+            If None, imports from fbx_path via import_character().
 
     Returns:
         CharacterResult with per-pose success/failure/skip counts.
@@ -358,18 +367,20 @@ def process_character(
         camera_angles = list(DEFAULT_CAMERA_ANGLES)
 
     t_start = time.monotonic()
-    char_id = fbx_path.stem
-    result = CharacterResult(char_id=char_id)
+    result_char_id = fbx_path.stem if import_result is None else import_result.character_id
+    result = CharacterResult(char_id=result_char_id)
     total_poses = len(poses)
 
-    print(f"[{char_num}/{total_chars}] Importing {char_id}...")
-    import_result = import_character(fbx_path)
     if import_result is None:
-        result.error = "import failed (no armature or mesh)"
-        result.elapsed = time.monotonic() - t_start
-        print(f"[{char_num}/{total_chars}] {char_id} FAILED — {result.error}")
-        return result
+        print(f"[{char_num}/{total_chars}] Importing {result_char_id}...")
+        import_result = import_character(fbx_path)
+        if import_result is None:
+            result.error = "import failed (no armature or mesh)"
+            result.elapsed = time.monotonic() - t_start
+            print(f"[{char_num}/{total_chars}] {result_char_id} FAILED — {result.error}")
+            return result
 
+    char_id = import_result.character_id
     armature = import_result.armature
     meshes = import_result.meshes
     scene = bpy.context.scene
@@ -766,6 +777,8 @@ def _infer_source(char_id: str) -> str:
         return "kenney"
     if lower.startswith("spine"):
         return "spine"
+    if lower.startswith("vroid"):
+        return "vroid"
     return "unknown"
 
 
@@ -857,6 +870,7 @@ def main() -> None:
     poses_per_character: int = args.poses_per_character
     do_generate_overrides: bool = args.generate_overrides
     spine_dir: Path | None = args.spine_dir
+    vroid_dir: Path | None = args.vroid_dir
 
     # Parse camera angles
     angles_raw = args.angles.strip()
@@ -986,6 +1000,70 @@ def main() -> None:
             ))
 
         print(f"Spine: {len(spine_results)} characters processed")
+
+    # --- Process VRoid/VRM characters (if --vroid_dir provided) ---
+    if vroid_dir is not None and vroid_dir.is_dir():
+        from .vroid_importer import import_vrm
+
+        vrm_files = sorted(vroid_dir.glob("*.vrm"))
+        if vrm_files:
+            if max_characters > 0:
+                vrm_files = vrm_files[:max_characters]
+
+            print()
+            print("=" * 60)
+            print(f"Processing VRoid characters from {vroid_dir}...")
+            print(f"VRoid characters: {len(vrm_files)}")
+            print("=" * 60)
+
+            for vrm_idx, vrm_path in enumerate(vrm_files):
+                vrm_num = vrm_idx + 1 + total_chars
+
+                try:
+                    vrm_import = import_vrm(vrm_path)
+                    if vrm_import is None:
+                        results.append(CharacterResult(
+                            char_id=f"vroid_{vrm_path.stem}",
+                            error="VRM import failed",
+                        ))
+                        continue
+
+                    char_result = process_character(
+                        vrm_path,
+                        output_dir,
+                        poses,
+                        pose_dir,
+                        styles,
+                        resolution,
+                        char_num=vrm_num,
+                        total_chars=total_chars + len(vrm_files),
+                        enable_flip=enable_flip,
+                        enable_scale=enable_scale,
+                        scale_factors=scale_factors,
+                        only_new=only_new,
+                        camera_angles=camera_angles,
+                        import_result=vrm_import,
+                    )
+                    results.append(char_result)
+
+                except Exception:
+                    logger.exception("Unhandled error processing VRM %s", vrm_path.name)
+                    results.append(CharacterResult(
+                        char_id=f"vroid_{vrm_path.stem}",
+                        error="unhandled exception",
+                    ))
+
+                # Scene cleanup between characters
+                try:
+                    clear_scene()
+                except Exception:
+                    logger.debug("Scene cleanup failed between VRM characters", exc_info=True)
+
+                gc.collect()
+
+            print(f"VRoid: {len(vrm_files)} characters processed")
+        else:
+            print(f"WARNING: No .vrm files found in {vroid_dir}")
 
     elapsed_total = time.monotonic() - t_total
 
