@@ -561,7 +561,8 @@ def _process_single_pose(
             # Apply post-render style transform (pixel art, painterly, sketch)
             if style in POST_RENDER_STYLES:
                 img = Image.open(image_out_path)
-                img = apply_post_render_style(img, style)
+                style_seed = hash((char_id, pose_idx)) & 0xFFFFFFFF
+                img = apply_post_render_style(img, style, seed=style_seed)
                 img.save(image_out_path, format="PNG")
 
             color_paths[style] = image_out_path

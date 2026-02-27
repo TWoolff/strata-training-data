@@ -526,6 +526,21 @@ POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
 PIXEL_ART_DOWNSCALE_SIZE: int = 64  # downscale target (64 or 128)
 PIXEL_ART_PALETTE_SIZE: int = 16  # number of colors after quantization (16–32)
 
+# Painterly style parameters
+PAINTERLY_BILATERAL_D: int = 9  # bilateral filter diameter
+PAINTERLY_SIGMA_COLOR: int = 75  # bilateral filter sigma in color space
+PAINTERLY_SIGMA_SPACE: int = 75  # bilateral filter sigma in coordinate space
+PAINTERLY_PASSES: dict[str, int] = {  # bilateral filter pass count by strength
+    "light": 1,
+    "medium": 2,
+    "heavy": 3,
+}
+PAINTERLY_DEFAULT_STRENGTH: str = "medium"
+PAINTERLY_HUE_JITTER: int = 5  # max hue shift in degrees (OpenCV hue is 0–180)
+PAINTERLY_SAT_JITTER: int = 25  # max saturation shift (0–255 scale)
+PAINTERLY_VAL_JITTER: int = 25  # max value/brightness shift (0–255 scale)
+PAINTERLY_NOISE_SIGMA: float = 0.02  # Gaussian noise σ (fraction of 255)
+
 # Cel/toon shading parameters
 CEL_RAMP_STOPS: list[tuple[float, float]] = [
     (0.0, 0.3),  # shadow tone (position, brightness factor)
