@@ -1,0 +1,65 @@
+<!--
+  Label Studio project template for Strata segmentation annotation.
+
+  Two-task workflow:
+    1. PolygonLabels — draw polygon outlines for each body region
+    2. KeyPointLabels — place a keypoint at each joint position
+
+  Region colors match pipeline/config.py REGION_COLORS exactly.
+  Region IDs 1–19 (background is inferred from unlabeled areas).
+
+  Usage:
+    1. Create a new Label Studio project
+    2. Go to Settings → Labeling Interface → Code
+    3. Paste this XML and save
+-->
+<View>
+  <Header value="Step 1: Draw polygon regions for each body part" />
+  <Image name="image" value="$image" zoom="true" zoomControl="true" rotateControl="false" />
+
+  <PolygonLabels name="segmentation" toName="image" strokeWidth="2" pointSize="small" opacity="0.5">
+    <Label value="head" background="#FF0000" />
+    <Label value="neck" background="#00FF00" />
+    <Label value="chest" background="#0000FF" />
+    <Label value="spine" background="#FFFF00" />
+    <Label value="hips" background="#FF00FF" />
+    <Label value="upper_arm_l" background="#800000" />
+    <Label value="lower_arm_l" background="#008000" />
+    <Label value="hand_l" background="#000080" />
+    <Label value="upper_arm_r" background="#808000" />
+    <Label value="lower_arm_r" background="#800080" />
+    <Label value="hand_r" background="#008080" />
+    <Label value="upper_leg_l" background="#400000" />
+    <Label value="lower_leg_l" background="#004000" />
+    <Label value="foot_l" background="#000040" />
+    <Label value="upper_leg_r" background="#404000" />
+    <Label value="lower_leg_r" background="#400040" />
+    <Label value="foot_r" background="#004040" />
+    <Label value="shoulder_l" background="#C04000" />
+    <Label value="shoulder_r" background="#0040C0" />
+  </PolygonLabels>
+
+  <Header value="Step 2: Place keypoints at joint centers" />
+
+  <KeyPointLabels name="joints" toName="image" strokeWidth="2" opacity="0.9">
+    <Label value="head" background="#FF0000" />
+    <Label value="neck" background="#00FF00" />
+    <Label value="chest" background="#0000FF" />
+    <Label value="spine" background="#FFFF00" />
+    <Label value="hips" background="#FF00FF" />
+    <Label value="upper_arm_l" background="#800000" />
+    <Label value="lower_arm_l" background="#008000" />
+    <Label value="hand_l" background="#000080" />
+    <Label value="upper_arm_r" background="#808000" />
+    <Label value="lower_arm_r" background="#800080" />
+    <Label value="hand_r" background="#008080" />
+    <Label value="upper_leg_l" background="#400000" />
+    <Label value="lower_leg_l" background="#004000" />
+    <Label value="foot_l" background="#000040" />
+    <Label value="upper_leg_r" background="#404000" />
+    <Label value="lower_leg_r" background="#400040" />
+    <Label value="foot_r" background="#004040" />
+    <Label value="shoulder_l" background="#C04000" />
+    <Label value="shoulder_r" background="#0040C0" />
+  </KeyPointLabels>
+</View>
