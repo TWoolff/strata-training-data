@@ -1,0 +1,329 @@
+"""Main entry point: orchestrate the full synthetic data pipeline.
+
+Phase 1 scope: single character, T-pose only, flat style only.
+Wires together all pipeline modules: import → bone map → materials →
+camera → render (seg + color) → extract joints → export.
+
+Usage::
+
+    blender --background --python generate_dataset.py -- \\
+      --input_dir ./source_characters/ \\
+      --output_dir ./dataset/ \\
+      --styles flat \\
+      --resolution 512
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+import bpy  # type: ignore[import-untyped]
+
+from bone_mapper import map_bones
+from config import RENDER_RESOLUTION
+from exporter import (
+    ensure_output_dirs,
+    save_class_map,
+    save_joints,
+    save_source_metadata,
+)
+from importer import import_character
+from joint_extractor import extract_joints
+from renderer import (
+    assign_region_materials,
+    convert_rgb_to_grayscale_mask,
+    create_region_materials,
+    render_color,
+    render_segmentation,
+    setup_camera,
+    setup_color_render,
+    setup_segmentation_render,
+)
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# CLI argument parsing
+# ---------------------------------------------------------------------------
+
+POSE_INDEX = 0  # Phase 1: T-pose only
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments passed after the ``--`` separator.
+
+    Blender places its own arguments before ``--`` and forwards everything
+    after it to the Python script via ``sys.argv``.
+    """
+    try:
+        separator_idx = sys.argv.index("--")
+    except ValueError:
+        # No separator — no script args (use defaults)
+        script_args: list[str] = []
+    else:
+        script_args = sys.argv[separator_idx + 1 :]
+
+    parser = argparse.ArgumentParser(
+        description="Strata synthetic data pipeline — generate labeled training data.",
+    )
+    parser.add_argument(
+        "--input_dir",
+        type=Path,
+        default=Path("./source_characters"),
+        help="Directory containing .fbx source characters.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=Path("./dataset"),
+        help="Root output directory for the generated dataset.",
+    )
+    parser.add_argument(
+        "--styles",
+        type=str,
+        default="flat",
+        help="Comma-separated art style names (Phase 1: flat only).",
+    )
+    parser.add_argument(
+        "--resolution",
+        type=int,
+        default=RENDER_RESOLUTION,
+        help="Render resolution in pixels (square).",
+    )
+
+    return parser.parse_args(script_args)
+
+
+# ---------------------------------------------------------------------------
+# Material backup / restore
+# ---------------------------------------------------------------------------
+
+
+def _backup_materials(
+    meshes: list[bpy.types.Object],
+) -> list[list[bpy.types.Material | None]]:
+    """Store each mesh's current material slot list for later restoration."""
+    return [
+        [slot.material for slot in mesh_obj.material_slots]
+        for mesh_obj in meshes
+    ]
+
+
+def _restore_materials(
+    meshes: list[bpy.types.Object],
+    backup: list[list[bpy.types.Material | None]],
+) -> None:
+    """Restore previously backed-up materials to each mesh."""
+    for mesh_obj, saved_mats in zip(meshes, backup):
+        mesh_obj.data.materials.clear()
+        for mat in saved_mats:
+            mesh_obj.data.materials.append(mat)
+
+
+# ---------------------------------------------------------------------------
+# Per-character pipeline
+# ---------------------------------------------------------------------------
+
+
+def process_character(
+    fbx_path: Path,
+    output_dir: Path,
+    styles: list[str],
+    resolution: int,
+) -> bool:
+    """Run the full pipeline for a single character.
+
+    Args:
+        fbx_path: Path to the .fbx file.
+        output_dir: Root dataset output directory.
+        styles: List of art style names to render.
+        resolution: Render resolution in pixels.
+
+    Returns:
+        True if processing succeeded, False otherwise.
+    """
+    t_start = time.monotonic()
+    char_id = fbx_path.stem
+
+    print(f"[{char_id}] Importing...")
+    result = import_character(fbx_path)
+    if result is None:
+        print(f"[{char_id}] FAILED — import returned None (no armature or mesh)")
+        return False
+
+    armature = result.armature
+    meshes = result.meshes
+    scene = bpy.context.scene
+
+    # --- Bone mapping ---
+    print(f"[{char_id}] Mapping bones...")
+    mapping = map_bones(
+        armature,
+        meshes,
+        character_id=char_id,
+        source_dir=fbx_path.parent,
+    )
+    if mapping.unmapped_bones:
+        print(
+            f"[{char_id}] WARNING: {len(mapping.unmapped_bones)} unmapped bones: "
+            f"{mapping.unmapped_bones}"
+        )
+
+    # --- Store original materials for color pass ---
+    original_materials = _backup_materials(meshes)
+
+    # --- Assign segmentation materials ---
+    print(f"[{char_id}] Assigning segmentation materials...")
+    region_materials = create_region_materials()
+    for mesh_idx, mesh_obj in enumerate(meshes):
+        assign_region_materials(
+            mesh_obj, mesh_idx, mapping.vertex_to_region, region_materials,
+        )
+
+    # --- Camera ---
+    print(f"[{char_id}] Setting up camera...")
+    camera = setup_camera(scene, meshes)
+
+    # Override resolution if specified
+    scene.render.resolution_x = resolution
+    scene.render.resolution_y = resolution
+
+    # --- Segmentation render (RGB → grayscale mask) ---
+    print(f"[{char_id}] Rendering segmentation mask...")
+    setup_segmentation_render(scene)
+
+    mask_out_path = output_dir / "masks" / f"{char_id}_pose_{POSE_INDEX:02d}.png"
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp_rgb_path = Path(tmp.name)
+
+    render_segmentation(scene, tmp_rgb_path)
+    convert_rgb_to_grayscale_mask(tmp_rgb_path, mask_out_path)
+    tmp_rgb_path.unlink(missing_ok=True)
+
+    # --- Extract joints (while seg materials are still assigned — doesn't matter,
+    # joint extraction uses bone positions not materials) ---
+    print(f"[{char_id}] Extracting joint positions...")
+    joint_data = extract_joints(
+        scene, camera, armature, meshes, mapping.bone_to_region,
+    )
+
+    # --- Restore original materials for color pass ---
+    _restore_materials(meshes, original_materials)
+
+    # --- Color render ---
+    setup_color_render(scene)
+    for style in styles:
+        print(f"[{char_id}] Rendering color ({style})...")
+        image_out_path = (
+            output_dir / "images" / f"{char_id}_pose_{POSE_INDEX:02d}_{style}.png"
+        )
+        render_color(scene, image_out_path)
+
+    # --- Export metadata ---
+    print(f"[{char_id}] Saving metadata...")
+
+    # Save joints via exporter
+    save_joints(joint_data, output_dir, char_id, POSE_INDEX)
+
+    # Save source metadata
+    has_overrides = mapping.mapping_stats.override > 0
+    save_source_metadata(
+        output_dir,
+        char_id,
+        source=_infer_source(char_id),
+        name=char_id,
+        bone_mapping="manual" if has_overrides else "auto",
+        unmapped_bones=mapping.unmapped_bones,
+    )
+
+    elapsed = time.monotonic() - t_start
+    print(f"[{char_id}] DONE in {elapsed:.1f}s")
+    return True
+
+
+def _infer_source(char_id: str) -> str:
+    """Infer the asset source from the character ID prefix."""
+    lower = char_id.lower()
+    if lower.startswith("mixamo"):
+        return "mixamo"
+    if lower.startswith("quaternius"):
+        return "quaternius"
+    if lower.startswith("kenney"):
+        return "kenney"
+    return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main() -> None:
+    """Discover FBX files, process each, and report a summary."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
+
+    args = parse_args()
+    input_dir: Path = args.input_dir
+    output_dir: Path = args.output_dir
+    styles = [s.strip() for s in args.styles.split(",")]
+    resolution: int = args.resolution
+
+    if not input_dir.is_dir():
+        print(f"ERROR: Input directory does not exist: {input_dir}")
+        sys.exit(1)
+
+    # Discover FBX files
+    fbx_files = sorted(input_dir.glob("*.fbx"))
+    if not fbx_files:
+        print(f"ERROR: No .fbx files found in {input_dir}")
+        sys.exit(1)
+
+    print(f"Found {len(fbx_files)} character(s) in {input_dir}")
+    print(f"Output directory: {output_dir}")
+    print(f"Styles: {styles}")
+    print(f"Resolution: {resolution}x{resolution}")
+    print()
+
+    # Create output directories
+    ensure_output_dirs(output_dir)
+
+    # Save class map (once, shared across all characters)
+    save_class_map(output_dir)
+
+    # Process each character
+    succeeded = 0
+    failed = 0
+    t_total = time.monotonic()
+
+    for fbx_path in fbx_files:
+        try:
+            ok = process_character(fbx_path, output_dir, styles, resolution)
+            if ok:
+                succeeded += 1
+            else:
+                failed += 1
+        except Exception:
+            logger.exception("Unhandled error processing %s", fbx_path.name)
+            failed += 1
+
+    elapsed_total = time.monotonic() - t_total
+
+    # Summary
+    print()
+    print("=" * 60)
+    print(f"Pipeline complete: {succeeded} succeeded, {failed} failed")
+    print(f"Total time: {elapsed_total:.1f}s")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
