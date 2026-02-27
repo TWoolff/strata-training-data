@@ -520,6 +520,11 @@ WEIGHT_THRESHOLD: float = 0.01  # Minimum bone weight to include (noise reductio
 
 ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit"]
 RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit"}
+POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
+
+# Pixel art style parameters
+PIXEL_ART_DOWNSCALE_SIZE: int = 64  # downscale target (64 or 128)
+PIXEL_ART_PALETTE_SIZE: int = 16  # number of colors after quantization (16–32)
 
 # Cel/toon shading parameters
 CEL_RAMP_STOPS: list[tuple[float, float]] = [
