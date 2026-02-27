@@ -177,6 +177,12 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Generate template override JSONs for characters with unmapped bones, then exit.",
     )
+    parser.add_argument(
+        "--spine_dir",
+        type=Path,
+        default=None,
+        help="Directory containing Spine project files (.spine/.json + images).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -703,6 +709,8 @@ def _infer_source(char_id: str) -> str:
         return "quaternius"
     if lower.startswith("kenney"):
         return "kenney"
+    if lower.startswith("spine"):
+        return "spine"
     return "unknown"
 
 
@@ -793,6 +801,7 @@ def main() -> None:
     max_characters: int = args.max_characters
     poses_per_character: int = args.poses_per_character
     do_generate_overrides: bool = args.generate_overrides
+    spine_dir: Path | None = args.spine_dir
 
     if not input_dir.is_dir():
         print(f"ERROR: Input directory does not exist: {input_dir}")
@@ -882,6 +891,33 @@ def main() -> None:
 
         # Force garbage collection to free memory
         gc.collect()
+
+    # --- Process Spine projects (if --spine_dir provided) ---
+    if spine_dir is not None and spine_dir.is_dir():
+        from .spine_parser import process_spine_directory
+
+        print()
+        print("=" * 60)
+        print(f"Processing Spine projects from {spine_dir}...")
+        print("=" * 60)
+
+        spine_results = process_spine_directory(
+            spine_dir,
+            output_dir,
+            resolution=resolution,
+            styles=styles,
+            only_new=only_new,
+        )
+
+        # Track Spine characters as CharacterResult entries for the summary
+        for sr in spine_results:
+            results.append(CharacterResult(
+                char_id=sr.char_id,
+                poses_succeeded=1,  # default pose
+                style_counts=Counter({s: 1 for s in styles}),
+            ))
+
+        print(f"Spine: {len(spine_results)} characters processed")
 
     elapsed_total = time.monotonic() - t_total
 
