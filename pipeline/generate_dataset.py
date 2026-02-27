@@ -50,12 +50,15 @@ from .exporter import (
     ensure_output_dirs,
     save_class_map,
     save_joints,
+    save_measurement_profiles,
+    save_measurements,
     save_source_metadata,
     save_weights,
 )
 from .importer import clear_scene, import_character
 from .joint_extractor import extract_joints
 from .manifest import generate_manifest
+from .measurement_ground_truth import extract_mesh_measurements
 from .pose_applicator import (
     AugmentationInfo,
     PoseInfo,
@@ -305,6 +308,7 @@ class CharacterResult:
     style_counts: Counter = field(default_factory=Counter)
     elapsed: float = 0.0
     error: str = ""
+    measurements: dict | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -491,6 +495,16 @@ def process_character(
         bpy.data.objects.remove(weight_camera, do_unlink=True)
     except Exception:
         logger.exception("Error extracting weights for %s", char_id)
+
+    # --- Extract measurements (T-pose, once per character) ---
+    try:
+        print(f"[{char_num}/{total_chars}] {char_id} — extracting measurements...")
+        measurement_data = extract_mesh_measurements(body_meshes, mapping.bone_to_region)
+        measurement_data["character_id"] = char_id
+        save_measurements(measurement_data, output_dir, char_id, only_new=only_new)
+        result.measurements = measurement_data
+    except Exception:
+        logger.exception("Error extracting measurements for %s", char_id)
 
     # --- Save source metadata (once per character) ---
     print(f"[{char_num}/{total_chars}] {char_id} — saving metadata...")
@@ -974,6 +988,19 @@ def main() -> None:
         print(f"Spine: {len(spine_results)} characters processed")
 
     elapsed_total = time.monotonic() - t_total
+
+    # --- Aggregate measurement profiles ---
+    measurement_profiles = {
+        r.char_id: r.measurements
+        for r in results
+        if r.measurements is not None
+    }
+    if measurement_profiles:
+        profiles_path = save_measurement_profiles(
+            measurement_profiles, output_dir, only_new=only_new,
+        )
+        if profiles_path:
+            print(f"Measurement profiles written to {profiles_path}")
 
     # --- Summary ---
     _print_summary(results, elapsed_total)
