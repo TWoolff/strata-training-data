@@ -59,44 +59,62 @@ def ensure_output_dirs(output_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def image_filename(char_id: str, pose_index: int, style: str) -> str:
+def _angle_infix(angle: str) -> str:
+    """Return the filename infix for a camera angle.
+
+    For ``"front"`` (the default single-angle case) returns an empty string
+    so that existing filenames are unchanged.  For other angles returns
+    ``"_{angle}"``.
+    """
+    if angle == "front":
+        return ""
+    return f"_{angle}"
+
+
+def image_filename(char_id: str, pose_index: int, style: str, angle: str = "front") -> str:
     """Build the canonical image filename.
 
     Args:
         char_id: Character identifier (e.g. ``"mixamo_001"``).
         pose_index: Zero-based pose number.
         style: Art style name (e.g. ``"flat"``).
+        angle: Camera angle name (e.g. ``"front"``, ``"three_quarter"``).
 
     Returns:
-        Filename such as ``"mixamo_001_pose_00_flat.png"``.
+        Filename such as ``"mixamo_001_pose_00_flat.png"`` or
+        ``"mixamo_001_pose_00_three_quarter_flat.png"``.
     """
-    return f"{char_id}_pose_{pose_index:02d}_{style}.png"
+    return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}_{style}.png"
 
 
-def mask_filename(char_id: str, pose_index: int) -> str:
+def mask_filename(char_id: str, pose_index: int, angle: str = "front") -> str:
     """Build the canonical mask filename.
 
     Args:
         char_id: Character identifier.
         pose_index: Zero-based pose number.
+        angle: Camera angle name.
 
     Returns:
-        Filename such as ``"mixamo_001_pose_00.png"``.
+        Filename such as ``"mixamo_001_pose_00.png"`` or
+        ``"mixamo_001_pose_00_three_quarter.png"``.
     """
-    return f"{char_id}_pose_{pose_index:02d}.png"
+    return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}.png"
 
 
-def joints_filename(char_id: str, pose_index: int) -> str:
+def joints_filename(char_id: str, pose_index: int, angle: str = "front") -> str:
     """Build the canonical joints filename.
 
     Args:
         char_id: Character identifier.
         pose_index: Zero-based pose number.
+        angle: Camera angle name.
 
     Returns:
-        Filename such as ``"mixamo_001_pose_00.json"``.
+        Filename such as ``"mixamo_001_pose_00.json"`` or
+        ``"mixamo_001_pose_00_three_quarter.json"``.
     """
-    return f"{char_id}_pose_{pose_index:02d}.json"
+    return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}.json"
 
 
 def weights_filename(char_id: str, pose_index: int) -> str:
@@ -112,17 +130,19 @@ def weights_filename(char_id: str, pose_index: int) -> str:
     return f"{char_id}_pose_{pose_index:02d}.json"
 
 
-def draw_order_filename(char_id: str, pose_index: int) -> str:
+def draw_order_filename(char_id: str, pose_index: int, angle: str = "front") -> str:
     """Build the canonical draw order map filename.
 
     Args:
         char_id: Character identifier.
         pose_index: Zero-based pose number.
+        angle: Camera angle name.
 
     Returns:
-        Filename such as ``"mixamo_001_pose_00.png"``.
+        Filename such as ``"mixamo_001_pose_00.png"`` or
+        ``"mixamo_001_pose_00_three_quarter.png"``.
     """
-    return f"{char_id}_pose_{pose_index:02d}.png"
+    return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}.png"
 
 
 def source_filename(char_id: str) -> str:

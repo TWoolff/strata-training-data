@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from math import radians
+from math import cos, radians, sin
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
@@ -136,15 +136,20 @@ def _combined_bounding_box(
 def setup_camera(
     scene: bpy.types.Scene,
     meshes: list[bpy.types.Object],
+    *,
+    azimuth: float = 0.0,
 ) -> bpy.types.Object:
     """Create an orthographic camera that auto-frames the character.
 
-    The camera faces front-on (looking along +Y), centered on the character's
-    bounding box with padding so the character fills ~80% of the frame.
+    The camera orbits the character's bounding-box center at ``azimuth``
+    degrees around the vertical (Z) axis, always looking toward the center.
+    At azimuth 0 the camera faces front-on (looking along +Y).
 
     Args:
         scene: The Blender scene to add the camera to.
         meshes: Character mesh objects to frame.
+        azimuth: Horizontal rotation in degrees (0 = front, 90 = side,
+            180 = back).
 
     Returns:
         The camera object (already set as the scene's active camera).
@@ -154,9 +159,14 @@ def setup_camera(
 
     width = bbox_max.x - bbox_min.x
     height = bbox_max.z - bbox_min.z
+    depth = bbox_max.y - bbox_min.y
+
+    # For non-frontal views the visible horizontal extent includes depth
+    az_rad = radians(azimuth)
+    apparent_width = abs(width * cos(az_rad)) + abs(depth * sin(az_rad))
 
     # Orthographic scale: fit the larger dimension with padding
-    ortho_scale = max(width, height) * (1.0 + 2.0 * CAMERA_PADDING)
+    ortho_scale = max(apparent_width, height) * (1.0 + 2.0 * CAMERA_PADDING)
 
     # Create camera data block
     cam_data = bpy.data.cameras.new(name="strata_camera")
@@ -169,12 +179,19 @@ def setup_camera(
     cam_obj = bpy.data.objects.new(name="strata_camera", object_data=cam_data)
     scene.collection.objects.link(cam_obj)
 
-    # Position: centered on character, offset along -Y
-    cam_obj.location = (bbox_center.x, -CAMERA_DISTANCE, bbox_center.z)
+    # Position: orbit around the character center at CAMERA_DISTANCE.
+    # At azimuth=0 the camera is at (center.x, center.y - D, center.z)
+    # looking along +Y.  Positive azimuth rotates clockwise when viewed
+    # from above (standard screen-space convention).
+    cam_x = bbox_center.x + CAMERA_DISTANCE * sin(az_rad)
+    cam_y = bbox_center.y - CAMERA_DISTANCE * cos(az_rad)
+    cam_z = bbox_center.z
+    cam_obj.location = (cam_x, cam_y, cam_z)
 
-    # Rotation: face along +Y (camera looks down its local -Z axis,
-    # so we rotate 90° around X to point it forward)
-    cam_obj.rotation_euler = (radians(90), 0, 0)
+    # Rotation: camera always faces the character center.
+    # Base rotation is 90° around X (to look along +Y).
+    # Azimuth adds a Z rotation.
+    cam_obj.rotation_euler = (radians(90), 0, az_rad)
 
     # Set as active camera
     scene.camera = cam_obj
@@ -188,7 +205,8 @@ def setup_camera(
     scene.render.film_transparent = True
 
     logger.info(
-        "Camera setup: ortho_scale=%.3f, center=(%.2f, %.2f), resolution=%dx%d",
+        "Camera setup: azimuth=%.0f°, ortho_scale=%.3f, center=(%.2f, %.2f), resolution=%dx%d",
+        azimuth,
         ortho_scale,
         bbox_center.x,
         bbox_center.z,
