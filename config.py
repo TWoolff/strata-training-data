@@ -409,6 +409,9 @@ TARGET_CHARACTER_HEIGHT: float = 2.0  # Blender units (bounding box height)
 RENDER_RESOLUTION: int = 512
 CAMERA_TYPE: str = "ORTHO"
 CAMERA_PADDING: float = 0.1
+CAMERA_DISTANCE: float = 10.0  # distance along -Y axis (avoids near-plane clipping)
+CAMERA_CLIP_START: float = 0.1
+CAMERA_CLIP_END: float = 100.0
 BACKGROUND_TRANSPARENT: bool = True
 
 # ---------------------------------------------------------------------------
