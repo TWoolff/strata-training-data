@@ -33,6 +33,7 @@ from .bone_mapper import BoneMapping, map_bones
 from .config import (
     ENABLE_FLIP,
     ENABLE_SCALE,
+    POST_RENDER_STYLES,
     RENDER_RESOLUTION,
     RENDER_TIME_STYLES,
     SCALE_FACTORS,
@@ -70,6 +71,7 @@ from .renderer import (
     setup_color_render,
     setup_segmentation_render,
 )
+from .style_augmentor import apply_post_render_style
 from .weight_extractor import extract_weights
 
 logger = logging.getLogger(__name__)
@@ -555,6 +557,13 @@ def _process_single_pose(
 
             image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
             render_color(scene, image_out_path)
+
+            # Apply post-render style transform (pixel art, painterly, sketch)
+            if style in POST_RENDER_STYLES:
+                img = Image.open(image_out_path)
+                img = apply_post_render_style(img, style)
+                img.save(image_out_path, format="PNG")
+
             color_paths[style] = image_out_path
 
             # Clean up scene-level style state
