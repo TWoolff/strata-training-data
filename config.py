@@ -463,6 +463,50 @@ KEYFRAMES_PER_CLIP: int = 4  # number of evenly-spaced keyframes to sample per a
 A_POSE_SHOULDER_ANGLE: float = 45.0  # degrees downward rotation for A-pose upper arms
 
 # ---------------------------------------------------------------------------
+# Pose augmentation
+# ---------------------------------------------------------------------------
+
+ENABLE_FLIP: bool = False  # Y-axis (horizontal) flip augmentation
+ENABLE_SCALE: bool = False  # uniform scale variation augmentation
+SCALE_FACTORS: list[float] = [0.85, 1.0, 1.15]  # scale factors to apply
+
+# Left↔right region ID swap pairs for flip augmentation
+FLIP_REGION_SWAP: dict[RegionId, RegionId] = {
+    6: 9,     # upper_arm_l ↔ upper_arm_r
+    7: 10,    # lower_arm_l ↔ lower_arm_r
+    8: 11,    # hand_l ↔ hand_r
+    9: 6,
+    10: 7,
+    11: 8,
+    12: 15,   # upper_leg_l ↔ upper_leg_r
+    13: 16,   # lower_leg_l ↔ lower_leg_r
+    14: 17,   # foot_l ↔ foot_r
+    15: 12,
+    16: 13,
+    17: 14,
+    18: 19,   # shoulder_l ↔ shoulder_r
+    19: 18,
+}
+
+# Left↔right joint name swap pairs for flip augmentation
+FLIP_JOINT_SWAP: dict[str, str] = {
+    "upper_arm_l": "upper_arm_r",
+    "lower_arm_l": "lower_arm_r",
+    "hand_l": "hand_r",
+    "upper_arm_r": "upper_arm_l",
+    "lower_arm_r": "lower_arm_l",
+    "hand_r": "hand_l",
+    "upper_leg_l": "upper_leg_r",
+    "lower_leg_l": "lower_leg_r",
+    "foot_l": "foot_r",
+    "upper_leg_r": "upper_leg_l",
+    "lower_leg_r": "lower_leg_l",
+    "foot_r": "foot_l",
+    "shoulder_l": "shoulder_r",
+    "shoulder_r": "shoulder_l",
+}
+
+# ---------------------------------------------------------------------------
 # Art styles
 # ---------------------------------------------------------------------------
 # Render-time (Blender shaders): flat, cel, unlit
