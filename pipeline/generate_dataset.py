@@ -35,6 +35,9 @@ from PIL import Image  # type: ignore[import-untyped]
 from .accessory_detector import detect_accessories, hide_accessories
 from .bone_mapper import BoneMapping, generate_override_template, map_bones
 from .config import (
+    ALL_CAMERA_ANGLES,
+    CAMERA_ANGLES,
+    DEFAULT_CAMERA_ANGLES,
     ENABLE_FLIP,
     ENABLE_SCALE,
     POST_RENDER_BASE_STYLE,
@@ -183,6 +186,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Directory containing Spine project files (.spine/.json + images).",
     )
+    parser.add_argument(
+        "--angles",
+        type=str,
+        default=",".join(DEFAULT_CAMERA_ANGLES),
+        help=(
+            "Comma-separated camera angle names or 'all'. "
+            f"Available: {', '.join(ALL_CAMERA_ANGLES)}. Default: front."
+        ),
+    )
 
     return parser.parse_args(script_args)
 
@@ -314,6 +326,7 @@ def process_character(
     enable_scale: bool = False,
     scale_factors: list[float] | None = None,
     only_new: bool = False,
+    camera_angles: list[str] | None = None,
 ) -> CharacterResult:
     """Run the full pipeline for a single character across all poses.
 
@@ -330,12 +343,15 @@ def process_character(
         enable_scale: Generate scale variation augmentation variants.
         scale_factors: Scale factors for scale augmentation.
         only_new: Skip already-processed character+pose combinations.
+        camera_angles: Camera angle names to render (default: front only).
 
     Returns:
         CharacterResult with per-pose success/failure/skip counts.
     """
     if scale_factors is None:
         scale_factors = [1.0]
+    if camera_angles is None:
+        camera_angles = list(DEFAULT_CAMERA_ANGLES)
 
     t_start = time.monotonic()
     char_id = fbx_path.stem
@@ -426,6 +442,7 @@ def process_character(
                 char_id=char_id,
                 styles=styles,
                 resolution=resolution,
+                camera_angles=camera_angles,
             )
             result.poses_succeeded += 1
             result.style_counts += pose_style_counts
@@ -516,8 +533,9 @@ def _process_single_pose(
     char_id: str,
     styles: list[str],
     resolution: int,
+    camera_angles: list[str] | None = None,
 ) -> Counter:
-    """Process a single pose for a character (all augmentation variants).
+    """Process a single pose for a character (all augmentation and angle variants).
 
     Args:
         scene: The Blender scene.
@@ -534,10 +552,14 @@ def _process_single_pose(
         char_id: Character identifier.
         styles: Art style names.
         resolution: Render resolution.
+        camera_angles: Camera angle names to render.
 
     Returns:
         Counter of style images produced (style_name → count).
     """
+    if camera_angles is None:
+        camera_angles = list(DEFAULT_CAMERA_ANGLES)
+
     style_counts: Counter = Counter()
 
     # Apply the pose (handles built-in T-pose/A-pose and animation FBX poses)
@@ -562,133 +584,152 @@ def _process_single_pose(
         if aug.scale_factor != 1.0:
             apply_scale(armature, meshes, aug.scale_factor)
 
-        # --- Camera (recompute for each scale/pose variant) ---
-        old_cam = bpy.data.objects.get("strata_camera")
-        if old_cam is not None:
-            bpy.data.objects.remove(old_cam, do_unlink=True)
-        camera = setup_camera(scene, meshes)
+        # --- Camera angle loop ---
+        for angle_name in camera_angles:
+            angle_cfg = CAMERA_ANGLES[angle_name]
+            azimuth = float(angle_cfg["azimuth"])
 
-        scene.render.resolution_x = resolution
-        scene.render.resolution_y = resolution
+            # --- Camera (recompute for each scale/pose/angle variant) ---
+            old_cam = bpy.data.objects.get("strata_camera")
+            if old_cam is not None:
+                bpy.data.objects.remove(old_cam, do_unlink=True)
+            camera = setup_camera(scene, meshes, azimuth=azimuth)
 
-        # Pose name suffix for file naming
-        pose_suffix = f"_pose_{pose_idx:02d}{aug.suffix}"
+            scene.render.resolution_x = resolution
+            scene.render.resolution_y = resolution
 
-        # --- Segmentation render (RGB → grayscale mask) ---
-        setup_segmentation_render(scene)
+            # File naming: angle infix is empty for "front" (backward compat)
+            angle_infix = "" if angle_name == "front" else f"_{angle_name}"
+            pose_suffix = f"_pose_{pose_idx:02d}{aug.suffix}{angle_infix}"
 
-        mask_out_path = output_dir / "masks" / f"{char_id}{pose_suffix}.png"
+            # --- Segmentation render (RGB → grayscale mask) ---
+            setup_segmentation_render(scene)
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            tmp_rgb_path = Path(tmp.name)
+            mask_out_path = output_dir / "masks" / f"{char_id}{pose_suffix}.png"
 
-        render_segmentation(scene, tmp_rgb_path)
-        convert_rgb_to_grayscale_mask(tmp_rgb_path, mask_out_path)
-        tmp_rgb_path.unlink(missing_ok=True)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp_rgb_path = Path(tmp.name)
 
-        # --- Extract joints ---
-        joint_data = extract_joints(
-            scene,
-            camera,
-            armature,
-            meshes,
-            mapping.bone_to_region,
-        )
+            render_segmentation(scene, tmp_rgb_path)
+            convert_rgb_to_grayscale_mask(tmp_rgb_path, mask_out_path)
+            tmp_rgb_path.unlink(missing_ok=True)
 
-        # --- Extract draw order (per-pose, not per-style) ---
-        seg_mask_arr = np.array(Image.open(mask_out_path).convert("L"))
-        draw_order_data = extract_draw_order(
-            scene,
-            camera,
-            armature,
-            meshes,
-            mapping.bone_to_region,
-            seg_mask_arr,
-        )
-        draw_order_out_path = output_dir / "draw_order" / f"{char_id}{pose_suffix}.png"
-        Image.fromarray(draw_order_data["draw_order_map"].astype(np.uint8), mode="L").save(
-            draw_order_out_path, format="PNG", compress_level=9
-        )
+            # --- Extract joints ---
+            joint_data = extract_joints(
+                scene,
+                camera,
+                armature,
+                meshes,
+                mapping.bone_to_region,
+            )
 
-        # --- Color render ---
-        setup_color_render(scene)
-        color_paths: dict[str, Path] = {}
-        style_seed = hash((char_id, pose_idx)) & 0xFFFFFFFF
+            # --- Extract draw order (per-pose per-angle) ---
+            seg_mask_arr = np.array(Image.open(mask_out_path).convert("L"))
+            draw_order_data = extract_draw_order(
+                scene,
+                camera,
+                armature,
+                meshes,
+                mapping.bone_to_region,
+                seg_mask_arr,
+            )
+            draw_order_out_path = output_dir / "draw_order" / f"{char_id}{pose_suffix}.png"
+            Image.fromarray(draw_order_data["draw_order_map"].astype(np.uint8), mode="L").save(
+                draw_order_out_path, format="PNG", compress_level=9
+            )
 
-        # --- Render-time styles (flat, cel, unlit): each needs its own Blender render ---
-        base_image: Image.Image | None = None
-        for style in render_styles:
-            print(f"    rendering {style}...")
-            _restore_materials(meshes, original_materials)
-            apply_style(scene, meshes, style)
+            # --- Color render ---
+            setup_color_render(scene)
+            color_paths: dict[str, Path] = {}
+            style_seed = hash((char_id, pose_idx, angle_name)) & 0xFFFFFFFF
 
-            image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-            render_color(scene, image_out_path)
-            color_paths[style] = image_out_path
-            style_counts[style] += 1
-
-            # Cache the flat render as the base for post-render styles
-            if style == POST_RENDER_BASE_STYLE and post_styles:
-                base_image = Image.open(image_out_path).copy()
-
-            restore_style(scene, style)
-
-        # --- Post-render styles: render flat base once, apply Python transforms ---
-        if post_styles:
-            # If flat wasn't in the requested render styles, render it now as a
-            # temporary base image for the post-render transforms
-            if base_image is None:
-                print(f"    rendering {POST_RENDER_BASE_STYLE} (base for post-render)...")
+            # --- Render-time styles (flat, cel, unlit) ---
+            base_image: Image.Image | None = None
+            for style in render_styles:
+                print(f"    rendering {style} ({angle_name})...")
                 _restore_materials(meshes, original_materials)
-                apply_style(scene, meshes, POST_RENDER_BASE_STYLE)
+                apply_style(scene, meshes, style)
 
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                    tmp_base_path = Path(tmp.name)
-                render_color(scene, tmp_base_path)
-                base_image = Image.open(tmp_base_path).copy()
-                tmp_base_path.unlink(missing_ok=True)
-
-                restore_style(scene, POST_RENDER_BASE_STYLE)
-
-            for style in post_styles:
-                print(f"    applying {style} post-render transform...")
-                image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-                styled_image = apply_post_render_style(base_image.copy(), style, seed=style_seed)
-                styled_image.save(image_out_path, format="PNG")
+                image_out_path = (
+                    output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
+                )
+                render_color(scene, image_out_path)
                 color_paths[style] = image_out_path
                 style_counts[style] += 1
 
-        # --- Re-assign segmentation materials for next variant ---
-        for mesh_idx, mesh_obj in enumerate(meshes):
-            assign_region_materials(
-                mesh_obj,
-                mesh_idx,
-                mapping.vertex_to_region,
-                region_materials,
-            )
+                # Cache the flat render as the base for post-render styles
+                if style == POST_RENDER_BASE_STYLE and post_styles:
+                    base_image = Image.open(image_out_path).copy()
 
-        # --- Save metadata (with augmentation info) ---
-        joint_data["augmentation"] = aug.to_dict()
-        joint_data["pose_name"] = pose.name
-        joint_data["pose_source"] = pose.source
-        joint_data["pose_frame"] = pose.frame
-        save_joints(joint_data, output_dir, char_id, pose_idx)
+                restore_style(scene, style)
 
-        # --- Generate flip variant from the rendered outputs ---
-        if aug.flipped:
-            flip_mask(mask_out_path, mask_out_path)
-            joint_data = flip_joints(joint_data, resolution)
+            # --- Post-render styles ---
+            if post_styles:
+                if base_image is None:
+                    print(
+                        f"    rendering {POST_RENDER_BASE_STYLE} "
+                        f"(base for post-render, {angle_name})..."
+                    )
+                    _restore_materials(meshes, original_materials)
+                    apply_style(scene, meshes, POST_RENDER_BASE_STYLE)
+
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp_base_path = Path(tmp.name)
+                    render_color(scene, tmp_base_path)
+                    base_image = Image.open(tmp_base_path).copy()
+                    tmp_base_path.unlink(missing_ok=True)
+
+                    restore_style(scene, POST_RENDER_BASE_STYLE)
+
+                for style in post_styles:
+                    print(f"    applying {style} post-render transform ({angle_name})...")
+                    image_out_path = (
+                        output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
+                    )
+                    styled_image = apply_post_render_style(
+                        base_image.copy(), style, seed=style_seed
+                    )
+                    styled_image.save(image_out_path, format="PNG")
+                    color_paths[style] = image_out_path
+                    style_counts[style] += 1
+
+            # --- Re-assign segmentation materials for next angle ---
+            for mesh_idx, mesh_obj in enumerate(meshes):
+                assign_region_materials(
+                    mesh_obj,
+                    mesh_idx,
+                    mapping.vertex_to_region,
+                    region_materials,
+                )
+
+            # --- Save metadata (with augmentation and camera angle info) ---
             joint_data["augmentation"] = aug.to_dict()
+            joint_data["pose_name"] = pose.name
+            joint_data["pose_source"] = pose.source
+            joint_data["pose_frame"] = pose.frame
+            joint_data["camera_angle"] = angle_name
+            joint_data["camera_azimuth"] = azimuth
+            joint_data["character_id"] = char_id
+            joint_data["pose_id"] = pose_idx
             save_joints(joint_data, output_dir, char_id, pose_idx)
 
-            # Flip draw order map (horizontal mirror, no region ID swap needed)
-            do_img = Image.open(draw_order_out_path)
-            do_img.transpose(Image.FLIP_LEFT_RIGHT).save(draw_order_out_path, format="PNG")
+            # --- Generate flip variant from the rendered outputs ---
+            if aug.flipped:
+                flip_mask(mask_out_path, mask_out_path)
+                joint_data = flip_joints(joint_data, resolution)
+                joint_data["augmentation"] = aug.to_dict()
+                save_joints(joint_data, output_dir, char_id, pose_idx)
 
-            for _style, img_path in color_paths.items():
-                img = Image.open(img_path)
-                flipped_img = flip_image(img)
-                flipped_img.save(img_path, format="PNG")
+                # Flip draw order map (horizontal mirror)
+                do_img = Image.open(draw_order_out_path)
+                do_img.transpose(Image.FLIP_LEFT_RIGHT).save(
+                    draw_order_out_path, format="PNG"
+                )
+
+                for _style, img_path in color_paths.items():
+                    img = Image.open(img_path)
+                    flipped_img = flip_image(img)
+                    flipped_img.save(img_path, format="PNG")
 
         # --- Restore scale ---
         if aug.scale_factor != 1.0:
@@ -803,6 +844,17 @@ def main() -> None:
     do_generate_overrides: bool = args.generate_overrides
     spine_dir: Path | None = args.spine_dir
 
+    # Parse camera angles
+    angles_raw = args.angles.strip()
+    if angles_raw.lower() == "all":
+        camera_angles = list(ALL_CAMERA_ANGLES)
+    else:
+        camera_angles = [a.strip() for a in angles_raw.split(",")]
+        for a in camera_angles:
+            if a not in CAMERA_ANGLES:
+                print(f"ERROR: Unknown camera angle '{a}'. Available: {ALL_CAMERA_ANGLES}")
+                sys.exit(1)
+
     if not input_dir.is_dir():
         print(f"ERROR: Input directory does not exist: {input_dir}")
         sys.exit(1)
@@ -838,6 +890,7 @@ def main() -> None:
     print(f"Characters:  {total_chars} (from {input_dir})")
     print(f"Poses:       {total_poses} (from {pose_dir})")
     print(f"Styles:      {styles}")
+    print(f"Angles:      {camera_angles}")
     print(f"Resolution:  {resolution}x{resolution}")
     print(f"Flip:        {enable_flip}")
     print(f"Scale:       {enable_scale} (factors: {scale_factors})")
@@ -873,6 +926,7 @@ def main() -> None:
                 enable_scale=enable_scale,
                 scale_factors=scale_factors,
                 only_new=only_new,
+                camera_angles=camera_angles,
             )
         except Exception:
             logger.exception("Unhandled error processing %s", fbx_path.name)

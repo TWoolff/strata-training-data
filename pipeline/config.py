@@ -597,10 +597,30 @@ TARGET_CHARACTER_HEIGHT: float = 2.0  # Blender units (bounding box height)
 RENDER_RESOLUTION: int = 512
 CAMERA_TYPE: str = "ORTHO"
 CAMERA_PADDING: float = 0.1
-CAMERA_DISTANCE: float = 10.0  # distance along -Y axis (avoids near-plane clipping)
+CAMERA_DISTANCE: float = 10.0  # distance from character center (avoids near-plane clipping)
 CAMERA_CLIP_START: float = 0.1
 CAMERA_CLIP_END: float = 100.0
 BACKGROUND_TRANSPARENT: bool = True
+
+# ---------------------------------------------------------------------------
+# Multi-angle camera positions
+# ---------------------------------------------------------------------------
+# Azimuth = rotation around the vertical (Z) axis in degrees.
+# 0° = front, 90° = side (left), 180° = back.
+# Elevation is always 0 (eye-level).
+
+CameraAngle = dict[str, int]
+
+CAMERA_ANGLES: dict[str, CameraAngle] = {
+    "front": {"azimuth": 0, "elevation": 0},
+    "three_quarter": {"azimuth": 45, "elevation": 0},
+    "side": {"azimuth": 90, "elevation": 0},
+    "three_quarter_back": {"azimuth": 135, "elevation": 0},
+    "back": {"azimuth": 180, "elevation": 0},
+}
+
+DEFAULT_CAMERA_ANGLES: list[str] = ["front"]
+ALL_CAMERA_ANGLES: list[str] = list(CAMERA_ANGLES.keys())
 
 # Lighting (color render only — segmentation uses Emission materials that ignore lighting)
 SUN_POSITION: tuple[float, float, float] = (0.0, -5.0, 10.0)
