@@ -1,8 +1,10 @@
-"""Camera setup, segmentation material assignment, and render-pass configuration.
+"""Camera setup, render passes, and segmentation material assignment.
 
-Sets up an orthographic camera with auto-framing, creates per-region Emission
-materials, and assigns each mesh face to the material corresponding to its
-dominant body region (majority vote of vertex assignments from the bone mapper).
+Provides:
+- Orthographic camera with auto-framing
+- Per-region Emission materials for segmentation
+- Color render pass (flat-shaded with minimal lighting)
+- Segmentation render pass (RGB → 8-bit grayscale region ID mask)
 """
 
 from __future__ import annotations
@@ -13,9 +15,12 @@ from math import radians
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
+import numpy as np
 from mathutils import Vector  # type: ignore[import-untyped]
+from PIL import Image
 
 from config import (
+    AMBIENT_COLOR,
     CAMERA_CLIP_END,
     CAMERA_CLIP_START,
     CAMERA_DISTANCE,
@@ -24,6 +29,8 @@ from config import (
     NUM_REGIONS,
     REGION_COLORS,
     RENDER_RESOLUTION,
+    SUN_ENERGY,
+    SUN_POSITION,
     RegionId,
 )
 
@@ -372,4 +379,171 @@ def render_segmentation(
     bpy.ops.render.render(write_still=True)
 
     logger.info("Segmentation mask rendered to %s", output_path)
+    return output_path
+
+
+# ---------------------------------------------------------------------------
+# RGB → grayscale mask conversion
+# ---------------------------------------------------------------------------
+
+def convert_rgb_to_grayscale_mask(rgb_path: Path, output_path: Path) -> Path:
+    """Convert an RGB segmentation render to an 8-bit grayscale region ID mask.
+
+    Each pixel's RGB value is mapped to its region ID via the REGION_COLORS
+    reverse lookup. Transparent pixels (alpha = 0) are mapped to region 0
+    (background). Pixels that don't exactly match any region color are mapped
+    to the nearest region color by Euclidean distance.
+
+    Args:
+        rgb_path: Path to the RGBA PNG rendered by ``render_segmentation``.
+        output_path: Destination path for the 8-bit grayscale PNG.
+
+    Returns:
+        The output path.
+    """
+    img = Image.open(rgb_path).convert("RGBA")
+    pixels = np.array(img)  # (H, W, 4) uint8
+
+    r, g, b, a = pixels[:, :, 0], pixels[:, :, 1], pixels[:, :, 2], pixels[:, :, 3]
+
+    # Build region color arrays for vectorized lookup
+    region_ids = sorted(REGION_COLORS.keys())
+    color_array = np.array([REGION_COLORS[rid] for rid in region_ids], dtype=np.int32)
+    id_array = np.array(region_ids, dtype=np.uint8)
+
+    # Reshape pixel RGB for broadcasting: (H, W, 1, 3) vs (1, 1, N, 3)
+    pixel_rgb = np.stack([r, g, b], axis=-1).astype(np.int32)
+    diff = pixel_rgb[:, :, np.newaxis, :] - color_array[np.newaxis, np.newaxis, :, :]
+    dist_sq = (diff ** 2).sum(axis=-1)  # (H, W, N)
+
+    # Nearest region color for each pixel
+    nearest_idx = dist_sq.argmin(axis=-1)  # (H, W)
+    mask = id_array[nearest_idx]  # (H, W) uint8
+
+    # Transparent pixels → region 0
+    mask[a == 0] = 0
+
+    out_img = Image.fromarray(mask, mode="L")
+    out_img.save(output_path, format="PNG", compress_level=9)
+
+    logger.info("Grayscale mask saved to %s (%dx%d)", output_path, *mask.shape)
+    return output_path
+
+
+# ---------------------------------------------------------------------------
+# Color render setup
+# ---------------------------------------------------------------------------
+
+
+def setup_color_render(scene: bpy.types.Scene) -> None:
+    """Configure EEVEE render settings and lighting for the color pass.
+
+    Sets up flat shading with minimal lighting: a single Sun lamp and a
+    World ambient background. Anti-aliasing is enabled (default filter size)
+    and standard color management is used.
+
+    Args:
+        scene: The Blender scene to configure.
+    """
+    # Engine
+    scene.render.engine = "BLENDER_EEVEE_NEXT"
+
+    # Resolution
+    scene.render.resolution_x = RENDER_RESOLUTION
+    scene.render.resolution_y = RENDER_RESOLUTION
+    scene.render.resolution_percentage = 100
+
+    # Transparent background
+    scene.render.film_transparent = True
+
+    # Anti-aliasing: restore default filter size (segmentation pass sets 0.0)
+    scene.render.filter_size = 1.5
+
+    # Standard color management
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.look = "None"
+
+    # Output format: PNG with RGBA
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.render.image_settings.color_depth = "8"
+    scene.render.image_settings.compression = 15
+
+    # Disable post-processing
+    scene.render.use_compositing = False
+    scene.render.use_sequencer = False
+
+    # Disable ambient occlusion and bloom
+    scene.eevee.use_gtao = False
+    scene.eevee.use_bloom = False
+
+    # --- Lighting ---
+
+    # Sun lamp
+    sun_data = bpy.data.lights.get("strata_sun")
+    if sun_data is None:
+        sun_data = bpy.data.lights.new(name="strata_sun", type="SUN")
+    sun_data.energy = SUN_ENERGY
+
+    sun_obj = bpy.data.objects.get("strata_sun")
+    if sun_obj is None:
+        sun_obj = bpy.data.objects.new(name="strata_sun", object_data=sun_data)
+        scene.collection.objects.link(sun_obj)
+    else:
+        sun_obj.data = sun_data
+
+    sun_obj.location = SUN_POSITION
+    # Point roughly downward-forward (60° tilt from horizontal)
+    sun_obj.rotation_euler = (radians(60), 0, 0)
+
+    # World ambient background
+    world = scene.world
+    if world is None:
+        world = bpy.data.worlds.new(name="strata_world")
+        scene.world = world
+
+    world.use_nodes = True
+    nodes = world.node_tree.nodes
+    links = world.node_tree.links
+    nodes.clear()
+
+    bg_node = nodes.new(type="ShaderNodeBackground")
+    bg_node.inputs["Color"].default_value = AMBIENT_COLOR
+    bg_node.inputs["Strength"].default_value = 1.0
+    bg_node.location = (0, 0)
+
+    output_node = nodes.new(type="ShaderNodeOutputWorld")
+    output_node.location = (300, 0)
+
+    links.new(bg_node.outputs["Background"], output_node.inputs["Surface"])
+
+    logger.info(
+        "Color render configured: %dx%d, EEVEE, sun energy=%.1f, ambient=(%.1f,%.1f,%.1f)",
+        RENDER_RESOLUTION,
+        RENDER_RESOLUTION,
+        SUN_ENERGY,
+        AMBIENT_COLOR[0],
+        AMBIENT_COLOR[1],
+        AMBIENT_COLOR[2],
+    )
+
+
+def render_color(scene: bpy.types.Scene, output_path: Path) -> Path:
+    """Execute the color render pass and save the result.
+
+    The scene must already have color render settings configured via
+    ``setup_color_render`` and the character's original materials active
+    (not segmentation materials).
+
+    Args:
+        scene: The Blender scene to render.
+        output_path: File path for the output PNG.
+
+    Returns:
+        The path to the rendered image.
+    """
+    scene.render.filepath = str(output_path)
+    bpy.ops.render.render(write_still=True)
+
+    logger.info("Color render saved to %s", output_path)
     return output_path

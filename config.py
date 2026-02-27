@@ -414,6 +414,11 @@ CAMERA_CLIP_START: float = 0.1
 CAMERA_CLIP_END: float = 100.0
 BACKGROUND_TRANSPARENT: bool = True
 
+# Lighting (color render only — segmentation uses Emission materials that ignore lighting)
+SUN_POSITION: tuple[float, float, float] = (0.0, -5.0, 10.0)
+SUN_ENERGY: float = 1.0
+AMBIENT_COLOR: tuple[float, float, float, float] = (0.7, 0.7, 0.7, 1.0)
+
 # ---------------------------------------------------------------------------
 # Art styles
 # ---------------------------------------------------------------------------
