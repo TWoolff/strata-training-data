@@ -49,3 +49,21 @@
 ## Open Questions
 - Should rotation order be preserved in the blueprint JSON? → Yes, include it as metadata since different BVH sources use different orders.
 - Should the blueprint include only mapped bones or all 19 Strata bones (with zeros for unmissioned)? → All 19, with zero rotations for bones not present in source.
+
+## Implementation Notes
+
+### What was implemented
+All three modules as planned, plus comprehensive test suites (43 tests total).
+
+### Design decisions during implementation
+- **`_extract_channels` consolidation:** `_extract_rotation` and `_extract_position` shared identical iteration logic. Consolidated into a shared `_extract_channels(channels, values, x_name, y_name, z_name)` helper with thin wrappers.
+- **Bone name correction:** Issue #45 used `forearm_l`/`forearm_r` in the CMU_TO_STRATA mapping, but Strata's canonical names are `lower_arm_l`/`lower_arm_r`. Implementation uses the correct Strata names.
+- **`_SILENTLY_IGNORED_SUFFIXES`:** End Sites, finger bones (Thumb, Index, Middle, Ring, Pinky), and toe bones are silently skipped rather than logged as unmapped warnings, since they're expected to have no Strata equivalent.
+- **Rotation order detection:** Reads the first joint with 3+ rotation channels and extracts the axis order (e.g., "ZXY", "YXZ"). Stored in `RetargetedAnimation.rotation_order` and included in blueprint JSON as `rotation_order` metadata.
+- **`math.hypot(*offset)`:** Used instead of manual `sqrt(x²+y²+z²)` for bone length calculation — cleaner and numerically equivalent.
+- **Blueprint JSON rounding:** Values rounded to 4 decimal places for compact output while preserving sufficient precision.
+
+### Test coverage
+- `test_bvh_to_strata.py`: 19 tests — basic retargeting, multi-spine collapse, bone mapping, rotation order detection, empty motion edge case
+- `test_proportion_normalizer.py`: 10 tests — bone length extraction, scaling, identity scale, zero-height guards
+- `test_blueprint_exporter.py`: 14 tests — blueprint structure, file export, JSON roundtrip consistency
