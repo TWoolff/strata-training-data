@@ -20,6 +20,9 @@ ignore = [
     "RUF003",  # ambiguous unicode in comments (en dashes are intentional)
 ]
 
+[lint.per-file-ignores]
+"run_*.py" = ["E402"]  # sys.path manipulation must precede local imports
+
 [lint.isort]
 known-third-party = ["bpy", "bpy_extras", "mathutils", "bmesh", "cv2", "numpy", "PIL"]
 
