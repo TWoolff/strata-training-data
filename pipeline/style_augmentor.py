@@ -6,15 +6,27 @@ color image is modified.
 
 Currently implemented:
 - Pixel art (downscale + palette reduction + upscale)
+- Painterly (bilateral filter + color jitter + noise grain)
 """
 
 from __future__ import annotations
 
 import logging
 
+import cv2
+import numpy as np
 from PIL import Image
 
 from .config import (
+    PAINTERLY_BILATERAL_D,
+    PAINTERLY_DEFAULT_STRENGTH,
+    PAINTERLY_HUE_JITTER,
+    PAINTERLY_NOISE_SIGMA,
+    PAINTERLY_PASSES,
+    PAINTERLY_SAT_JITTER,
+    PAINTERLY_SIGMA_COLOR,
+    PAINTERLY_SIGMA_SPACE,
+    PAINTERLY_VAL_JITTER,
     PIXEL_ART_DOWNSCALE_SIZE,
     PIXEL_ART_PALETTE_SIZE,
 )
@@ -75,21 +87,103 @@ def apply_pixel_art(
     return result
 
 
-def apply_post_render_style(image: Image.Image, style: str) -> Image.Image:
+def apply_painterly(
+    image: Image.Image,
+    *,
+    strength: str = PAINTERLY_DEFAULT_STRENGTH,
+    seed: int = 0,
+) -> Image.Image:
+    """Transform a rendered image into a painterly/soft style.
+
+    Flow: separate alpha → bilateral filter (multi-pass) → color jitter
+    in HSV space → add Gaussian noise → restore alpha.
+
+    Args:
+        image: Input RGBA image (typically 512x512).
+        strength: Filter strength — "light", "medium", or "heavy".
+            Controls the number of bilateral filter passes.
+        seed: Random seed for deterministic jitter and noise.
+
+    Returns:
+        Transformed RGBA image at the same resolution as the input.
+    """
+    rgba = image.convert("RGBA")
+    r, g, b, a = rgba.split()
+    rgb = Image.merge("RGB", (r, g, b))
+
+    # PIL RGB → OpenCV BGR
+    img_bgr = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
+
+    # --- Bilateral filter (edge-preserving blur) ---
+    num_passes = PAINTERLY_PASSES.get(strength, PAINTERLY_PASSES[PAINTERLY_DEFAULT_STRENGTH])
+    for _ in range(num_passes):
+        img_bgr = cv2.bilateralFilter(
+            img_bgr,
+            d=PAINTERLY_BILATERAL_D,
+            sigmaColor=PAINTERLY_SIGMA_COLOR,
+            sigmaSpace=PAINTERLY_SIGMA_SPACE,
+        )
+
+    # --- Color jitter in HSV space ---
+    rng = np.random.default_rng(seed)
+    img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+
+    h, s, v = cv2.split(img_hsv)
+    h_shift = rng.integers(-PAINTERLY_HUE_JITTER, PAINTERLY_HUE_JITTER + 1)
+    s_shift = rng.integers(-PAINTERLY_SAT_JITTER, PAINTERLY_SAT_JITTER + 1)
+    v_shift = rng.integers(-PAINTERLY_VAL_JITTER, PAINTERLY_VAL_JITTER + 1)
+
+    # Hue wraps around 0–179 in OpenCV
+    h = ((h.astype(np.int16) + h_shift) % 180).astype(np.uint8)
+    s = np.clip(s.astype(np.int16) + s_shift, 0, 255).astype(np.uint8)
+    v = np.clip(v.astype(np.int16) + v_shift, 0, 255).astype(np.uint8)
+
+    img_hsv = cv2.merge([h, s, v])
+    img_bgr = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+
+    # --- Gaussian noise ---
+    noise = rng.normal(0, PAINTERLY_NOISE_SIGMA * 255, img_bgr.shape)
+    img_bgr = np.clip(img_bgr.astype(np.float32) + noise, 0, 255).astype(np.uint8)
+
+    # OpenCV BGR → PIL RGB
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    result_rgb = Image.fromarray(img_rgb)
+
+    # Restore original alpha channel
+    result = Image.merge("RGBA", (*result_rgb.split(), a))
+
+    logger.info(
+        "Painterly: strength=%s (%d passes), seed=%d",
+        strength,
+        num_passes,
+        seed,
+    )
+    return result
+
+
+def apply_post_render_style(
+    image: Image.Image,
+    style: str,
+    *,
+    seed: int = 0,
+) -> Image.Image:
     """Apply a post-render art style transform to a color image.
 
     Routes to the appropriate style function. For styles not yet
-    implemented (painterly, sketch), returns the image unchanged.
+    implemented (sketch), returns the image unchanged.
 
     Args:
         image: Input RGBA image.
         style: Style name ("pixel", "painterly", "sketch").
+        seed: Random seed for deterministic transforms (used by painterly).
 
     Returns:
         Transformed RGBA image (same resolution as input).
     """
     if style == "pixel":
         return apply_pixel_art(image)
-    # Future: painterly, sketch
+    if style == "painterly":
+        return apply_painterly(image, seed=seed)
+    # Future: sketch
     logger.warning("Post-render style '%s' not yet implemented, returning original", style)
     return image
