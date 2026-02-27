@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import bpy  # type: ignore[import-untyped]
+import numpy as np
 from PIL import Image  # type: ignore[import-untyped]
 
 from .bone_mapper import BoneMapping, map_bones
@@ -38,6 +39,7 @@ from .config import (
     RENDER_TIME_STYLES,
     SCALE_FACTORS,
 )
+from .draw_order_extractor import extract_draw_order
 from .exporter import (
     ensure_output_dirs,
     save_class_map,
@@ -544,6 +546,21 @@ def _process_single_pose(
             mapping.bone_to_region,
         )
 
+        # --- Extract draw order (per-pose, not per-style) ---
+        seg_mask_arr = np.array(Image.open(mask_out_path).convert("L"))
+        draw_order_data = extract_draw_order(
+            scene,
+            camera,
+            armature,
+            meshes,
+            mapping.bone_to_region,
+            seg_mask_arr,
+        )
+        draw_order_out_path = output_dir / "draw_order" / f"{char_id}{pose_suffix}.png"
+        Image.fromarray(
+            draw_order_data["draw_order_map"].astype(np.uint8), mode="L"
+        ).save(draw_order_out_path, format="PNG", compress_level=9)
+
         # --- Color render (one pass per style) ---
         setup_color_render(scene)
         color_paths: dict[str, Path] = {}
@@ -593,6 +610,12 @@ def _process_single_pose(
             joint_data = flip_joints(joint_data, resolution)
             joint_data["augmentation"] = aug.to_dict()
             save_joints(joint_data, output_dir, char_id, pose_idx)
+
+            # Flip draw order map (horizontal mirror, no region ID swap needed)
+            do_img = Image.open(draw_order_out_path)
+            do_img.transpose(Image.FLIP_LEFT_RIGHT).save(
+                draw_order_out_path, format="PNG"
+            )
 
             for _style, img_path in color_paths.items():
                 img = Image.open(img_path)

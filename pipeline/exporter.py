@@ -8,11 +8,12 @@ Directory layout (PRD §8.1)::
 
     dataset/
     ├── class_map.json
-    ├── images/   {char_id}_pose_{nn}_{style}.png   (RGBA)
-    ├── masks/    {char_id}_pose_{nn}.png            (8-bit grayscale)
-    ├── joints/   {char_id}_pose_{nn}.json
-    ├── weights/  {char_id}_pose_{nn}.json
-    └── sources/  {char_id}.json
+    ├── images/      {char_id}_pose_{nn}_{style}.png   (RGBA)
+    ├── masks/       {char_id}_pose_{nn}.png            (8-bit grayscale)
+    ├── joints/      {char_id}_pose_{nn}.json
+    ├── weights/     {char_id}_pose_{nn}.json
+    ├── draw_order/  {char_id}_pose_{nn}.png            (8-bit grayscale depth)
+    └── sources/     {char_id}.json
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Subdirectory names
 # ---------------------------------------------------------------------------
 
-_SUBDIRS: list[str] = ["images", "masks", "joints", "weights", "sources"]
+_SUBDIRS: list[str] = ["images", "masks", "joints", "weights", "draw_order", "sources"]
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +110,19 @@ def weights_filename(char_id: str, pose_index: int) -> str:
         Filename such as ``"mixamo_001_pose_00.json"``.
     """
     return f"{char_id}_pose_{pose_index:02d}.json"
+
+
+def draw_order_filename(char_id: str, pose_index: int) -> str:
+    """Build the canonical draw order map filename.
+
+    Args:
+        char_id: Character identifier.
+        pose_index: Zero-based pose number.
+
+    Returns:
+        Filename such as ``"mixamo_001_pose_00.png"``.
+    """
+    return f"{char_id}_pose_{pose_index:02d}.png"
 
 
 def source_filename(char_id: str) -> str:
@@ -288,6 +302,46 @@ def save_weights(
         encoding="utf-8",
     )
     logger.info("Saved weights %s", path)
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Draw order saving
+# ---------------------------------------------------------------------------
+
+
+def save_draw_order(
+    draw_order_map: np.ndarray,
+    output_dir: Path,
+    char_id: str,
+    pose_index: int,
+    *,
+    only_new: bool = False,
+) -> Path | None:
+    """Save a draw order map as an 8-bit grayscale PNG.
+
+    Args:
+        draw_order_map: 2D uint8 array where each pixel value is the
+            normalized depth of its region (0=farthest, 255=nearest).
+        output_dir: Root dataset directory.
+        char_id: Character identifier.
+        pose_index: Zero-based pose number.
+        only_new: If True, skip saving when the file already exists.
+
+    Returns:
+        The output path, or None if skipped.
+    """
+    path = output_dir / "draw_order" / draw_order_filename(char_id, pose_index)
+
+    if only_new and path.exists():
+        logger.debug("Skipping existing draw order %s", path)
+        return None
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    img = Image.fromarray(draw_order_map.astype(np.uint8), mode="L")
+    img.save(path, format="PNG", compress_level=9)
+    logger.info("Saved draw order %s", path)
     return path
 
 
