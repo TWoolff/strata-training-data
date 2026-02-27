@@ -6,6 +6,7 @@ data/sprites/**
 data/live2d/**
 data/vroid/**
 data/psd/**
+data/preprocessed/**
 
 # Generated output (reproducible)
 output/
@@ -22,6 +23,8 @@ output/
 !data/vroid/labels/
 !data/vroid/labels/**
 !data/psd/README.md
+!data/preprocessed/*/
+!data/preprocessed/*/README.md
 
 # Python
 __pycache__/
