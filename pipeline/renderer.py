@@ -121,10 +121,7 @@ def _combined_bounding_box(
     """
     all_corners: list[Vector] = []
     for mesh_obj in meshes:
-        all_corners.extend(
-            mesh_obj.matrix_world @ Vector(corner)
-            for corner in mesh_obj.bound_box
-        )
+        all_corners.extend(mesh_obj.matrix_world @ Vector(corner) for corner in mesh_obj.bound_box)
 
     xs = [v.x for v in all_corners]
     ys = [v.y for v in all_corners]
@@ -226,9 +223,7 @@ def _face_region_majority_vote(
     vertex_indices = list(polygon.vertices)
 
     # Collect region votes
-    regions = [
-        vertex_to_region.get(base_id + vi, 0) for vi in vertex_indices
-    ]
+    regions = [vertex_to_region.get(base_id + vi, 0) for vi in vertex_indices]
 
     if not regions:
         return 0
@@ -246,7 +241,7 @@ def _face_region_majority_vote(
     best_dist = float("inf")
     best_region: RegionId = tied[0]
 
-    for vi, region in zip(vertex_indices, regions):
+    for vi, region in zip(vertex_indices, regions, strict=True):
         if region not in tied:
             continue
         vert_pos = mesh_data.vertices[vi].co
@@ -288,7 +283,10 @@ def assign_region_materials(
 
     for polygon in mesh_data.polygons:
         region = _face_region_majority_vote(
-            polygon, mesh_data, mesh_index, vertex_to_region,
+            polygon,
+            mesh_data,
+            mesh_index,
+            vertex_to_region,
         )
         polygon.material_index = region
         region_counts[region] += 1
@@ -386,6 +384,7 @@ def render_segmentation(
 # RGB → grayscale mask conversion
 # ---------------------------------------------------------------------------
 
+
 def convert_rgb_to_grayscale_mask(rgb_path: Path, output_path: Path) -> Path:
     """Convert an RGB segmentation render to an 8-bit grayscale region ID mask.
 
@@ -414,7 +413,7 @@ def convert_rgb_to_grayscale_mask(rgb_path: Path, output_path: Path) -> Path:
     # Reshape pixel RGB for broadcasting: (H, W, 1, 3) vs (1, 1, N, 3)
     pixel_rgb = np.stack([r, g, b], axis=-1).astype(np.int32)
     diff = pixel_rgb[:, :, np.newaxis, :] - color_array[np.newaxis, np.newaxis, :, :]
-    dist_sq = (diff ** 2).sum(axis=-1)  # (H, W, N)
+    dist_sq = (diff**2).sum(axis=-1)  # (H, W, N)
 
     # Nearest region color for each pixel
     nearest_idx = dist_sq.argmin(axis=-1)  # (H, W)
