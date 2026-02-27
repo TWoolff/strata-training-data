@@ -530,6 +530,61 @@ LATERALITY_ALIASES: dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
+# Accessory detection
+# ---------------------------------------------------------------------------
+# Keywords matched case-insensitively against mesh object names.
+# A mesh matching any pattern is a candidate for hiding (combined with
+# skinning heuristics in accessory_detector.py).
+
+ACCESSORY_NAME_PATTERNS: list[str] = [
+    "weapon",
+    "sword",
+    "shield",
+    "bow",
+    "staff",
+    "spear",
+    "axe",
+    "mace",
+    "dagger",
+    "cape",
+    "cloak",
+    "wings",
+    "wing",
+    "tail",
+    "armor",
+    "pauldron",
+    "gauntlet",
+    "hat",
+    "helmet",
+    "crown",
+    "headpiece",
+    "headband",
+    "ribbon",
+    "ornament",
+    "jewelry",
+    "necklace",
+    "earring",
+    "accessory",
+    "belt",
+    "scarf",
+    "glasses",
+    "mask",
+    "quiver",
+    "backpack",
+    "bag",
+    "pouch",
+]
+
+# Maximum number of vertex groups for a mesh to be considered an accessory
+# via weak-skinning heuristic. Meshes with fewer vertex groups than this
+# are likely accessories parented to a single bone.
+ACCESSORY_MAX_VERTEX_GROUPS: int = 5
+
+# Minimum fraction of vertices that must be weighted to a single bone
+# for the mesh to be considered weakly-skinned (likely an accessory).
+ACCESSORY_WEAK_SKIN_THRESHOLD: float = 0.8
+
+# ---------------------------------------------------------------------------
 # Character normalization
 # ---------------------------------------------------------------------------
 
