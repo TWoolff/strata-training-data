@@ -362,6 +362,8 @@ def save_source_metadata(
     bone_mapping_overrides: dict[str, int] | None = None,
     unmapped_bones: list[str] | None = None,
     character_type: str = "humanoid",
+    has_accessories: bool = False,
+    accessories: list[dict[str, Any]] | None = None,
     notes: str = "",
     only_new: bool = False,
 ) -> Path | None:
@@ -379,6 +381,8 @@ def save_source_metadata(
         bone_mapping_overrides: Manual bone mapping overrides applied.
         unmapped_bones: Bones that could not be mapped.
         character_type: Character type (``"humanoid"`` for v1).
+        has_accessories: Whether accessories were detected and hidden.
+        accessories: List of detected accessory dicts with name and reasons.
         notes: Free-form notes.
         only_new: If True, skip saving when the file already exists.
 
@@ -403,6 +407,8 @@ def save_source_metadata(
         "bone_mapping_overrides": bone_mapping_overrides or {},
         "unmapped_bones": unmapped_bones or [],
         "character_type": character_type,
+        "has_accessories": has_accessories,
+        "accessories": accessories or [],
         "notes": notes,
     }
 

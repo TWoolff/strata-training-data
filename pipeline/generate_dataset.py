@@ -32,6 +32,7 @@ import bpy  # type: ignore[import-untyped]
 import numpy as np
 from PIL import Image  # type: ignore[import-untyped]
 
+from .accessory_detector import detect_accessories, hide_accessories
 from .bone_mapper import BoneMapping, generate_override_template, map_bones
 from .config import (
     ENABLE_FLIP,
@@ -347,11 +348,29 @@ def process_character(
     meshes = import_result.meshes
     scene = bpy.context.scene
 
+    # --- Accessory detection and hiding ---
+    accessory_result = detect_accessories(meshes)
+    if accessory_result.has_accessories:
+        body_meshes = hide_accessories(meshes, accessory_result)
+        print(
+            f"[{char_num}/{total_chars}] {char_id} — "
+            f"hiding {len(accessory_result.accessories)} accessories: "
+            f"{accessory_result.accessory_names}"
+        )
+    else:
+        body_meshes = meshes
+
+    if not body_meshes:
+        result.error = "all meshes detected as accessories — no body meshes"
+        result.elapsed = time.monotonic() - t_start
+        print(f"[{char_num}/{total_chars}] {char_id} FAILED — {result.error}")
+        return result
+
     # --- Bone mapping ---
     print(f"[{char_num}/{total_chars}] {char_id} — mapping bones...")
     mapping = map_bones(
         armature,
-        meshes,
+        body_meshes,
         character_id=char_id,
         source_dir=fbx_path.parent,
     )
@@ -362,7 +381,7 @@ def process_character(
         )
 
     # --- Store original materials for color pass ---
-    original_materials = _backup_materials(meshes)
+    original_materials = _backup_materials(body_meshes)
 
     # --- Create segmentation materials (reused across poses) ---
     region_materials = create_region_materials()
@@ -389,7 +408,7 @@ def process_character(
             pose_style_counts = _process_single_pose(
                 scene=scene,
                 armature=armature,
-                meshes=meshes,
+                meshes=body_meshes,
                 mapping=mapping,
                 original_materials=original_materials,
                 region_materials=region_materials,
@@ -422,7 +441,7 @@ def process_character(
         reset_pose(armature)
 
         # Assign seg materials for consistent state
-        for mesh_idx, mesh_obj in enumerate(meshes):
+        for mesh_idx, mesh_obj in enumerate(body_meshes):
             assign_region_materials(
                 mesh_obj,
                 mesh_idx,
@@ -433,14 +452,14 @@ def process_character(
         old_cam = bpy.data.objects.get("strata_camera")
         if old_cam is not None:
             bpy.data.objects.remove(old_cam, do_unlink=True)
-        weight_camera = setup_camera(scene, meshes)
+        weight_camera = setup_camera(scene, body_meshes)
         scene.render.resolution_x = resolution
         scene.render.resolution_y = resolution
 
         weight_data = extract_weights(
             scene,
             weight_camera,
-            meshes,
+            body_meshes,
             mapping.bone_to_region,
         )
         weight_data["character_id"] = char_id
@@ -453,6 +472,7 @@ def process_character(
     # --- Save source metadata (once per character) ---
     print(f"[{char_num}/{total_chars}] {char_id} — saving metadata...")
     has_overrides = mapping.mapping_stats.override > 0
+    accessory_metadata = accessory_result.to_metadata()
     save_source_metadata(
         output_dir,
         char_id,
@@ -460,6 +480,8 @@ def process_character(
         name=char_id,
         bone_mapping="manual" if has_overrides else "auto",
         unmapped_bones=mapping.unmapped_bones,
+        has_accessories=accessory_metadata["has_accessories"],
+        accessories=accessory_metadata["accessories"],
         only_new=only_new,
     )
 
