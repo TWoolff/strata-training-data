@@ -8,12 +8,13 @@ Directory layout (PRD §8.1)::
 
     dataset/
     ├── class_map.json
-    ├── images/      {char_id}_pose_{nn}_{style}.png   (RGBA)
-    ├── masks/       {char_id}_pose_{nn}.png            (8-bit grayscale)
-    ├── joints/      {char_id}_pose_{nn}.json
-    ├── weights/     {char_id}_pose_{nn}.json
-    ├── draw_order/  {char_id}_pose_{nn}.png            (8-bit grayscale depth)
-    └── sources/     {char_id}.json
+    ├── images/         {char_id}_pose_{nn}_{style}.png   (RGBA)
+    ├── masks/          {char_id}_pose_{nn}.png            (8-bit grayscale)
+    ├── joints/         {char_id}_pose_{nn}.json
+    ├── weights/        {char_id}_pose_{nn}.json
+    ├── draw_order/     {char_id}_pose_{nn}.png            (8-bit grayscale depth)
+    ├── measurements/   {char_id}.json                     (body part dimensions)
+    └── sources/        {char_id}.json
 """
 
 from __future__ import annotations
@@ -34,7 +35,9 @@ logger = logging.getLogger(__name__)
 # Subdirectory names
 # ---------------------------------------------------------------------------
 
-_SUBDIRS: list[str] = ["images", "masks", "joints", "weights", "draw_order", "sources"]
+_SUBDIRS: list[str] = [
+    "images", "masks", "joints", "weights", "draw_order", "measurements", "sources",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +150,18 @@ def draw_order_filename(char_id: str, pose_index: int, angle: str = "front") -> 
 
 def source_filename(char_id: str) -> str:
     """Build the canonical per-character source metadata filename.
+
+    Args:
+        char_id: Character identifier.
+
+    Returns:
+        Filename such as ``"mixamo_001.json"``.
+    """
+    return f"{char_id}.json"
+
+
+def measurements_filename(char_id: str) -> str:
+    """Build the canonical per-character measurements filename.
 
     Args:
         char_id: Character identifier.
@@ -437,6 +452,80 @@ def save_source_metadata(
         encoding="utf-8",
     )
     logger.info("Saved source metadata %s", path)
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Measurement data saving
+# ---------------------------------------------------------------------------
+
+
+def save_measurements(
+    measurement_data: dict[str, Any],
+    output_dir: Path,
+    char_id: str,
+    *,
+    only_new: bool = False,
+) -> Path | None:
+    """Save per-character body measurement data as a JSON file.
+
+    Args:
+        measurement_data: Measurement data dict (as returned by
+            ``measurement_ground_truth.extract_mesh_measurements``).
+        output_dir: Root dataset directory.
+        char_id: Character identifier.
+        only_new: If True, skip saving when the file already exists.
+
+    Returns:
+        The output path, or None if skipped.
+    """
+    path = output_dir / "measurements" / measurements_filename(char_id)
+
+    if only_new and path.exists():
+        logger.debug("Skipping existing measurements %s", path)
+        return None
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(measurement_data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    logger.info("Saved measurements %s", path)
+    return path
+
+
+def save_measurement_profiles(
+    profiles: dict[str, Any],
+    output_dir: Path,
+    *,
+    only_new: bool = False,
+) -> Path | None:
+    """Save aggregated measurement profiles for all characters.
+
+    Args:
+        profiles: Dict mapping character ID → measurement data.
+        output_dir: Root dataset directory.
+        only_new: If True, skip saving when the file already exists.
+
+    Returns:
+        The output path, or None if skipped.
+    """
+    path = output_dir / "mesh" / "measurements" / "measurement_profiles.json"
+
+    if only_new and path.exists():
+        logger.debug("Skipping existing measurement profiles %s", path)
+        return None
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(profiles, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    logger.info(
+        "Saved measurement profiles for %d characters to %s",
+        len(profiles),
+        path,
+    )
     return path
 
 

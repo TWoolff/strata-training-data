@@ -7,72 +7,53 @@ Blender-based pipeline that generates labeled training data for Strata's AI mode
 **Segmentation pipeline** — Takes rigged 3D characters (.fbx) and produces:
 - **Color images** rendered in multiple art styles (flat, cel, pixel art, painterly, sketch, unlit)
 - **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–19)
+- **Draw order maps** (per-pixel depth, grayscale PNG)
 - **Joint position JSON** (bone heads projected to 2D screen coords)
 - **Weight map JSON** (per-vertex bone weights)
 
 One character × 20 poses × 6 styles = 120 training examples. Target: 300+ characters → 36,000+ images.
 
+**Planned data sources** (see PRD v1.1):
+- **Live2D models** — 2D illustrated characters with pre-decomposed layers, providing style diversity + draw order ground truth
+- **VRoid/VRM models** — Anime-style 3D characters for multi-angle rendering (front, 3/4, side, back)
+- **PSD files** — Opportunistic collection of layered Photoshop files with natural segmentation
+
 **Animation intelligence** — Scripts and curated metadata for animation training data:
-- BVH mocap parsing, action labeling, timing extraction
+- BVH mocap parsing, retargeting to Strata 19-bone skeleton, action labeling, timing extraction
+- Synthetic degradation for in-betweening model training pairs
 - Hand-annotated labels, breakdowns, and timing norms (tracked in Git)
+
+**Manual annotation** — Label Studio integration for human review of segmentation masks (see `annotation/`).
 
 ## Project Structure
 
 ```
 strata-training-data/
-├── README.md
-├── CLAUDE.md
-├── requirements.txt
-├── .gitignore
-│
-├── pipeline/                          # Blender/Python segmentation pipeline
-│   ├── bone_mapper.py                 # Map bones to Strata's 19 regions
-│   ├── config.py                      # Region colors, bone mappings, defaults
-│   ├── exporter.py                    # Save images, masks, JSON metadata
-│   ├── generate_dataset.py            # Main entry point, orchestrates pipeline
-│   ├── importer.py                    # Load FBX, normalize scale/position
-│   ├── joint_extractor.py             # Project bone positions to 2D → JSON
-│   ├── pose_applicator.py             # Apply animation keyframes
-│   ├── renderer.py                    # Render color + segmentation passes
-│   └── weight_extractor.py            # Extract per-vertex bone weights → JSON
-│
-├── data/                              # ALL raw data (mostly .gitignored)
-│   ├── fbx/                           # Mixamo FBX characters
-│   ├── poses/                         # FBX pose files from Mixamo
-│   ├── mocap/                         # CMU BVH, SFU, other mocap
-│   └── sprites/                       # Downloaded sprite sheets
-│
-├── output/                            # Generated renders, masks, datasets
-│   ├── segmentation/                  # Rendered images + segmentation masks
-│   └── animation/                     # Processed mocap, extracted features
-│
-├── animation/                         # Animation intelligence scripts + tracked metadata
-│   ├── scripts/
-│   │   ├── bvh_parser.py              # Parse BVH into Strata bone format
-│   │   ├── label_actions.py           # CLI tool for tagging mocap clips by action type
-│   │   ├── extract_timing.py          # Extract frame spacing/velocity from labeled clips
-│   │   └── degrade_animation.py       # Strip principles from good animations (synthetic pairs)
-│   ├── labels/                        # ✅ Tracked — action type CSVs, quality annotations
-│   ├── breakdowns/                    # ✅ Tracked — transcribed YouTube/book analyses
-│   └── timing-norms/                  # ✅ Tracked — extracted from Williams/Thomas books
-│
-└── docs/                              # Reference documentation
-    ├── data-sources.md                # Master list of all data sources with URLs + licenses
-    └── labeling-guide.md              # How to annotate action types, quality, principles
+├── run_pipeline.py                    # CLI entry point for Blender pipeline
+├── run_validation.py                  # CLI entry point for dataset validation
+├── ruff.toml                          # Linting configuration
+├── pipeline/                          # Blender/Python segmentation pipeline (18 modules)
+│   ├── generate_dataset.py            #   Main entry point, orchestrates pipeline
+│   ├── config.py                      #   Region colors, bone mappings, defaults
+│   ├── bone_mapper.py                 #   Map bones → Strata's 19 regions
+│   ├── renderer.py                    #   Render color + segmentation passes
+│   ├── draw_order_extractor.py        #   Compute per-pixel depth from render
+│   ├── live2d_mapper.py               #   Fragment name → Strata label mapping
+│   └── ...                            #   importer, exporter, validator, style_augmentor, etc.
+├── annotation/                        # Label Studio manual annotation pipeline
+├── animation/                         # BVH parsing, retargeting, degradation scripts
+│   ├── scripts/                       #   bvh_parser, bvh_to_strata, degrade_animation, etc.
+│   ├── labels/                        #   ✅ Tracked — cmu_action_labels.csv
+│   ├── breakdowns/                    #   ✅ Tracked — transcribed animation analyses
+│   └── timing-norms/                  #   ✅ Tracked — extracted from Williams/Thomas books
+├── tests/                             # Test suite
+├── data/                              # ⛔ .gitignore — FBX, poses, mocap, sprites, live2d
+├── output/                            # ⛔ .gitignore — generated renders + masks
+└── docs/                              # data-sources, labeling-guide, taxonomy-comparison, etc.
 ```
 
-### What Gets Tracked vs. Ignored
-
-| Directory | Tracked | Why |
-|-----------|---------|-----|
-| `pipeline/` | ✅ Yes | Code — small, text, irreplaceable |
-| `animation/scripts/` | ✅ Yes | Code |
-| `animation/labels/` | ✅ Yes | Hand-annotated metadata — small CSV/JSON, irreplaceable |
-| `animation/breakdowns/` | ✅ Yes | Transcribed analyses — small JSON, irreplaceable |
-| `animation/timing-norms/` | ✅ Yes | Extracted reference data — small, irreplaceable |
-| `docs/` | ✅ Yes | Documentation |
-| `data/**` | ⛔ No | Large binaries, re-downloadable from source |
-| `output/` | ⛔ No | Generated — reproducible by running pipeline |
+**Tracked:** `pipeline/`, `annotation/`, `animation/`, `tests/`, `docs/`
+**Ignored:** `data/` (large binaries, re-downloadable), `output/` (generated, reproducible)
 
 ## Running the Pipeline
 
@@ -118,13 +99,28 @@ Mixamo characters should map 100% automatically. Non-Mixamo ~80% auto, ~20% manu
 - No anti-aliasing, nearest-neighbor sampling — each pixel = exactly one region ID
 - Output: 8-bit single-channel grayscale PNG (pixel value = region ID)
 
+### Output Format
+
+Per training example:
+```
+example_001/
+├── image.png           ← Character render (512×512)
+├── segmentation.png    ← Per-pixel label IDs (grayscale)
+├── draw_order.png      ← Per-pixel depth (grayscale, 0=back 255=front)
+├── joints.json         ← 2D joint positions
+└── metadata.json       ← Source type, style, pose name, camera angle, draw order values
+```
+
+Draw order is computed from vertex Z-depth relative to camera (Mixamo) or from explicit render order indices (Live2D). Normalized to [0, 1] range per frame.
+
 ### Render Setup
 
 - Orthographic camera (no perspective distortion)
-- Front-facing, auto-framed to character bounding box + 10% padding
+- Auto-framed to character bounding box + 10% padding
 - 512×512 output resolution
 - Transparent background (alpha channel)
 - Minimal lighting: single directional + high ambient (~0.7)
+- **Multi-angle rendering** (planned): 5 camera angles per character×pose — front (0°), three-quarter (45°), side (90°), three-quarter-back (135°), back (180°). Required for 3D mesh pipeline training data.
 
 ### Style Augmentation
 
@@ -143,9 +139,6 @@ Split by **character**, not by image (prevents data leakage). 80% train / 10% va
 - OpenCV, Pillow (post-render style augmentation)
 - NumPy (weight extraction)
 
-For model training (separate from generation):
-- PyTorch 2.0+, MMSegmentation, Albumentations, ONNX/onnxruntime
-
 ## Asset Sources
 
 - **Mixamo** (primary): ~100 free rigged humanoids + animation clips. Standard skeleton naming.
@@ -154,6 +147,9 @@ For model training (separate from generation):
 - **Blender community**: ~30–50 various CC rigs.
 - **CMU Graphics Lab**: 2,548 mocap clips (BVH) — for animation intelligence.
 - **SFU Motion Capture**: BVH mocap data.
+- **Live2D community** (planned): ~300–500 models from Booth.pm, DeviantArt, GitHub. Pre-decomposed ArtMesh fragments provide near-free segmentation ground truth for 2D illustrated characters.
+- **VRoid Hub** (planned): 2,000–5,000 VRM models. Anime-style 3D characters renderable from any angle. Standardized humanoid skeleton maps to Strata labels via bone weights.
+- **PSD files** (opportunistic): ~50–100 layered Photoshop files from OpenGameArt, itch.io. Layer structure provides natural segmentation annotations.
 
 Only use CC0, CC-BY, or CC-BY-SA licenses. Never CC-NC. Full source list in `docs/data-sources.md`. Log every asset's license in output metadata.
 
@@ -174,3 +170,4 @@ Automated (run after every batch):
 - JSON metadata uses the schema defined in the PRD (sections 8.2–8.3)
 - v1 is humanoid bipeds only. Non-humanoid (quadruped, bird, serpentine) is future work.
 - Accessories: hide for v1 (cleaner training data). Flag with `has_accessories: true` in metadata.
+
