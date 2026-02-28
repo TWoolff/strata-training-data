@@ -27,6 +27,10 @@ output/
 !data/preprocessed/*/
 !data/preprocessed/*/README.md
 
+# ONNX model weights (downloaded, not tracked)
+models/*.onnx
+models/*.zip
+
 # Cloned dependencies (research notebooks)
 deps/
 
