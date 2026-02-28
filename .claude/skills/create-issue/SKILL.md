@@ -13,7 +13,7 @@ Create a detailed GitHub issue for: $ARGUMENTS
 
 1. **Understand the Request**
    - Parse the feature/bug description
-   - Identify affected pipeline modules (importer, bone_mapper, renderer, style_augmentor, joint_extractor, weight_extractor, exporter)
+   - Identify affected pipeline modules (see full module list below)
    - Determine scope and complexity
 
 2. **Research Codebase**
@@ -23,7 +23,21 @@ Create a detailed GitHub issue for: $ARGUMENTS
 
 3. **Check for Related Work**
    - Search existing issues for duplicates
-   - Review `.claude/prd/strata-synthetic-data-pipeline.md` for PRD context
+   - Review PRDs in `.claude/prd/` for context
+
+## Pipeline Modules Reference
+
+**Core pipeline (`pipeline/`):**
+`generate_dataset.py`, `config.py`, `importer.py`, `bone_mapper.py`, `pose_applicator.py`, `renderer.py`, `style_augmentor.py`, `joint_extractor.py`, `weight_extractor.py`, `draw_order_extractor.py`, `exporter.py`, `manifest.py`, `splitter.py`, `validator.py`
+
+**Source-specific (`pipeline/`):**
+`vroid_importer.py`, `vroid_mapper.py`, `live2d_mapper.py`, `spine_parser.py`, `accessory_detector.py`, `measurement_ground_truth.py`
+
+**External dataset adapters (`ingest/`):**
+`nova_human_adapter.py`, `stdgen_semantic_mapper.py`, `stdgen_pipeline_ext.py`
+
+**Key config.py constants:**
+`REGION_COLORS`, `REGION_NAMES`, `NUM_REGIONS` (20), `MIXAMO_BONE_MAP`, `VRM_BONE_ALIASES`, `COMMON_BONE_ALIASES`, `VROID_MATERIAL_PATTERNS`, `SPINE_BONE_PATTERNS`, `LIVE2D_FRAGMENT_PATTERNS`, `STDGEN_SEMANTIC_CLASSES`, `CAMERA_ANGLES`, `ART_STYLES`, `RENDER_RESOLUTION`, `ACCESSORY_NAME_PATTERNS`, `FUZZY_KEYWORD_PATTERNS`, `SUBSTRING_KEYWORDS`
 
 ## Issue Creation
 
@@ -38,9 +52,9 @@ Clear, action-oriented title (e.g., "Implement fuzzy bone mapper for non-Mixamo 
 Describe what needs to be built or fixed.
 
 **Affected Modules**
-- List relevant pipeline modules (e.g., `bone_mapper.py`, `renderer.py`, `style_augmentor.py`)
-- Note specific pipeline stages involved (import → map → pose → render → style → export)
-- Identify constants that may need updates in `config.py` (REGION_COLORS, RENDER_RESOLUTION, bone mapping tables)
+- List relevant pipeline modules from the reference above
+- Note specific pipeline stages involved (Import -> Map -> Pose -> Render -> Style -> Export -> Validate -> Manifest)
+- Identify constants that may need updates in `config.py`
 - Note data structures affected (region mapping, joint JSON, weight JSON, manifest)
 
 **Technical Approach**
@@ -51,28 +65,31 @@ Describe what needs to be built or fixed.
 
 **Acceptance Criteria**
 - [ ] Specific, testable requirements
-- [ ] Output images are 512×512 PNG with transparent background
-- [ ] Segmentation masks are 8-bit grayscale with valid region IDs (0–17)
-- [ ] Joint JSON has all 17 joints within image bounds
+- [ ] Output images are 512x512 PNG with transparent background
+- [ ] Segmentation masks are 8-bit grayscale with valid region IDs (0-19, 20 total)
+- [ ] Joint JSON has all 19 joints within image bounds
 - [ ] Pipeline runs headless (`blender --background`)
-- [ ] Handles Mixamo naming conventions
+- [ ] Handles Mixamo and VRM naming conventions
 - [ ] Constants defined in `config.py`
+- [ ] Tests pass: `python -m pytest tests/ -v`
+- [ ] Lint passes: `ruff check . && ruff format --check .`
 
 **Code Standards**
 - Type hints on function signatures
 - `snake_case` for functions/variables, `ALL_CAPS` for constants
 - `pathlib.Path` for file paths
 - Google-style docstrings for public functions
+- `from __future__ import annotations` at top of each module
 - f-strings for formatting
 
 **PRD Reference**
-Note relevant sections from `.claude/prd/strata-synthetic-data-pipeline.md` and phase number
+Note relevant sections from `.claude/prd/` and phase number
 
 ### Labels
 Suggest appropriate labels:
 - `bug` / `feature` / `enhancement`
-- `importer` / `bone-mapper` / `renderer` / `style-augmentor` / `joint-extractor` / `weight-extractor` / `exporter` / `config`
-- `phase-1` through `phase-5` (per PRD implementation plan)
+- `importer` / `bone-mapper` / `renderer` / `style-augmentor` / `joint-extractor` / `weight-extractor` / `exporter` / `config` / `vroid-importer` / `vroid-mapper` / `live2d-mapper` / `spine-parser` / `accessory-detector` / `validator` / `manifest` / `splitter` / `draw-order` / `ingest`
+- `phase-1` through `phase-6` (per PRD implementation plan)
 - Priority level if clear
 
 ## Create Issue

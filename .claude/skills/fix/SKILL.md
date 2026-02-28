@@ -34,24 +34,34 @@ For each issue:
 
 ### 3. Verify Fixes
 ```bash
-# Run linter
+# Lint Python files (line-length=100, target-version=py310 per ruff.toml)
 ruff check .
 
-# Run type checker (if configured)
-mypy *.py
+# Format Python files
+ruff format .
+
+# Run tests
+python -m pytest tests/ -v
 
 # Run pipeline on a single test character
-blender --background --python generate_dataset.py -- \
-  --input_dir ./source_characters/ \
-  --output_dir ./dataset/ \
+blender --background --python run_pipeline.py -- \
+  --input_dir ./data/fbx/ \
+  --pose_dir ./data/poses/ \
+  --output_dir ./output/segmentation/ \
   --styles flat \
   --resolution 512
 ```
 
 ### 4. Validate Output
-- Check that output images are 512×512 with correct format
-- Verify segmentation masks are single-channel grayscale with valid region IDs (0–17)
-- Confirm joint JSON has all 17 joints with positions within image bounds
+```bash
+# Run automated validation CLI
+python run_validation.py --dataset_dir ./output/segmentation/
+```
+
+Manual spot checks:
+- Check that output images are 512x512 with correct format
+- Verify segmentation masks are single-channel grayscale with valid region IDs (0-19, 20 total)
+- Confirm joint JSON has all 19 joints with positions within image bounds
 - Overlay mask on image to verify alignment
 
 ## Pipeline-Specific Fixes
@@ -144,7 +154,7 @@ output = Path(output_dir) / filename
 ```
 
 **Bone Name Matching:**
-Case-insensitive, handle prefixes like "mixamorig:"
+Case-insensitive, handle prefixes like "mixamorig:" — see `bone_mapper.py` for the full matching chain: exact -> prefix-stripped -> substring -> fuzzy keyword
 
 ```python
 # BAD — exact match only
@@ -174,32 +184,19 @@ ruff check .
 # Format Python files
 ruff format .
 
+# Run tests
+python -m pytest tests/ -v
+
 # Run pipeline on test character
-blender --background --python generate_dataset.py -- \
-  --input_dir ./source_characters/ \
-  --output_dir ./dataset/ \
+blender --background --python run_pipeline.py -- \
+  --input_dir ./data/fbx/ \
+  --pose_dir ./data/poses/ \
+  --output_dir ./output/segmentation/ \
   --styles flat \
   --resolution 512
 
 # Validate dataset outputs
-python -c "
-from PIL import Image
-import json, glob
-
-# Check mask dimensions and values
-for mask_path in glob.glob('dataset/masks/*.png'):
-    img = Image.open(mask_path)
-    assert img.mode == 'L', f'{mask_path}: expected grayscale, got {img.mode}'
-    assert img.size == (512, 512), f'{mask_path}: expected 512x512, got {img.size}'
-    pixels = set(img.getdata())
-    assert all(0 <= p <= 17 for p in pixels), f'{mask_path}: invalid region IDs {pixels}'
-
-# Check joint files
-for joint_path in glob.glob('dataset/joints/*.json'):
-    with open(joint_path) as f:
-        data = json.load(f)
-    assert 'joints' in data, f'{joint_path}: missing joints key'
-"
+python run_validation.py --dataset_dir ./output/segmentation/
 ```
 
 ## Output

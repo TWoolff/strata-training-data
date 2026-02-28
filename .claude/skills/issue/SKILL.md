@@ -22,21 +22,40 @@ Analyze and implement the GitHub issue: $ARGUMENTS
    - Identify the type: bug fix, new feature, optimization, or refactor
 
 3. **Check Existing Context**
-   - Reference PRD in `.claude/prd/strata-synthetic-data-pipeline.md`
+   - Reference PRDs in `.claude/prd/` for specifications
    - Look for related issues or discussions
 
 4. **Understand the Codebase**
    - Identify relevant pipeline modules:
-     - `generate_dataset.py` — Main orchestrator
-     - `importer.py` — FBX loading and normalization
-     - `bone_mapper.py` — Bone name → Strata region ID mapping
-     - `pose_applicator.py` — Animation keyframe application
-     - `renderer.py` — Color + segmentation render passes
-     - `style_augmentor.py` — Post-render style transforms (pixel art, painterly, sketch)
-     - `joint_extractor.py` — 3D bone positions → 2D pixel coordinates
-     - `weight_extractor.py` — Per-vertex bone weight extraction
-     - `exporter.py` — Image, mask, JSON output
-     - `config.py` — Region colors, bone mappings, constants
+
+   **Core pipeline (`pipeline/`):**
+   - `generate_dataset.py` — Main orchestrator
+   - `config.py` — Region colors, bone mappings, render settings, all constants (~1000 lines)
+   - `importer.py` — FBX loading and normalization
+   - `bone_mapper.py` — Bone name -> Strata region ID mapping (Mixamo, VRM, generic, fuzzy)
+   - `pose_applicator.py` — Animation keyframe application
+   - `renderer.py` — Color + segmentation + multi-angle render passes
+   - `style_augmentor.py` — Post-render style transforms (pixel art, painterly, sketch)
+   - `joint_extractor.py` — 3D bone positions -> 2D pixel coordinates
+   - `weight_extractor.py` — Per-vertex bone weight extraction
+   - `draw_order_extractor.py` — Per-pixel depth from Z-buffer
+   - `exporter.py` — Image, mask, JSON output
+   - `manifest.py` — Dataset statistics + quality report
+   - `splitter.py` — Train/val/test split by character
+   - `validator.py` — Automated post-generation validation
+
+   **Source-specific modules (`pipeline/`):**
+   - `vroid_importer.py` — VRM/VRoid character import + A-pose normalization
+   - `vroid_mapper.py` — VRoid material slot -> Strata region mapping
+   - `live2d_mapper.py` — Live2D ArtMesh fragment -> Strata label mapping
+   - `spine_parser.py` — Spine 2D JSON project parsing (pure Python, no Blender)
+   - `accessory_detector.py` — Detect and hide accessories for clean training data
+   - `measurement_ground_truth.py` — Body measurements from 3D mesh vertices
+
+   **External dataset adapters (`ingest/`):**
+   - `nova_human_adapter.py` — NOVA-Human dataset -> Strata format conversion
+   - `stdgen_semantic_mapper.py` — StdGEN 4-class -> Strata 20-class mapping
+   - `stdgen_pipeline_ext.py` — StdGEN Blender rendering extension
 
 ## PHASE 2: PLAN (Write scratchpad BEFORE any code changes)
 
@@ -75,13 +94,14 @@ Analyze and implement the GitHub issue: $ARGUMENTS
    - Future sessions can reference this to understand the intent and context
 
 3. **Follow Pipeline Patterns**
-   - Constants in `config.py` (REGION_COLORS, bone mapping tables, RENDER_RESOLUTION)
+   - Constants in `config.py` (REGION_COLORS, REGION_NAMES, bone mapping tables, RENDER_RESOLUTION, CAMERA_ANGLES, VRM_BONE_ALIASES, VROID_MATERIAL_PATTERNS, SPINE_BONE_PATTERNS, LIVE2D_FRAGMENT_PATTERNS, STDGEN_SEMANTIC_CLASSES, style parameters, accessory patterns)
    - `snake_case` for functions/variables, `ALL_CAPS` for constants
    - Type hints on function signatures
    - `pathlib.Path` for file paths
    - Google-style docstrings for public functions
+   - `from __future__ import annotations` at top of each module
    - Each module has single responsibility
-   - Pipeline flow: Import → Map → Pose → Render → Style → Export
+   - Pipeline flow: Import -> Map -> Pose -> Render -> Style -> Export -> Validate -> Manifest
 
 ## PHASE 3: IMPLEMENT (only after scratchpad is written)
 
@@ -94,11 +114,12 @@ Analyze and implement the GitHub issue: $ARGUMENTS
 
 2. **Key Implementation Notes**
    - **Rendering**: EEVEE with Emission shaders for segmentation, orthographic camera
-   - **Bone Mapping**: exact → prefix → substring → manual override priority
+   - **Bone Mapping**: exact -> prefix-stripped -> substring -> fuzzy keyword priority (see `bone_mapper.py`)
    - **Segmentation**: Per-face material assignment via vertex group majority vote
-   - **Masks**: 8-bit grayscale PNG, pixel value = region ID, no anti-aliasing
-   - **Joints**: `bpy_extras.object_utils.world_to_camera_view` for 3D→2D projection
-   - **Styles**: Render-time (Blender shaders) + post-render (PIL/OpenCV)
+   - **Masks**: 8-bit grayscale PNG, pixel value = region ID (0-19, 20 total), no anti-aliasing
+   - **Joints**: `bpy_extras.object_utils.world_to_camera_view` for 3D->2D projection, 19 joints (regions 1-19)
+   - **Styles**: Render-time (Blender shaders: flat, cel, unlit) + post-render (PIL/OpenCV: pixel, painterly, sketch)
+   - **Multi-angle**: 5 camera angles (front, three-quarter, side, three-quarter-back, back) via `CAMERA_ANGLES`
    - **Cleanup**: Always clear scene between characters to prevent data leaks
 
 3. **Commit Incrementally**
@@ -109,24 +130,31 @@ Analyze and implement the GitHub issue: $ARGUMENTS
 
 1. **Run Quality Checks**
    ```bash
-   # Run linter
+   # Run linter (line-length=100, target-version=py310 per ruff.toml)
    ruff check .
 
-   # Run type checker (if configured)
-   mypy *.py
+   # Format check
+   ruff format --check .
 
-   # Run pipeline on a test character
-   blender --background --python generate_dataset.py -- \
-     --input_dir ./source_characters/ \
-     --output_dir ./dataset/ \
+   # Run tests
+   python -m pytest tests/ -v
+
+   # Run pipeline on a test character (if applicable)
+   blender --background --python run_pipeline.py -- \
+     --input_dir ./data/fbx/ \
+     --pose_dir ./data/poses/ \
+     --output_dir ./output/segmentation/ \
      --styles flat \
      --resolution 512
    ```
 
 2. **Validate Dataset Output**
-   - Check output images are 512×512 RGBA PNG
-   - Verify masks are single-channel grayscale with valid region IDs (0–17)
-   - Confirm joint JSON has all 17 joints with positions within image bounds
+   ```bash
+   python run_validation.py --dataset_dir ./output/segmentation/ --save_report
+   ```
+   - Check output images are 512x512 RGBA PNG
+   - Verify masks are single-channel grayscale with valid region IDs (0-19)
+   - Confirm joint JSON has all 19 joints with positions within image bounds
    - Overlay mask on image to visually verify alignment
    - Check file naming follows `{source}_{id}_pose_{nn}_{style}.png` convention
 
@@ -134,7 +162,7 @@ Analyze and implement the GitHub issue: $ARGUMENTS
    - Characters with accessories (should be hidden or mapped)
    - Bones that don't map to any region (should be logged as warnings)
    - Extreme poses with self-occlusion (joints should have `visible: false`)
-   - Non-Mixamo bone naming conventions
+   - Non-Mixamo bone naming conventions (VRM, generic, Blender-style)
 
 ## PHASE 5: FINALIZE
 
@@ -161,6 +189,7 @@ Analyze and implement the GitHub issue: $ARGUMENTS
 - **Types**: Type hints on all function signatures
 - **Paths**: `pathlib.Path`, not string concatenation
 - **Docstrings**: Google style for public functions
-- **Imports**: stdlib → third-party (bpy, cv2, numpy, PIL) → local modules
+- **Imports**: `from __future__ import annotations` first, then stdlib -> third-party (bpy, cv2, numpy, PIL) -> local modules
 - **Blender**: All code must work in `--background` mode
-- **Pipeline**: Import → Map → Pose → Render → Style → Export
+- **Pipeline**: Import -> Map -> Pose -> Render -> Style -> Export -> Validate -> Manifest
+- **Linting**: `ruff check .` and `ruff format .` (line-length=100, py310)

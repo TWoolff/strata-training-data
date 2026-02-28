@@ -2,18 +2,38 @@
 name: validate-dataset
 description: Run automated validation checks on generated dataset output. Checks mask correctness, joint bounds, file pairing, resolution, and region distribution. Use after batch generation or to diagnose dataset quality issues.
 user-invokable: true
-argument-hint: "<dataset directory path (default: ./dataset/)>"
+argument-hint: "<dataset directory path (default: ./output/segmentation/)>"
 ---
 
 # Validate Dataset
 
 Run comprehensive validation checks on the generated dataset: $ARGUMENTS
 
-If no path specified, default to `./dataset/`.
+If no path specified, default to `./output/segmentation/`.
 
-## Validation Checks
+## Quick Validation (Preferred)
 
-Run all of the following checks against the dataset directory. Report every failure with the specific file path and what went wrong.
+The project has a dedicated validation CLI (`run_validation.py` using `pipeline/validator.py`). Use this first:
+
+```bash
+# Validate entire dataset
+python run_validation.py --dataset_dir ./output/segmentation/
+
+# Validate specific characters
+python run_validation.py --dataset_dir ./output/segmentation/ --characters mixamo_001,mixamo_002
+
+# Validate and save JSON report
+python run_validation.py --dataset_dir ./output/segmentation/ --save_report
+
+# Custom resolution (default: 512)
+python run_validation.py --dataset_dir ./output/segmentation/ --resolution 1024
+```
+
+The CLI validator checks: mask completeness, mask uniqueness, joint bounds, joint count (19 per pose), file pairing, resolution, and region distribution. It imports `NUM_REGIONS` (20) and `NUM_JOINT_REGIONS` (19) from `pipeline/config.py`.
+
+## Manual Validation Checks
+
+These supplement the automated CLI tool for deeper investigation.
 
 ### 1. File Pairing
 Every image in `images/` must have:
@@ -39,7 +59,7 @@ Report any orphaned files (images without masks, masks without joints, etc.).
 
 ### 3. Mask Validity
 For each mask:
-- Every pixel value must be in range 0–17 (valid region IDs)
+- Every pixel value must be in range 0-19 (valid region IDs — 20 total: background + 19 body regions)
 - No mask should be all-zero (would mean entire character is background — mapping failed)
 - No mask should be all-one-value (would mean everything mapped to one region — mapping failed)
 - At least 3 distinct regions should be present (head + torso + limbs minimum)
@@ -52,8 +72,8 @@ For each image-mask pair:
 
 ### 5. Joint Bounds
 For each joint JSON file:
-- Must contain a `joints` key with entries for all 17 body regions (excluding background)
-- All joint `position` values must be within image bounds [0, 512) × [0, 512)
+- Must contain a `joints` key with entries for all 19 body regions (regions 1-19, excluding background)
+- All joint `position` values must be within image bounds [0, 512) x [0, 512)
 - Each joint must have `position` (array of 2 ints) and `visible` (boolean) fields
 - Must contain `image_size` field matching [512, 512]
 
@@ -71,7 +91,7 @@ For each weight JSON in `weights/`:
 
 ### 8. Manifest & Splits
 - `manifest.json` must exist and be valid JSON
-- `class_map.json` must map all 18 region IDs (0–17) to region names
+- `class_map.json` must map all 20 region IDs (0-19) to region names
 - `splits.json` must exist with `train`, `val`, `test` keys
 - Splits must be by character (all poses/styles of one character in same split)
 - Split ratio should approximate 80/10/10 (within 5% tolerance)
@@ -83,7 +103,7 @@ Generate a summary report:
 ```
 Dataset Validation Report
 =========================
-Path: ./dataset/
+Path: ./output/segmentation/
 Date: YYYY-MM-DD
 
 Files:
@@ -96,9 +116,9 @@ Files:
 Checks:
   [PASS] File pairing — all N images have matching masks and joints
   [FAIL] Resolution — 3 images are not 512x512: <list>
-  [PASS] Mask validity — all masks have valid region IDs
+  [PASS] Mask validity — all masks have valid region IDs (0-19)
   [WARN] Mask alignment — 2 masks have <95% alignment: <list>
-  [PASS] Joint bounds — all joints within image bounds
+  [PASS] Joint bounds — all 19 joints within image bounds
   [WARN] Region distribution — 1 character has >60% single region: <list>
   [PASS] Splits — 80.2% train / 9.8% val / 10.0% test
 

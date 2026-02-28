@@ -14,12 +14,12 @@ If a character ID is given (e.g., `mixamo_001`), generate visualizations for all
 ## Debug Visualizations
 
 ### 1. Mask Overlay
-Overlay the segmentation mask on the color image at 50% opacity, with each region rendered in its assigned color from `config.py REGION_COLORS`.
+Overlay the segmentation mask on the color image at 50% opacity, with each region rendered in its assigned color from `pipeline/config.py REGION_COLORS` (20 regions, IDs 0-19).
 
 ```python
 from PIL import Image
 import numpy as np
-from config import REGION_COLORS
+from pipeline.config import REGION_COLORS
 
 def create_mask_overlay(image_path: str, mask_path: str, output_path: str):
     """Overlay segmentation mask on color image with 50% opacity."""
@@ -37,10 +37,10 @@ def create_mask_overlay(image_path: str, mask_path: str, output_path: str):
     composite.save(output_path)
 ```
 
-Save to: `dataset/debug/{char_id}_pose_{nn}_overlay.png`
+Save to: `output/segmentation/debug/{char_id}_pose_{nn}_overlay.png`
 
 ### 2. Joint Position Plot
-Draw joint positions as colored circles on the color image, with lines connecting parent-child joints (skeleton visualization).
+Draw joint positions as colored circles on the color image, with lines connecting parent-child joints (skeleton visualization). 19 joints total (regions 1-19).
 
 ```python
 from PIL import Image, ImageDraw
@@ -67,7 +67,7 @@ def create_joint_overlay(image_path: str, joint_path: str, output_path: str):
     image.save(output_path)
 ```
 
-Save to: `dataset/debug/{char_id}_pose_{nn}_joints.png`
+Save to: `output/segmentation/debug/{char_id}_pose_{nn}_joints.png`
 
 ### 3. Region Distribution Chart
 For each mask, show a bar chart of pixel counts per region. Helps identify mapping errors (e.g., entire arm mapped to chest).
@@ -98,12 +98,22 @@ Print distribution to console and flag any region >60% or any expected region mi
 ### 4. Style Comparison Grid
 For a given character + pose, create a side-by-side grid of all style variants with the mask overlay, confirming all styles align with the same mask.
 
-Save to: `dataset/debug/{char_id}_pose_{nn}_style_grid.png`
+Save to: `output/segmentation/debug/{char_id}_pose_{nn}_style_grid.png`
 
 ### 5. Bone Mapping Visualization
 For a character in T-pose, color each mesh face by its assigned region and label with the bone name that determined the assignment. Helps debug bone mapping issues.
 
-Save to: `dataset/debug/{char_id}_bone_map.png`
+Save to: `output/segmentation/debug/{char_id}_bone_map.png`
+
+### 6. Draw Order Visualization
+Overlay the draw order map on the color image to verify depth ordering. Draw order maps are grayscale PNGs where 0=back, 255=front. Use a colormap (e.g., viridis) for better visibility.
+
+Save to: `output/segmentation/debug/{char_id}_pose_{nn}_draw_order.png`
+
+### 7. Multi-Angle Comparison
+For multi-angle renders (front, three-quarter, side, three-quarter-back, back), create a horizontal strip of all angles with mask overlays to verify camera rotation and consistent labeling.
+
+Save to: `output/segmentation/debug/{char_id}_pose_{nn}_angles.png`
 
 ## Usage
 
@@ -112,7 +122,7 @@ Save to: `dataset/debug/{char_id}_bone_map.png`
 # /render-debug mixamo_001
 
 # Debug a specific image
-# /render-debug dataset/images/mixamo_001_pose_00_flat.png
+# /render-debug output/segmentation/images/mixamo_001_pose_00_flat.png
 
 # Debug all characters (spot check — random 5%)
 # /render-debug --spot-check
@@ -120,7 +130,7 @@ Save to: `dataset/debug/{char_id}_bone_map.png`
 
 ## Output
 
-All debug images are saved to `dataset/debug/`. Report:
+All debug images are saved to `output/segmentation/debug/`. Report:
 - Number of visualizations generated
 - Any anomalies found (misaligned masks, out-of-bounds joints, skewed region distributions)
 - Recommendations for fixes if issues are detected

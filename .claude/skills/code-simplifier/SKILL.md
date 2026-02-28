@@ -15,13 +15,16 @@ Never change what the code does — only how it does it. All original features, 
 
 ### 2. Apply Project Standards
 Follow established Python coding standards for this Blender pipeline:
+- Use `from __future__ import annotations` at top of each module
 - Use type hints for function signatures
 - Use `snake_case` for variables/functions, `ALL_CAPS` for constants
 - Use `pathlib.Path` for file paths, not string concatenation
-- Group imports: stdlib → third-party (`bpy`, `cv2`, `numpy`, `PIL`) → local modules
+- Group imports: stdlib -> third-party (`bpy`, `cv2`, `numpy`, `PIL`) -> local modules
 - All tunable values live as constants at the top of the relevant file or in `config.py`
 - Docstrings for public functions (Google style)
 - f-strings for string formatting
+- Line length: 100 characters (per `ruff.toml`)
+- Target Python version: 3.10+ (per `ruff.toml`)
 
 ### 3. Enhance Clarity
 Simplify code structure by:
@@ -48,24 +51,25 @@ Avoid over-simplification that could:
 2. Analyze for opportunities to improve elegance and consistency
 3. Apply project-specific best practices and coding standards
 4. Ensure all functionality remains unchanged
-5. Verify the refined code is simpler and more maintainable
-6. Document only significant changes that affect understanding
+5. Run `ruff check .` and `ruff format --check .` to verify compliance
+6. Verify the refined code is simpler and more maintainable
+7. Document only significant changes that affect understanding
 
 ## Strata Pipeline-Specific Patterns
 
 When simplifying pipeline code:
 
-- **Constants in config.py**: All tunable values centralized
+- **Constants in config.py**: All tunable values centralized (~1000 lines of constants)
   ```python
   # BAD — magic numbers inline
   mask = render_segmentation(scene, camera, resolution=512)
 
   # GOOD — constant from config
-  from config import RENDER_RESOLUTION
+  from pipeline.config import RENDER_RESOLUTION
   mask = render_segmentation(scene, camera, resolution=RENDER_RESOLUTION)
   ```
 
-- **Region colors as a dictionary**: Map region IDs to names and colors
+- **Region colors as a dictionary**: Map region IDs to names and colors (20 regions, IDs 0-19)
   ```python
   # Project pattern — defined in config.py
   REGION_COLORS = {
@@ -73,6 +77,7 @@ When simplifying pipeline code:
       1: (255, 0, 0),      # head
       2: (0, 255, 0),      # neck
       ...
+      19: (0, 64, 192),    # shoulder_r
   }
   ```
 
@@ -127,11 +132,35 @@ When simplifying pipeline code:
 
 - **Module organization**: Each file has a single responsibility
   ```
-  importer.py       — FBX loading and normalization
-  bone_mapper.py    — Skeleton → Strata region mapping
-  renderer.py       — Blender render passes
-  style_augmentor.py — Post-render image processing
+  importer.py              — FBX loading and normalization
+  vroid_importer.py        — VRM/VRoid import and A-pose normalization
+  bone_mapper.py           — Skeleton -> Strata region mapping (exact/prefix/substring/fuzzy)
+  vroid_mapper.py          — VRoid material slot -> Strata region mapping
+  live2d_mapper.py         — Live2D fragment -> Strata label mapping
+  spine_parser.py          — Spine 2D JSON project parsing (pure Python)
+  renderer.py              — Blender render passes (color, segmentation, multi-angle)
+  style_augmentor.py       — Post-render image processing (pixel, painterly, sketch)
+  accessory_detector.py    — Accessory detection and hiding
+  draw_order_extractor.py  — Per-pixel depth from Z-buffer
+  joint_extractor.py       — 3D bone -> 2D pixel projection
+  weight_extractor.py      — Per-vertex bone weights
+  measurement_ground_truth.py — Body measurements from mesh
+  exporter.py              — Image, mask, JSON output
+  manifest.py              — Dataset statistics + quality report
+  splitter.py              — Train/val/test split by character
+  validator.py             — Post-generation validation
   ```
+
+- **Ingest adapter patterns**: Modules in `ingest/` follow consistent conventions:
+  - Pure Python where possible (no Blender dependency for mapper modules)
+  - Dataclass for structured results
+  - Module-level logger via `logging.getLogger(__name__)`
+  - Source constant (e.g., `SOURCE = "nova_human"`)
+  - Import from `pipeline.config` for shared constants
+
+- **Ruff compliance**: Run `ruff check .` and `ruff format .` after simplification
+  - Project uses `ruff.toml` with `line-length = 100`, `target-version = "py310"`
+  - Known third-party: bpy, bpy_extras, mathutils, bmesh, cv2, numpy, PIL
 
 ## Outputs
 
