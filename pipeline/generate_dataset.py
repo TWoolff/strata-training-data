@@ -204,6 +204,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Directory containing VRM/VRoid character files (.vrm).",
     )
+    parser.add_argument(
+        "--live2d_dir",
+        type=Path,
+        default=None,
+        help="Directory containing Live2D model subdirectories (.model3.json + textures).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -675,9 +681,7 @@ def _process_single_pose(
                 _restore_materials(meshes, original_materials)
                 apply_style(scene, meshes, style)
 
-                image_out_path = (
-                    output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-                )
+                image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
                 render_color(scene, image_out_path)
                 color_paths[style] = image_out_path
                 style_counts[style] += 1
@@ -708,9 +712,7 @@ def _process_single_pose(
 
                 for style in post_styles:
                     print(f"    applying {style} post-render transform ({angle_name})...")
-                    image_out_path = (
-                        output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
-                    )
+                    image_out_path = output_dir / "images" / f"{char_id}{pose_suffix}_{style}.png"
                     styled_image = apply_post_render_style(
                         base_image.copy(), style, seed=style_seed
                     )
@@ -747,9 +749,7 @@ def _process_single_pose(
 
                 # Flip draw order map (horizontal mirror)
                 do_img = Image.open(draw_order_out_path)
-                do_img.transpose(Image.FLIP_LEFT_RIGHT).save(
-                    draw_order_out_path, format="PNG"
-                )
+                do_img.transpose(Image.FLIP_LEFT_RIGHT).save(draw_order_out_path, format="PNG")
 
                 for _style, img_path in color_paths.items():
                     img = Image.open(img_path)
@@ -871,6 +871,7 @@ def main() -> None:
     do_generate_overrides: bool = args.generate_overrides
     spine_dir: Path | None = args.spine_dir
     vroid_dir: Path | None = args.vroid_dir
+    live2d_dir: Path | None = args.live2d_dir
 
     # Parse camera angles
     angles_raw = args.angles.strip()
@@ -993,11 +994,13 @@ def main() -> None:
 
         # Track Spine characters as CharacterResult entries for the summary
         for sr in spine_results:
-            results.append(CharacterResult(
-                char_id=sr.char_id,
-                poses_succeeded=1,  # default pose
-                style_counts=Counter({s: 1 for s in styles}),
-            ))
+            results.append(
+                CharacterResult(
+                    char_id=sr.char_id,
+                    poses_succeeded=1,  # default pose
+                    style_counts=Counter({s: 1 for s in styles}),
+                )
+            )
 
         print(f"Spine: {len(spine_results)} characters processed")
 
@@ -1022,10 +1025,12 @@ def main() -> None:
                 try:
                     vrm_import = import_vrm(vrm_path)
                     if vrm_import is None:
-                        results.append(CharacterResult(
-                            char_id=f"vroid_{vrm_path.stem}",
-                            error="VRM import failed",
-                        ))
+                        results.append(
+                            CharacterResult(
+                                char_id=f"vroid_{vrm_path.stem}",
+                                error="VRM import failed",
+                            )
+                        )
                         continue
 
                     char_result = process_character(
@@ -1048,10 +1053,12 @@ def main() -> None:
 
                 except Exception:
                     logger.exception("Unhandled error processing VRM %s", vrm_path.name)
-                    results.append(CharacterResult(
-                        char_id=f"vroid_{vrm_path.stem}",
-                        error="unhandled exception",
-                    ))
+                    results.append(
+                        CharacterResult(
+                            char_id=f"vroid_{vrm_path.stem}",
+                            error="unhandled exception",
+                        )
+                    )
 
                 # Scene cleanup between characters
                 try:
@@ -1065,17 +1072,46 @@ def main() -> None:
         else:
             print(f"WARNING: No .vrm files found in {vroid_dir}")
 
+    # --- Process Live2D models (if --live2d_dir provided) ---
+    if live2d_dir is not None and live2d_dir.is_dir():
+        from .live2d_renderer import process_live2d_directory
+
+        print()
+        print("=" * 60)
+        print(f"Processing Live2D models from {live2d_dir}...")
+        print("=" * 60)
+
+        live2d_results = process_live2d_directory(
+            live2d_dir,
+            output_dir,
+            resolution=resolution,
+            styles=styles,
+            enable_augmentation=enable_flip,
+            only_new=only_new,
+        )
+
+        for lr in live2d_results:
+            results.append(
+                CharacterResult(
+                    char_id=lr.char_id,
+                    poses_succeeded=1,
+                    style_counts=Counter({s: 1 for s in styles}),
+                )
+            )
+
+        print(f"Live2D: {len(live2d_results)} models processed")
+
     elapsed_total = time.monotonic() - t_total
 
     # --- Aggregate measurement profiles ---
     measurement_profiles = {
-        r.char_id: r.measurements
-        for r in results
-        if r.measurements is not None
+        r.char_id: r.measurements for r in results if r.measurements is not None
     }
     if measurement_profiles:
         profiles_path = save_measurement_profiles(
-            measurement_profiles, output_dir, only_new=only_new,
+            measurement_profiles,
+            output_dir,
+            only_new=only_new,
         )
         if profiles_path:
             print(f"Measurement profiles written to {profiles_path}")
