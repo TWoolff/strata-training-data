@@ -991,3 +991,18 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
     (r"\bbody\b|Body|torso|chest|mune|bust", "chest"),
     (r"\bspine\b|\bback\b", "spine"),
 ]
+
+# ---------------------------------------------------------------------------
+# StdGEN semantic class → Strata mapping
+# ---------------------------------------------------------------------------
+# StdGEN (CVPR 2025) annotates VRoid characters with 4 semantic classes.
+# "hair" and "face" map directly to head (region 1).
+# "body" and "clothes" require per-vertex bone-weight refinement using
+# VRM_BONE_ALIASES to resolve into Strata's 16 body sub-regions.
+
+STDGEN_SEMANTIC_CLASSES: dict[str, RegionId | None] = {
+    "hair": 1,     # → head
+    "face": 1,     # → head
+    "body": None,  # → per-vertex bone-weight refinement
+    "clothes": None,  # → underlying body region via bone weights
+}
