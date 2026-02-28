@@ -13,7 +13,7 @@ See also: `docs/data-sources.md` for primary pipeline sources (Mixamo, Sketchfab
 | [UniRig / Rig-XL](#unirig--rig-xl) | 14K meshes | ~20 GB | MIT | Planned: `unirig_skeleton_mapper.py` |
 | [AnimeRun](#animerun) | ~8K pairs | ~5 GB | Not specified | Planned: `animerun_contour_adapter.py` |
 | [LinkTo-Anime](#linkto-anime) | ~29K frames | ~10 GB | Research | Planned: `linkto_adapter.py` |
-| [FBAnimeHQ](#fbanimehq) | ~113K | ~25 GB | Unclear (Danbooru-sourced) | Not started |
+| [FBAnimeHQ](#fbanimehq) | ~113K | ~25 GB | Unclear (Danbooru-sourced) | `fbanimehq_adapter.py` |
 | [anime-segmentation](#anime-segmentation) | Varies | ~18 GB | Apache-2.0 | Not started |
 | [AnimeInstanceSeg](#anime-instance-segmentation) | ~100K+ | Varies | Not specified | Not started |
 | [CharacterGen](#charactergen) | ~13.7K chars | Varies | Apache-2.0 (code); research (data) | Not started |
@@ -209,13 +209,13 @@ Feng, X., Zou, K., Cen, C., Huang, T., Guo, H., Huang, Z., Zhao, Y., Zhang, M., 
 
 **Content:** Full-body anime girl images, cropped and aligned. No annotations — images only. High visual quality and style diversity.
 
-**Strata adapter:** Not started. Would need: resize to 512×512, generate metadata. No segmentation or joint data available from this source.
+**Strata adapter:** `ingest/fbanimehq_adapter.py` — discovers images recursively across the shard/bucket hierarchy, resizes longest edge to 512 preserving aspect ratio, centers on transparent 512×512 canvas, and generates metadata. Supports `--max_images` and `--random_sample` for phased runs. Run via `python run_ingest.py --adapter fbanimehq`.
 
 **Known limitations:**
 - No segmentation masks, joints, or any annotations — images only
 - All images are female characters (bias concern for training)
 - Danbooru-sourced — mixed art quality, some NSFW content may need filtering
-- Resolution is 1024×512 (non-square) — requires cropping or padding for Strata's 512×512 format
+- Resolution is 512×1024 (portrait, non-square) — adapter pads to 512×512
 
 **Licensing risk:** High. Danbooru images are typically copyrighted by original artists. No clear license for ML training. Safest to use for validation/testing only, or as style reference — not as primary training data.
 
@@ -329,7 +329,7 @@ Most pre-processed datasets are released for **research use only**. This is the 
 | UniRig | `ingest/unirig_skeleton_mapper.py` | Planned |
 | AnimeRun | `ingest/animerun_contour_adapter.py` | Planned |
 | LinkTo-Anime | `ingest/linkto_adapter.py` | Planned |
-| FBAnimeHQ | — | Not started |
+| FBAnimeHQ | `ingest/fbanimehq_adapter.py` | Implemented |
 | anime-segmentation | — | Not started |
 | AnimeInstanceSeg | — | Not started |
 | CharacterGen | — | Not started |
