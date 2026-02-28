@@ -27,6 +27,9 @@ output/
 !data/preprocessed/*/
 !data/preprocessed/*/README.md
 
+# Cloned dependencies (research notebooks)
+deps/
+
 # Python
 __pycache__/
 *.pyc
