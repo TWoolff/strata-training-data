@@ -859,25 +859,52 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"shoulder.*[lL]|kata.*[lL]|shoulder.*left|kata.*hidari", "shoulder_l"),
     (r"shoulder.*[rR]|kata.*[rR]|shoulder.*right|kata.*migi", "shoulder_r"),
     # --- Left arm (forearm/lower before upper to avoid substring clash) ---
-    (r"arm.*(?:lower|fore).*[lL]|arm.*(?:lower|fore).*left|forearm.*[lL]|forearm.*left", "lower_arm_l"),
-    (r"arm.*upper.*[lL]|arm.*upper.*left|ude.*ue.*[lL]|ude.*ue.*left|upper.*arm.*[lL]", "upper_arm_l"),
+    (
+        r"arm.*(?:lower|fore).*[lL]|arm.*(?:lower|fore).*left|forearm.*[lL]|forearm.*left",
+        "lower_arm_l",
+    ),
+    (
+        r"arm.*upper.*[lL]|arm.*upper.*left|ude.*ue.*[lL]|ude.*ue.*left|upper.*arm.*[lL]",
+        "upper_arm_l",
+    ),
     (r"hand.*[lL]|hand.*left|te_[lL]|te.*hidari", "hand_l"),
     # --- Right arm ---
-    (r"arm.*(?:lower|fore).*[rR]|arm.*(?:lower|fore).*right|forearm.*[rR]|forearm.*right", "lower_arm_r"),
-    (r"arm.*upper.*[rR]|arm.*upper.*right|ude.*ue.*[rR]|ude.*ue.*right|upper.*arm.*[rR]", "upper_arm_r"),
+    (
+        r"arm.*(?:lower|fore).*[rR]|arm.*(?:lower|fore).*right|forearm.*[rR]|forearm.*right",
+        "lower_arm_r",
+    ),
+    (
+        r"arm.*upper.*[rR]|arm.*upper.*right|ude.*ue.*[rR]|ude.*ue.*right|upper.*arm.*[rR]",
+        "upper_arm_r",
+    ),
     (r"hand.*[rR]|hand.*right|te_[rR]|te.*migi", "hand_r"),
     # --- Left leg (lower/shin before upper to avoid substring clash) ---
-    (r"leg.*(?:lower|shin).*[lL]|leg.*(?:lower|shin).*left|shin.*[lL]|shin.*left|sune.*[lL]", "lower_leg_l"),
-    (r"leg.*upper.*[lL]|leg.*upper.*left|thigh.*[lL]|thigh.*left|momo.*[lL]|momo.*left|upper.*leg.*[lL]", "upper_leg_l"),
+    (
+        r"leg.*(?:lower|shin).*[lL]|leg.*(?:lower|shin).*left|shin.*[lL]|shin.*left|sune.*[lL]",
+        "lower_leg_l",
+    ),
+    (
+        r"leg.*upper.*[lL]|leg.*upper.*left|thigh.*[lL]|thigh.*left|momo.*[lL]|momo.*left|upper.*leg.*[lL]",
+        "upper_leg_l",
+    ),
     (r"foot.*[lL]|foot.*left|ashi.*[lL]|ashi.*hidari", "foot_l"),
     # --- Right leg ---
-    (r"leg.*(?:lower|shin).*[rR]|leg.*(?:lower|shin).*right|shin.*[rR]|shin.*right|sune.*[rR]", "lower_leg_r"),
-    (r"leg.*upper.*[rR]|leg.*upper.*right|thigh.*[rR]|thigh.*right|momo.*[rR]|momo.*right|upper.*leg.*[rR]", "upper_leg_r"),
+    (
+        r"leg.*(?:lower|shin).*[rR]|leg.*(?:lower|shin).*right|shin.*[rR]|shin.*right|sune.*[rR]",
+        "lower_leg_r",
+    ),
+    (
+        r"leg.*upper.*[rR]|leg.*upper.*right|thigh.*[rR]|thigh.*right|momo.*[rR]|momo.*right|upper.*leg.*[rR]",
+        "upper_leg_r",
+    ),
     (r"foot.*[rR]|foot.*right|ashi.*[rR]|ashi.*migi", "foot_r"),
     # --- Hips ---
     (r"hip|pelvis|koshi|waist", "hips"),
     # --- Accessories → background (region 0) — before torso to avoid "armor_chest" matching "chest" ---
-    (r"cloth|dress|skirt|hat|ribbon|accessory|cape|armor|weapon|shield|bow|jewel|ornament|belt|glove|boot|scarf", "background"),
+    (
+        r"cloth|dress|skirt|hat|ribbon|accessory|cape|armor|weapon|shield|bow|jewel|ornament|belt|glove|boot|scarf",
+        "background",
+    ),
     # --- Torso / body (general — after specific regions and accessories) ---
     (r"body|torso|karada|chest|mune|bust", "chest"),
     (r"spine|senaka|back(?!ground)", "spine"),
@@ -898,24 +925,63 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
     # --- Neck ---
     (r"\bneck\b", "neck"),
     # --- Shoulders (before arms to avoid false matches) ---
-    (r"shoulder.*(?:left|[-_]l\b)|(?:left|l[-_]).*shoulder|clavicle.*(?:left|[-_]l\b)", "shoulder_l"),
-    (r"shoulder.*(?:right|[-_]r\b)|(?:right|r[-_]).*shoulder|clavicle.*(?:right|[-_]r\b)", "shoulder_r"),
+    (
+        r"shoulder.*(?:left|[-_]l\b)|(?:left|l[-_]).*shoulder|clavicle.*(?:left|[-_]l\b)",
+        "shoulder_l",
+    ),
+    (
+        r"shoulder.*(?:right|[-_]r\b)|(?:right|r[-_]).*shoulder|clavicle.*(?:right|[-_]r\b)",
+        "shoulder_r",
+    ),
     # --- Left arm (forearm/lower before upper) ---
-    (r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_l"),
-    (r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:left|[-_]l\b)|(?:left|l[-_]).*upper[-_]?arm", "upper_arm_l"),
-    (r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fist|hand|finger|thumb)", "hand_l"),
+    (
+        r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)",
+        "lower_arm_l",
+    ),
+    (
+        r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:left|[-_]l\b)|(?:left|l[-_]).*upper[-_]?arm",
+        "upper_arm_l",
+    ),
+    (
+        r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fist|hand|finger|thumb)",
+        "hand_l",
+    ),
     # --- Right arm ---
-    (r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_r"),
-    (r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:right|[-_]r\b)|(?:right|r[-_]).*upper[-_]?arm", "upper_arm_r"),
-    (r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fist|hand|finger|thumb)", "hand_r"),
+    (
+        r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)",
+        "lower_arm_r",
+    ),
+    (
+        r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:right|[-_]r\b)|(?:right|r[-_]).*upper[-_]?arm",
+        "upper_arm_r",
+    ),
+    (
+        r"(?:front|rear)?[-_]?(?:fist|hand|finger|thumb).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fist|hand|finger|thumb)",
+        "hand_r",
+    ),
     # --- Left leg (lower/shin before upper) ---
-    (r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
-    (r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:thigh|upper[-_]?leg)", "upper_leg_l"),
+    (
+        r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_l",
+    ),
+    (
+        r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:thigh|upper[-_]?leg)",
+        "upper_leg_l",
+    ),
     (r"(?:front|rear)?[-_]?(?:foot|toe).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:foot|toe)", "foot_l"),
     # --- Right leg ---
-    (r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_r"),
-    (r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:thigh|upper[-_]?leg)", "upper_leg_r"),
-    (r"(?:front|rear)?[-_]?(?:foot|toe).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:foot|toe)", "foot_r"),
+    (
+        r"(?:front|rear)?[-_]?(?:shin|lower[-_]?leg|calf).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_r",
+    ),
+    (
+        r"(?:front|rear)?[-_]?(?:thigh|upper[-_]?leg).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:thigh|upper[-_]?leg)",
+        "upper_leg_r",
+    ),
+    (
+        r"(?:front|rear)?[-_]?(?:foot|toe).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:foot|toe)",
+        "foot_r",
+    ),
     # --- Front/rear without explicit side (Spine convention: front=left, rear=right) ---
     (r"\bfront[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_l"),
     (r"\bfront[-_]?upper[-_]?arm", "upper_arm_l"),
@@ -932,7 +998,10 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
     # --- Hips / pelvis ---
     (r"\bhip|pelvis|waist", "hips"),
     # --- Accessories → background ---
-    (r"weapon|sword|shield|bow|staff|gun|crosshair|muzzle|hover|portal|dust|cloak|cape|armor|helmet|hat|crown", "background"),
+    (
+        r"weapon|sword|shield|bow|staff|gun|crosshair|muzzle|hover|portal|dust|cloak|cape|armor|helmet|hat|crown",
+        "background",
+    ),
     # --- Torso / body (general — after specific regions) ---
     (r"\btorso\b|\bchest\b|\bbody\b", "chest"),
     (r"\bspine\b|\bback\b", "spine"),
@@ -967,25 +1036,64 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
     (r"shoulder.*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*shoulder", "shoulder_l"),
     (r"shoulder.*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*shoulder", "shoulder_r"),
     # --- Left arm (lower/forearm before upper to avoid substring clash) ---
-    (r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)", "lower_arm_l"),
-    (r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)", "upper_arm_l"),
-    (r"(?:glove|hand|finger).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:glove|hand|finger)", "hand_l"),
+    (
+        r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
+        "lower_arm_l",
+    ),
+    (
+        r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)",
+        "upper_arm_l",
+    ),
+    (
+        r"(?:glove|hand|finger).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:glove|hand|finger)",
+        "hand_l",
+    ),
     # --- Right arm ---
-    (r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)", "lower_arm_r"),
-    (r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)", "upper_arm_r"),
-    (r"(?:glove|hand|finger).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:glove|hand|finger)", "hand_r"),
+    (
+        r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
+        "lower_arm_r",
+    ),
+    (
+        r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)",
+        "upper_arm_r",
+    ),
+    (
+        r"(?:glove|hand|finger).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:glove|hand|finger)",
+        "hand_r",
+    ),
     # --- Left leg (lower/shin before upper to avoid substring clash) ---
-    (r"(?:shin|lower[-_]?leg|calf).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
-    (r"(?:thigh|upper[-_]?leg|leg).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:thigh|upper[-_]?leg|leg)", "upper_leg_l"),
-    (r"(?:shoe|foot|toe|sock|boot).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shoe|foot|toe|sock|boot)", "foot_l"),
+    (
+        r"(?:shin|lower[-_]?leg|calf).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_l",
+    ),
+    (
+        r"(?:thigh|upper[-_]?leg|leg).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:thigh|upper[-_]?leg|leg)",
+        "upper_leg_l",
+    ),
+    (
+        r"(?:shoe|foot|toe|sock|boot).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shoe|foot|toe|sock|boot)",
+        "foot_l",
+    ),
     # --- Right leg ---
-    (r"(?:shin|lower[-_]?leg|calf).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_r"),
-    (r"(?:thigh|upper[-_]?leg|leg).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:thigh|upper[-_]?leg|leg)", "upper_leg_r"),
-    (r"(?:shoe|foot|toe|sock|boot).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shoe|foot|toe|sock|boot)", "foot_r"),
+    (
+        r"(?:shin|lower[-_]?leg|calf).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_r",
+    ),
+    (
+        r"(?:thigh|upper[-_]?leg|leg).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:thigh|upper[-_]?leg|leg)",
+        "upper_leg_r",
+    ),
+    (
+        r"(?:shoe|foot|toe|sock|boot).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shoe|foot|toe|sock|boot)",
+        "foot_r",
+    ),
     # --- Hips / lower body ---
     (r"\bhip|pelvis|waist|Outfit_Lower|pants|skirt|shorts", "hips"),
     # --- Accessories → background (before torso to prevent false matches) ---
-    (r"accessory|ribbon|wing|tail|cape|cloak|weapon|shield|bag|mask|ornament|jewelry|crown|hat|glasses|goggle|belt|scarf|collar", "background"),
+    (
+        r"accessory|ribbon|wing|tail|cape|cloak|weapon|shield|bag|mask|ornament|jewelry|crown|hat|glasses|goggle|belt|scarf|collar",
+        "background",
+    ),
     # --- Torso / body (general — after specific regions and accessories) ---
     (r"Outfit_Upper|jacket|shirt|vest|coat|blazer|uniform", "chest"),
     (r"\bbody\b|Body|torso|chest|mune|bust", "chest"),
@@ -1001,8 +1109,25 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
 # VRM_BONE_ALIASES to resolve into Strata's 16 body sub-regions.
 
 STDGEN_SEMANTIC_CLASSES: dict[str, RegionId | None] = {
-    "hair": 1,     # → head
-    "face": 1,     # → head
+    "hair": 1,  # → head
+    "face": 1,  # → head
     "body": None,  # → per-vertex bone-weight refinement
     "clothes": None,  # → underlying body region via bone weights
+}
+
+# ---------------------------------------------------------------------------
+# Live2D renderer augmentation settings
+# ---------------------------------------------------------------------------
+# Rotation angles (degrees) applied to Live2D composites for data augmentation.
+LIVE2D_AUGMENTATION_ROTATIONS: list[float] = [-5.0, 0.0, 5.0]
+
+# Uniform scale factors applied to Live2D composites for data augmentation.
+LIVE2D_AUGMENTATION_SCALES: list[float] = [0.9, 1.0, 1.1]
+
+# Color jitter ranges: (hue_shift_degrees, saturation_factor, brightness_factor).
+# Each element is (min, max) for random uniform sampling.
+LIVE2D_AUGMENTATION_COLOR_JITTER: dict[str, tuple[float, float]] = {
+    "hue": (-15.0, 15.0),  # degrees on hue wheel
+    "saturation": (0.85, 1.15),  # multiplicative factor
+    "brightness": (0.85, 1.15),  # multiplicative factor
 }
