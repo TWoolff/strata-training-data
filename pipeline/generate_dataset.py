@@ -45,6 +45,8 @@ from .config import (
     SCALE_FACTORS,
     STYLE_REGISTRY,
 )
+from .contour_augmenter import augment_all_styles as augment_contour_styles
+from .contour_renderer import render_contour_pair
 from .draw_order_extractor import extract_draw_order
 from .exporter import (
     ensure_output_dirs,
@@ -210,6 +212,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Directory containing Live2D model subdirectories (.model3.json + textures).",
     )
+    parser.add_argument(
+        "--contours",
+        action="store_true",
+        default=False,
+        help="Enable Freestyle contour pair rendering (with/without contours + mask + 5 styles).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -344,6 +352,7 @@ def process_character(
     only_new: bool = False,
     camera_angles: list[str] | None = None,
     import_result: ImportResult | None = None,
+    enable_contours: bool = False,
 ) -> CharacterResult:
     """Run the full pipeline for a single character across all poses.
 
@@ -363,6 +372,7 @@ def process_character(
         camera_angles: Camera angle names to render (default: front only).
         import_result: Pre-imported character (e.g. from VRM importer).
             If None, imports from fbx_path via import_character().
+        enable_contours: Render Freestyle contour pairs + augmentations.
 
     Returns:
         CharacterResult with per-pose success/failure/skip counts.
@@ -464,6 +474,7 @@ def process_character(
                 styles=styles,
                 resolution=resolution,
                 camera_angles=camera_angles,
+                enable_contours=enable_contours,
             )
             result.poses_succeeded += 1
             result.style_counts += pose_style_counts
@@ -565,6 +576,7 @@ def _process_single_pose(
     styles: list[str],
     resolution: int,
     camera_angles: list[str] | None = None,
+    enable_contours: bool = False,
 ) -> Counter:
     """Process a single pose for a character (all augmentation and angle variants).
 
@@ -584,6 +596,7 @@ def _process_single_pose(
         styles: Art style names.
         resolution: Render resolution.
         camera_angles: Camera angle names to render.
+        enable_contours: Render Freestyle contour pairs + augmentations.
 
     Returns:
         Counter of style images produced (style_name → count).
@@ -719,6 +732,33 @@ def _process_single_pose(
                     styled_image.save(image_out_path, format="PNG")
                     color_paths[style] = image_out_path
                     style_counts[style] += 1
+
+            # --- Contour pair rendering (Freestyle on/off) ---
+            if enable_contours:
+                print(f"    rendering contour pair ({angle_name})...")
+                _restore_materials(meshes, original_materials)
+                setup_color_render(scene)
+
+                contour_prefix = f"{char_id}{pose_suffix}"
+                _with_path, without_path, mask_path = render_contour_pair(
+                    scene,
+                    output_dir,
+                    contour_prefix,
+                )
+
+                # Load the segmentation mask for per-region coloring.
+                seg_for_contour = np.array(Image.open(mask_out_path).convert("L"))
+                contour_mask_arr = np.array(Image.open(mask_path).convert("L"))
+                without_img = Image.open(without_path)
+
+                augment_contour_styles(
+                    without_img,
+                    contour_mask_arr,
+                    output_dir,
+                    contour_prefix,
+                    seg_mask=seg_for_contour,
+                    seed=style_seed,
+                )
 
             # --- Re-assign segmentation materials for next angle ---
             for mesh_idx, mesh_obj in enumerate(meshes):
@@ -872,6 +912,7 @@ def main() -> None:
     spine_dir: Path | None = args.spine_dir
     vroid_dir: Path | None = args.vroid_dir
     live2d_dir: Path | None = args.live2d_dir
+    enable_contours: bool = args.contours
 
     # Parse camera angles
     angles_raw = args.angles.strip()
@@ -924,6 +965,7 @@ def main() -> None:
     print(f"Flip:        {enable_flip}")
     print(f"Scale:       {enable_scale} (factors: {scale_factors})")
     print(f"Only new:    {only_new}")
+    print(f"Contours:    {enable_contours}")
     print(f"Output:      {output_dir}")
     print("=" * 60)
     print()
@@ -956,6 +998,7 @@ def main() -> None:
                 scale_factors=scale_factors,
                 only_new=only_new,
                 camera_angles=camera_angles,
+                enable_contours=enable_contours,
             )
         except Exception:
             logger.exception("Unhandled error processing %s", fbx_path.name)
@@ -1048,6 +1091,7 @@ def main() -> None:
                         only_new=only_new,
                         camera_angles=camera_angles,
                         import_result=vrm_import,
+                        enable_contours=enable_contours,
                     )
                     results.append(char_result)
 

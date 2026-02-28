@@ -1131,3 +1131,103 @@ LIVE2D_AUGMENTATION_COLOR_JITTER: dict[str, tuple[float, float]] = {
     "saturation": (0.85, 1.15),  # multiplicative factor
     "brightness": (0.85, 1.15),  # multiplicative factor
 }
+
+# ---------------------------------------------------------------------------
+# Contour rendering (Freestyle line pairs for contour-removal training)
+# ---------------------------------------------------------------------------
+
+# Freestyle edge detection flags — which edge types to render as contour lines.
+CONTOUR_EDGE_SILHOUETTE: bool = True
+CONTOUR_EDGE_CREASE: bool = True
+CONTOUR_EDGE_MATERIAL_BOUNDARY: bool = True
+CONTOUR_EDGE_BORDER: bool = False  # Open mesh edges — usually not wanted
+CONTOUR_EDGE_MARK: bool = False  # Manually marked edges
+
+# Freestyle line thickness for the base contour render (in pixels).
+CONTOUR_FREESTYLE_THICKNESS: float = 2.0
+
+# Pixel-difference threshold for computing the binary contour mask.
+# Pixels where abs(with_contours - without_contours) > threshold are contour pixels.
+CONTOUR_DIFF_THRESHOLD: int = 30
+
+# ---------------------------------------------------------------------------
+# Contour augmentation styles
+# ---------------------------------------------------------------------------
+# Each style defines: (name, line_width_px, color_rgb, opacity, wobble).
+# color_rgb can be a single RGB tuple or "per_region" for region-based coloring.
+
+CONTOUR_STYLE_THIN_BLACK: dict[str, object] = {
+    "name": "thin_black",
+    "line_width": 1,
+    "color": (0, 0, 0),
+    "opacity": 1.0,
+    "wobble": False,
+}
+
+CONTOUR_STYLE_MEDIUM_BLACK: dict[str, object] = {
+    "name": "medium_black",
+    "line_width": 2,
+    "color": (0, 0, 0),
+    "opacity": 1.0,
+    "wobble": False,
+}
+
+CONTOUR_STYLE_THICK_BROWN: dict[str, object] = {
+    "name": "thick_brown",
+    "line_width": 3,
+    "color": (80, 50, 30),
+    "opacity": 0.9,
+    "wobble": False,
+}
+
+CONTOUR_STYLE_PER_REGION: dict[str, object] = {
+    "name": "per_region",
+    "line_width": 1,
+    "color": "per_region",
+    "opacity": 0.8,
+    "wobble": False,
+}
+
+CONTOUR_STYLE_WOBBLY: dict[str, object] = {
+    "name": "wobbly",
+    "line_width": 2,
+    "color": (0, 0, 0),
+    "opacity": 1.0,
+    "wobble": True,
+}
+
+CONTOUR_STYLES: list[dict[str, object]] = [
+    CONTOUR_STYLE_THIN_BLACK,
+    CONTOUR_STYLE_MEDIUM_BLACK,
+    CONTOUR_STYLE_THICK_BROWN,
+    CONTOUR_STYLE_PER_REGION,
+    CONTOUR_STYLE_WOBBLY,
+]
+
+# Wobble displacement range (pixels) for hand-drawn contour effect.
+CONTOUR_WOBBLE_RANGE: int = 2
+
+# Per-region contour colors — maps region ID to RGB.
+# Uses warm/cool alternating scheme so adjacent regions contrast.
+CONTOUR_REGION_COLORS: dict[RegionId, RGB] = {
+    0: (0, 0, 0),  # background — black (fallback)
+    1: (200, 50, 50),  # head — red
+    2: (180, 100, 60),  # neck — brown
+    3: (50, 100, 200),  # chest — blue
+    4: (80, 150, 80),  # spine — green
+    5: (150, 80, 150),  # hips — purple
+    6: (200, 130, 50),  # upper_arm_l — orange
+    7: (50, 170, 170),  # lower_arm_l — teal
+    8: (200, 50, 120),  # hand_l — magenta
+    9: (200, 130, 50),  # upper_arm_r — orange
+    10: (50, 170, 170),  # lower_arm_r — teal
+    11: (200, 50, 120),  # hand_r — magenta
+    12: (80, 80, 200),  # upper_leg_l — indigo
+    13: (50, 150, 50),  # lower_leg_l — green
+    14: (180, 50, 50),  # foot_l — crimson
+    15: (80, 80, 200),  # upper_leg_r — indigo
+    16: (50, 150, 50),  # lower_leg_r — green
+    17: (180, 50, 50),  # foot_r — crimson
+    18: (160, 120, 80),  # shoulder_l — tan
+    19: (160, 120, 80),  # shoulder_r — tan
+}

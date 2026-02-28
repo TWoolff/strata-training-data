@@ -36,7 +36,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _SUBDIRS: list[str] = [
-    "images", "masks", "joints", "weights", "draw_order", "measurements", "sources",
+    "images",
+    "masks",
+    "joints",
+    "weights",
+    "draw_order",
+    "measurements",
+    "sources",
+    "contours",
 ]
 
 
