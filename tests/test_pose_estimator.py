@@ -137,10 +137,10 @@ class TestCocoToStrata:
             "neck",
             "chest",
             "spine",
-            "upper_arm_l",
-            "upper_arm_r",
-            "upper_leg_l",
-            "upper_leg_r",
+            "hand_l",
+            "hand_r",
+            "foot_l",
+            "foot_r",
         ]
         for name in interpolated:
             assert joints[name]["confidence"] < cf[0], f"{name} confidence should be reduced"
@@ -177,18 +177,20 @@ class TestCocoToStrata:
         # Spine is 2/3 from shoulders → closer to hips
         assert abs(spine_y - hip_mid_y) < abs(spine_y - shoulder_mid_y)
 
-    def test_upper_arm_midpoint(self) -> None:
+    def test_upper_arm_at_elbow(self) -> None:
+        """upper_arm should be placed at the elbow (COCO elbow keypoint)."""
         kp, cf = _dummy_coco_keypoints()
         joints = coco_to_strata(kp, cf, (512, 512))
-        expected_x = round((kp[COCO_LEFT_SHOULDER][0] + kp[COCO_LEFT_ELBOW][0]) / 2)
-        expected_y = round((kp[COCO_LEFT_SHOULDER][1] + kp[COCO_LEFT_ELBOW][1]) / 2)
+        expected_x = round(float(kp[COCO_LEFT_ELBOW][0]))
+        expected_y = round(float(kp[COCO_LEFT_ELBOW][1]))
         assert joints["upper_arm_l"]["position"] == [expected_x, expected_y]
 
-    def test_upper_leg_midpoint(self) -> None:
+    def test_upper_leg_at_knee(self) -> None:
+        """upper_leg should be placed at the knee (COCO knee keypoint)."""
         kp, cf = _dummy_coco_keypoints()
         joints = coco_to_strata(kp, cf, (512, 512))
-        expected_x = round((kp[COCO_LEFT_HIP][0] + kp[COCO_LEFT_KNEE][0]) / 2)
-        expected_y = round((kp[COCO_LEFT_HIP][1] + kp[COCO_LEFT_KNEE][1]) / 2)
+        expected_x = round(float(kp[COCO_LEFT_KNEE][0]))
+        expected_y = round(float(kp[COCO_LEFT_KNEE][1]))
         assert joints["upper_leg_l"]["position"] == [expected_x, expected_y]
 
     def test_positions_clamped_to_image_bounds(self) -> None:

@@ -90,7 +90,7 @@ def draw_joints(image: np.ndarray, joints_data: dict) -> np.ndarray:
         color = tuple(int(c * alpha) for c in BONE_COLOR)
         cv2.line(canvas, pt_a, pt_b, color, 2, cv2.LINE_AA)
 
-    # Draw joint dots
+    # Draw joint dots + labels
     for name, joint in joints.items():
         if not joint.get("visible"):
             continue
@@ -100,6 +100,29 @@ def draw_joints(image: np.ndarray, joints_data: dict) -> np.ndarray:
         radius = 5 if conf >= 0.5 else 3
         cv2.circle(canvas, pos, radius, color, -1, cv2.LINE_AA)
         cv2.circle(canvas, pos, radius, (255, 255, 255), 1, cv2.LINE_AA)
+
+        # Draw label with background for readability
+        label = name
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.3
+        thickness = 1
+        (tw, th), baseline = cv2.getTextSize(label, font, font_scale, thickness)
+        tx = pos[0] + radius + 3
+        ty = pos[1] + th // 2
+        # Keep label within image bounds
+        if tx + tw > canvas.shape[1]:
+            tx = pos[0] - radius - 3 - tw
+        if ty - th < 0:
+            ty = pos[1] + th + radius
+        # Dark background rectangle
+        cv2.rectangle(
+            canvas,
+            (tx - 1, ty - th - 1),
+            (tx + tw + 1, ty + baseline + 1),
+            (0, 0, 0),
+            -1,
+        )
+        cv2.putText(canvas, label, (tx, ty), font, font_scale, (255, 255, 255), thickness)
 
     # Draw bbox if present
     bbox = joints_data.get("bbox")

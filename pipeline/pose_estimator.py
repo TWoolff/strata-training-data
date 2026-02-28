@@ -48,6 +48,12 @@ INTERPOLATION_CONFIDENCE_FACTOR: float = 0.8
 # Default minimum confidence to mark a joint as visible.
 DEFAULT_CONFIDENCE_THRESHOLD: float = 0.3
 
+# Extrapolation factors for hands and feet.
+# COCO's most distal keypoints are wrists/ankles, but Strata's "hand" and
+# "foot" regions are beyond those joints.  We extrapolate along the limb.
+HAND_EXTRAPOLATION: float = 0.3  # 30% past wrist along elbow→wrist direction
+FOOT_EXTRAPOLATION: float = 0.25  # 25% past ankle along knee→ankle direction
+
 
 # ---------------------------------------------------------------------------
 # COCO → Strata mapping (pure function, no model dependency)
@@ -80,9 +86,11 @@ def coco_to_strata(
 ) -> dict[str, dict[str, Any]]:
     """Map COCO 17-point keypoints to Strata 19-region joints.
 
-    Produces all 19 body-region joints (regions 1–19).  13 are directly
-    mapped from COCO keypoints; 6 are interpolated from neighboring
-    COCO keypoints with a reduced confidence factor.
+    Produces all 19 body-region joints (regions 1–19).  Each joint is placed
+    on the body part it names: ``upper_arm`` at the elbow, ``lower_arm`` at
+    the wrist, ``hand`` extrapolated past the wrist, etc.  5 are directly
+    mapped from COCO keypoints; 14 are interpolated or extrapolated with a
+    reduced confidence factor.
 
     Args:
         keypoints: Array of shape ``(17, 2)`` with (x, y) pixel coords.
@@ -112,19 +120,22 @@ def coco_to_strata(
     hip_mid = _midpoint(kp[COCO_LEFT_HIP], kp[COCO_RIGHT_HIP])
     hip_mid_conf = mid_conf(COCO_LEFT_HIP, COCO_RIGHT_HIP)
 
-    # --- Direct mappings (13 regions) ---
+    # --- Direct mappings (5 joints with 1:1 COCO keypoint) ---
+    #   shoulder = at the shoulder, upper_arm = at the elbow,
+    #   lower_arm = at the wrist, upper_leg = at the knee,
+    #   lower_leg = at the ankle.
     direct: list[tuple[str, int]] = [
-        ("head", COCO_NOSE),  # 1
-        ("shoulder_l", COCO_LEFT_SHOULDER),  # 18
-        ("shoulder_r", COCO_RIGHT_SHOULDER),  # 19
-        ("lower_arm_l", COCO_LEFT_ELBOW),  # 7
-        ("lower_arm_r", COCO_RIGHT_ELBOW),  # 10
-        ("hand_l", COCO_LEFT_WRIST),  # 8
-        ("hand_r", COCO_RIGHT_WRIST),  # 11
-        ("lower_leg_l", COCO_LEFT_KNEE),  # 13
-        ("lower_leg_r", COCO_RIGHT_KNEE),  # 16
-        ("foot_l", COCO_LEFT_ANKLE),  # 14
-        ("foot_r", COCO_RIGHT_ANKLE),  # 17
+        ("head", COCO_NOSE),
+        ("shoulder_l", COCO_LEFT_SHOULDER),
+        ("shoulder_r", COCO_RIGHT_SHOULDER),
+        ("upper_arm_l", COCO_LEFT_ELBOW),     # elbow
+        ("upper_arm_r", COCO_RIGHT_ELBOW),     # elbow
+        ("lower_arm_l", COCO_LEFT_WRIST),      # wrist
+        ("lower_arm_r", COCO_RIGHT_WRIST),     # wrist
+        ("upper_leg_l", COCO_LEFT_KNEE),       # knee
+        ("upper_leg_r", COCO_RIGHT_KNEE),      # knee
+        ("lower_leg_l", COCO_LEFT_ANKLE),      # ankle
+        ("lower_leg_r", COCO_RIGHT_ANKLE),     # ankle
     ]
 
     def joint(pos: np.ndarray, conf: float) -> dict[str, Any]:
@@ -136,49 +147,42 @@ def coco_to_strata(
     # Hips: midpoint of both COCO hips
     joints["hips"] = joint(hip_mid, hip_mid_conf)
 
-    # --- Interpolated regions (6 regions, confidence × 0.8) ---
+    # --- Interpolated / extrapolated regions (7 regions, confidence × 0.8) ---
+    icf = INTERPOLATION_CONFIDENCE_FACTOR
 
     # neck: midpoint of nose ↔ shoulder midpoint
     neck_pos = _midpoint(kp[COCO_NOSE], shoulder_mid)
     neck_conf = mid_conf(COCO_NOSE, COCO_LEFT_SHOULDER, COCO_RIGHT_SHOULDER)
-    joints["neck"] = joint(neck_pos, neck_conf * INTERPOLATION_CONFIDENCE_FACTOR)
+    joints["neck"] = joint(neck_pos, neck_conf * icf)
 
     # chest: 1/3 from shoulder midpoint toward hip midpoint
     chest_pos = _lerp(shoulder_mid, hip_mid, 1.0 / 3.0)
     torso_conf = min(shoulder_mid_conf, hip_mid_conf)
-    joints["chest"] = joint(chest_pos, torso_conf * INTERPOLATION_CONFIDENCE_FACTOR)
+    joints["chest"] = joint(chest_pos, torso_conf * icf)
 
     # spine: 2/3 from shoulder midpoint toward hip midpoint
     spine_pos = _lerp(shoulder_mid, hip_mid, 2.0 / 3.0)
-    joints["spine"] = joint(spine_pos, torso_conf * INTERPOLATION_CONFIDENCE_FACTOR)
+    joints["spine"] = joint(spine_pos, torso_conf * icf)
 
-    # upper_arm_l: midpoint of left shoulder ↔ left elbow
-    upper_arm_l_pos = _midpoint(kp[COCO_LEFT_SHOULDER], kp[COCO_LEFT_ELBOW])
-    upper_arm_l_conf = mid_conf(COCO_LEFT_SHOULDER, COCO_LEFT_ELBOW)
-    joints["upper_arm_l"] = joint(
-        upper_arm_l_pos, upper_arm_l_conf * INTERPOLATION_CONFIDENCE_FACTOR
-    )
+    # hand_l: extrapolate past left wrist along elbow→wrist direction
+    hand_l_pos = _lerp(kp[COCO_LEFT_ELBOW], kp[COCO_LEFT_WRIST], 1.0 + HAND_EXTRAPOLATION)
+    hand_l_conf = mid_conf(COCO_LEFT_ELBOW, COCO_LEFT_WRIST)
+    joints["hand_l"] = joint(hand_l_pos, hand_l_conf * icf)
 
-    # upper_arm_r: midpoint of right shoulder ↔ right elbow
-    upper_arm_r_pos = _midpoint(kp[COCO_RIGHT_SHOULDER], kp[COCO_RIGHT_ELBOW])
-    upper_arm_r_conf = mid_conf(COCO_RIGHT_SHOULDER, COCO_RIGHT_ELBOW)
-    joints["upper_arm_r"] = joint(
-        upper_arm_r_pos, upper_arm_r_conf * INTERPOLATION_CONFIDENCE_FACTOR
-    )
+    # hand_r: extrapolate past right wrist along elbow→wrist direction
+    hand_r_pos = _lerp(kp[COCO_RIGHT_ELBOW], kp[COCO_RIGHT_WRIST], 1.0 + HAND_EXTRAPOLATION)
+    hand_r_conf = mid_conf(COCO_RIGHT_ELBOW, COCO_RIGHT_WRIST)
+    joints["hand_r"] = joint(hand_r_pos, hand_r_conf * icf)
 
-    # upper_leg_l: midpoint of left hip ↔ left knee
-    upper_leg_l_pos = _midpoint(kp[COCO_LEFT_HIP], kp[COCO_LEFT_KNEE])
-    upper_leg_l_conf = mid_conf(COCO_LEFT_HIP, COCO_LEFT_KNEE)
-    joints["upper_leg_l"] = joint(
-        upper_leg_l_pos, upper_leg_l_conf * INTERPOLATION_CONFIDENCE_FACTOR
-    )
+    # foot_l: extrapolate past left ankle along knee→ankle direction
+    foot_l_pos = _lerp(kp[COCO_LEFT_KNEE], kp[COCO_LEFT_ANKLE], 1.0 + FOOT_EXTRAPOLATION)
+    foot_l_conf = mid_conf(COCO_LEFT_KNEE, COCO_LEFT_ANKLE)
+    joints["foot_l"] = joint(foot_l_pos, foot_l_conf * icf)
 
-    # upper_leg_r: midpoint of right hip ↔ right knee
-    upper_leg_r_pos = _midpoint(kp[COCO_RIGHT_HIP], kp[COCO_RIGHT_KNEE])
-    upper_leg_r_conf = mid_conf(COCO_RIGHT_HIP, COCO_RIGHT_KNEE)
-    joints["upper_leg_r"] = joint(
-        upper_leg_r_pos, upper_leg_r_conf * INTERPOLATION_CONFIDENCE_FACTOR
-    )
+    # foot_r: extrapolate past right ankle along knee→ankle direction
+    foot_r_pos = _lerp(kp[COCO_RIGHT_KNEE], kp[COCO_RIGHT_ANKLE], 1.0 + FOOT_EXTRAPOLATION)
+    foot_r_conf = mid_conf(COCO_RIGHT_KNEE, COCO_RIGHT_ANKLE)
+    joints["foot_r"] = joint(foot_r_pos, foot_r_conf * icf)
 
     return joints
 
