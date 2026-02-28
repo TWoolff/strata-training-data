@@ -188,7 +188,10 @@ def _convert_mtoon_materials(meshes: list[bpy.types.Object]) -> None:
                     links.new(
                         base_texture.outputs["Alpha"], principled.inputs["Alpha"]
                     )
-                    mat.blend_method = "CLIP"  # type: ignore[attr-defined]
+                    if hasattr(mat, "surface_render_method"):
+                        mat.surface_render_method = "DITHERED"
+                    elif hasattr(mat, "blend_method"):
+                        mat.blend_method = "CLIP"  # type: ignore[attr-defined]
             else:
                 principled.inputs["Base Color"].default_value = base_color
 

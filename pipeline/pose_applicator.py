@@ -242,7 +242,10 @@ def _import_animation_fbx(fbx_path: Path) -> bpy.types.Object | None:
     return new_armatures[0]
 
 
-def _cleanup_imported_armature(armature: bpy.types.Object) -> None:
+def _cleanup_imported_armature(
+    armature: bpy.types.Object,
+    keep_actions: bool = False,
+) -> None:
     """Remove a temporarily imported animation armature and its data.
 
     Also removes any child objects (meshes that came along with the FBX)
@@ -250,6 +253,8 @@ def _cleanup_imported_armature(armature: bpy.types.Object) -> None:
 
     Args:
         armature: The armature object to remove.
+        keep_actions: If True, don't purge orphaned actions (used when
+            the action has been transferred to the character armature).
     """
     # Collect objects to delete (armature + any children)
     objects_to_delete = [armature, *armature.children]
@@ -258,7 +263,10 @@ def _cleanup_imported_armature(armature: bpy.types.Object) -> None:
         bpy.data.objects.remove(obj, do_unlink=True)
 
     # Purge orphaned data blocks
-    for collection in (bpy.data.armatures, bpy.data.actions, bpy.data.meshes):
+    collections_to_purge = [bpy.data.armatures, bpy.data.meshes]
+    if not keep_actions:
+        collections_to_purge.append(bpy.data.actions)
+    for collection in collections_to_purge:
         for block in list(collection):
             if block.users == 0:
                 collection.remove(block)
@@ -316,8 +324,13 @@ def _apply_animation_pose(
 ) -> int:
     """Transfer an animation pose from one armature to another at a given frame.
 
-    Sets the scene to the target frame, reads bone transforms from the
-    animation armature, and copies them to matching bones on the character.
+    Binds the animation action directly to the character armature and evaluates
+    at the target frame. This lets Blender's animation system handle the full
+    transform evaluation, which is required in Blender 5.0+ where the layered
+    action system replaced direct fcurve access.
+
+    The action stays bound to the character armature until ``reset_pose()``
+    is called, which clears the action and resets to T-pose.
 
     Args:
         character_armature: The character's armature to pose.
@@ -328,52 +341,42 @@ def _apply_animation_pose(
         Number of bones successfully transferred.
     """
     scene = bpy.context.scene
-    scene.frame_set(target_frame)
 
-    # Build bone name mapping (anim → character)
-    anim_bone_names = [b.name for b in anim_armature.pose.bones]
-    char_bone_names = [b.name for b in character_armature.pose.bones]
-    name_map = _build_name_map(anim_bone_names, char_bone_names)
-
-    if not name_map:
-        logger.warning(
-            "No matching bones between animation (%s) and character (%s)",
-            anim_armature.name,
-            character_armature.name,
-        )
+    # Get the animation action
+    action = None
+    if anim_armature.animation_data and anim_armature.animation_data.action:
+        action = anim_armature.animation_data.action
+    if action is None:
+        logger.error("No action found on animation armature %s", anim_armature.name)
         return 0
 
-    # Transfer pose bone transforms
-    transferred = 0
-    for anim_bone_name, char_bone_name in name_map.items():
-        anim_pbone = anim_armature.pose.bones.get(anim_bone_name)
-        char_pbone = character_armature.pose.bones.get(char_bone_name)
+    # Bind action to character armature
+    if character_armature.animation_data is None:
+        character_armature.animation_data_create()
 
-        if anim_pbone is None or char_pbone is None:
-            continue
+    character_armature.animation_data.action = action
 
-        # Copy the local transform basis (rotation + location + scale)
-        char_pbone.rotation_mode = anim_pbone.rotation_mode
+    # Blender 5.0+: copy the action slot binding so channels evaluate
+    if hasattr(character_armature.animation_data, "action_slot"):
+        anim_slot = getattr(anim_armature.animation_data, "action_slot", None)
+        if anim_slot is not None:
+            try:
+                character_armature.animation_data.action_slot = anim_slot
+            except Exception:
+                logger.debug("Could not assign action slot, channels may not evaluate")
 
-        if anim_pbone.rotation_mode == "QUATERNION":
-            char_pbone.rotation_quaternion = anim_pbone.rotation_quaternion.copy()
-        elif anim_pbone.rotation_mode == "AXIS_ANGLE":
-            char_pbone.rotation_axis_angle = tuple(anim_pbone.rotation_axis_angle)
-        else:
-            char_pbone.rotation_euler = anim_pbone.rotation_euler.copy()
-
-        char_pbone.location = anim_pbone.location.copy()
-        char_pbone.scale = anim_pbone.scale.copy()
-
-        transferred += 1
-
-    # Force scene update so positions are current for rendering
+    # Evaluate at target frame
+    scene.frame_set(target_frame)
     bpy.context.view_layer.update()
 
+    # Count how many bones have matching names (for logging)
+    anim_bone_names = {b.name for b in anim_armature.pose.bones}
+    char_bone_names = {b.name for b in character_armature.pose.bones}
+    transferred = len(anim_bone_names & char_bone_names)
+
     logger.debug(
-        "Transferred %d/%d bones at frame %d",
+        "Transferred %d bones at frame %d via action binding",
         transferred,
-        len(anim_bone_names),
         target_frame,
     )
     return transferred
@@ -544,8 +547,9 @@ def apply_pose(
 
     transferred = _apply_animation_pose(armature, anim_armature, pose.frame)
 
-    # Clean up the temporary animation armature
-    _cleanup_imported_armature(anim_armature)
+    # Clean up the temporary animation armature (but not the action,
+    # which is now bound to the character armature for rendering).
+    _cleanup_imported_armature(anim_armature, keep_actions=True)
 
     if transferred == 0:
         logger.warning(
@@ -563,11 +567,22 @@ def reset_pose(armature: bpy.types.Object) -> None:
     """Reset an armature to its rest pose (T-pose).
 
     Call this between pose applications to ensure a clean state.
+    Also clears any bound animation action from the armature.
 
     Args:
         armature: The armature to reset.
     """
+    # Clear any bound animation action (left from _apply_animation_pose)
+    if armature.animation_data and armature.animation_data.action:
+        armature.animation_data.action = None
+
     _apply_tpose(armature)
+
+    # Purge orphaned actions from previous pose applications
+    for action in list(bpy.data.actions):
+        if action.users == 0:
+            bpy.data.actions.remove(action)
+
     logger.debug("Reset armature %s to rest pose", armature.name)
 
 

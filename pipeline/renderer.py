@@ -19,6 +19,21 @@ import numpy as np
 from mathutils import Vector  # type: ignore[import-untyped]
 from PIL import Image
 
+def _eevee_engine_name() -> str:
+    """Return the correct EEVEE engine enum for this Blender version.
+
+    Blender 4.2–4.4 used ``BLENDER_EEVEE_NEXT``; Blender 5.0+ renamed
+    it back to ``BLENDER_EEVEE``.
+    """
+    try:
+        bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
+        return "BLENDER_EEVEE_NEXT"
+    except TypeError:
+        return "BLENDER_EEVEE"
+
+
+_EEVEE_ENGINE = _eevee_engine_name()
+
 from .config import (
     AMBIENT_COLOR,
     CAMERA_CLIP_END,
@@ -84,10 +99,17 @@ def create_region_materials() -> list[bpy.types.Material]:
 
         if region_id == 0:
             # Background region — fully transparent so the render alpha
-            # channel distinguishes character pixels from empty space
-            mat.blend_method = "CLIP"
-            mat.shadow_method = "CLIP"
-            mat.alpha_threshold = 0.5
+            # channel distinguishes character pixels from empty space.
+            # Blender 4.2+ replaced blend_method/shadow_method with
+            # surface_render_method; fall back for older versions.
+            if hasattr(mat, "surface_render_method"):
+                mat.surface_render_method = "DITHERED"
+            elif hasattr(mat, "blend_method"):
+                mat.blend_method = "CLIP"
+            if hasattr(mat, "shadow_method"):
+                mat.shadow_method = "CLIP"
+            if hasattr(mat, "alpha_threshold"):
+                mat.alpha_threshold = 0.5
             transparent = nodes.new(type="ShaderNodeBsdfTransparent")
             transparent.location = (0, 0)
             links.new(transparent.outputs["BSDF"], output.inputs["Surface"])
@@ -336,7 +358,7 @@ def setup_segmentation_render(scene: bpy.types.Scene) -> None:
         scene: The Blender scene to configure.
     """
     # Engine
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.engine = _EEVEE_ENGINE
 
     # Resolution
     scene.render.resolution_x = RENDER_RESOLUTION
@@ -363,9 +385,11 @@ def setup_segmentation_render(scene: bpy.types.Scene) -> None:
     scene.render.use_compositing = False
     scene.render.use_sequencer = False
 
-    # Disable ambient occlusion and bloom
-    scene.eevee.use_gtao = False
-    scene.eevee.use_bloom = False
+    # Disable ambient occlusion and bloom (removed in Blender 5.0)
+    if hasattr(scene.eevee, "use_gtao"):
+        scene.eevee.use_gtao = False
+    if hasattr(scene.eevee, "use_bloom"):
+        scene.eevee.use_bloom = False
 
     logger.info(
         "Segmentation render configured: %dx%d, EEVEE, no AA, transparent BG",
@@ -466,7 +490,7 @@ def setup_color_render(scene: bpy.types.Scene) -> None:
         scene: The Blender scene to configure.
     """
     # Engine
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.engine = _EEVEE_ENGINE
 
     # Resolution
     scene.render.resolution_x = RENDER_RESOLUTION
@@ -493,9 +517,11 @@ def setup_color_render(scene: bpy.types.Scene) -> None:
     scene.render.use_compositing = False
     scene.render.use_sequencer = False
 
-    # Disable ambient occlusion and bloom
-    scene.eevee.use_gtao = False
-    scene.eevee.use_bloom = False
+    # Disable ambient occlusion and bloom (removed in Blender 5.0)
+    if hasattr(scene.eevee, "use_gtao"):
+        scene.eevee.use_gtao = False
+    if hasattr(scene.eevee, "use_bloom"):
+        scene.eevee.use_bloom = False
 
     # --- Lighting ---
 

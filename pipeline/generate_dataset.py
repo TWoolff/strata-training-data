@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import gc
+import json
 import logging
 import sys
 import tempfile
@@ -948,9 +949,18 @@ def main() -> None:
     print("Indexing pose library...")
     poses = list_poses(pose_dir)
 
-    # Apply --poses_per_character limit
-    if poses_per_character > 0:
-        poses = poses[:poses_per_character]
+    # Apply --poses_per_character limit — evenly sample across all available
+    # poses (after T-pose and A-pose) so we get diversity across the full
+    # animation library rather than just the first N alphabetically.
+    if poses_per_character > 0 and len(poses) > poses_per_character:
+        # Always keep T-pose (index 0) and A-pose (index 1)
+        builtins = [p for p in poses if p.source == "built-in"]
+        animations = [p for p in poses if p.source != "built-in"]
+        n_anim = poses_per_character - len(builtins)
+        if n_anim > 0 and len(animations) > n_anim:
+            step = len(animations) / n_anim
+            animations = [animations[int(i * step)] for i in range(n_anim)]
+        poses = builtins + animations
 
     total_chars = len(fbx_files)
     total_poses = len(poses)
@@ -967,6 +977,16 @@ def main() -> None:
     print(f"Only new:    {only_new}")
     print(f"Contours:    {enable_contours}")
     print(f"Output:      {output_dir}")
+
+    # Save selected pose list so it's clear which poses were used
+    pose_list_path = output_dir / "pose_list.json"
+    pose_list_path.parent.mkdir(parents=True, exist_ok=True)
+    pose_list_data = [
+        {"index": i, "name": p.name, "source": p.source, "frame": p.frame}
+        for i, p in enumerate(poses)
+    ]
+    pose_list_path.write_text(json.dumps(pose_list_data, indent=2))
+    print(f"Pose list:   {pose_list_path} ({len(poses)} poses)")
     print("=" * 60)
     print()
 
