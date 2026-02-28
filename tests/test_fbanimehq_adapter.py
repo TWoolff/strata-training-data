@@ -241,7 +241,7 @@ class TestConvertImage:
         saved = convert_image(image_path, output_dir)
         assert saved is True
 
-        example_dir = output_dir / f"fbanimehq_{image_path.stem}"
+        example_dir = output_dir / f"fbanimehq_{image_path.parent.name}_{image_path.stem}"
         assert (example_dir / "image.png").is_file()
         assert (example_dir / "metadata.json").is_file()
 
@@ -252,7 +252,7 @@ class TestConvertImage:
 
         convert_image(image_path, output_dir)
 
-        example_dir = output_dir / f"fbanimehq_{image_path.stem}"
+        example_dir = output_dir / f"fbanimehq_{image_path.parent.name}_{image_path.stem}"
         img = Image.open(example_dir / "image.png")
         assert img.size == (512, 512)
 
@@ -274,7 +274,7 @@ class TestConvertImage:
 
         convert_image(image_path, output_dir)
 
-        example_dir = output_dir / f"fbanimehq_{image_path.stem}"
+        example_dir = output_dir / f"fbanimehq_{image_path.parent.name}_{image_path.stem}"
         meta = json.loads((example_dir / "metadata.json").read_text())
         assert meta["source"] == "fbanimehq"
 
@@ -285,7 +285,7 @@ class TestConvertImage:
 
         convert_image(image_path, output_dir, resolution=256)
 
-        example_dir = output_dir / f"fbanimehq_{image_path.stem}"
+        example_dir = output_dir / f"fbanimehq_{image_path.parent.name}_{image_path.stem}"
         img = Image.open(example_dir / "image.png")
         assert img.size == (256, 256)
 

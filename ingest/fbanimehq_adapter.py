@@ -253,7 +253,10 @@ def convert_image(
     Returns:
         True if saved, False if skipped or errored.
     """
-    image_id = f"{FBANIMEHQ_SOURCE}_{image_path.stem}"
+    # Include the parent bucket directory in the ID to avoid collisions —
+    # every bucket has 000000.png through 000999.png.
+    bucket = image_path.parent.name
+    image_id = f"{FBANIMEHQ_SOURCE}_{bucket}_{image_path.stem}"
 
     try:
         img = Image.open(image_path)
