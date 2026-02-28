@@ -1101,6 +1101,101 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
 ]
 
 # ---------------------------------------------------------------------------
+# PSD layer name → Strata label mapping
+# ---------------------------------------------------------------------------
+# Ordered list of (regex_pattern, strata_region_name) tuples.
+# Patterns are matched case-insensitively against PSD layer names.
+# First match wins — place specific patterns before general ones.
+# Covers common artist naming conventions for body-part-separated PSDs
+# (game sprites, paper dolls, character rigs).
+
+PSD_LAYER_PATTERNS: list[tuple[str, str]] = [
+    # --- Head (facial features, hair) ---
+    (r"eye|iris|pupil|sclera|eyelid|eyelash", "head"),
+    (r"brow|eyebrow", "head"),
+    (r"mouth|lip|teeth|tongue|jaw", "head"),
+    (r"nose", "head"),
+    (r"\bear\b", "head"),
+    (r"hair|bangs|fringe|ponytail|ahoge|braid|pigtail", "head"),
+    (r"face|cheek|chin|forehead", "head"),
+    (r"\bhead\b", "head"),
+    # --- Neck ---
+    (r"\bneck\b", "neck"),
+    # --- Shoulders (before arms to avoid false matches) ---
+    (r"shoulder.*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*shoulder", "shoulder_l"),
+    (r"shoulder.*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*shoulder", "shoulder_r"),
+    # --- Left arm (forearm/lower before upper to avoid substring clash) ---
+    (
+        r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
+        "lower_arm_l",
+    ),
+    (
+        r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)",
+        "upper_arm_l",
+    ),
+    (
+        r"(?:hand|finger|thumb|palm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:hand|finger|thumb|palm)",
+        "hand_l",
+    ),
+    # --- Right arm ---
+    (
+        r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
+        "lower_arm_r",
+    ),
+    (
+        r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)",
+        "upper_arm_r",
+    ),
+    (
+        r"(?:hand|finger|thumb|palm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:hand|finger|thumb|palm)",
+        "hand_r",
+    ),
+    # --- Left leg (lower/shin before upper to avoid substring clash) ---
+    (
+        r"(?:shin|lower[-_]?leg|calf).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_l",
+    ),
+    (
+        r"(?:thigh|upper[-_]?leg|leg).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:thigh|upper[-_]?leg|leg)",
+        "upper_leg_l",
+    ),
+    (
+        r"(?:foot|toe|shoe|boot).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:foot|toe|shoe|boot)",
+        "foot_l",
+    ),
+    # --- Right leg ---
+    (
+        r"(?:shin|lower[-_]?leg|calf).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shin|lower[-_]?leg|calf)",
+        "lower_leg_r",
+    ),
+    (
+        r"(?:thigh|upper[-_]?leg|leg).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:thigh|upper[-_]?leg|leg)",
+        "upper_leg_r",
+    ),
+    (
+        r"(?:foot|toe|shoe|boot).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:foot|toe|shoe|boot)",
+        "foot_r",
+    ),
+    # --- Hips / lower body ---
+    (r"\bhip|pelvis|waist", "hips"),
+    # --- Accessories → background (before torso to prevent false matches) ---
+    (
+        r"accessory|ribbon|wing|tail|cape|cloak|weapon|shield|bag|mask|ornament|jewelry|crown|hat|glasses|belt|scarf",
+        "background",
+    ),
+    # --- Skip layers (rendering concerns, not body parts) → background ---
+    (r"\blineart\b|\bline[-_]?art\b|\boutline\b|\bink\b", "background"),
+    (r"\bshad(?:ow|ing)\b|\bhighlight\b|\brim[-_]?light\b", "background"),
+    (r"\bflat[-_]?color\b|\bbase[-_]?color\b|\bcolor\b", "background"),
+    (r"\bbackground\b|\bbg\b|\bsky\b|\bground\b|\bfloor\b", "background"),
+    (r"\beffect\b|\bfx\b|\bparticle\b|\bglow\b|\bblur\b", "background"),
+    # --- Torso / body (general — after specific regions and accessories) ---
+    (r"\btorso\b|\bchest\b|\bupper[-_]?body\b|\bbreast\b|\bbust\b", "chest"),
+    (r"\bspine\b|\bback\b", "spine"),
+    (r"\bbody\b|\btorso\b", "chest"),
+]
+
+# ---------------------------------------------------------------------------
 # StdGEN semantic class → Strata mapping
 # ---------------------------------------------------------------------------
 # StdGEN (CVPR 2025) annotates VRoid characters with 4 semantic classes.
