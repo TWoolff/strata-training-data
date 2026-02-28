@@ -1326,3 +1326,20 @@ CONTOUR_REGION_COLORS: dict[RegionId, RGB] = {
     18: (160, 120, 80),  # shoulder_l — tan
     19: (160, 120, 80),  # shoulder_r — tan
 }
+
+# ---------------------------------------------------------------------------
+# Texture projection training data (partial→complete UV map pairs)
+# ---------------------------------------------------------------------------
+
+# Dense camera angles for complete texture coverage: every 15° azimuth (24 views).
+TEXTURE_DENSE_ANGLES: list[int] = list(range(0, 360, 15))
+
+# Subset of angles for partial texture (simulates limited user input).
+# Front (0°), three-quarter (45°), back (180°) — matches typical user-facing views.
+TEXTURE_PARTIAL_ANGLES: list[int] = [0, 45, 180]
+
+# UV texture map resolution (square).
+TEXTURE_RESOLUTION: int = 1024
+
+# Pixel margin for UV seam bleeding to prevent edge artifacts.
+TEXTURE_BAKE_MARGIN: int = 4

@@ -106,3 +106,44 @@ This is the most reliable approach for `--background` mode.
 ## Open Questions
 - Should we support elevation variation for the 24 views (e.g., slight downward tilt) or keep all at elevation=0? → Issue says every 15° azimuth only, so elevation=0.
 - Should partial views be configurable or always front/3-4/back? → Start with hardcoded 3 views per issue spec, make it a config constant for future flexibility.
+
+## Implementation Notes
+
+### What was implemented
+- **`mesh/scripts/texture_projection_trainer.py`** (~500 lines) — Full texture projection trainer with:
+  - Camera-projection approach (render → ray-cast visibility → UV-space rasterization via barycentric interpolation)
+  - `ensure_uv_map()` — Smart UV Project fallback for meshes without UVs
+  - `setup_projection_camera()` — Orthographic camera matching pipeline/renderer.py orbit logic
+  - `build_visibility_map()` — Backface culling + depsgraph ray casting for occlusion
+  - `_barycentric_coords()` + `_rasterize_triangle_to_uv()` — Per-texel UV projection
+  - `apply_texture_margin()` — Iterative 4-connected dilation for UV seam bleeding
+  - `composite_texture_from_views()` — Multi-angle render + UV projection orchestration
+  - `compute_inpainting_mask()` — Binary mask from coverage difference
+  - `generate_texture_pairs()` — Top-level API: complete/partial/mask + metadata JSON
+  - CLI via `blender --background --python mesh/scripts/texture_projection_trainer.py -- --input ...`
+
+- **`tests/test_texture_projection_trainer.py`** (24 tests) — Tests for all pure-Python logic:
+  - Barycentric coordinates (vertices, centroid, outside, degenerate, sum-to-one)
+  - Inpainting mask (no gap, full gap, partial gap, both empty)
+  - Texture margin (single pixel dilation, zero margin, two steps, edge handling)
+  - Config constants (24 angles, spacing, partial subset, resolution, margin)
+  - Triangle rasterization (identity projection, degenerate triangle)
+
+- **`pipeline/config.py`** — Added 4 constants:
+  - `TEXTURE_DENSE_ANGLES` — `list(range(0, 360, 15))` (24 views)
+  - `TEXTURE_PARTIAL_ANGLES` — `[0, 45, 180]` (front/3-4/back)
+  - `TEXTURE_RESOLUTION` — 1024
+  - `TEXTURE_BAKE_MARGIN` — 4 pixels
+
+- **`ruff.toml`** — Added E402 exemption for `mesh/scripts/*.py` (sys.path manipulation for Blender invocation)
+
+### Design decisions during implementation
+1. **Camera-projection over Blender bake** — `bpy.ops.object.bake()` bakes from all directions, not per-camera. Manual projection via UV-space rasterization gives per-view control needed for partial/complete pairs.
+2. **Visibility via depsgraph ray casting** — More accurate than BVH tree for complex multi-mesh characters. Handles inter-mesh occlusion correctly.
+3. **First-write-wins compositing** — When multiple views see the same texel, the first view's color is kept. This is simple and avoids blending artifacts.
+4. **Removed `apply_texture_margin_fast`** during code simplification — had incorrect normalization math and added an unnecessary scipy dependency.
+
+### Follow-up work
+- Performance optimization: The per-texel Python loop in `_rasterize_triangle_to_uv` could be vectorized with NumPy for ~10-50x speedup on large meshes
+- Integration with `generate_dataset.py` main loop for batch processing
+- Elevation variation for denser coverage (currently all views at elevation=0)
