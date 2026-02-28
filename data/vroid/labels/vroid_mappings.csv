@@ -1,0 +1,42 @@
+model_id,material_name,strata_label,strata_region_id,confirmed,override_reason
+_default,Face,head,1,auto,standard VRoid Studio face material
+_default,Face_,head,1,auto,VRoid face variant with trailing underscore
+_default,EyeWhite,head,1,auto,standard VRoid eye white material
+_default,EyeIris,head,1,auto,standard VRoid eye iris material
+_default,EyeHighlight,head,1,auto,standard VRoid eye highlight material
+_default,EyeExtra,head,1,auto,standard VRoid eye extra/effect material
+_default,Eyebrow,head,1,auto,standard VRoid eyebrow material
+_default,Hair,head,1,auto,standard VRoid hair material
+_default,Hair_Back,head,1,auto,VRoid back hair — maps to head (no hair_back label yet)
+_default,Hair_Front,head,1,auto,VRoid front hair / bangs
+_default,Hair_Extension,head,1,manual,hair extension / ponytail — head for now; may need hair_back label in future
+_default,Mouth,head,1,auto,standard VRoid mouth interior material
+_default,Tooth,head,1,auto,VRoid tooth material
+_default,Tongue,head,1,auto,VRoid tongue material
+_default,Ear,head,1,auto,VRoid ear material
+_default,Nose,head,1,auto,VRoid nose material
+_default,Head,head,1,auto,generic head material
+_default,Neck,neck,2,auto,standard VRoid neck material
+_default,Body,chest,3,manual,coarse full-body material — maps to chest as fallback; per-vertex bone weights needed for fine-grained labeling
+_default,Outfit_Upper,chest,3,auto,standard VRoid upper outfit material (shirt/jacket/vest)
+_default,Outfit_Lower,hips,5,auto,standard VRoid lower outfit material (pants/skirt)
+_default,Shoe,foot_l,14,manual,unsuffixed shoe material — needs L/R disambiguation via vertex centroid X position at runtime
+_default,Shoe_L,foot_l,14,auto,explicitly left shoe
+_default,Shoe_R,foot_r,17,auto,explicitly right shoe
+_default,Boot,foot_l,14,manual,unsuffixed boot material — needs L/R disambiguation at runtime
+_default,Sock,foot_l,14,manual,unsuffixed sock material — needs L/R disambiguation at runtime
+_default,Glove,hand_l,8,manual,unsuffixed glove material — needs L/R disambiguation at runtime
+_default,Glove_L,hand_l,8,auto,explicitly left glove
+_default,Glove_R,hand_r,11,auto,explicitly right glove
+_default,Accessory,background,0,manual,generic accessory — hidden for v1 training data
+_default,Ribbon,background,0,manual,ribbon accessory — hidden for v1
+_default,Wing,background,0,manual,wing accessory — hidden for v1
+_default,Tail,background,0,manual,tail accessory — hidden for v1
+_default,Cape,background,0,manual,cape/cloak accessory — hidden for v1
+_default,Hat,background,0,manual,hat accessory — hidden for v1
+_default,Glasses,background,0,manual,glasses accessory — hidden for v1
+_default,Crown,background,0,manual,crown accessory — hidden for v1
+_default,Mask,background,0,manual,mask accessory — hidden for v1
+_default,Belt,background,0,manual,belt accessory — mapped to background to avoid hips confusion
+_default,Scarf,background,0,manual,scarf accessory — hidden for v1
+_default,Weapon,background,0,manual,weapon/shield — hidden for v1
