@@ -1,6 +1,6 @@
 ---
 name: issue
-description: Analyze and implement a GitHub issue for the Strata synthetic data pipeline. Use when working on GitHub issues, implementing features from tickets, or when user mentions issue numbers.
+description: This skill should be used when the user asks to "implement an issue", "work on issue #N", "fix issue N", mentions a GitHub issue number, or says "/issue". It analyzes and implements GitHub issues for the Strata synthetic data pipeline.
 user-invokable: true
 argument-hint: "<issue number>"
 ---
@@ -129,34 +129,19 @@ Analyze and implement the GitHub issue: $ARGUMENTS
 ## PHASE 4: VERIFY
 
 1. **Run Quality Checks**
-   ```bash
-   # Run linter (line-length=100, target-version=py310 per ruff.toml)
-   ruff check .
+   - Invoke `/run-tests` to run the test suite, linting, and format checks
+   - If the pipeline was modified and test data is available, run a single-character pipeline test:
+     ```bash
+     blender --background --python run_pipeline.py -- \
+       --input_dir ./data/fbx/ \
+       --pose_dir ./data/poses/ \
+       --output_dir ./output/segmentation/ \
+       --styles flat \
+       --resolution 512
+     ```
 
-   # Format check
-   ruff format --check .
-
-   # Run tests
-   python -m pytest tests/ -v
-
-   # Run pipeline on a test character (if applicable)
-   blender --background --python run_pipeline.py -- \
-     --input_dir ./data/fbx/ \
-     --pose_dir ./data/poses/ \
-     --output_dir ./output/segmentation/ \
-     --styles flat \
-     --resolution 512
-   ```
-
-2. **Validate Dataset Output**
-   ```bash
-   python run_validation.py --dataset_dir ./output/segmentation/ --save_report
-   ```
-   - Check output images are 512x512 RGBA PNG
-   - Verify masks are single-channel grayscale with valid region IDs (0-19)
-   - Confirm joint JSON has all 19 joints with positions within image bounds
-   - Overlay mask on image to visually verify alignment
-   - Check file naming follows `{source}_{id}_pose_{nn}_{style}.png` convention
+2. **Validate Dataset Output** (if pipeline produced output)
+   - Invoke `/validate-dataset` to run automated validation on generated output
 
 3. **Test Edge Cases**
    - Characters with accessories (should be hidden or mapped)
@@ -168,7 +153,7 @@ Analyze and implement the GitHub issue: $ARGUMENTS
 
 1. **Run Code Simplifier**
    - Get the list of modified files using `git diff --name-only HEAD~1` or similar
-   - Invoke the `code-simplifier` skill using the Skill tool, passing the file paths as arguments
+   - Invoke `/code-simplifier` with the file paths as arguments
    - This ensures code clarity, consistency, and maintainability
    - Apply the simplifications before committing final changes
 

@@ -1,6 +1,6 @@
 ---
 name: validate-dataset
-description: Run automated validation checks on generated dataset output. Checks mask correctness, joint bounds, file pairing, resolution, and region distribution. Use after batch generation or to diagnose dataset quality issues.
+description: This skill should be used when the user asks to "validate the dataset", "check the output", "run validation", "verify the generated data", or says "/validate-dataset". It runs automated validation checks on generated dataset output including mask correctness, joint bounds, file pairing, resolution, and region distribution.
 user-invokable: true
 argument-hint: "<dataset directory path (default: ./output/segmentation/)>"
 ---

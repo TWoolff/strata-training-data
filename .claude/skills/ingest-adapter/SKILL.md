@@ -1,6 +1,6 @@
 ---
 name: ingest-adapter
-description: Work with external dataset adapters in the ingest/ directory. Use when converting pre-processed datasets (NOVA-Human, StdGEN, AnimeRun, etc.) into Strata training format, or when creating new dataset adapters.
+description: This skill should be used when the task involves the ingest/ directory, converting external datasets (NOVA-Human, StdGEN, AnimeRun, UniRig, LinkTo-Anime, FBAnimeHQ) to Strata format, or creating new dataset adapters.
 user-invokable: false
 ---
 

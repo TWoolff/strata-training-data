@@ -1,7 +1,8 @@
 ---
 name: code-simplifier
-description: Simplifies and refines Python code for clarity, consistency, and maintainability while preserving functionality. Use after writing code to clean it up, or when refactoring for readability.
-user-invokable: false
+description: This skill should be used when the user asks to "simplify code", "clean up the code", "refactor for readability", says "/code-simplifier", or when code has been written and needs refinement for clarity and consistency.
+user-invokable: true
+argument-hint: "<file paths to simplify>"
 ---
 
 # Code Simplifier

@@ -1,6 +1,6 @@
 ---
 name: run-tests
-description: Run the test suite for the Strata training data pipeline. Use when the user asks to run tests, verify changes, or check for regressions.
+description: This skill should be used when the user asks to "run tests", "run the test suite", "check for regressions", "run pytest", "verify changes", or says "/run-tests". It runs the pytest test suite for the Strata training data pipeline.
 user-invokable: true
 argument-hint: "<optional: specific test file, module name, or pattern>"
 ---

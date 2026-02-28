@@ -1,6 +1,6 @@
 ---
 name: render-debug
-description: Debug rendering and segmentation issues by generating overlay visualizations. Creates mask-on-image overlays, joint position plots, and region distribution charts for a specific character or pose. Use when visual inspection is needed.
+description: This skill should be used when the user asks to "debug rendering", "show mask overlay", "visualize joints", "check segmentation", "debug a character", or says "/render-debug". It generates overlay visualizations for diagnosing rendering and segmentation issues.
 user-invokable: true
 argument-hint: "<character_id or image path>"
 ---

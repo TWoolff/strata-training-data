@@ -1,6 +1,6 @@
 ---
 name: blender-python-expert
-description: Expert in Blender Python (bpy) scripting for the Strata synthetic data pipeline. Use for FBX import, VRM import, armature/bone manipulation, mesh operations, material setup, rendering, camera configuration, and batch processing.
+description: This skill should be used when the task involves Blender Python scripting, bpy API calls, FBX import, VRM import, armature manipulation, mesh operations, material node setup, EEVEE rendering, camera configuration, or batch Blender processing for the Strata pipeline.
 user-invokable: false
 ---
 

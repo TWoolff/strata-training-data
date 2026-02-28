@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Create a detailed GitHub issue for a new feature or bug in the Strata synthetic data pipeline. Use when user wants to create an issue, report a bug, or document a feature request.
+description: This skill should be used when the user asks to "create an issue", "file a bug", "write a feature request", "report a problem", or says "/create-issue". It creates detailed GitHub issues for the Strata synthetic data pipeline.
 user-invokable: true
 argument-hint: "<feature or bug description>"
 ---

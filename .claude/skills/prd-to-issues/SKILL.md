@@ -1,6 +1,6 @@
 ---
 name: prd-to-issues
-description: Parse a PRD markdown file and create GitHub issues for all features. Each issue is scoped to be completable by one developer in one work day. Use when starting a new project phase or breaking down a PRD into actionable tasks.
+description: This skill should be used when the user asks to "break down the PRD", "create issues from the PRD", "parse the PRD", "convert PRD to issues", or says "/prd-to-issues". It parses a PRD markdown file and creates GitHub issues scoped to one developer per work day.
 user-invokable: true
 argument-hint: "<path to PRD file or phase name>"
 ---

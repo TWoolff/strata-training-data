@@ -1,7 +1,8 @@
 ---
 name: fix
-description: Fix ALL found issues and recommendations from code reviews, linting, or quality checks. Use when user says "/fix", "fix the issues", or after receiving review feedback.
+description: This skill should be used when the user says "/fix", "fix the issues", "fix the errors", "apply the fixes", or after receiving code review feedback. It systematically fixes all identified issues from code reviews, linting, or quality checks.
 user-invokable: true
+argument-hint: "<optional: file paths or 'all'>"
 ---
 
 # Fix Issues and Recommendations
