@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
         "--adapter",
         type=str,
         required=True,
-        choices=["fbanimehq", "nova_human"],
+        choices=["fbanimehq", "nova_human", "anime_seg"],
         help="Which dataset adapter to use.",
     )
     parser.add_argument(
@@ -186,9 +186,37 @@ def _run_nova_human(args: argparse.Namespace) -> int:
     return 0 if results else 1
 
 
+def _run_anime_seg(args: argparse.Namespace) -> int:
+    """Run the anime-segmentation adapter."""
+    from ingest.anime_seg_adapter import convert_directory
+
+    # Determine variant from input path heuristic
+    variant = "v2" if "anime_seg_v2" in str(args.input_dir) else "v1"
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        variant=variant,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+    )
+
+    print(f"\nanime-segmentation ({variant}) ingestion complete:")
+    print(f"  Images processed: {result.images_processed}")
+    print(f"  Images skipped:   {result.images_skipped}")
+    print(f"  Errors:           {len(result.errors)}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
+    "anime_seg": _run_anime_seg,
 }
 
 
