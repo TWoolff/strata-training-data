@@ -937,3 +937,57 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
     (r"\btorso\b|\bchest\b|\bbody\b", "chest"),
     (r"\bspine\b|\bback\b", "spine"),
 ]
+
+# ---------------------------------------------------------------------------
+# VRoid material slot → Strata label mapping
+# ---------------------------------------------------------------------------
+# Ordered list of (regex_pattern, strata_region_name) tuples.
+# Patterns are matched case-insensitively against VRoid material slot names.
+# First match wins — place specific patterns before general ones.
+# Covers standard VRoid Studio material slots and common custom naming.
+#
+# VRoid material-level mapping is COARSE — e.g., "Body" covers the entire
+# body mesh.  Fine-grained per-vertex labeling uses bone weights via
+# VRM_BONE_ALIASES in bone_mapper.py (issue #83).  Material patterns serve
+# as a fallback when bone data is incomplete.
+
+VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
+    # --- Head (facial features, hair) ---
+    (r"\bface\b|\bFace_", "head"),
+    (r"\beye\b|\bEyeWhite\b|\bEyeIris\b|\bEyeHighlight\b|\bEyeExtra\b", "head"),
+    (r"\bbrow\b|\bEyebrow\b", "head"),
+    (r"\bhair\b|\bHair(?:[-_]\w+)*\b|\bbangs\b|\bponytail\b|\bahoge\b", "head"),
+    (r"\bmouth\b|\bMouth\b|\btooth\b|\btongue\b", "head"),
+    (r"\bear\b|\bEar\b", "head"),
+    (r"\bnose\b|\bNose\b", "head"),
+    (r"\bhead\b|\bHead\b", "head"),
+    # --- Neck ---
+    (r"\bneck\b|\bNeck\b", "neck"),
+    # --- Shoulders (before arms to avoid false matches) ---
+    (r"shoulder.*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*shoulder", "shoulder_l"),
+    (r"shoulder.*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*shoulder", "shoulder_r"),
+    # --- Left arm (lower/forearm before upper to avoid substring clash) ---
+    (r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)", "lower_arm_l"),
+    (r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)", "upper_arm_l"),
+    (r"(?:glove|hand|finger).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:glove|hand|finger)", "hand_l"),
+    # --- Right arm ---
+    (r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)", "lower_arm_r"),
+    (r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)", "upper_arm_r"),
+    (r"(?:glove|hand|finger).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:glove|hand|finger)", "hand_r"),
+    # --- Left leg (lower/shin before upper to avoid substring clash) ---
+    (r"(?:shin|lower[-_]?leg|calf).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
+    (r"(?:thigh|upper[-_]?leg|leg).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:thigh|upper[-_]?leg|leg)", "upper_leg_l"),
+    (r"(?:shoe|foot|toe|sock|boot).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:shoe|foot|toe|sock|boot)", "foot_l"),
+    # --- Right leg ---
+    (r"(?:shin|lower[-_]?leg|calf).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shin|lower[-_]?leg|calf)", "lower_leg_r"),
+    (r"(?:thigh|upper[-_]?leg|leg).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:thigh|upper[-_]?leg|leg)", "upper_leg_r"),
+    (r"(?:shoe|foot|toe|sock|boot).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:shoe|foot|toe|sock|boot)", "foot_r"),
+    # --- Hips / lower body ---
+    (r"\bhip|pelvis|waist|Outfit_Lower|pants|skirt|shorts", "hips"),
+    # --- Accessories → background (before torso to prevent false matches) ---
+    (r"accessory|ribbon|wing|tail|cape|cloak|weapon|shield|bag|mask|ornament|jewelry|crown|hat|glasses|goggle|belt|scarf|collar", "background"),
+    # --- Torso / body (general — after specific regions and accessories) ---
+    (r"Outfit_Upper|jacket|shirt|vest|coat|blazer|uniform", "chest"),
+    (r"\bbody\b|Body|torso|chest|mune|bust", "chest"),
+    (r"\bspine\b|\bback\b", "spine"),
+]
