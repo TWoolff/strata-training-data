@@ -46,6 +46,9 @@ from .live2d_mapper import map_fragment
 
 logger = logging.getLogger(__name__)
 
+# Fraction of canvas reserved as padding on each side when compositing fragments.
+_COMPOSITE_PADDING_FRAC = 0.05
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -96,6 +99,7 @@ class Live2DRenderResult:
     fragment_count: int
     mapped_count: int
     unmapped_fragments: list[str]
+    region_layers: dict[int, Image.Image] | None = None  # per-region RGBA layers
 
 
 # ---------------------------------------------------------------------------
@@ -343,8 +347,7 @@ def _composite_from_fragments(
     total_h = max(img.height for _, img, _ in sorted_fragments)
 
     # Scale to fit in resolution with padding
-    padding_frac = 0.05
-    usable = resolution * (1 - 2 * padding_frac)
+    usable = resolution * (1 - 2 * _COMPOSITE_PADDING_FRAC)
     scale = usable / max(total_w, total_h) if max(total_w, total_h) > 0 else 1.0
     scale = min(scale, 1.0)  # don't upscale
 
@@ -400,6 +403,64 @@ def _composite_from_fragments(
             draw_order_arr[dst_y_start:dst_y_end, dst_x_start:dst_x_end][opaque] = normalized_depth
 
     return canvas, mask_arr, draw_order_arr
+
+
+def extract_region_layers(
+    fragment_images: list[tuple[str, Image.Image, int]],
+    fragment_to_region: dict[str, RegionId],
+    resolution: int = RENDER_RESOLUTION,
+) -> dict[int, Image.Image]:
+    """Extract per-region RGBA layers from Live2D fragments.
+
+    Groups fragments by their mapped region and composites each group
+    onto its own transparent canvas using the same scale and centering
+    as ``_composite_from_fragments`` so layers align perfectly.
+
+    Args:
+        fragment_images: List of (fragment_name, image, draw_order) tuples.
+        fragment_to_region: Fragment name → region ID mapping.
+        resolution: Output resolution (square).
+
+    Returns:
+        Dict mapping region_id → RGBA layer image.
+    """
+    sorted_fragments = sorted(fragment_images, key=lambda x: x[2])
+    if not sorted_fragments:
+        return {}
+
+    # Recompute the same scale/centering as _composite_from_fragments
+    total_w = max(img.width for _, img, _ in sorted_fragments)
+    total_h = max(img.height for _, img, _ in sorted_fragments)
+    usable = resolution * (1 - 2 * _COMPOSITE_PADDING_FRAC)
+    scale = usable / max(total_w, total_h) if max(total_w, total_h) > 0 else 1.0
+    scale = min(scale, 1.0)
+
+    # Group fragments by region
+    region_fragments: dict[int, list[tuple[str, Image.Image, int]]] = {}
+    for frag_name, frag_img, frag_order in sorted_fragments:
+        region_id = fragment_to_region.get(frag_name, 0)
+        if region_id > 0:
+            region_fragments.setdefault(region_id, []).append(
+                (frag_name, frag_img, frag_order),
+            )
+
+    # Composite each region's fragments onto a separate canvas
+    layers: dict[int, Image.Image] = {}
+    for region_id, frags in region_fragments.items():
+        canvas = Image.new("RGBA", (resolution, resolution), (0, 0, 0, 0))
+        for _frag_name, frag_img, _frag_order in frags:
+            new_w = max(1, round(frag_img.width * scale))
+            new_h = max(1, round(frag_img.height * scale))
+            try:
+                scaled = frag_img.resize((new_w, new_h), Image.BILINEAR)
+            except Exception:
+                continue
+            paste_x = (resolution - new_w) // 2
+            paste_y = (resolution - new_h) // 2
+            canvas.paste(scaled, (paste_x, paste_y), scaled)
+        layers[region_id] = canvas
+
+    return layers
 
 
 # ---------------------------------------------------------------------------
@@ -829,6 +890,9 @@ def process_live2d_model(
         loaded_fragments, fragment_to_region, resolution
     )
 
+    # Extract per-region RGBA layers
+    region_layers = extract_region_layers(loaded_fragments, fragment_to_region, resolution)
+
     # Extract joints from mask centroids
     joint_data = _extract_joints_from_mask(mask, resolution)
 
@@ -843,6 +907,7 @@ def process_live2d_model(
         fragment_count=total_count,
         mapped_count=mapped_count,
         unmapped_fragments=unmapped,
+        region_layers=region_layers if region_layers else None,
     )
 
 
@@ -921,6 +986,20 @@ def process_live2d_directory(
             exporter.save_draw_order(
                 aug_draw_order, output_dir, result.char_id, pose_index, only_new=only_new
             )
+
+            # Save per-region RGBA layers (identity variant only)
+            if result.region_layers and pose_index == 0:
+                layers_dir = output_dir / "layers"
+                layers_dir.mkdir(parents=True, exist_ok=True)
+                for region_id, layer_img in sorted(result.region_layers.items()):
+                    layer_path = layers_dir / exporter.layer_filename(
+                        result.char_id,
+                        pose_index,
+                        region_id,
+                    )
+                    if only_new and layer_path.exists():
+                        continue
+                    layer_img.save(layer_path, format="PNG", compress_level=9)
 
             # Save original image as "flat" style
             exporter.save_image(

@@ -44,6 +44,7 @@ _SUBDIRS: list[str] = [
     "measurements",
     "sources",
     "contours",
+    "layers",
 ]
 
 
@@ -153,6 +154,27 @@ def draw_order_filename(char_id: str, pose_index: int, angle: str = "front") -> 
         ``"mixamo_001_pose_00_three_quarter.png"``.
     """
     return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}.png"
+
+
+def layer_filename(
+    char_id: str,
+    pose_index: int,
+    region_id: int,
+    angle: str = "front",
+) -> str:
+    """Build the canonical per-region layer filename.
+
+    Args:
+        char_id: Character identifier.
+        pose_index: Zero-based pose number.
+        region_id: Body region ID (1–19).
+        angle: Camera angle name.
+
+    Returns:
+        Filename such as ``"mixamo_001_pose_00_03.png"`` (region 3, front)
+        or ``"mixamo_001_pose_00_three_quarter_03.png"``.
+    """
+    return f"{char_id}_pose_{pose_index:02d}{_angle_infix(angle)}_{region_id:02d}.png"
 
 
 def source_filename(char_id: str) -> str:
