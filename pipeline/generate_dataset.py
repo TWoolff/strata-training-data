@@ -219,6 +219,12 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Enable Freestyle contour pair rendering (with/without contours + mask + 5 styles).",
     )
+    parser.add_argument(
+        "--layers",
+        action="store_true",
+        default=False,
+        help="Extract per-region RGBA layers for layer decomposition training (See Through).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -354,6 +360,7 @@ def process_character(
     camera_angles: list[str] | None = None,
     import_result: ImportResult | None = None,
     enable_contours: bool = False,
+    enable_layers: bool = False,
 ) -> CharacterResult:
     """Run the full pipeline for a single character across all poses.
 
@@ -374,6 +381,7 @@ def process_character(
         import_result: Pre-imported character (e.g. from VRM importer).
             If None, imports from fbx_path via import_character().
         enable_contours: Render Freestyle contour pairs + augmentations.
+        enable_layers: Extract per-region RGBA layers.
 
     Returns:
         CharacterResult with per-pose success/failure/skip counts.
@@ -476,6 +484,7 @@ def process_character(
                 resolution=resolution,
                 camera_angles=camera_angles,
                 enable_contours=enable_contours,
+                enable_layers=enable_layers,
             )
             result.poses_succeeded += 1
             result.style_counts += pose_style_counts
@@ -578,6 +587,7 @@ def _process_single_pose(
     resolution: int,
     camera_angles: list[str] | None = None,
     enable_contours: bool = False,
+    enable_layers: bool = False,
 ) -> Counter:
     """Process a single pose for a character (all augmentation and angle variants).
 
@@ -598,6 +608,7 @@ def _process_single_pose(
         resolution: Render resolution.
         camera_angles: Camera angle names to render.
         enable_contours: Render Freestyle contour pairs + augmentations.
+        enable_layers: Extract per-region RGBA layers.
 
     Returns:
         Counter of style images produced (style_name → count).
@@ -682,6 +693,30 @@ def _process_single_pose(
             Image.fromarray(draw_order_data["draw_order_map"].astype(np.uint8), mode="L").save(
                 draw_order_out_path, format="PNG", compress_level=9
             )
+
+            # --- Per-region RGBA layers ---
+            if enable_layers:
+                from .layer_extractor import extract_layers
+
+                setup_color_render(scene)
+                layer_prefix = f"{char_id}{pose_suffix}"
+                extract_layers(
+                    scene,
+                    meshes,
+                    original_materials,
+                    seg_mask_arr,
+                    output_dir,
+                    layer_prefix,
+                )
+                # Re-assign seg materials (layer extractor restores them,
+                # but re-assign to be safe before color render).
+                for mesh_idx, mesh_obj in enumerate(meshes):
+                    assign_region_materials(
+                        mesh_obj,
+                        mesh_idx,
+                        mapping.vertex_to_region,
+                        region_materials,
+                    )
 
             # --- Color render ---
             setup_color_render(scene)
@@ -914,6 +949,7 @@ def main() -> None:
     vroid_dir: Path | None = args.vroid_dir
     live2d_dir: Path | None = args.live2d_dir
     enable_contours: bool = args.contours
+    enable_layers: bool = args.layers
 
     # Parse camera angles
     angles_raw = args.angles.strip()
@@ -976,6 +1012,7 @@ def main() -> None:
     print(f"Scale:       {enable_scale} (factors: {scale_factors})")
     print(f"Only new:    {only_new}")
     print(f"Contours:    {enable_contours}")
+    print(f"Layers:      {enable_layers}")
     print(f"Output:      {output_dir}")
 
     # Save selected pose list so it's clear which poses were used
@@ -1019,6 +1056,7 @@ def main() -> None:
                 only_new=only_new,
                 camera_angles=camera_angles,
                 enable_contours=enable_contours,
+                enable_layers=enable_layers,
             )
         except Exception:
             logger.exception("Unhandled error processing %s", fbx_path.name)
@@ -1112,6 +1150,7 @@ def main() -> None:
                         camera_angles=camera_angles,
                         import_result=vrm_import,
                         enable_contours=enable_contours,
+                        enable_layers=enable_layers,
                     )
                     results.append(char_result)
 

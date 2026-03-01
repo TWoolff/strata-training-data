@@ -62,32 +62,37 @@ def _setup_scene_dir(
     with_anime: bool = True,
     mismatched: bool = False,
 ) -> Path:
-    """Create a fake AnimeRun scene directory.
+    """Create a fake AnimeRun v2 scene directory.
+
+    AnimeRun v2 layout::
+
+        root/{split}/contour/{scene}/*.png
+        root/{split}/Frame_Anime/{scene}/original/*.png
 
     Args:
         tmp_path: Pytest tmp_path fixture.
         split: Split name (train/test).
         scene_name: Scene directory name.
         num_frames: Number of frames to create.
-        with_contours: Create contour/ directory.
-        with_anime: Create anime/ directory.
+        with_contours: Create contour directory.
+        with_anime: Create Frame_Anime directory.
         mismatched: If True, anime has one extra frame not in contour.
 
     Returns:
         Path to the root AnimeRun directory.
     """
     root = tmp_path / "animerun"
-    scene_dir = root / split / scene_name
+    split_dir = root / split
 
     if with_contours:
-        contour_dir = scene_dir / "contour"
+        contour_dir = split_dir / "contour" / scene_name
         contour_dir.mkdir(parents=True)
         for i in range(num_frames):
             img = _create_image_with_lines()
             img.save(contour_dir / f"frame_{i:04d}.png")
 
     if with_anime:
-        anime_dir = scene_dir / "anime"
+        anime_dir = split_dir / "Frame_Anime" / scene_name / "original"
         anime_dir.mkdir(parents=True)
         extra = 1 if mismatched else 0
         for i in range(num_frames + extra):
@@ -204,10 +209,11 @@ class TestDiscoverScenes:
 
     def test_discovers_train_and_test(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A")
-        # Add a test scene.
-        test_scene = root / "test" / "scene_B"
-        (test_scene / "contour").mkdir(parents=True)
-        (test_scene / "anime").mkdir(parents=True)
+        # Add a test scene (v2 layout).
+        test_contour = root / "test" / "contour" / "scene_B"
+        test_contour.mkdir(parents=True)
+        test_anime = root / "test" / "Frame_Anime" / "scene_B" / "original"
+        test_anime.mkdir(parents=True)
 
         scenes = discover_scenes(root)
         assert len(scenes) == 2
@@ -217,16 +223,16 @@ class TestDiscoverScenes:
 
     def test_skips_incomplete_scenes(self, tmp_path: Path) -> None:
         root = tmp_path / "animerun"
-        # Scene with only contour/ (no anime/).
-        (root / "train" / "bad_scene" / "contour").mkdir(parents=True)
+        # Scene with only contour (no Frame_Anime).
+        (root / "train" / "contour" / "bad_scene").mkdir(parents=True)
         scenes = discover_scenes(root)
         assert len(scenes) == 0
 
     def test_skips_hidden_dirs(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A")
-        hidden = root / "train" / ".hidden"
-        (hidden / "contour").mkdir(parents=True)
-        (hidden / "anime").mkdir(parents=True)
+        # Hidden scene under contour/
+        hidden = root / "train" / "contour" / ".hidden"
+        hidden.mkdir(parents=True)
 
         scenes = discover_scenes(root)
         assert len(scenes) == 1
@@ -249,26 +255,26 @@ class TestDiscoverPairs:
 
     def test_discovers_matched_pairs(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=5)
-        scene_dir = root / "train" / "scene_001"
+        split_dir = root / "train"
 
-        pairs = discover_pairs(scene_dir, "train", "scene_001")
+        pairs = discover_pairs(split_dir, "train", "scene_001")
         assert len(pairs) == 5
         assert all(p.scene_id == "scene_001" for p in pairs)
         assert all(p.split == "train" for p in pairs)
 
     def test_mismatched_frames_only_include_common(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=3, mismatched=True)
-        scene_dir = root / "train" / "scene_001"
+        split_dir = root / "train"
 
-        pairs = discover_pairs(scene_dir, "train", "scene_001")
+        pairs = discover_pairs(split_dir, "train", "scene_001")
         assert len(pairs) == 3  # Only the 3 common frames.
 
     def test_empty_scene(self, tmp_path: Path) -> None:
-        scene_dir = tmp_path / "scene"
-        (scene_dir / "contour").mkdir(parents=True)
-        (scene_dir / "anime").mkdir(parents=True)
+        split_dir = tmp_path / "split"
+        (split_dir / "contour" / "empty_scene").mkdir(parents=True)
+        (split_dir / "Frame_Anime" / "empty_scene" / "original").mkdir(parents=True)
 
-        pairs = discover_pairs(scene_dir, "train", "empty_scene")
+        pairs = discover_pairs(split_dir, "train", "empty_scene")
         assert pairs == []
 
 
@@ -282,8 +288,8 @@ class TestConvertPair:
 
     def test_convert_creates_output(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=1)
-        scene_dir = root / "train" / "scene_001"
-        pairs = discover_pairs(scene_dir, "train", "scene_001")
+        split_dir = root / "train"
+        pairs = discover_pairs(split_dir, "train", "scene_001")
         output_dir = tmp_path / "output"
 
         saved = convert_pair(pairs[0], output_dir, resolution=64)
@@ -307,8 +313,8 @@ class TestConvertPair:
 
     def test_only_new_skips_existing(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=1)
-        scene_dir = root / "train" / "scene_001"
-        pairs = discover_pairs(scene_dir, "train", "scene_001")
+        split_dir = root / "train"
+        pairs = discover_pairs(split_dir, "train", "scene_001")
         output_dir = tmp_path / "output"
 
         assert convert_pair(pairs[0], output_dir, resolution=64)
@@ -335,21 +341,21 @@ class TestConvertScene:
 
     def test_converts_all_frames(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=4)
-        scene_dir = root / "train" / "scene_001"
+        split_dir = root / "train"
         output_dir = tmp_path / "output"
 
-        result = convert_scene(scene_dir, output_dir, "train", "scene_001", resolution=64)
+        result = convert_scene(split_dir, output_dir, "train", "scene_001", resolution=64)
         assert isinstance(result, AdapterResult)
         assert result.scene_id == "scene_001"
         assert result.frames_saved == 4
 
     def test_max_frames(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, num_frames=10)
-        scene_dir = root / "train" / "scene_001"
+        split_dir = root / "train"
         output_dir = tmp_path / "output"
 
         result = convert_scene(
-            scene_dir,
+            split_dir,
             output_dir,
             "train",
             "scene_001",
@@ -369,12 +375,13 @@ class TestConvertDirectory:
 
     def test_converts_multiple_scenes(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A", num_frames=2)
-        # Add second scene.
-        scene_b = root / "train" / "scene_B"
-        (scene_b / "contour").mkdir(parents=True)
-        (scene_b / "anime").mkdir(parents=True)
-        _create_image_with_lines().save(scene_b / "contour" / "f001.png")
-        _create_test_image().save(scene_b / "anime" / "f001.png")
+        # Add second scene (v2 layout).
+        contour_b = root / "train" / "contour" / "scene_B"
+        contour_b.mkdir(parents=True)
+        anime_b = root / "train" / "Frame_Anime" / "scene_B" / "original"
+        anime_b.mkdir(parents=True)
+        _create_image_with_lines().save(contour_b / "f001.png")
+        _create_test_image().save(anime_b / "f001.png")
 
         output_dir = tmp_path / "output"
         results = convert_directory(root, output_dir, resolution=64)
@@ -384,11 +391,12 @@ class TestConvertDirectory:
 
     def test_max_scenes(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A", num_frames=1)
-        scene_b = root / "train" / "scene_B"
-        (scene_b / "contour").mkdir(parents=True)
-        (scene_b / "anime").mkdir(parents=True)
-        _create_image_with_lines().save(scene_b / "contour" / "f001.png")
-        _create_test_image().save(scene_b / "anime" / "f001.png")
+        contour_b = root / "train" / "contour" / "scene_B"
+        contour_b.mkdir(parents=True)
+        anime_b = root / "train" / "Frame_Anime" / "scene_B" / "original"
+        anime_b.mkdir(parents=True)
+        _create_image_with_lines().save(contour_b / "f001.png")
+        _create_test_image().save(anime_b / "f001.png")
 
         output_dir = tmp_path / "output"
         results = convert_directory(root, output_dir, resolution=64, max_scenes=1)
