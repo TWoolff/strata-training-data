@@ -181,3 +181,15 @@ AnimeRun ingestion complete:
   Cleaning up extracted data...
   Cleaned. Free disk: 52Gi
   Uploading animerun (11276 files, 689M)...
+  Upload complete. Deleting local copy...
+  animerun: uploaded and cleaned. Free disk: 53Gi
+
+=== Done at Sun Mar  1 19:11:39 CET 2026 ===
+    Total runtime: 36 minutes
+    Free disk: 53Gi
+
+=== Bucket contents ===
+                           PRE anime_seg/
+                           PRE animerun/
+                           PRE fbanimehq/
+                           PRE segmentation/
