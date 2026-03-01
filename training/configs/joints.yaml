@@ -1,0 +1,35 @@
+model:
+  backbone: "mobilenet_v3_large"
+  num_joints: 20                   # 20 joints matching BONE_ORDER
+  pretrained_backbone: true
+
+data:
+  dataset_dirs: ["../output/segmentation"]
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.2, contrast: 0.2, saturation: 0.2, hue: 0.05}
+  random_rotation: 10
+  random_scale: [0.9, 1.1]
+
+training:
+  batch_size: 8
+  num_workers: 4
+  epochs: 200
+  optimizer: "adam"
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  heatmap_weight: 1.0
+  offset_weight: 0.5
+
+checkpointing:
+  save_dir: "./checkpoints/joints"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/pck"
