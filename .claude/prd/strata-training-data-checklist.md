@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 1, 2026 (v3 — updated with progress and what's next)
+**Last updated:** March 1, 2026 (v4 — updated after batch 3 results + anime_seg_v2 ingestion)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -14,39 +14,48 @@
 |----------|--------|---------|
 | **Blender 3D pipeline** | Working | 49/62 Mixamo chars rendered (5 poses × 5 angles × flat style + per-region RGBA layers) |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
-| **Ingest framework** | Complete | `run_ingest.py` with 7 registered adapters, CLI with `--enrich` pose estimation |
-| **FBAnimeHQ** | Ingested + uploaded | 239,277 files (8.1 GB) in bucket — shards 00-07 processed |
+| **Ingest framework** | Complete | `run_ingest.py` with 8 registered adapters, CLI with `--enrich` pose estimation |
+| **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.5 GB) in bucket — all shards 00-11 processed |
 | **anime-segmentation v1** | Ingested + uploaded | 35,406 files (1.8 GB) in bucket — 11,802 images |
+| **anime-segmentation v2** | Ingested + uploaded | ~39,000 files in bucket — 13,000 images from fg-01/02/03 |
 | **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (689 MB) in bucket — 2,819 frames from 30 scenes |
+| **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MB) in bucket — 1,059 frames |
 | **Blender segmentation** | Uploaded | 28,032 files (1.0 GB) in bucket — 49 chars × 5 poses × 5 angles |
 | **AnimeRun flow adapter** | Implemented | `animerun_flow_adapter.py` + 39 tests passing (issue #135) |
-| **AnimeRun segment adapter** | In progress | `animerun_segment_adapter.py` (issue #136) |
-| **AnimeRun correspondence adapter** | Planned | Issue #137 created |
+| **AnimeRun segment adapter** | Implemented | `animerun_segment_adapter.py` + tests passing (issue #136) |
+| **AnimeRun correspondence adapter** | Implemented | `animerun_correspondence_adapter.py` + tests passing (issue #137) |
+| **AnimeRun linearea adapter** | Implemented | `animerun_linearea_adapter.py` + 32 tests passing |
 | **Training infrastructure** | Implemented | configs, data loaders, utils, model architectures (issues #122-124) |
 | **Label Studio integration** | Ready | import/export pipeline + config XML |
 | **CMU action labels** | Tracked | `animation/labels/cmu_action_labels.csv` (80 clips labeled) |
-| **Test suite** | 36 test files | Covering all pipeline modules, adapters, and utilities |
+| **Test suite** | 37 test files | Covering all pipeline modules, adapters, and utilities |
 | **Documentation** | Complete | data-sources, preprocessed-datasets, labeling-guide, annotation-guide, taxonomy-comparison |
 
 ### What's in the Hetzner Bucket
 
 | Prefix | Files | Size |
 |--------|------:|-----:|
-| `anime_seg/` | 35,406 | 1.8 GB |
+| `anime_seg/` | 50,406 | 1.9 GB |
 | `animerun/` | 11,276 | 689 MB |
-| `fbanimehq/` | 239,277 | 8.1 GB |
+| `animerun_linearea/` | 4,236 | 119 MB |
+| `animerun_flow/` | 0 | — |
+| `animerun_segment/` | 0 | — |
+| `animerun_correspondence/` | 0 | — |
+| `fbanimehq/` | 304,889 | 11.5 GB |
 | `segmentation/` | 28,032 | 1.0 GB |
-| **Total** | **313,991** | **~11.6 GB** |
+| **Total** | **398,839** | **~15.2 GB** |
+
+**Note:** `animerun_flow`, `animerun_segment`, and `animerun_correspondence` failed in batch 3 (Frame_Anime was stripped from zip). Re-running tonight in batch 4.
 
 ### What's Downloaded Locally (data/preprocessed/)
 
-| Dataset | Size | Downloaded |
-|---------|------|-----------|
-| anime_segmentation (v1) | 17 GB | Yes |
-| anime_seg_v2 | 12 GB | Yes |
-| animerun | 18 GB (zip, trimmed) | Yes |
-| fbanimehq | 17 GB | Yes |
-| vroid_lite | 7.3 GB | Yes |
+| Dataset | Size | Downloaded | Status |
+|---------|------|-----------|--------|
+| anime_segmentation (v1) | 17 GB | Yes | Ingested, local cleanup tonight |
+| anime_seg_v2 | 12 GB | Yes | Ingested + uploaded, zips deleted |
+| animerun | 21 GB (zip, restored) | Yes | Flow/Seg/Corr re-running tonight |
+| fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
+| vroid_lite | 7.3 GB | Yes | No adapter yet |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
@@ -58,25 +67,32 @@
 
 ## What's Next (Immediate)
 
-### Tonight: run_overnight_3.sh (after #136 and #137 are done)
+### Tonight: run_overnight_4.sh
 
-1. Extract remaining AnimeRun data types one at a time from the 18 GB zip:
-   - SegMatching (<1 GB) → ingest via adapter → upload → delete from zip
-   - LineArea (4 GB) → upload raw → delete from zip
-   - UnmatchedBackward (5 GB) → ingest via adapter → upload → delete from zip
-   - UnmatchedForward (5 GB) → ingest via adapter → upload → delete from zip
-   - Segment (10 GB) → ingest via adapter → upload → delete from zip
-   - Flow (20 GB) → ingest via adapter → upload → delete from zip
-2. FBAnimeHQ shards 08-11 (extract → ingest → upload → cleanup each)
+Re-running the 3 AnimeRun adapters that failed in batch 3 (Frame_Anime was stripped before they ran):
+
+1. Flow + Frame_Anime → animerun_flow adapter → upload → delete Flow from zip
+2. Segment + Frame_Anime → animerun_segment adapter → upload → delete Segment from zip
+3. SegMatching + Unmatched + Frame_Anime → animerun_correspondence adapter → upload → delete + delete zip
+4. Delete v1 anime_segmentation local copy (~17 GB, already in bucket)
+
+Command: `caffeinate -dims bash run_overnight_4.sh 2>&1 | tee overnight_log_4.txt`
+
+### Completed Since Last Update
+
+- [x] Finish AnimeRun segment adapter (#136) — implemented + tests passing
+- [x] Finish AnimeRun correspondence adapter (#137) — implemented + tests passing
+- [x] Build AnimeRun LineArea adapter — implemented + 32 tests passing
+- [x] Run overnight batch 3 — FBAnimeHQ shards 08-11 succeeded, AnimeRun adapters failed (Frame_Anime issue)
+- [x] Ingest anime_seg_v2 (13,000 images from fg-01/02/03)
+- [x] Clean FBAnimeHQ leftovers (~17 GB reclaimed)
+- [x] Delete anime_seg_v2 fg zips after ingestion
 
 ### This Week
 
-- [ ] Finish AnimeRun segment adapter (#136)
-- [ ] Finish AnimeRun correspondence adapter (#137)
-- [ ] Update `run_overnight_3.sh` to use adapters instead of raw upload
-- [ ] Run overnight batch 3
-- [ ] Ingest anime_seg_v2 (12 GB downloaded but not yet ingested)
+- [ ] Run overnight batch 4 (tonight — AnimeRun flow/segment/correspondence)
 - [ ] Fix the 13 Mixamo characters that failed rendering (3 problematic poses)
+- [ ] Build vroid_lite adapter (4,651 PNG renders, 7.3 GB local)
 
 ### Near-Term
 
@@ -264,10 +280,11 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - [x] Build contour adapter (`animerun_contour_adapter.py`) — 2,819 frames ingested
 - [x] Upload contour pairs to Hetzner bucket (11,276 files, 689 MB)
 - [x] Build optical flow adapter (`animerun_flow_adapter.py`) — issue #135 complete, 39 tests passing
-- [ ] Build instance segmentation adapter (`animerun_segment_adapter.py`) — issue #136, in progress
-- [ ] Build temporal correspondence adapter (`animerun_correspondence_adapter.py`) — issue #137
-- [x] Trim contour + Frame_Anime from zip (18 GB remaining)
-- [ ] Run overnight extraction of remaining data types (Flow, Segment, SegMatching, LineArea, Unmatched)
+- [x] Build instance segmentation adapter (`animerun_segment_adapter.py`) — issue #136 complete
+- [x] Build temporal correspondence adapter (`animerun_correspondence_adapter.py`) — issue #137 complete
+- [x] Build line area adapter (`animerun_linearea_adapter.py`) — 32 tests passing, 1,059 frames ingested
+- [x] Trim contour + Frame_Anime from zip (restored from external HD for re-run)
+- [ ] Run overnight extraction of remaining data types (Flow, Segment, Correspondence) — tonight via batch 4
 - [ ] Evaluate whether contour style matches anime/game character needs
 - [ ] Supplement with Blender Freestyle renders for anime-specific contours
 
@@ -306,27 +323,28 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ### PP-8: Supplementary Datasets
 
-**skytnt/anime-segmentation** (HuggingFace) ✅ DOWNLOADED + INGESTED
+**skytnt/anime-segmentation** (HuggingFace) ✅ DOWNLOADED + FULLY INGESTED
 - Figure/background segmentation for anime characters
 - v1: 17 GB downloaded, 11,802 images ingested and uploaded to bucket (1.8 GB)
-- v2: 12 GB downloaded, not yet ingested
+- v2: 12 GB downloaded, 13,000 images ingested and uploaded to bucket
+- Combined: ~50,406 files in bucket under `anime_seg/`
 - [x] Download v1
 - [x] Ingest v1 (11,802 images → 35,406 files in bucket)
 - [x] Download v2
-- [ ] Ingest v2
+- [x] Ingest v2 (13,000 images from fg-01/02/03 → ~15,000 files in bucket)
 
 **dreMaz/AnimeInstanceSegmentationDataset** (HuggingFace)
 - Instance segmentation (which pixels belong to which character in multi-character scenes)
 - Useful for multi-character handling, not body-part segmentation
 - [ ] Download: `git clone https://huggingface.co/datasets/dreMaz/AnimeInstanceSegmentationDataset`
 
-**skytnt/fbanimehq** (HuggingFace) ✅ DOWNLOADED + INGESTED
+**skytnt/fbanimehq** (HuggingFace) ✅ DOWNLOADED + FULLY INGESTED
 - 112,806 full-body anime character images at 1024×512, background-removed
-- Shards 00-07 ingested (239,277 files, 8.1 GB in bucket)
-- Shards 08-11 downloaded but not yet ingested (queued for tonight)
+- All shards 00-11 ingested (304,889 files, 11.5 GB in bucket)
+- Local leftovers cleaned (extracted dirs + zips deleted)
 - [x] Download all shards
 - [x] Ingest shards 00-07
-- [ ] Ingest shards 08-11
+- [x] Ingest shards 08-11 (batch 3)
 
 **SMPL/SMPL-X** (smpl.is.tue.mpg.de)
 - Parametric human body model with body-part segmentation definitions
@@ -540,17 +558,18 @@ These require downloading raw assets and running your own rendering pipeline.
 | NOVA-Human (PP-1) | ~204,000 images | 0 | Not downloaded |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | Not downloaded |
 | AnimeRun contour pairs (PP-6) | ~8,000 | 2,819 ingested | ✅ In bucket |
-| AnimeRun flow/seg/corr | ~8,000 × 3 types | 0 | Adapters ready, extraction tonight |
+| AnimeRun linearea (PP-6) | ~1,000 | 1,059 ingested | ✅ In bucket |
+| AnimeRun flow/seg/corr | ~8,000 × 3 types | 0 | Adapters ready, re-running tonight (batch 4) |
 | LinkTo-Anime (PP-7) | ~29,270 | 0 | Not downloaded |
 | UniRig Rig-XL (PP-5) | 14,000 meshes | 0 | Not downloaded |
 | Mixamo renders (DS-1) | ~10,000 | 1,225 | ✅ In bucket (49 chars) |
 | VRoid supplementary renders | ~50,000 | 0 | Pipeline ready, no VRM files |
 | Live2D composites (DS-3) | ~1,600 | 0 | Pipeline ready, no models |
-| FBAnimeHQ (PP-8) | 112,806 | 79,759 ingested | ✅ Shards 00-07 in bucket |
-| anime-segmentation (PP-8) | ~22,000 | 11,802 | ✅ v1 in bucket, v2 downloaded |
+| FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
+| anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~465,000+** | **~95,605** | **~20%** |
+| **TOTAL** | **~465,000+** | **~130,000+** | **~28%** |
 
 ---
 
@@ -621,7 +640,7 @@ These require downloading raw assets and running your own rendering pipeline.
 **Dataset management:** validator, manifest, splitter, multiview_validator, dataset_merger, measurement_extractor
 **Configuration:** config, accessory_detector
 
-### Ingest Adapters (7 registered + supporting modules)
+### Ingest Adapters (8 registered + supporting modules)
 
 | Adapter | CLI name | Status |
 |---------|----------|--------|
@@ -630,8 +649,9 @@ These require downloading raw assets and running your own rendering pipeline.
 | `anime_seg_adapter.py` | `--adapter anime_seg` | ✅ Working |
 | `animerun_contour_adapter.py` | `--adapter animerun` | ✅ Working |
 | `animerun_flow_adapter.py` | `--adapter animerun_flow` | ✅ Working |
-| `animerun_segment_adapter.py` | `--adapter animerun_segment` | 🔧 In progress (#136) |
-| `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | 📋 Planned (#137) |
+| `animerun_segment_adapter.py` | `--adapter animerun_segment` | ✅ Working (#136 complete) |
+| `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
+| `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `linkto_adapter.py` | — | ✅ Implemented (not registered) |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_skeleton_mapper.py` | — | 📋 Planned |
@@ -654,7 +674,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 - Bucket: `s3://strata-training-data` (Falkenstein datacenter)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: ~11.6 GB across 4 datasets
+- Total uploaded: ~15.2 GB across 6 dataset prefixes
 - Access: AWS CLI compatible, credentials in `.env`
 
 ---
@@ -682,7 +702,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | **GRAND TOTAL** | **~275–305 GB** | |
 
 **Hetzner bucket capacity:** 1 TB (plenty of headroom)
-**Local disk:** 460 GB total, ~35 GB free — must use extract→ingest→upload→delete workflow
+**Local disk:** 460 GB total, ~75 GB free — must use extract→ingest→upload→delete workflow
 
 ---
 
@@ -715,9 +735,9 @@ These require downloading raw assets and running your own rendering pipeline.
 | Download AnimeRun | 2 hours | 8K contour/color pairs | ✅ Done |
 | Download FBAnimeHQ | 1 day (bandwidth) | 112K full-body anime images (unlabeled) | ✅ Done |
 | Download anime-segmentation | 4 hours | 22K+ fg/bg segmentation pairs | ✅ Done |
-| Ingest AnimeRun (all types) | Tonight | Contour + flow + seg + correspondence | 🔧 In progress |
-| Ingest FBAnimeHQ shards 08-11 | Tonight | ~30K more images | Queued |
-| Ingest anime_seg_v2 | 1 hour | ~10K more images | Queued |
+| Ingest AnimeRun (flow/seg/corr) | Tonight (batch 4) | Re-running failed adapters | 🔧 Queued |
+| Ingest FBAnimeHQ shards 08-11 | Done | All shards in bucket | ✅ Done |
+| Ingest anime_seg_v2 | Done | 13K images in bucket | ✅ Done |
 | Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
 | Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
