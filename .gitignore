@@ -38,3 +38,5 @@ deps/
 __pycache__/
 *.pyc
 .ruff_cache/
+
+.env
