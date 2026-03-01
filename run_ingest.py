@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
         "--adapter",
         type=str,
         required=True,
-        choices=["fbanimehq", "nova_human", "anime_seg"],
+        choices=["fbanimehq", "nova_human", "anime_seg", "animerun"],
         help="Which dataset adapter to use.",
     )
     parser.add_argument(
@@ -213,10 +213,34 @@ def _run_anime_seg(args: argparse.Namespace) -> int:
     return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
+def _run_animerun(args: argparse.Namespace) -> int:
+    """Run the AnimeRun contour adapter."""
+    from ingest.animerun_contour_adapter import convert_directory
+
+    results = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_frames_per_scene=args.max_images,
+    )
+
+    total_saved = sum(r.frames_saved for r in results)
+    total_skipped = sum(r.frames_skipped for r in results)
+    print("\nAnimeRun ingestion complete:")
+    print(f"  Scenes processed: {len(results)}")
+    print(f"  Frames saved:     {total_saved}")
+    print(f"  Frames skipped:   {total_skipped}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if total_saved > 0 or total_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
     "anime_seg": _run_anime_seg,
+    "animerun": _run_animerun,
 }
 
 

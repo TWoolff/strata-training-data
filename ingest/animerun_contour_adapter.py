@@ -4,22 +4,21 @@ AnimeRun (NeurIPS 2022) provides ~8K paired frames from anime-style 3D
 rendering — contour maps alongside matching color frames.  These pairs are
 ideal for training contour detection and removal models.
 
-Input directory structure::
+Input directory structure (AnimeRun_v2)::
 
-    animerun/
+    AnimeRun_v2/
     ├── train/
-    │   ├── scene_001/
-    │   │   ├── contour/       ← contour-only renders
-    │   │   ├── anime/         ← color frames (matching contour frames)
-    │   │   └── ...            ← flow_fwd/, flow_bwd/, etc. (ignored)
-    │   └── scene_002/
+    │   ├── contour/{scene}/*.png           ← contour line art
+    │   ├── Frame_Anime/{scene}/original/*.png  ← color frames
+    │   ├── Segment/{scene}/*.png           ← per-object segmentation (optional)
+    │   └── ...                             ← Flow/, SegMatching/ (ignored)
     └── test/
         └── ...
 
 Output per frame triple::
 
     output_dir/{source}_{scene}_{frame}/
-    ├── with_contours.png       ← color frame with contours visible
+    ├── with_contours.png       ← contour line art frame
     ├── without_contours.png    ← color frame (anime render)
     ├── contour_mask.png        ← binary contour mask (white=contour)
     └── metadata.json
@@ -55,9 +54,10 @@ STRATA_RESOLUTION = 512
 # difference between contour and anime frames exceeds this are contour pixels.
 CONTOUR_DIFF_THRESHOLD = 30
 
-# Subdirectories inside each AnimeRun scene folder.
+# Top-level data type directories within each split.
 _CONTOUR_DIR = "contour"
-_ANIME_DIR = "anime"
+_ANIME_DIR = "Frame_Anime"
+_ANIME_VARIANT = "original"  # Sub-variant under Frame_Anime/{scene}/
 
 # Dataset split directories.
 _SPLIT_DIRS = ("train", "test")
@@ -101,47 +101,84 @@ class AdapterResult:
 # ---------------------------------------------------------------------------
 
 
+def _find_root(animerun_dir: Path) -> Path:
+    """Find the actual data root, handling nested extraction.
+
+    The zip may extract to ``AnimeRun_v2/`` inside the target dir, so we
+    check for that and return the inner directory if present.
+    """
+    for candidate in ("AnimeRun_v2", "animerun_v2", "AnimeRun"):
+        nested = animerun_dir / candidate
+        if nested.is_dir() and any((nested / s).is_dir() for s in _SPLIT_DIRS):
+            return nested
+    return animerun_dir
+
+
 def discover_scenes(animerun_dir: Path) -> list[tuple[str, str, Path]]:
     """Discover scene directories within the AnimeRun dataset.
+
+    AnimeRun_v2 layout has contour and anime frames in parallel top-level
+    directories: ``{split}/contour/{scene}/`` and
+    ``{split}/Frame_Anime/{scene}/original/``.
+
+    A valid scene must have matching directories in both contour and anime.
 
     Args:
         animerun_dir: Root AnimeRun dataset directory.
 
     Returns:
-        List of (split, scene_id, scene_dir) tuples, sorted by split and name.
+        List of (split, scene_id, split_dir) tuples, sorted by split and name.
     """
+    root = _find_root(animerun_dir)
     scenes: list[tuple[str, str, Path]] = []
 
     for split_name in _SPLIT_DIRS:
-        split_dir = animerun_dir / split_name
+        split_dir = root / split_name
         if not split_dir.is_dir():
             continue
 
-        for scene_dir in sorted(split_dir.iterdir()):
+        contour_base = split_dir / _CONTOUR_DIR
+        anime_base = split_dir / _ANIME_DIR
+
+        if not contour_base.is_dir() or not anime_base.is_dir():
+            continue
+
+        for scene_dir in sorted(contour_base.iterdir()):
             if not scene_dir.is_dir() or scene_dir.name.startswith("."):
                 continue
-            # A valid scene must have both contour/ and anime/ subdirectories.
-            if (scene_dir / _CONTOUR_DIR).is_dir() and (scene_dir / _ANIME_DIR).is_dir():
-                scenes.append((split_name, scene_dir.name, scene_dir))
+            scene_id = scene_dir.name
+            # Anime frames live under Frame_Anime/{scene}/original/
+            anime_scene = anime_base / scene_id / _ANIME_VARIANT
+            if not anime_scene.is_dir():
+                # Fallback: try directly under Frame_Anime/{scene}/
+                anime_scene = anime_base / scene_id
+            if anime_scene.is_dir():
+                scenes.append((split_name, scene_id, split_dir))
 
     return scenes
 
 
 def discover_pairs(scene_dir: Path, split: str, scene_id: str) -> list[ContourPair]:
-    """Discover matched contour/anime frame pairs in a scene directory.
+    """Discover matched contour/anime frame pairs in a scene.
 
-    Only frames present in both contour/ and anime/ are included.
+    ``scene_dir`` here is the *split directory* (e.g. ``train/``), not the
+    scene itself.  Contour frames are at ``contour/{scene_id}/`` and anime
+    frames at ``Frame_Anime/{scene_id}/original/``.
+
+    Only frames present in both directories are included.
 
     Args:
-        scene_dir: Path to the scene directory.
+        scene_dir: Path to the split directory (train/ or test/).
         split: Dataset split name (train/test).
         scene_id: Scene identifier.
 
     Returns:
         List of matched ContourPair objects, sorted by frame name.
     """
-    contour_dir = scene_dir / _CONTOUR_DIR
-    anime_dir = scene_dir / _ANIME_DIR
+    contour_dir = scene_dir / _CONTOUR_DIR / scene_id
+    anime_dir = scene_dir / _ANIME_DIR / scene_id / _ANIME_VARIANT
+    if not anime_dir.is_dir():
+        anime_dir = scene_dir / _ANIME_DIR / scene_id
 
     extensions = {".png", ".jpg", ".jpeg"}
 
@@ -386,7 +423,7 @@ def convert_scene(
     """Convert all matched pairs in a scene to contour training format.
 
     Args:
-        scene_dir: Path to the scene directory.
+        scene_dir: Path to the split directory (e.g. train/).
         output_dir: Root output directory.
         split: Dataset split name.
         scene_id: Scene identifier.

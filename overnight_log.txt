@@ -1,0 +1,1576 @@
+========================================
+Starting overnight batch — 20:59:59
+Budget: ~7 hours
+========================================
+
+>>> [1/3] FBAnimeHQ shards 01–11
+========================================
+FBAnimeHQ batch processing
+Shards: 01 → 11
+Output: output/fbanimehq
+========================================
+
+----------------------------------------
+Shard 01 — 20:59:59
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-01.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-01
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-01
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1123.8s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 01.
+
+----------------------------------------
+Shard 02 — 21:19:14
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-02.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-02
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-02
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1141.9s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 02.
+
+----------------------------------------
+Shard 03 — 21:38:51
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-03.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-03
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-03
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1151.3s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 03.
+
+----------------------------------------
+Shard 04 — 21:58:37
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-04.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-04
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-04
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1148.4s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 04.
+
+----------------------------------------
+Shard 05 — 22:18:15
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-05.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-05
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-05
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1147.7s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 05.
+
+----------------------------------------
+Shard 06 — 22:37:54
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-06.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-06
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-06
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
+INFO __main__: Enrichment: 9300/10000 (93.0%) — 9300 enriched, 0 failed
+INFO __main__: Enrichment: 9400/10000 (94.0%) — 9400 enriched, 0 failed
+INFO __main__: Enrichment: 9500/10000 (95.0%) — 9500 enriched, 0 failed
+INFO __main__: Enrichment: 9600/10000 (96.0%) — 9600 enriched, 0 failed
+INFO __main__: Enrichment: 9700/10000 (97.0%) — 9700 enriched, 0 failed
+INFO __main__: Enrichment: 9800/10000 (98.0%) — 9800 enriched, 0 failed
+INFO __main__: Enrichment: 9900/10000 (99.0%) — 9900 enriched, 0 failed
+INFO __main__: Enrichment: 10000/10000 (100.0%) — 10000 enriched, 0 failed
+
+FBAnimeHQ ingestion complete:
+  Images processed: 10000
+  Images skipped:   0
+  Errors:           0
+  Output directory:  output/fbanimehq
+
+Running pose enrichment on 10000 examples...
+load models/yolox_m_humanart.onnx with onnxruntime backend
+load models/rtmpose_m_body7.onnx with onnxruntime backend
+  Enriched:          10000
+  Failed:            0
+  Elapsed:           1183.3s
+  Cleaning up extracted files ...
+  Deleting zip to free disk space ...
+  Done with shard 06.
+
+----------------------------------------
+Shard 07 — 22:58:24
+----------------------------------------
+  Unzipping data/preprocessed/fbanimehq/data/fbanimehq-07.zip ...
+  Unzipped.
+  Running ingest + enrichment ...
+INFO ingest.fbanimehq_adapter: Discovered 10000 images in data/preprocessed/fbanimehq/data/fbanimehq-07
+INFO ingest.fbanimehq_adapter: Processing 10000 images from data/preprocessed/fbanimehq/data/fbanimehq-07
+INFO ingest.fbanimehq_adapter: Processed 100/10000 images (1.0%)
+INFO ingest.fbanimehq_adapter: Processed 200/10000 images (2.0%)
+INFO ingest.fbanimehq_adapter: Processed 300/10000 images (3.0%)
+INFO ingest.fbanimehq_adapter: Processed 400/10000 images (4.0%)
+INFO ingest.fbanimehq_adapter: Processed 500/10000 images (5.0%)
+INFO ingest.fbanimehq_adapter: Processed 600/10000 images (6.0%)
+INFO ingest.fbanimehq_adapter: Processed 700/10000 images (7.0%)
+INFO ingest.fbanimehq_adapter: Processed 800/10000 images (8.0%)
+INFO ingest.fbanimehq_adapter: Processed 900/10000 images (9.0%)
+INFO ingest.fbanimehq_adapter: Processed 1000/10000 images (10.0%)
+INFO ingest.fbanimehq_adapter: Processed 1100/10000 images (11.0%)
+INFO ingest.fbanimehq_adapter: Processed 1200/10000 images (12.0%)
+INFO ingest.fbanimehq_adapter: Processed 1300/10000 images (13.0%)
+INFO ingest.fbanimehq_adapter: Processed 1400/10000 images (14.0%)
+INFO ingest.fbanimehq_adapter: Processed 1500/10000 images (15.0%)
+INFO ingest.fbanimehq_adapter: Processed 1600/10000 images (16.0%)
+INFO ingest.fbanimehq_adapter: Processed 1700/10000 images (17.0%)
+INFO ingest.fbanimehq_adapter: Processed 1800/10000 images (18.0%)
+INFO ingest.fbanimehq_adapter: Processed 1900/10000 images (19.0%)
+INFO ingest.fbanimehq_adapter: Processed 2000/10000 images (20.0%)
+INFO ingest.fbanimehq_adapter: Processed 2100/10000 images (21.0%)
+INFO ingest.fbanimehq_adapter: Processed 2200/10000 images (22.0%)
+INFO ingest.fbanimehq_adapter: Processed 2300/10000 images (23.0%)
+INFO ingest.fbanimehq_adapter: Processed 2400/10000 images (24.0%)
+INFO ingest.fbanimehq_adapter: Processed 2500/10000 images (25.0%)
+INFO ingest.fbanimehq_adapter: Processed 2600/10000 images (26.0%)
+INFO ingest.fbanimehq_adapter: Processed 2700/10000 images (27.0%)
+INFO ingest.fbanimehq_adapter: Processed 2800/10000 images (28.0%)
+INFO ingest.fbanimehq_adapter: Processed 2900/10000 images (29.0%)
+INFO ingest.fbanimehq_adapter: Processed 3000/10000 images (30.0%)
+INFO ingest.fbanimehq_adapter: Processed 3100/10000 images (31.0%)
+INFO ingest.fbanimehq_adapter: Processed 3200/10000 images (32.0%)
+INFO ingest.fbanimehq_adapter: Processed 3300/10000 images (33.0%)
+INFO ingest.fbanimehq_adapter: Processed 3400/10000 images (34.0%)
+INFO ingest.fbanimehq_adapter: Processed 3500/10000 images (35.0%)
+INFO ingest.fbanimehq_adapter: Processed 3600/10000 images (36.0%)
+INFO ingest.fbanimehq_adapter: Processed 3700/10000 images (37.0%)
+INFO ingest.fbanimehq_adapter: Processed 3800/10000 images (38.0%)
+INFO ingest.fbanimehq_adapter: Processed 3900/10000 images (39.0%)
+INFO ingest.fbanimehq_adapter: Processed 4000/10000 images (40.0%)
+INFO ingest.fbanimehq_adapter: Processed 4100/10000 images (41.0%)
+INFO ingest.fbanimehq_adapter: Processed 4200/10000 images (42.0%)
+INFO ingest.fbanimehq_adapter: Processed 4300/10000 images (43.0%)
+INFO ingest.fbanimehq_adapter: Processed 4400/10000 images (44.0%)
+INFO ingest.fbanimehq_adapter: Processed 4500/10000 images (45.0%)
+INFO ingest.fbanimehq_adapter: Processed 4600/10000 images (46.0%)
+INFO ingest.fbanimehq_adapter: Processed 4700/10000 images (47.0%)
+INFO ingest.fbanimehq_adapter: Processed 4800/10000 images (48.0%)
+INFO ingest.fbanimehq_adapter: Processed 4900/10000 images (49.0%)
+INFO ingest.fbanimehq_adapter: Processed 5000/10000 images (50.0%)
+INFO ingest.fbanimehq_adapter: Processed 5100/10000 images (51.0%)
+INFO ingest.fbanimehq_adapter: Processed 5200/10000 images (52.0%)
+INFO ingest.fbanimehq_adapter: Processed 5300/10000 images (53.0%)
+INFO ingest.fbanimehq_adapter: Processed 5400/10000 images (54.0%)
+INFO ingest.fbanimehq_adapter: Processed 5500/10000 images (55.0%)
+INFO ingest.fbanimehq_adapter: Processed 5600/10000 images (56.0%)
+INFO ingest.fbanimehq_adapter: Processed 5700/10000 images (57.0%)
+INFO ingest.fbanimehq_adapter: Processed 5800/10000 images (58.0%)
+INFO ingest.fbanimehq_adapter: Processed 5900/10000 images (59.0%)
+INFO ingest.fbanimehq_adapter: Processed 6000/10000 images (60.0%)
+INFO ingest.fbanimehq_adapter: Processed 6100/10000 images (61.0%)
+INFO ingest.fbanimehq_adapter: Processed 6200/10000 images (62.0%)
+INFO ingest.fbanimehq_adapter: Processed 6300/10000 images (63.0%)
+INFO ingest.fbanimehq_adapter: Processed 6400/10000 images (64.0%)
+INFO ingest.fbanimehq_adapter: Processed 6500/10000 images (65.0%)
+INFO ingest.fbanimehq_adapter: Processed 6600/10000 images (66.0%)
+INFO ingest.fbanimehq_adapter: Processed 6700/10000 images (67.0%)
+INFO ingest.fbanimehq_adapter: Processed 6800/10000 images (68.0%)
+INFO ingest.fbanimehq_adapter: Processed 6900/10000 images (69.0%)
+INFO ingest.fbanimehq_adapter: Processed 7000/10000 images (70.0%)
+INFO ingest.fbanimehq_adapter: Processed 7100/10000 images (71.0%)
+INFO ingest.fbanimehq_adapter: Processed 7200/10000 images (72.0%)
+INFO ingest.fbanimehq_adapter: Processed 7300/10000 images (73.0%)
+INFO ingest.fbanimehq_adapter: Processed 7400/10000 images (74.0%)
+INFO ingest.fbanimehq_adapter: Processed 7500/10000 images (75.0%)
+INFO ingest.fbanimehq_adapter: Processed 7600/10000 images (76.0%)
+INFO ingest.fbanimehq_adapter: Processed 7700/10000 images (77.0%)
+INFO ingest.fbanimehq_adapter: Processed 7800/10000 images (78.0%)
+INFO ingest.fbanimehq_adapter: Processed 7900/10000 images (79.0%)
+INFO ingest.fbanimehq_adapter: Processed 8000/10000 images (80.0%)
+INFO ingest.fbanimehq_adapter: Processed 8100/10000 images (81.0%)
+INFO ingest.fbanimehq_adapter: Processed 8200/10000 images (82.0%)
+INFO ingest.fbanimehq_adapter: Processed 8300/10000 images (83.0%)
+INFO ingest.fbanimehq_adapter: Processed 8400/10000 images (84.0%)
+INFO ingest.fbanimehq_adapter: Processed 8500/10000 images (85.0%)
+INFO ingest.fbanimehq_adapter: Processed 8600/10000 images (86.0%)
+INFO ingest.fbanimehq_adapter: Processed 8700/10000 images (87.0%)
+INFO ingest.fbanimehq_adapter: Processed 8800/10000 images (88.0%)
+INFO ingest.fbanimehq_adapter: Processed 8900/10000 images (89.0%)
+INFO ingest.fbanimehq_adapter: Processed 9000/10000 images (90.0%)
+INFO ingest.fbanimehq_adapter: Processed 9100/10000 images (91.0%)
+INFO ingest.fbanimehq_adapter: Processed 9200/10000 images (92.0%)
+INFO ingest.fbanimehq_adapter: Processed 9300/10000 images (93.0%)
+INFO ingest.fbanimehq_adapter: Processed 9400/10000 images (94.0%)
+INFO ingest.fbanimehq_adapter: Processed 9500/10000 images (95.0%)
+INFO ingest.fbanimehq_adapter: Processed 9600/10000 images (96.0%)
+INFO ingest.fbanimehq_adapter: Processed 9700/10000 images (97.0%)
+INFO ingest.fbanimehq_adapter: Processed 9800/10000 images (98.0%)
+INFO ingest.fbanimehq_adapter: Processed 9900/10000 images (99.0%)
+INFO ingest.fbanimehq_adapter: Processed 10000/10000 images (100.0%)
+INFO ingest.fbanimehq_adapter: FBAnimeHQ conversion complete: 10000 processed, 0 skipped, 0 errors
+INFO pipeline.pose_estimator: Loaded RTMPose model: det=models/yolox_m_humanart.onnx, pose=models/rtmpose_m_body7.onnx, device=cpu
+INFO __main__: Enrichment: 100/10000 (1.0%) — 100 enriched, 0 failed
+INFO __main__: Enrichment: 200/10000 (2.0%) — 200 enriched, 0 failed
+INFO __main__: Enrichment: 300/10000 (3.0%) — 300 enriched, 0 failed
+INFO __main__: Enrichment: 400/10000 (4.0%) — 400 enriched, 0 failed
+INFO __main__: Enrichment: 500/10000 (5.0%) — 500 enriched, 0 failed
+INFO __main__: Enrichment: 600/10000 (6.0%) — 600 enriched, 0 failed
+INFO __main__: Enrichment: 700/10000 (7.0%) — 700 enriched, 0 failed
+INFO __main__: Enrichment: 800/10000 (8.0%) — 800 enriched, 0 failed
+INFO __main__: Enrichment: 900/10000 (9.0%) — 900 enriched, 0 failed
+INFO __main__: Enrichment: 1000/10000 (10.0%) — 1000 enriched, 0 failed
+INFO __main__: Enrichment: 1100/10000 (11.0%) — 1100 enriched, 0 failed
+INFO __main__: Enrichment: 1200/10000 (12.0%) — 1200 enriched, 0 failed
+INFO __main__: Enrichment: 1300/10000 (13.0%) — 1300 enriched, 0 failed
+INFO __main__: Enrichment: 1400/10000 (14.0%) — 1400 enriched, 0 failed
+INFO __main__: Enrichment: 1500/10000 (15.0%) — 1500 enriched, 0 failed
+INFO __main__: Enrichment: 1600/10000 (16.0%) — 1600 enriched, 0 failed
+INFO __main__: Enrichment: 1700/10000 (17.0%) — 1700 enriched, 0 failed
+INFO __main__: Enrichment: 1800/10000 (18.0%) — 1800 enriched, 0 failed
+INFO __main__: Enrichment: 1900/10000 (19.0%) — 1900 enriched, 0 failed
+INFO __main__: Enrichment: 2000/10000 (20.0%) — 2000 enriched, 0 failed
+INFO __main__: Enrichment: 2100/10000 (21.0%) — 2100 enriched, 0 failed
+INFO __main__: Enrichment: 2200/10000 (22.0%) — 2200 enriched, 0 failed
+INFO __main__: Enrichment: 2300/10000 (23.0%) — 2300 enriched, 0 failed
+INFO __main__: Enrichment: 2400/10000 (24.0%) — 2400 enriched, 0 failed
+INFO __main__: Enrichment: 2500/10000 (25.0%) — 2500 enriched, 0 failed
+INFO __main__: Enrichment: 2600/10000 (26.0%) — 2600 enriched, 0 failed
+INFO __main__: Enrichment: 2700/10000 (27.0%) — 2700 enriched, 0 failed
+INFO __main__: Enrichment: 2800/10000 (28.0%) — 2800 enriched, 0 failed
+INFO __main__: Enrichment: 2900/10000 (29.0%) — 2900 enriched, 0 failed
+INFO __main__: Enrichment: 3000/10000 (30.0%) — 3000 enriched, 0 failed
+INFO __main__: Enrichment: 3100/10000 (31.0%) — 3100 enriched, 0 failed
+INFO __main__: Enrichment: 3200/10000 (32.0%) — 3200 enriched, 0 failed
+INFO __main__: Enrichment: 3300/10000 (33.0%) — 3300 enriched, 0 failed
+INFO __main__: Enrichment: 3400/10000 (34.0%) — 3400 enriched, 0 failed
+INFO __main__: Enrichment: 3500/10000 (35.0%) — 3500 enriched, 0 failed
+INFO __main__: Enrichment: 3600/10000 (36.0%) — 3600 enriched, 0 failed
+INFO __main__: Enrichment: 3700/10000 (37.0%) — 3700 enriched, 0 failed
+INFO __main__: Enrichment: 3800/10000 (38.0%) — 3800 enriched, 0 failed
+INFO __main__: Enrichment: 3900/10000 (39.0%) — 3900 enriched, 0 failed
+INFO __main__: Enrichment: 4000/10000 (40.0%) — 4000 enriched, 0 failed
+INFO __main__: Enrichment: 4100/10000 (41.0%) — 4100 enriched, 0 failed
+INFO __main__: Enrichment: 4200/10000 (42.0%) — 4200 enriched, 0 failed
+INFO __main__: Enrichment: 4300/10000 (43.0%) — 4300 enriched, 0 failed
+INFO __main__: Enrichment: 4400/10000 (44.0%) — 4400 enriched, 0 failed
+INFO __main__: Enrichment: 4500/10000 (45.0%) — 4500 enriched, 0 failed
+INFO __main__: Enrichment: 4600/10000 (46.0%) — 4600 enriched, 0 failed
+INFO __main__: Enrichment: 4700/10000 (47.0%) — 4700 enriched, 0 failed
+INFO __main__: Enrichment: 4800/10000 (48.0%) — 4800 enriched, 0 failed
+INFO __main__: Enrichment: 4900/10000 (49.0%) — 4900 enriched, 0 failed
+INFO __main__: Enrichment: 5000/10000 (50.0%) — 5000 enriched, 0 failed
+INFO __main__: Enrichment: 5100/10000 (51.0%) — 5100 enriched, 0 failed
+INFO __main__: Enrichment: 5200/10000 (52.0%) — 5200 enriched, 0 failed
+INFO __main__: Enrichment: 5300/10000 (53.0%) — 5300 enriched, 0 failed
+INFO __main__: Enrichment: 5400/10000 (54.0%) — 5400 enriched, 0 failed
+INFO __main__: Enrichment: 5500/10000 (55.0%) — 5500 enriched, 0 failed
+INFO __main__: Enrichment: 5600/10000 (56.0%) — 5600 enriched, 0 failed
+INFO __main__: Enrichment: 5700/10000 (57.0%) — 5700 enriched, 0 failed
+INFO __main__: Enrichment: 5800/10000 (58.0%) — 5800 enriched, 0 failed
+INFO __main__: Enrichment: 5900/10000 (59.0%) — 5900 enriched, 0 failed
+INFO __main__: Enrichment: 6000/10000 (60.0%) — 6000 enriched, 0 failed
+INFO __main__: Enrichment: 6100/10000 (61.0%) — 6100 enriched, 0 failed
+INFO __main__: Enrichment: 6200/10000 (62.0%) — 6200 enriched, 0 failed
+INFO __main__: Enrichment: 6300/10000 (63.0%) — 6300 enriched, 0 failed
+INFO __main__: Enrichment: 6400/10000 (64.0%) — 6400 enriched, 0 failed
+INFO __main__: Enrichment: 6500/10000 (65.0%) — 6500 enriched, 0 failed
+INFO __main__: Enrichment: 6600/10000 (66.0%) — 6600 enriched, 0 failed
+INFO __main__: Enrichment: 6700/10000 (67.0%) — 6700 enriched, 0 failed
+INFO __main__: Enrichment: 6800/10000 (68.0%) — 6800 enriched, 0 failed
+INFO __main__: Enrichment: 6900/10000 (69.0%) — 6900 enriched, 0 failed
+INFO __main__: Enrichment: 7000/10000 (70.0%) — 7000 enriched, 0 failed
+INFO __main__: Enrichment: 7100/10000 (71.0%) — 7100 enriched, 0 failed
+INFO __main__: Enrichment: 7200/10000 (72.0%) — 7200 enriched, 0 failed
+INFO __main__: Enrichment: 7300/10000 (73.0%) — 7300 enriched, 0 failed
+INFO __main__: Enrichment: 7400/10000 (74.0%) — 7400 enriched, 0 failed
+INFO __main__: Enrichment: 7500/10000 (75.0%) — 7500 enriched, 0 failed
+INFO __main__: Enrichment: 7600/10000 (76.0%) — 7600 enriched, 0 failed
+INFO __main__: Enrichment: 7700/10000 (77.0%) — 7700 enriched, 0 failed
+INFO __main__: Enrichment: 7800/10000 (78.0%) — 7800 enriched, 0 failed
+INFO __main__: Enrichment: 7900/10000 (79.0%) — 7900 enriched, 0 failed
+INFO __main__: Enrichment: 8000/10000 (80.0%) — 8000 enriched, 0 failed
+INFO __main__: Enrichment: 8100/10000 (81.0%) — 8100 enriched, 0 failed
+INFO __main__: Enrichment: 8200/10000 (82.0%) — 8200 enriched, 0 failed
+INFO __main__: Enrichment: 8300/10000 (83.0%) — 8300 enriched, 0 failed
+INFO __main__: Enrichment: 8400/10000 (84.0%) — 8400 enriched, 0 failed
+INFO __main__: Enrichment: 8500/10000 (85.0%) — 8500 enriched, 0 failed
+INFO __main__: Enrichment: 8600/10000 (86.0%) — 8600 enriched, 0 failed
+INFO __main__: Enrichment: 8700/10000 (87.0%) — 8700 enriched, 0 failed
+INFO __main__: Enrichment: 8800/10000 (88.0%) — 8800 enriched, 0 failed
+INFO __main__: Enrichment: 8900/10000 (89.0%) — 8900 enriched, 0 failed
+INFO __main__: Enrichment: 9000/10000 (90.0%) — 9000 enriched, 0 failed
+INFO __main__: Enrichment: 9100/10000 (91.0%) — 9100 enriched, 0 failed
+INFO __main__: Enrichment: 9200/10000 (92.0%) — 9200 enriched, 0 failed
