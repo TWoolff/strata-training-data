@@ -63,6 +63,7 @@ def parse_args() -> argparse.Namespace:
             "animerun",
             "animerun_flow",
             "animerun_segment",
+            "animerun_correspondence",
         ],
         help="Which dataset adapter to use.",
     )
@@ -289,6 +290,29 @@ def _run_animerun_segment(args: argparse.Namespace) -> int:
     return 0 if total_saved > 0 or total_skipped > 0 else 1
 
 
+def _run_animerun_correspondence(args: argparse.Namespace) -> int:
+    """Run the AnimeRun temporal correspondence adapter."""
+    from ingest.animerun_correspondence_adapter import convert_directory
+
+    results = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_frames_per_scene=args.max_images,
+    )
+
+    total_saved = sum(r.frames_saved for r in results)
+    total_skipped = sum(r.frames_skipped for r in results)
+    print("\nAnimeRun correspondence ingestion complete:")
+    print(f"  Scenes processed: {len(results)}")
+    print(f"  Pairs saved:      {total_saved}")
+    print(f"  Pairs skipped:    {total_skipped}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if total_saved > 0 or total_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -296,6 +320,7 @@ _ADAPTERS = {
     "animerun": _run_animerun,
     "animerun_flow": _run_animerun_flow,
     "animerun_segment": _run_animerun_segment,
+    "animerun_correspondence": _run_animerun_correspondence,
 }
 
 
