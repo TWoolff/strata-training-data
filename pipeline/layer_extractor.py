@@ -48,7 +48,13 @@ def get_active_regions(segmentation_mask: np.ndarray) -> list[int]:
 
 
 def _create_transparent_material() -> bpy.types.Material:
-    """Create (or reuse) a transparent material for hiding non-target regions."""
+    """Create (or reuse) a fully transparent material for hiding non-target regions.
+
+    Uses Principled BSDF with Alpha=0 and Blended render method.  Blended
+    gives clean alpha transparency without the stipple/noise artifacts that
+    DITHERED mode produces.  Sort-order issues (Blended's main drawback)
+    don't matter here because only one region is visible at a time.
+    """
     name = f"{LAYER_MATERIAL_PREFIX}transparent"
     mat = bpy.data.materials.get(name)
     if mat is None:
@@ -57,15 +63,13 @@ def _create_transparent_material() -> bpy.types.Material:
     mat.use_nodes = True
     mat.use_backface_culling = False
 
-    # Blender 4.2+/5.0 transparency setup
+    # Use Blended transparency (clean alpha, no dithering noise).
     if hasattr(mat, "surface_render_method"):
-        mat.surface_render_method = "DITHERED"
+        mat.surface_render_method = "BLENDED"
     elif hasattr(mat, "blend_method"):
-        mat.blend_method = "CLIP"
+        mat.blend_method = "ALPHA_BLEND"
     if hasattr(mat, "shadow_method"):
-        mat.shadow_method = "CLIP"
-    if hasattr(mat, "alpha_threshold"):
-        mat.alpha_threshold = 0.5
+        mat.shadow_method = "NONE"
 
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
@@ -73,9 +77,12 @@ def _create_transparent_material() -> bpy.types.Material:
 
     output = nodes.new(type="ShaderNodeOutputMaterial")
     output.location = (300, 0)
-    transparent = nodes.new(type="ShaderNodeBsdfTransparent")
-    transparent.location = (0, 0)
-    links.new(transparent.outputs["BSDF"], output.inputs["Surface"])
+
+    # Principled BSDF with Alpha=0 → fully transparent.
+    principled = nodes.new(type="ShaderNodeBsdfPrincipled")
+    principled.location = (0, 0)
+    principled.inputs["Alpha"].default_value = 0.0
+    links.new(principled.outputs["BSDF"], output.inputs["Surface"])
 
     return mat
 
@@ -115,11 +122,18 @@ def extract_layers(
 
     For each region with pixels in the segmentation mask, temporarily
     replaces all non-target material slots with a transparent material,
-    applies flat style to the target region, and renders.
+    renders the target region with an Emission shader using the character's
+    texture, then restores the original material state.
+
+    Uses Emission shaders (not Diffuse BSDF) so layers are unaffected by
+    scene lighting — consistent flat color regardless of camera angle.
+    Disables anti-aliasing during rendering for clean pixel boundaries
+    (same as segmentation pass).
 
     The caller must have already configured the camera and called
     ``setup_color_render()``.  After this function returns, the meshes
-    are restored to their pre-call material state.
+    are restored to their pre-call material state and render settings
+    are restored.
 
     Args:
         scene: Blender scene (camera + render settings configured).
@@ -156,66 +170,70 @@ def extract_layers(
     layers_dir.mkdir(parents=True, exist_ok=True)
     transparent_mat = _create_transparent_material()
 
-    # Snapshot current slot materials (segmentation Emission materials)
+    # Snapshot current slot materials (segmentation Emission materials).
+    # After assign_region_materials(), meshes have 20 slots (one per region)
+    # with face material_index values pointing to the correct region slot.
     seg_backup = _backup_slot_materials(meshes)
 
-    # Build flat-style materials from the original character materials.
-    # For each mesh × slot, create a Diffuse BSDF material preserving
-    # the original base color / texture.
-    flat_materials: list[list[bpy.types.Material | None]] = []
-    for mesh_idx, mesh_obj in enumerate(meshes):
-        mesh_flat: list[bpy.types.Material | None] = []
-        for slot_idx in range(len(mesh_obj.material_slots)):
-            if slot_idx == 0 or slot_idx >= NUM_REGIONS:
-                mesh_flat.append(transparent_mat)
-                continue
+    # Temporarily restore original materials to extract texture/color info.
+    # Original materials have the character's real textures (typically a shared
+    # UV-mapped atlas) but only 3-5 slots, NOT the 20-slot region layout.
+    _restore_slot_materials(meshes, original_materials)
 
-            orig_mat = None
-            if mesh_idx < len(original_materials):
-                orig_mats = original_materials[mesh_idx]
-                if slot_idx < len(orig_mats):
-                    orig_mat = orig_mats[slot_idx]
+    # Find the shared texture atlas from any original material slot.
+    # Mixamo characters use one UV-mapped atlas across all body parts.
+    shared_tex_node = None
+    shared_base_color = (0.8, 0.8, 0.8, 1.0)
+    for mesh_obj in meshes:
+        for slot in mesh_obj.material_slots:
+            tex = _get_image_texture_node(slot.material)
+            if tex is not None:
+                shared_tex_node = tex
+                shared_base_color = _extract_base_color(slot.material)
+                break
+        if shared_tex_node is not None:
+            break
 
-            base_color = _extract_base_color(orig_mat)
-            tex_node = _get_image_texture_node(orig_mat)
+    # Restore seg materials (back to 20 slots with correct face indices)
+    _restore_slot_materials(meshes, seg_backup)
 
-            mat_name = f"{LAYER_MATERIAL_PREFIX}{mesh_idx}_{slot_idx}"
-            mat = bpy.data.materials.get(mat_name)
-            if mat is None:
-                mat = bpy.data.materials.new(name=mat_name)
-            mat.use_nodes = True
-            mat.use_backface_culling = False
+    # Build one shared Emission material using the character's texture.
+    # Emission is lighting-independent — consistent flat color regardless of
+    # camera angle, matching the "See Through" paper's expectation of unlit layers.
+    # Blender mesh UVs are stored on the mesh data, so the same texture + UVs
+    # produce the correct appearance regardless of which slot the face is in.
+    flat_mat = bpy.data.materials.new(name=f"{LAYER_MATERIAL_PREFIX}flat")
+    flat_mat.use_nodes = True
+    flat_mat.use_backface_culling = False
 
-            nodes = mat.node_tree.nodes
-            links = mat.node_tree.links
-            nodes.clear()
+    nodes = flat_mat.node_tree.nodes
+    links = flat_mat.node_tree.links
+    nodes.clear()
 
-            output_node = nodes.new(type="ShaderNodeOutputMaterial")
-            output_node.location = (400, 0)
-            diffuse = nodes.new(type="ShaderNodeBsdfDiffuse")
-            diffuse.location = (0, 0)
-            diffuse.inputs["Roughness"].default_value = 1.0
-            _wire_color_source(
-                nodes,
-                links,
-                diffuse.inputs["Color"],
-                tex_node,
-                base_color,
-            )
-            links.new(diffuse.outputs["BSDF"], output_node.inputs["Surface"])
+    output_node = nodes.new(type="ShaderNodeOutputMaterial")
+    output_node.location = (400, 0)
+    emission = nodes.new(type="ShaderNodeEmission")
+    emission.location = (0, 0)
+    emission.inputs["Strength"].default_value = 1.0
+    _wire_color_source(nodes, links, emission.inputs["Color"], shared_tex_node, shared_base_color)
+    links.new(emission.outputs["Emission"], output_node.inputs["Surface"])
 
-            mesh_flat.append(mat)
-        flat_materials.append(mesh_flat)
+    # Disable anti-aliasing for clean pixel boundaries (like segmentation pass).
+    # DITHERED transparency + AA creates stipple bleeding at edges.
+    saved_filter_size = scene.render.filter_size
+    saved_view_transform = scene.view_settings.view_transform
+    scene.render.filter_size = 0.0
+    scene.view_settings.view_transform = "Raw"
 
     # Render each active region in isolation
     saved_layers: dict[int, Path] = {}
 
     for region_id in active_regions:
         # Set all slots: target region gets flat material, others get transparent
-        for mesh_idx, mesh_obj in enumerate(meshes):
+        for mesh_obj in meshes:
             for slot_idx in range(len(mesh_obj.material_slots)):
                 if slot_idx == region_id:
-                    mesh_obj.material_slots[slot_idx].material = flat_materials[mesh_idx][slot_idx]
+                    mesh_obj.material_slots[slot_idx].material = flat_mat
                 else:
                     mesh_obj.material_slots[slot_idx].material = transparent_mat
 
@@ -232,6 +250,10 @@ def extract_layers(
         tmp_path.unlink(missing_ok=True)
 
         saved_layers[region_id] = layer_path
+
+    # Restore render settings (AA, color management) for subsequent passes.
+    scene.render.filter_size = saved_filter_size
+    scene.view_settings.view_transform = saved_view_transform
 
     logger.info("Saved %d region layers for %s", len(saved_layers), file_prefix)
 
