@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # Overnight batch #3:
-# 1. Shrink AnimeRun zip (remove already-ingested contour + Frame_Anime)
-# 2. Extract remaining AnimeRun data in stages → upload raw → delete each
+# 1. Skip Phase 1 (zip already trimmed of contour + Frame_Anime)
+# 2. Extract remaining AnimeRun data one type at a time:
+#    - Flow → ingest via animerun_flow adapter → upload → delete from zip
+#    - Segment → ingest via animerun_segment adapter → upload → delete from zip
+#    - SegMatching + Unmatched → ingest via animerun_correspondence adapter → upload → delete from zip
+#    - LineArea → upload raw (no adapter) → delete from zip
 # 3. FBAnimeHQ shards 08-11 (extract → ingest → upload → cleanup each)
+# 4. anime_seg_v2 ingest
 #
 # Usage:
 #   caffeinate -dims bash run_overnight_3.sh 2>&1 | tee overnight_log_3.txt
@@ -78,68 +83,167 @@ echo "=== Overnight batch #3 started at $(date) ==="
 echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 echo ""
 
-# ---------------------------------------------------------------------------
-# Phase 1: Shrink AnimeRun zip (remove already-ingested contour + Frame_Anime)
-# ---------------------------------------------------------------------------
 ANIMERUN_DIR="./data/preprocessed/animerun"
 ANIMERUN_ZIP="${ANIMERUN_DIR}/AnimeRun.zip"
 
-echo "=== Phase 1: Shrink AnimeRun zip ==="
-echo "    Current zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
-echo "    Removing contour + Frame_Anime (already ingested)..."
-
-zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/contour/*" "AnimeRun_v2/*/Frame_Anime/*" \
-    || echo "  WARNING: zip delete had errors (may already be removed)"
-
-echo "    New zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
+# ---------------------------------------------------------------------------
+# Phase 1: AnimeRun — Flow (optical flow adapter)
+# Extract Flow + Frame_Anime → ingest → upload → delete from zip
+# Flow is ~20GB extracted but we also need Frame_Anime for the adapter
+# ---------------------------------------------------------------------------
+echo "=== Phase 1: AnimeRun Flow (optical flow) ==="
+echo "    Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
 echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Extracting Flow + Frame_Anime..."
+unzip -q -o "$ANIMERUN_ZIP" "AnimeRun_v2/*/Flow/*" "AnimeRun_v2/*/Frame_Anime/*" -d "$ANIMERUN_DIR" \
+    || echo "  WARNING: extraction had errors"
+echo "  Extracted. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Ingesting via animerun_flow adapter..."
+python3 run_ingest.py \
+    --adapter animerun_flow \
+    --input_dir "${ANIMERUN_DIR}/AnimeRun_v2" \
+    --output_dir "./output/animerun_flow" || echo "  WARNING: adapter exited with errors"
+
+echo "  Cleaning up extracted data..."
+rm -rf "${ANIMERUN_DIR}/AnimeRun_v2"
+echo "  Cleaned. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+upload_and_cleanup "animerun_flow"
+
+echo "  Removing Flow from zip..."
+zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/Flow/*" \
+    || echo "  WARNING: zip delete had errors"
+echo "  Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
+
+PHASE1_END=$(date +%s)
+echo "=== Phase 1 complete at $(date) ($(( (PHASE1_END - START_TIME) / 60 )) min) ==="
 echo ""
 
 # ---------------------------------------------------------------------------
-# Phase 2: Extract remaining AnimeRun data one type at a time
-# Each type: extract from zip → upload raw to bucket → delete local
-#
-# Remaining dirs (after removing contour + Frame_Anime):
-#   Flow (20.1GB), Segment (10.4GB), UnmatchedForward (5.1GB),
-#   UnmatchedBackward (5.1GB), LineArea (4.0GB), SegMatching (<1GB)
+# Phase 2: AnimeRun — Segment (instance segmentation adapter)
+# Extract Segment + Frame_Anime → ingest → upload → delete from zip
 # ---------------------------------------------------------------------------
-echo "=== Phase 2: AnimeRun remaining data (raw upload) ==="
+echo "=== Phase 2: AnimeRun Segment (instance segmentation) ==="
+echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 
-for DATA_TYPE in SegMatching LineArea UnmatchedBackward UnmatchedForward Segment Flow; do
-    echo "  --- AnimeRun/$DATA_TYPE ---"
-    echo "  Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+echo "  Extracting Segment + Frame_Anime..."
+unzip -q -o "$ANIMERUN_ZIP" "AnimeRun_v2/*/Segment/*" "AnimeRun_v2/*/Frame_Anime/*" -d "$ANIMERUN_DIR" \
+    || echo "  WARNING: extraction had errors"
+echo "  Extracted. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 
-    echo "  Extracting $DATA_TYPE..."
-    unzip -q -o "$ANIMERUN_ZIP" "AnimeRun_v2/*/${DATA_TYPE}/*" -d "$ANIMERUN_DIR" \
-        || echo "  WARNING: extraction had errors"
+echo "  Ingesting via animerun_segment adapter..."
+python3 run_ingest.py \
+    --adapter animerun_segment \
+    --input_dir "${ANIMERUN_DIR}/AnimeRun_v2" \
+    --output_dir "./output/animerun_segment" || echo "  WARNING: adapter exited with errors"
 
-    # Upload raw to bucket under animerun_raw/{DATA_TYPE}/
-    upload_raw_and_cleanup "animerun_raw/${DATA_TYPE}" "${ANIMERUN_DIR}/AnimeRun_v2"
+echo "  Cleaning up extracted data..."
+rm -rf "${ANIMERUN_DIR}/AnimeRun_v2"
+echo "  Cleaned. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 
-    # Remove from zip to free space and avoid re-extracting
-    echo "  Removing $DATA_TYPE from zip..."
-    zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/${DATA_TYPE}/*" \
-        || echo "  WARNING: zip delete had errors"
+upload_and_cleanup "animerun_segment"
 
-    echo "  Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
-    echo ""
-done
+echo "  Removing Segment from zip..."
+zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/Segment/*" \
+    || echo "  WARNING: zip delete had errors"
+echo "  Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
 
-# Delete the now-empty zip
+PHASE2_END=$(date +%s)
+echo "=== Phase 2 complete at $(date) ($(( (PHASE2_END - PHASE1_END) / 60 )) min) ==="
+echo ""
+
+# ---------------------------------------------------------------------------
+# Phase 3: AnimeRun — Correspondence (SegMatching + Unmatched + Frame_Anime)
+# Extract all three + Frame_Anime → ingest → upload → delete from zip
+# ---------------------------------------------------------------------------
+echo "=== Phase 3: AnimeRun Correspondence (SegMatching + occlusion) ==="
+echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Extracting SegMatching + UnmatchedForward + UnmatchedBackward + Frame_Anime..."
+unzip -q -o "$ANIMERUN_ZIP" \
+    "AnimeRun_v2/*/SegMatching/*" \
+    "AnimeRun_v2/*/UnmatchedForward/*" \
+    "AnimeRun_v2/*/UnmatchedBackward/*" \
+    "AnimeRun_v2/*/Frame_Anime/*" \
+    -d "$ANIMERUN_DIR" \
+    || echo "  WARNING: extraction had errors"
+echo "  Extracted. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Ingesting via animerun_correspondence adapter..."
+python3 run_ingest.py \
+    --adapter animerun_correspondence \
+    --input_dir "${ANIMERUN_DIR}/AnimeRun_v2" \
+    --output_dir "./output/animerun_correspondence" || echo "  WARNING: adapter exited with errors"
+
+echo "  Cleaning up extracted data..."
+rm -rf "${ANIMERUN_DIR}/AnimeRun_v2"
+echo "  Cleaned. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+upload_and_cleanup "animerun_correspondence"
+
+echo "  Removing SegMatching + Unmatched from zip..."
+zip -q -d "$ANIMERUN_ZIP" \
+    "AnimeRun_v2/*/SegMatching/*" \
+    "AnimeRun_v2/*/UnmatchedForward/*" \
+    "AnimeRun_v2/*/UnmatchedBackward/*" \
+    || echo "  WARNING: zip delete had errors"
+echo "  Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
+
+PHASE3_END=$(date +%s)
+echo "=== Phase 3 complete at $(date) ($(( (PHASE3_END - PHASE2_END) / 60 )) min) ==="
+echo ""
+
+# ---------------------------------------------------------------------------
+# Phase 4: AnimeRun — LineArea (line art adapter)
+# ---------------------------------------------------------------------------
+echo "=== Phase 4: AnimeRun LineArea (line art) ==="
+echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Extracting LineArea..."
+unzip -q -o "$ANIMERUN_ZIP" "AnimeRun_v2/*/LineArea/*" -d "$ANIMERUN_DIR" \
+    || echo "  WARNING: extraction had errors"
+echo "  Extracted. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+echo "  Ingesting via animerun_linearea adapter..."
+python3 run_ingest.py \
+    --adapter animerun_linearea \
+    --input_dir "${ANIMERUN_DIR}/AnimeRun_v2" \
+    --output_dir "./output/animerun_linearea" || echo "  WARNING: adapter exited with errors"
+
+echo "  Cleaning up extracted data..."
+rm -rf "${ANIMERUN_DIR}/AnimeRun_v2"
+echo "  Cleaned. Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+upload_and_cleanup "animerun_linearea"
+
+echo "  Removing LineArea from zip..."
+zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/LineArea/*" \
+    || echo "  WARNING: zip delete had errors"
+
+# Also remove Frame_Anime from zip (extracted multiple times above, now done)
+echo "  Removing Frame_Anime from zip..."
+zip -q -d "$ANIMERUN_ZIP" "AnimeRun_v2/*/Frame_Anime/*" \
+    || echo "  WARNING: zip delete had errors (may already be removed)"
+
+echo "  Zip size: $(du -sh "$ANIMERUN_ZIP" 2>/dev/null | cut -f1)"
+
+# Delete the now-empty (or near-empty) zip
 echo "  Deleting emptied AnimeRun zip..."
 rm -f "$ANIMERUN_ZIP"
 echo "  Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 
-PHASE2_END=$(date +%s)
-echo "=== Phase 2 complete at $(date) ($(( (PHASE2_END - START_TIME) / 60 )) min) ==="
+PHASE4_END=$(date +%s)
+echo "=== Phase 4 complete at $(date) ($(( (PHASE4_END - PHASE3_END) / 60 )) min) ==="
 echo ""
 
 # ---------------------------------------------------------------------------
-# Phase 3: FBAnimeHQ shards 08-11
+# Phase 5: FBAnimeHQ shards 08-11
 # Zips extract to numbered dirs (0080/, etc.) not fbanimehq-08/.
 # Fix: extract into a temp dir, point adapter at it.
 # ---------------------------------------------------------------------------
-echo "=== Phase 3: FBAnimeHQ shards 08-11 ==="
+echo "=== Phase 5: FBAnimeHQ shards 08-11 ==="
 SHARD_DIR="./data/preprocessed/fbanimehq/data"
 
 for SHARD_NUM in 08 09 10 11; do
@@ -173,6 +277,35 @@ for SHARD_NUM in 08 09 10 11; do
     echo "  ${SHARD_NAME} done at $(date)"
     echo ""
 done
+
+PHASE5_END=$(date +%s)
+echo "=== Phase 5 complete at $(date) ($(( (PHASE5_END - PHASE4_END) / 60 )) min) ==="
+echo ""
+
+# ---------------------------------------------------------------------------
+# Phase 6: anime_seg_v2 ingest
+# ---------------------------------------------------------------------------
+ANIME_SEG_V2_DIR="./data/preprocessed/anime_seg_v2"
+
+if [ -d "$ANIME_SEG_V2_DIR" ]; then
+    echo "=== Phase 6: anime_seg_v2 ingest ==="
+    echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
+
+    python3 run_ingest.py \
+        --adapter anime_seg \
+        --input_dir "$ANIME_SEG_V2_DIR" \
+        --output_dir "./output/anime_seg" || echo "  WARNING: adapter exited with errors"
+
+    upload_and_cleanup "anime_seg"
+
+    PHASE6_END=$(date +%s)
+    echo "=== Phase 6 complete at $(date) ($(( (PHASE6_END - PHASE5_END) / 60 )) min) ==="
+    echo ""
+else
+    echo "=== Phase 6: Skipping anime_seg_v2 — directory not found ==="
+    PHASE6_END=$PHASE5_END
+    echo ""
+fi
 
 # ---------------------------------------------------------------------------
 # Summary

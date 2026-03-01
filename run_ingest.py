@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
             "animerun_flow",
             "animerun_segment",
             "animerun_correspondence",
+            "animerun_linearea",
         ],
         help="Which dataset adapter to use.",
     )
@@ -313,6 +314,29 @@ def _run_animerun_correspondence(args: argparse.Namespace) -> int:
     return 0 if total_saved > 0 or total_skipped > 0 else 1
 
 
+def _run_animerun_linearea(args: argparse.Namespace) -> int:
+    """Run the AnimeRun line area adapter."""
+    from ingest.animerun_linearea_adapter import convert_directory
+
+    results = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_frames_per_scene=args.max_images,
+    )
+
+    total_saved = sum(r.frames_saved for r in results)
+    total_skipped = sum(r.frames_skipped for r in results)
+    print("\nAnimeRun LineArea ingestion complete:")
+    print(f"  Scenes processed: {len(results)}")
+    print(f"  Frames saved:     {total_saved}")
+    print(f"  Frames skipped:   {total_skipped}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if total_saved > 0 or total_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -321,6 +345,7 @@ _ADAPTERS = {
     "animerun_flow": _run_animerun_flow,
     "animerun_segment": _run_animerun_segment,
     "animerun_correspondence": _run_animerun_correspondence,
+    "animerun_linearea": _run_animerun_linearea,
 }
 
 
