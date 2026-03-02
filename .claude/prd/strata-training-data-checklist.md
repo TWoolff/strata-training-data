@@ -460,7 +460,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 | Item | Target Volume | Current | Status |
 |------|--------------|---------|--------|
-| CMU BVH motion clips | 2,548 (full dataset) | 0 | Not downloaded |
+| CMU BVH motion clips | 2,548 (full dataset) | 2,548 | ✅ Downloaded to `data/mocap/cmu/` |
 | Action labels per clip | All clips labeled | 80 | `animation/labels/cmu_action_labels.csv` |
 | Strata-compatible flag per clip | All clips flagged | 80 | In labels CSV |
 
@@ -468,7 +468,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** LinkTo-Anime (PP-7) provides 80 VRoid characters pre-rigged with Mixamo skeletons — this may partially overlap with CMU data needs for animation training.
 
-**Status:** BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips). No BVH files downloaded yet.
+**Status:** BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips). Full dataset downloaded (2,548 BVH clips, 4.1 GB in `data/mocap/cmu/`).
 
 ---
 
@@ -590,7 +590,7 @@ These require downloading raw assets and running your own rendering pipeline.
 - [x] **Download AnimeRun dataset** (PP-6) — contour line pairs ✅
 - [ ] **Check LinkTo-Anime availability** (PP-7) — if released, download
 - [x] Download Mixamo FBX characters (61/250 downloaded) — need more
-- [ ] Download CMU BVH dataset (full 2,548 clips)
+- [x] Download CMU BVH dataset (full 2,548 clips) ✅
 - [x] Download anime-segmentation (v1 + v2) ✅
 - [x] Download FBAnimeHQ (all shards) ✅
 - [ ] Set up license tracking CSV for all sources

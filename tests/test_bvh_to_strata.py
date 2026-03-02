@@ -588,12 +588,12 @@ class TestStrataCompatibility:
         assert result.compatible is True
         assert result.reason == "No motion data — skeleton-only file"
 
-    def test_finger_motion_is_incompatible(self, tmp_path: Path) -> None:
-        """A clip with active finger bones should be incompatible."""
+    def test_finger_motion_is_silently_ignored(self, tmp_path: Path) -> None:
+        """Finger bones are silently ignored — clips with finger motion are still compatible."""
         bvh = parse_bvh(_write_bvh(tmp_path, FINGER_MOTION_BVH))
         result = check_strata_compatibility(bvh)
-        assert result.compatible is False
-        assert "LThumb" in result.active_unmapped
+        assert result.compatible is True
+        assert "LThumb" not in result.active_unmapped
 
     def test_inactive_unmapped_bone_is_compatible(self, tmp_path: Path) -> None:
         """Unmapped bones with no significant motion should not block compat."""
@@ -630,6 +630,6 @@ class TestStrataCompatibility:
 
     def test_reason_mentions_incompatible(self, tmp_path: Path) -> None:
         """Reason string should indicate incompatibility status."""
-        bvh = parse_bvh(_write_bvh(tmp_path, FINGER_MOTION_BVH))
+        bvh = parse_bvh(_write_bvh(tmp_path, ACTIVE_CUSTOM_BONE_BVH))
         result = check_strata_compatibility(bvh)
         assert "Incompatible" in result.reason
