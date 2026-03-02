@@ -25,11 +25,15 @@ from pipeline.live2d_renderer import (  # noqa: E402
     _apply_flip,
     _apply_rotation,
     _apply_scale,
+    _build_render_result,
     _composite_from_fragments,
     _discover_fragment_images,
+    _extract_fragments_from_moc3,
     _extract_joints_from_mask,
+    _find_moc3,
     _find_model_json,
     _parse_model_json,
+    _rasterize_mesh_from_atlas,
     generate_augmentations,
     process_live2d_directory,
     process_live2d_model,
@@ -520,6 +524,279 @@ class TestProcessLive2DModel:
         empty_dir.mkdir()
         result = process_live2d_model(empty_dir, resolution=256)
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# .moc3 extraction
+# ---------------------------------------------------------------------------
+
+
+class TestFindMoc3:
+    """Test .moc3 file discovery."""
+
+    def test_finds_moc3(self, tmp_path: Path) -> None:
+        moc3_file = tmp_path / "model.moc3"
+        moc3_file.write_bytes(b"MOC3\x03" + b"\x00" * 100)
+        result = _find_moc3(tmp_path)
+        assert result is not None
+        assert result.name == "model.moc3"
+
+    def test_returns_none_if_missing(self, tmp_path: Path) -> None:
+        result = _find_moc3(tmp_path)
+        assert result is None
+
+
+class TestRasterizeMeshFromAtlas:
+    """Test triangle rasterization from texture atlas."""
+
+    def test_basic_rasterization(self) -> None:
+        # 64x64 red atlas
+        atlas = np.zeros((64, 64, 4), dtype=np.uint8)
+        atlas[:, :] = [255, 0, 0, 255]
+
+        # Full-quad UVs covering entire atlas
+        uvs = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        triangles = [0, 1, 2, 0, 2, 3]
+
+        result = _rasterize_mesh_from_atlas(atlas, uvs, triangles)
+        assert result.shape == (64, 64, 4)
+        # Most pixels should be red (some edge pixels may be missed)
+        non_zero = result[:, :, 3] > 0
+        assert non_zero.sum() > 0
+
+    def test_empty_triangles(self) -> None:
+        atlas = np.zeros((32, 32, 4), dtype=np.uint8)
+        uvs = [(0.0, 0.0), (0.5, 0.0), (0.25, 0.5)]
+        result = _rasterize_mesh_from_atlas(atlas, uvs, [])
+        assert result.shape == (32, 32, 4)
+        assert result[:, :, 3].max() == 0
+
+    def test_opacity_applied(self) -> None:
+        atlas = np.zeros((32, 32, 4), dtype=np.uint8)
+        atlas[:, :] = [0, 255, 0, 255]
+
+        uvs = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        triangles = [0, 1, 2, 0, 2, 3]
+
+        result = _rasterize_mesh_from_atlas(atlas, uvs, triangles, opacity=0.5)
+        non_zero = result[:, :, 3] > 0
+        if non_zero.any():
+            max_alpha = result[:, :, 3][non_zero].max()
+            assert max_alpha <= 128  # 255 * 0.5 ≈ 127
+
+    def test_preserves_atlas_colors(self) -> None:
+        # Create atlas with distinct colors in quadrants
+        atlas = np.zeros((64, 64, 4), dtype=np.uint8)
+        atlas[:32, :32] = [255, 0, 0, 255]  # top-left red
+        atlas[:32, 32:] = [0, 255, 0, 255]  # top-right green
+        atlas[32:, :32] = [0, 0, 255, 255]  # bottom-left blue
+        atlas[32:, 32:] = [255, 255, 0, 255]  # bottom-right yellow
+
+        # Triangle in top-left quadrant
+        uvs = [(0.0, 0.0), (0.4, 0.0), (0.2, 0.4)]
+        triangles = [0, 1, 2]
+
+        result = _rasterize_mesh_from_atlas(atlas, uvs, triangles)
+        non_zero = result[:, :, 3] > 0
+        if non_zero.any():
+            # Pixels should be red (from top-left quadrant)
+            red_pixels = result[:, :, 0][non_zero]
+            assert red_pixels.mean() > 200
+
+
+class TestExtractFragmentsFromMoc3:
+    """Test .moc3 fragment extraction."""
+
+    def test_returns_empty_without_moc3(self, tmp_path: Path) -> None:
+        textures = [Image.new("RGBA", (64, 64), (255, 0, 0, 255))]
+        result = _extract_fragments_from_moc3(tmp_path, textures, {})
+        assert result == []
+
+    def test_extracts_fragments_from_synthetic(self, tmp_path: Path) -> None:
+        """Create a synthetic .moc3 and verify fragments are extracted."""
+        from tests.test_moc3_parser import _build_synthetic_moc3
+
+        # Create synthetic .moc3 with a single mesh
+        data = _build_synthetic_moc3(
+            parts=["PartBody"],
+            meshes=[
+                {
+                    "id": "ArtMesh_body",
+                    "parent_part_idx": 0,
+                    "vertex_count": 4,
+                    "uvs": [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)],
+                    "triangles": [0, 1, 2, 0, 2, 3],
+                    "draw_order": 50,
+                    "texture_no": 0,
+                }
+            ],
+        )
+        (tmp_path / "model.moc3").write_bytes(data)
+
+        # Create a colored texture atlas
+        atlas = Image.new("RGBA", (64, 64), (255, 0, 0, 255))
+        textures = [atlas]
+
+        fragments = _extract_fragments_from_moc3(tmp_path, textures, {})
+        assert len(fragments) >= 1
+
+        _name, img, draw_order = fragments[0]
+        assert isinstance(img, Image.Image)
+        assert img.mode == "RGBA"
+        assert draw_order == 50
+
+    def test_skips_transparent_meshes(self, tmp_path: Path) -> None:
+        """Meshes on a fully transparent atlas should be skipped."""
+        from tests.test_moc3_parser import _build_synthetic_moc3
+
+        data = _build_synthetic_moc3(
+            parts=["PartEmpty"],
+            meshes=[
+                {
+                    "id": "ArtMesh_empty",
+                    "parent_part_idx": 0,
+                    "vertex_count": 3,
+                    "uvs": [(0.1, 0.1), (0.5, 0.1), (0.3, 0.5)],
+                    "triangles": [0, 1, 2],
+                    "draw_order": 10,
+                    "texture_no": 0,
+                }
+            ],
+        )
+        (tmp_path / "model.moc3").write_bytes(data)
+
+        # Fully transparent atlas
+        atlas = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        fragments = _extract_fragments_from_moc3(tmp_path, [atlas], {})
+        assert fragments == []
+
+    def test_uses_cdi_names(self, tmp_path: Path) -> None:
+        """CDI display names should be used for fragment naming."""
+        from tests.test_moc3_parser import _build_synthetic_moc3
+
+        data = _build_synthetic_moc3(
+            parts=["Part37"],
+            meshes=[
+                {
+                    "id": "ArtMesh99",
+                    "parent_part_idx": 0,
+                    "vertex_count": 4,
+                    "uvs": [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)],
+                    "triangles": [0, 1, 2, 0, 2, 3],
+                    "draw_order": 10,
+                    "texture_no": 0,
+                }
+            ],
+        )
+        (tmp_path / "model.moc3").write_bytes(data)
+
+        atlas = Image.new("RGBA", (32, 32), (255, 0, 0, 255))
+        cdi_names = {"ArtMesh99": "head_front", "Part37": "头"}
+        fragments = _extract_fragments_from_moc3(tmp_path, [atlas], cdi_names)
+        assert len(fragments) >= 1
+        # Should use CDI name for the mesh ID first
+        assert fragments[0][0] == "head_front"
+
+
+class TestBuildRenderResult:
+    """Test the shared render result builder."""
+
+    def test_produces_result(self) -> None:
+        head = Image.new("RGBA", (64, 64), (255, 0, 0, 255))
+        body = Image.new("RGBA", (80, 120), (0, 255, 0, 255))
+        fragments = [("head", head, 0), ("body", body, 1)]
+        fragment_to_region = {"head": 1, "body": 3}
+
+        result = _build_render_result("test_model", fragments, fragment_to_region, [], 256)
+        assert result is not None
+        assert result.char_id == "live2d_test_model"
+        assert result.image.size == (256, 256)
+        assert result.mask.shape == (256, 256)
+        assert result.fragment_count == 2
+        assert result.mapped_count == 2
+        assert result.unmapped_fragments == []
+
+    def test_tracks_unmapped(self) -> None:
+        frag = Image.new("RGBA", (32, 32), (128, 128, 128, 255))
+        fragments = [("unknown", frag, 0)]
+        fragment_to_region = {"unknown": 0}
+
+        result = _build_render_result("test", fragments, fragment_to_region, ["unknown"], 128)
+        assert result is not None
+        assert result.mapped_count == 0
+        assert result.unmapped_fragments == ["unknown"]
+
+
+class TestProcessLive2DModelMoc3Path:
+    """Test that process_live2d_model uses .moc3 extraction when no fragment PNGs exist."""
+
+    def test_moc3_model_produces_result(self, tmp_path: Path) -> None:
+        """A model directory with .moc3 + atlas but no fragment PNGs should work."""
+        from tests.test_moc3_parser import _build_synthetic_moc3
+
+        model_dir = tmp_path / "moc3_model"
+        model_dir.mkdir()
+
+        # Create .model3.json
+        model_json = {
+            "Version": 3,
+            "FileReferences": {
+                "Moc": "model.moc3",
+                "Textures": ["texture_00.png"],
+            },
+        }
+        (model_dir / "model.model3.json").write_text(json.dumps(model_json), encoding="utf-8")
+
+        # Create synthetic .moc3 with head and body meshes
+        data = _build_synthetic_moc3(
+            parts=["PartHead", "PartBody"],
+            meshes=[
+                {
+                    "id": "ArtMesh_head",
+                    "parent_part_idx": 0,
+                    "vertex_count": 4,
+                    "uvs": [(0.0, 0.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)],
+                    "triangles": [0, 1, 2, 0, 2, 3],
+                    "draw_order": 100,
+                    "texture_no": 0,
+                },
+                {
+                    "id": "ArtMesh_body",
+                    "parent_part_idx": 1,
+                    "vertex_count": 4,
+                    "uvs": [(0.5, 0.0), (1.0, 0.0), (1.0, 0.5), (0.5, 0.5)],
+                    "triangles": [0, 1, 2, 0, 2, 3],
+                    "draw_order": 50,
+                    "texture_no": 0,
+                },
+            ],
+        )
+        (model_dir / "model.moc3").write_bytes(data)
+
+        # Create colored texture atlas — must be >2048 so _discover_fragment_images
+        # skips it (same as real atlases). We use numpy for speed.
+        tex_dir = model_dir / "textures"
+        tex_dir.mkdir()
+        atlas_arr = np.zeros((2049, 2049, 4), dtype=np.uint8)
+        # Top-left quadrant red (head region: UVs 0.0-0.5)
+        atlas_arr[:1024, :1024] = [255, 0, 0, 255]
+        # Top-right quadrant green (body region: UVs 0.5-1.0, 0.0-0.5)
+        atlas_arr[:1024, 1024:2049] = [0, 255, 0, 255]
+        atlas = Image.fromarray(atlas_arr, "RGBA")
+        atlas.save(tex_dir / "texture_00.png")
+
+        # Update model3.json to point to textures/ subdir
+        model_json["FileReferences"]["Textures"] = ["textures/texture_00.png"]
+        (model_dir / "model.model3.json").write_text(json.dumps(model_json), encoding="utf-8")
+
+        result = process_live2d_model(model_dir, resolution=256)
+        assert result is not None
+        assert result.char_id == "live2d_moc3_model"
+        assert result.image.size == (256, 256)
+        assert result.mask.shape == (256, 256)
+        assert result.fragment_count >= 2
+        # At least some non-background pixels in the mask
+        assert result.mask.max() > 0
 
 
 # ---------------------------------------------------------------------------
