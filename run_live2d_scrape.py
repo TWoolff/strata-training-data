@@ -2,7 +2,11 @@
 
 Searches GitHub for repositories containing Live2D model files (.moc3, .model3.json),
 filters by permissive license, downloads qualifying models via sparse git checkout,
-and organizes them into data/live2d/live2d_NNN/ directories.
+and organizes them into data/live2d/NNN/ directories.
+
+The directory naming uses plain numeric IDs (001, 002, ...) because the downstream
+Live2D renderer (pipeline/live2d_renderer.py) prepends "live2d_" to the directory
+name when constructing char_id. So directory "001" → char_id "live2d_001".
 
 Usage:
     # Dry run — search and report without downloading
@@ -578,8 +582,11 @@ def save_manifest(manifest_path: Path, models: dict[str, ModelInfo]) -> None:
 def _next_model_id(output_dir: Path, existing_models: dict[str, ModelInfo]) -> int:
     """Determine the next available model ID number.
 
+    Scans both existing directories (named NNN) and manifest entries to find
+    the highest used ID, then returns the next one.
+
     Args:
-        output_dir: Base directory containing live2d_NNN subdirectories.
+        output_dir: Base directory containing NNN subdirectories.
         existing_models: Already-loaded manifest models.
 
     Returns:
@@ -587,16 +594,17 @@ def _next_model_id(output_dir: Path, existing_models: dict[str, ModelInfo]) -> i
     """
     max_id = 0
 
-    # Check existing directories
-    for d in output_dir.iterdir():
-        if d.is_dir() and d.name.startswith("live2d_"):
-            try:
-                num = int(d.name.split("_", 1)[1])
-                max_id = max(max_id, num)
-            except (ValueError, IndexError):
-                pass
+    # Check existing directories (named as plain numbers: 001, 002, ...)
+    if output_dir.is_dir():
+        for d in output_dir.iterdir():
+            if d.is_dir():
+                try:
+                    num = int(d.name)
+                    max_id = max(max_id, num)
+                except ValueError:
+                    pass
 
-    # Check manifest entries
+    # Check manifest entries (model_id format: "live2d_NNN")
     for model_id in existing_models:
         if model_id.startswith("live2d_"):
             try:
@@ -721,7 +729,8 @@ def main() -> None:
                 continue
 
             model_id = f"live2d_{next_id:03d}"
-            dest_dir = output_dir / model_id
+            dir_name = f"{next_id:03d}"
+            dest_dir = output_dir / dir_name
 
             if args.dry_run:
                 logger.info(
