@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v7 — .moc3 binary parser + atlas fragment extractor built, issue #146)
+**Last updated:** March 2, 2026 (v8 — VRoid Hub models confirmed dead, StdGEN/NOVA-Human/PAniC-3D blocked, CMU BVH batch processing)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -95,7 +95,9 @@
 ### Near-Term
 
 - [ ] Run Live2D GitHub scraper to download .moc3 models (`python3 run_live2d_scrape.py`)
-- [ ] Download remaining pre-processed datasets (NOVA-Human, StdGEN, UniRig)
+- [ ] Download NOVA-Human dataset (Alipan link — needs China-based help, see-through team contacted)
+- [x] ~~Download StdGEN~~ — BLOCKED: VRoid Hub models all 404'd, pre-renders not distributed. Repo cloned for rendering scripts only.
+- [ ] Download UniRig Rig-XL dataset
 - [ ] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
 - [ ] Download more Mixamo characters (currently 61, target 150-250)
 - [x] Download Mixamo animation clips to `data/poses/` (2,021 FBX clips)
@@ -137,7 +139,7 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - [ ] Estimate storage (~50–80 GB for full dataset)
 - [ ] Plan supplementary 45° render pass using their source VRoid models
 
-**Status:** Adapter implemented (`nova_human_adapter.py`). Directory structure created but full dataset not yet downloaded.
+**Status:** BLOCKED on download. Dataset hosted exclusively on Alipan (`https://www.alipan.com/s/FqiHyraNCZd`) — inaccessible from outside China. GitHub issue #2 requesting alternative mirror went unanswered. Contacted see-through paper team in China for download assistance (March 2026). Adapter implemented (`nova_human_adapter.py`).
 
 ---
 
@@ -171,7 +173,7 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - [ ] Extend their `distributed_uniform.py` with Strata's additional render outputs
 - [ ] Run extended rendering pipeline on the 10,811 curated characters
 
-**Status:** Adapter planned (`stdgen_semantic_mapper.py` + `stdgen_pipeline_ext.py` exist as files). Not yet downloaded.
+**Status:** BLOCKED. VRoid Hub models are gone — 0/15 sampled IDs returned 404 (March 2026). StdGEN team confirmed they cannot release pre-rendered images ("policy restrictions"). Repo cloned to `data/preprocessed/stdgen/StdGEN/` — rendering scripts and 4-class semantic mapping logic salvaged for use with any VRM models we obtain elsewhere. Train/test lists (10,702 + 109 IDs) archived but useless without source VRMs.
 
 ---
 
@@ -198,7 +200,7 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - [ ] Run downloader to get the source .vrm files
 - [ ] Cross-reference with StdGEN's train/test lists to know which 10,811 are quality-filtered
 
-**Status:** Not started.
+**Status:** BLOCKED. VRoid Hub models all return 404 as of March 2026. The scraper tool and metadata are archived in `data/preprocessed/stdgen/vroid-dataset/` but source VRM files cannot be downloaded. Same blocker as PP-2 and DS-2.
 
 ---
 
@@ -426,7 +428,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Expected new rendering work:** ~10,000 characters × 1 new angle (45°) × 5 poses = ~50,000 images to render. Much less than the original plan of rendering everything from scratch.
 
-**Status:** VRoid lite set ingested + uploaded to bucket (9,302 files, 788 MB), local copy deleted. VRoid importer + mapper implemented. Full download pipeline not yet started.
+**Status:** MOSTLY BLOCKED. VRoid Hub models are gone (all 404'd as of March 2026). PAniC-3D scraper and StdGEN pipeline both depend on VRoid Hub. Only VRoid data we have: 16 CC0 characters ingested + uploaded (9,302 files, 788 MB). VRoid importer + mapper implemented. Unless VRM files can be obtained from another source, this pipeline is limited to the 16 CC0 chars.
 
 ---
 
@@ -464,11 +466,11 @@ These require downloading raw assets and running your own rendering pipeline.
 | Action labels per clip | All clips labeled | 80 | `animation/labels/cmu_action_labels.csv` |
 | Strata-compatible flag per clip | All clips flagged | 80 | In labels CSV |
 
-**Expected output:** ~500 Strata-compatible clips × 7 degradations = **~3,500 training pairs**
+**Expected output:** ~~~500 Strata-compatible clips × 7 degradations = ~3,500 training pairs~~ **ACTUAL: 2,548 clips × 7 degradations = 17,822 training pairs** (all clips compatible after bone mapping fixes)
 
 **Note:** LinkTo-Anime (PP-7) provides 80 VRoid characters pre-rigged with Mixamo skeletons — this may partially overlap with CMU data needs for animation training.
 
-**Status:** BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips). Full dataset downloaded (2,548 BVH clips, 4.1 GB in `data/mocap/cmu/`).
+**Status:** COMPLETE. All 2,548 clips retargeted + degraded → 17,822 JSON training pairs in `output/animation/cmu_degraded/` (~31 GB). Zero failures. Ready for upload to Hetzner bucket. BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips).
 
 ---
 
@@ -557,18 +559,18 @@ These require downloading raw assets and running your own rendering pipeline.
 
 | Source | Target | Actual | Status |
 |--------|--------|--------|--------|
-| NOVA-Human (PP-1) | ~204,000 images | 0 | Not downloaded |
-| StdGEN semantic maps (PP-2) | 10,811 chars | 0 | Not downloaded |
+| NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
+| StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
 | AnimeRun contour pairs (PP-6) | ~8,000 | 2,819 ingested | ✅ In bucket |
 | AnimeRun linearea (PP-6) | ~1,000 | 1,059 ingested | ✅ In bucket |
 | AnimeRun flow | ~2,800 | 2,789 ingested | ✅ In bucket (16,704 files) |
 | AnimeRun segment | ~2,800 | 2,819 ingested | ✅ In bucket (11,276 files) |
 | AnimeRun correspondence | ~2,800 | 2,789 ingested | ✅ In bucket (19,493 files) |
-| LinkTo-Anime (PP-7) | ~29,270 | 0 | Not downloaded |
+| LinkTo-Anime (PP-7) | ~29,270 | 0 | SKIPPED — CC-BY-NC license forbidden |
 | UniRig Rig-XL (PP-5) | 14,000 meshes | 0 | Not downloaded |
 | Mixamo renders (DS-1) | ~10,000 | 1,225 | ✅ In bucket (49 chars) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
-| VRoid supplementary renders | ~50,000 | 0 | Pipeline ready, no VRM files |
+| VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
 | Live2D composites (DS-3) | ~1,600 | 0 | Pipeline ready, no models |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |

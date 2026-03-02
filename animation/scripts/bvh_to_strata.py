@@ -35,11 +35,11 @@ STRATA_BONES: list[str] = [
     "head",           # 1
     "shoulder_l",     # 18
     "upper_arm_l",    # 6
-    "lower_arm_l",    # 7
+    "forearm_l",    # 7
     "hand_l",         # 8
     "shoulder_r",     # 19
     "upper_arm_r",    # 9
-    "lower_arm_r",    # 10
+    "forearm_r",    # 10
     "hand_r",         # 11
     "upper_leg_l",    # 12
     "lower_leg_l",    # 13
@@ -65,11 +65,11 @@ CMU_TO_STRATA: dict[str, str] = {
     "Head": "head",
     "LeftShoulder": "shoulder_l",
     "LeftArm": "upper_arm_l",
-    "LeftForeArm": "lower_arm_l",
+    "LeftForeArm": "forearm_l",
     "LeftHand": "hand_l",
     "RightShoulder": "shoulder_r",
     "RightArm": "upper_arm_r",
-    "RightForeArm": "lower_arm_r",
+    "RightForeArm": "forearm_r",
     "RightHand": "hand_r",
     "LeftUpLeg": "upper_leg_l",
     "LeftLeg": "lower_leg_l",

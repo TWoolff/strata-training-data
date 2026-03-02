@@ -46,7 +46,7 @@ _COMPILED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 _LR_PAIRS: dict[str, str] = {
     "shoulder_l": "shoulder_r",
     "upper_arm_l": "upper_arm_r",
-    "lower_arm_l": "lower_arm_r",
+    "forearm_l": "forearm_r",
     "hand_l": "hand_r",
     "upper_leg_l": "upper_leg_r",
     "lower_leg_l": "lower_leg_r",

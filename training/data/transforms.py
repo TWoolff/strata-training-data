@@ -55,7 +55,7 @@ BONE_TO_INDEX: dict[str, int] = {name: i for i, name in enumerate(BONE_ORDER)}
 # ---------------------------------------------------------------------------
 # Pipeline name → Rust bone name mapping
 # ---------------------------------------------------------------------------
-# Key differences: pipeline uses "lower_arm" while Rust uses "forearm".
+# Pipeline and Rust now both use "forearm" naming.
 
 PIPELINE_TO_BONE: dict[str, str] = {
     "hips": "hips",
@@ -65,11 +65,11 @@ PIPELINE_TO_BONE: dict[str, str] = {
     "head": "head",
     "shoulder_l": "shoulder_l",
     "upper_arm_l": "upper_arm_l",
-    "lower_arm_l": "forearm_l",
+    "forearm_l": "forearm_l",
     "hand_l": "hand_l",
     "shoulder_r": "shoulder_r",
     "upper_arm_r": "upper_arm_r",
-    "lower_arm_r": "forearm_r",
+    "forearm_r": "forearm_r",
     "hand_r": "hand_r",
     "upper_leg_l": "upper_leg_l",
     "lower_leg_l": "lower_leg_l",
@@ -77,6 +77,8 @@ PIPELINE_TO_BONE: dict[str, str] = {
     "upper_leg_r": "upper_leg_r",
     "lower_leg_r": "lower_leg_r",
     "foot_r": "foot_r",
+    "accessory": "accessory",
+    "hair_back": "hair_back",
 }
 
 # ---------------------------------------------------------------------------
@@ -86,28 +88,30 @@ PIPELINE_TO_BONE: dict[str, str] = {
 # and vice versa.  These pairs define the bidirectional swaps.
 
 FLIP_REGION_SWAP: dict[int, int] = {
-    6: 9,  # upper_arm_l ↔ upper_arm_r
-    9: 6,
-    7: 10,  # lower_arm_l ↔ lower_arm_r
-    10: 7,
-    8: 11,  # hand_l ↔ hand_r
-    11: 8,
-    12: 15,  # upper_leg_l ↔ upper_leg_r
-    15: 12,
-    13: 16,  # lower_leg_l ↔ lower_leg_r
-    16: 13,
-    14: 17,  # foot_l ↔ foot_r
+    6: 10,  # shoulder_l ↔ shoulder_r
+    10: 6,
+    7: 11,  # upper_arm_l ↔ upper_arm_r
+    11: 7,
+    8: 12,  # forearm_l ↔ forearm_r
+    12: 8,
+    9: 13,  # hand_l ↔ hand_r
+    13: 9,
+    14: 17,  # upper_leg_l ↔ upper_leg_r
     17: 14,
-    18: 19,  # shoulder_l ↔ shoulder_r
-    19: 18,
+    15: 18,  # lower_leg_l ↔ lower_leg_r
+    18: 15,
+    16: 19,  # foot_l ↔ foot_r
+    19: 16,
 }
 
 # L/R joint name swap pairs for joint position flipping.
 FLIP_JOINT_SWAP: dict[str, str] = {
+    "shoulder_l": "shoulder_r",
+    "shoulder_r": "shoulder_l",
     "upper_arm_l": "upper_arm_r",
     "upper_arm_r": "upper_arm_l",
-    "lower_arm_l": "lower_arm_r",
-    "lower_arm_r": "lower_arm_l",
+    "forearm_l": "forearm_r",
+    "forearm_r": "forearm_l",
     "hand_l": "hand_r",
     "hand_r": "hand_l",
     "upper_leg_l": "upper_leg_r",
@@ -116,8 +120,6 @@ FLIP_JOINT_SWAP: dict[str, str] = {
     "lower_leg_r": "lower_leg_l",
     "foot_l": "foot_r",
     "foot_r": "foot_l",
-    "shoulder_l": "shoulder_r",
-    "shoulder_r": "shoulder_l",
 }
 
 
@@ -130,7 +132,7 @@ def flip_mask(mask: np.ndarray) -> np.ndarray:
     """Horizontally flip a segmentation mask and swap L/R region IDs.
 
     Args:
-        mask: 2D uint8 array where pixel values are region IDs (0-19).
+        mask: 2D uint8 array where pixel values are region IDs (0-21).
 
     Returns:
         New array with horizontal flip applied and L/R regions swapped.

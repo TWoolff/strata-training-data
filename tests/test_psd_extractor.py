@@ -103,14 +103,14 @@ class TestMapLayer:
     @pytest.mark.parametrize(
         "layer_name, expected_label, expected_id",
         [
-            ("upper_arm_L", "upper_arm_l", 6),
-            ("arm_left", "upper_arm_l", 6),
-            ("L_arm", "upper_arm_l", 6),
-            ("forearm_L", "lower_arm_l", 7),
-            ("lower_arm_left", "lower_arm_l", 7),
-            ("hand_L", "hand_l", 8),
-            ("hand_left", "hand_l", 8),
-            ("finger_left", "hand_l", 8),
+            ("upper_arm_L", "upper_arm_l", 7),
+            ("arm_left", "upper_arm_l", 7),
+            ("L_arm", "upper_arm_l", 7),
+            ("forearm_L", "forearm_l", 8),
+            ("forearm_left", "forearm_l", 8),
+            ("hand_L", "hand_l", 9),
+            ("hand_left", "hand_l", 9),
+            ("finger_left", "hand_l", 9),
         ],
     )
     def test_left_arm_layers(self, layer_name: str, expected_label: str, expected_id: int) -> None:
@@ -123,14 +123,14 @@ class TestMapLayer:
     @pytest.mark.parametrize(
         "layer_name, expected_label, expected_id",
         [
-            ("upper_arm_R", "upper_arm_r", 9),
-            ("arm_right", "upper_arm_r", 9),
-            ("R_arm", "upper_arm_r", 9),
-            ("forearm_R", "lower_arm_r", 10),
-            ("lower_arm_right", "lower_arm_r", 10),
-            ("hand_R", "hand_r", 11),
-            ("hand_right", "hand_r", 11),
-            ("finger_right", "hand_r", 11),
+            ("upper_arm_R", "upper_arm_r", 11),
+            ("arm_right", "upper_arm_r", 11),
+            ("R_arm", "upper_arm_r", 11),
+            ("forearm_R", "forearm_r", 12),
+            ("forearm_right", "forearm_r", 12),
+            ("hand_R", "hand_r", 13),
+            ("hand_right", "hand_r", 13),
+            ("finger_right", "hand_r", 13),
         ],
     )
     def test_right_arm_layers(self, layer_name: str, expected_label: str, expected_id: int) -> None:
@@ -143,15 +143,15 @@ class TestMapLayer:
     @pytest.mark.parametrize(
         "layer_name, expected_label, expected_id",
         [
-            ("thigh_L", "upper_leg_l", 12),
-            ("upper_leg_left", "upper_leg_l", 12),
-            ("leg_left", "upper_leg_l", 12),
-            ("shin_L", "lower_leg_l", 13),
-            ("lower_leg_left", "lower_leg_l", 13),
-            ("calf_left", "lower_leg_l", 13),
-            ("foot_L", "foot_l", 14),
-            ("foot_left", "foot_l", 14),
-            ("shoe_left", "foot_l", 14),
+            ("thigh_L", "upper_leg_l", 14),
+            ("upper_leg_left", "upper_leg_l", 14),
+            ("leg_left", "upper_leg_l", 14),
+            ("shin_L", "lower_leg_l", 15),
+            ("lower_leg_left", "lower_leg_l", 15),
+            ("calf_left", "lower_leg_l", 15),
+            ("foot_L", "foot_l", 16),
+            ("foot_left", "foot_l", 16),
+            ("shoe_left", "foot_l", 16),
         ],
     )
     def test_left_leg_layers(self, layer_name: str, expected_label: str, expected_id: int) -> None:
@@ -164,15 +164,15 @@ class TestMapLayer:
     @pytest.mark.parametrize(
         "layer_name, expected_label, expected_id",
         [
-            ("thigh_R", "upper_leg_r", 15),
-            ("upper_leg_right", "upper_leg_r", 15),
-            ("leg_right", "upper_leg_r", 15),
-            ("shin_R", "lower_leg_r", 16),
-            ("lower_leg_right", "lower_leg_r", 16),
-            ("calf_right", "lower_leg_r", 16),
-            ("foot_R", "foot_r", 17),
-            ("foot_right", "foot_r", 17),
-            ("boot_right", "foot_r", 17),
+            ("thigh_R", "upper_leg_r", 17),
+            ("upper_leg_right", "upper_leg_r", 17),
+            ("leg_right", "upper_leg_r", 17),
+            ("shin_R", "lower_leg_r", 18),
+            ("lower_leg_right", "lower_leg_r", 18),
+            ("calf_right", "lower_leg_r", 18),
+            ("foot_R", "foot_r", 19),
+            ("foot_right", "foot_r", 19),
+            ("boot_right", "foot_r", 19),
         ],
     )
     def test_right_leg_layers(self, layer_name: str, expected_label: str, expected_id: int) -> None:
@@ -185,10 +185,10 @@ class TestMapLayer:
     @pytest.mark.parametrize(
         "layer_name, expected_label, expected_id",
         [
-            ("shoulder_L", "shoulder_l", 18),
-            ("shoulder_left", "shoulder_l", 18),
-            ("shoulder_R", "shoulder_r", 19),
-            ("shoulder_right", "shoulder_r", 19),
+            ("shoulder_L", "shoulder_l", 6),
+            ("shoulder_left", "shoulder_l", 6),
+            ("shoulder_R", "shoulder_r", 10),
+            ("shoulder_right", "shoulder_r", 10),
         ],
     )
     def test_shoulder_layers(self, layer_name: str, expected_label: str, expected_id: int) -> None:

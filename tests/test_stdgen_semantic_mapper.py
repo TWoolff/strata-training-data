@@ -2,7 +2,7 @@
 
 These tests exercise the pure-Python mapping logic that converts StdGEN's
 4-class semantic annotations (body, clothes, hair, face) to Strata's
-20-class taxonomy using mock bone weight data.
+22-class taxonomy using mock bone weight data.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ class TestResolveRegionFromWeights:
         weights = {"leftUpperArm": 0.7, "leftLowerArm": 0.3}
         label, region_id = resolve_region_from_weights(weights)
         assert label == "upper_arm_l"
-        assert region_id == 6
+        assert region_id == 7
 
     def test_chest_bone(self) -> None:
         label, region_id = resolve_region_from_weights({"upperChest": 0.9})
@@ -56,23 +56,23 @@ class TestResolveRegionFromWeights:
         weights = {"rightHand": 0.6, "rightLowerArm": 0.4}
         label, region_id = resolve_region_from_weights(weights)
         assert label == "hand_r"
-        assert region_id == 11
+        assert region_id == 13
 
     def test_left_foot(self) -> None:
         label, region_id = resolve_region_from_weights({"leftFoot": 1.0})
         assert label == "foot_l"
-        assert region_id == 14
+        assert region_id == 16
 
     def test_right_shoulder(self) -> None:
         label, region_id = resolve_region_from_weights({"rightShoulder": 1.0})
         assert label == "shoulder_r"
-        assert region_id == 19
+        assert region_id == 10
 
     def test_finger_maps_to_hand(self) -> None:
         weights = {"leftIndexProximal": 0.8, "leftHand": 0.2}
         label, region_id = resolve_region_from_weights(weights)
         assert label == "hand_l"
-        assert region_id == 8
+        assert region_id == 9
 
     def test_empty_weights_returns_fallback(self) -> None:
         _label, region_id = resolve_region_from_weights({})
@@ -98,26 +98,24 @@ class TestResolveRegionFromWeights:
             "chest": 3,
             "spine": 4,
             "hips": 5,
-            "leftUpperArm": 6,
-            "leftLowerArm": 7,
-            "leftHand": 8,
-            "rightUpperArm": 9,
-            "rightLowerArm": 10,
-            "rightHand": 11,
-            "leftUpperLeg": 12,
-            "leftLowerLeg": 13,
-            "leftFoot": 14,
-            "rightUpperLeg": 15,
-            "rightLowerLeg": 16,
-            "rightFoot": 17,
-            "leftShoulder": 18,
-            "rightShoulder": 19,
+            "leftShoulder": 6,
+            "leftUpperArm": 7,
+            "leftLowerArm": 8,
+            "leftHand": 9,
+            "rightShoulder": 10,
+            "rightUpperArm": 11,
+            "rightLowerArm": 12,
+            "rightHand": 13,
+            "leftUpperLeg": 14,
+            "leftLowerLeg": 15,
+            "leftFoot": 16,
+            "rightUpperLeg": 17,
+            "rightLowerLeg": 18,
+            "rightFoot": 19,
         }
         for bone, expected_id in vrm_bones.items():
             _, region_id = resolve_region_from_weights({bone: 1.0})
-            assert region_id == expected_id, (
-                f"{bone} → region {region_id}, expected {expected_id}"
-            )
+            assert region_id == expected_id, f"{bone} → region {region_id}, expected {expected_id}"
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +149,7 @@ class TestMapVertex:
     def test_body_uses_bone_weights(self) -> None:
         label, region_id = map_vertex("body", {"leftUpperArm": 0.9})
         assert label == "upper_arm_l"
-        assert region_id == 6
+        assert region_id == 7
 
     def test_clothes_uses_bone_weights(self) -> None:
         label, region_id = map_vertex("clothes", {"hips": 0.8})
@@ -244,11 +242,13 @@ class TestMapCharacter:
     """Test full character mapping."""
 
     def test_single_mesh(self) -> None:
-        meshes = [(
-            "Body",
-            ["hair", "face", "body"],
-            [{}, {}, {"head": 1.0}],
-        )]
+        meshes = [
+            (
+                "Body",
+                ["hair", "face", "body"],
+                [{}, {}, {"head": 1.0}],
+            )
+        ]
         result = map_character("char_001", meshes)
 
         assert result.character_id == "char_001"
@@ -283,20 +283,23 @@ class TestMapCharacter:
 
 
 class TestRefineSegmentationMask:
-    """Test mask refinement from 4-class to 20-class."""
+    """Test mask refinement from 4-class to 22-class."""
 
     def test_basic_refinement(self) -> None:
         coarse = np.zeros((64, 64), dtype=np.uint8)
-        vertex_ids = np.array([1, 5, 6], dtype=np.uint8)
+        vertex_ids = np.array([1, 5, 7], dtype=np.uint8)
         vertex_coords = np.array([[10, 10], [30, 30], [50, 50]], dtype=int)
 
         refined = refine_segmentation_mask(
-            coarse, vertex_ids, vertex_coords, image_size=(64, 64),
+            coarse,
+            vertex_ids,
+            vertex_coords,
+            image_size=(64, 64),
         )
 
         assert refined[10, 10] == 1  # head
         assert refined[30, 30] == 5  # hips
-        assert refined[50, 50] == 6  # upper_arm_l
+        assert refined[50, 50] == 7  # upper_arm_l
 
     def test_out_of_bounds_ignored(self) -> None:
         coarse = np.zeros((64, 64), dtype=np.uint8)
@@ -304,7 +307,10 @@ class TestRefineSegmentationMask:
         vertex_coords = np.array([[10, 10], [100, 100]], dtype=int)  # second is OOB
 
         refined = refine_segmentation_mask(
-            coarse, vertex_ids, vertex_coords, image_size=(64, 64),
+            coarse,
+            vertex_ids,
+            vertex_coords,
+            image_size=(64, 64),
         )
 
         assert refined[10, 10] == 1
@@ -316,7 +322,10 @@ class TestRefineSegmentationMask:
         vertex_coords = np.empty((0, 2), dtype=int)
 
         refined = refine_segmentation_mask(
-            coarse, vertex_ids, vertex_coords, image_size=(32, 32),
+            coarse,
+            vertex_ids,
+            vertex_coords,
+            image_size=(32, 32),
         )
 
         assert np.all(refined == 0)
@@ -327,7 +336,10 @@ class TestRefineSegmentationMask:
         vertex_coords = np.array([[64, 64]], dtype=int)
 
         refined = refine_segmentation_mask(
-            coarse, vertex_ids, vertex_coords, image_size=(128, 128),
+            coarse,
+            vertex_ids,
+            vertex_coords,
+            image_size=(128, 128),
         )
 
         assert refined.shape == (128, 128)
@@ -345,11 +357,13 @@ class TestJSONExport:
     def test_round_trip(self, tmp_path: Path) -> None:
         json_path = tmp_path / "mapping.json"
 
-        meshes = [(
-            "Body",
-            ["hair", "body", "clothes"],
-            [{}, {"head": 1.0}, {"hips": 0.8}],
-        )]
+        meshes = [
+            (
+                "Body",
+                ["hair", "body", "clothes"],
+                [{}, {"head": 1.0}, {"hips": 0.8}],
+            )
+        ]
         mapping = map_character("stdgen_test_001", meshes)
         export_mapping_json(mapping, json_path)
 
@@ -365,11 +379,13 @@ class TestJSONExport:
     def test_region_distribution_in_json(self, tmp_path: Path) -> None:
         json_path = tmp_path / "mapping.json"
 
-        meshes = [(
-            "Body",
-            ["hair", "hair", "body"],
-            [{}, {}, {"leftFoot": 1.0}],
-        )]
+        meshes = [
+            (
+                "Body",
+                ["hair", "hair", "body"],
+                [{}, {}, {"leftFoot": 1.0}],
+            )
+        ]
         mapping = map_character("char_dist", meshes)
         export_mapping_json(mapping, json_path)
 

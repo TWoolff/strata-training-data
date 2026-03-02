@@ -130,8 +130,8 @@ def coco_to_strata(
         ("shoulder_r", COCO_RIGHT_SHOULDER),
         ("upper_arm_l", COCO_LEFT_ELBOW),     # elbow
         ("upper_arm_r", COCO_RIGHT_ELBOW),     # elbow
-        ("lower_arm_l", COCO_LEFT_WRIST),      # wrist
-        ("lower_arm_r", COCO_RIGHT_WRIST),     # wrist
+        ("forearm_l", COCO_LEFT_WRIST),      # wrist
+        ("forearm_r", COCO_RIGHT_WRIST),     # wrist
         ("upper_leg_l", COCO_LEFT_KNEE),       # knee
         ("upper_leg_r", COCO_RIGHT_KNEE),      # knee
         ("lower_leg_l", COCO_LEFT_ANKLE),      # ankle

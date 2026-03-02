@@ -316,7 +316,7 @@ class TestMergeDatasets:
         class_map = json.loads((out / "class_map.json").read_text())
         assert class_map["0"] == "background"
         assert class_map["1"] == "head"
-        assert len(class_map) == 20
+        assert len(class_map) == 22
 
 
 # ---------------------------------------------------------------------------

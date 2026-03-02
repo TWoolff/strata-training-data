@@ -112,12 +112,12 @@ class TestExtractApparentMeasurements:
         assert chest["bbox"] is None
         assert chest["pixel_count"] == 0
 
-    def test_all_19_regions_present(self) -> None:
+    def test_all_21_regions_present(self) -> None:
         mask = _make_mask({1: (10, 5, 20, 15)})
         result = extract_apparent_measurements(mask, camera_angle="front")
 
-        # Should have entries for all 19 body regions (excluding background)
-        assert len(result["regions"]) == 19
+        # Should have entries for all 21 body regions (excluding background)
+        assert len(result["regions"]) == 21
 
     def test_background_excluded(self) -> None:
         mask = _make_mask({0: (0, 0, 63, 63)})

@@ -101,10 +101,10 @@ def sample_mask() -> np.ndarray:
     mask[50:150, 200:312] = 1
     # Chest region (3) in middle
     mask[150:300, 180:332] = 3
-    # Upper arm left (6) on the right side
-    mask[170:280, 332:380] = 6
-    # Upper arm right (9) on the left side
-    mask[170:280, 132:180] = 9
+    # Upper arm left (7) on the right side
+    mask[170:280, 332:380] = 7
+    # Upper arm right (11) on the left side
+    mask[170:280, 132:180] = 11
     return mask
 
 
@@ -311,7 +311,7 @@ class TestFlipAugmentation:
     def test_flip_image_dimensions(self) -> None:
         img = Image.new("RGBA", (128, 128), (255, 0, 0, 255))
         mask = np.zeros((128, 128), dtype=np.uint8)
-        mask[0:64, 0:64] = 6  # upper_arm_l in top-left
+        mask[0:64, 0:64] = 7  # upper_arm_l in top-left
         do_map = np.zeros((128, 128), dtype=np.uint8)
 
         flipped_img, flipped_mask, flipped_do = _apply_flip(img, mask, do_map)
@@ -322,15 +322,15 @@ class TestFlipAugmentation:
 
     def test_flip_swaps_regions(self) -> None:
         mask = np.zeros((128, 128), dtype=np.uint8)
-        mask[0:64, 0:64] = 6  # upper_arm_l
+        mask[0:64, 0:64] = 7  # upper_arm_l
         img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
         do_map = np.zeros((128, 128), dtype=np.uint8)
 
         _, flipped_mask, _ = _apply_flip(img, mask, do_map)
 
-        # upper_arm_l (6) should become upper_arm_r (9)
+        # upper_arm_l (7) should become upper_arm_r (11)
         # and should be in top-right (flipped from top-left)
-        assert 9 in np.unique(flipped_mask)
+        assert 11 in np.unique(flipped_mask)
 
 
 class TestRotationAugmentation:

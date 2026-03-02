@@ -26,14 +26,14 @@ from training.data.transforms import (
 class TestFlipMask:
     def test_round_trip_is_identity(self):
         """Flipping twice should return the original mask."""
-        mask = np.array([[1, 6, 9], [12, 0, 15]], dtype=np.uint8)
+        mask = np.array([[1, 7, 11], [14, 0, 17]], dtype=np.uint8)
         result = flip_mask(flip_mask(mask))
         np.testing.assert_array_equal(result, mask)
 
     def test_swaps_all_lr_pairs(self):
         """Each L/R pair should be swapped after flip."""
         # Build a mask with one pixel per swappable region
-        lr_pairs = [(6, 9), (7, 10), (8, 11), (12, 15), (13, 16), (14, 17), (18, 19)]
+        lr_pairs = [(6, 10), (7, 11), (8, 12), (9, 13), (14, 17), (15, 18), (16, 19)]
         left_ids = [p[0] for p in lr_pairs]
         right_ids = [p[1] for p in lr_pairs]
 
@@ -56,15 +56,15 @@ class TestFlipMask:
 
     def test_no_in_place_corruption(self):
         """Swapping must not corrupt data by overwriting before reading."""
-        # All pixels region 6 (upper_arm_l) — after flip all should be 9
-        mask = np.full((4, 4), 6, dtype=np.uint8)
+        # All pixels region 7 (upper_arm_l) — after flip all should be 11
+        mask = np.full((4, 4), 7, dtype=np.uint8)
         flipped = flip_mask(mask)
-        assert np.all(flipped == 9)
+        assert np.all(flipped == 11)
 
-        # Reverse: all 9 → all 6
-        mask2 = np.full((4, 4), 9, dtype=np.uint8)
+        # Reverse: all 11 → all 7
+        mask2 = np.full((4, 4), 11, dtype=np.uint8)
         flipped2 = flip_mask(mask2)
-        assert np.all(flipped2 == 6)
+        assert np.all(flipped2 == 7)
 
     def test_empty_mask(self):
         """Empty mask should work without error."""
@@ -74,9 +74,9 @@ class TestFlipMask:
 
     def test_single_pixel(self):
         """Single pixel mask should swap correctly."""
-        mask = np.array([[18]], dtype=np.uint8)  # shoulder_l
+        mask = np.array([[6]], dtype=np.uint8)  # shoulder_l
         result = flip_mask(mask)
-        assert result[0, 0] == 19  # shoulder_r
+        assert result[0, 0] == 10  # shoulder_r
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ class TestNormalizeImagenet:
 
 class TestConstants:
     def test_bone_order_length(self):
-        """BONE_ORDER should have exactly 20 entries."""
+        """BONE_ORDER should have exactly 20 entries (Rust runtime bones)."""
         assert len(BONE_ORDER) == 20
 
     def test_bone_to_index_matches_bone_order(self):
@@ -203,15 +203,15 @@ class TestConstants:
         assert len(FLIP_REGION_SWAP) == 14
 
     def test_pipeline_to_bone_forearm_mapping(self):
-        """Key difference: lower_arm → forearm."""
-        assert PIPELINE_TO_BONE["lower_arm_l"] == "forearm_l"
-        assert PIPELINE_TO_BONE["lower_arm_r"] == "forearm_r"
+        """Pipeline and Rust both use forearm naming."""
+        assert PIPELINE_TO_BONE["forearm_l"] == "forearm_l"
+        assert PIPELINE_TO_BONE["forearm_r"] == "forearm_r"
 
     def test_pipeline_to_bone_covers_all_pipeline_regions(self):
-        """Should cover all 19 non-background pipeline regions."""
-        # Pipeline regions 1-19 (names from config)
+        """Should cover all 21 non-background pipeline regions."""
+        # Pipeline regions 1-21 (names from config)
         from pipeline.config import REGION_NAMES
 
-        for region_id in range(1, 20):
+        for region_id in range(1, 22):
             region_name = REGION_NAMES[region_id]
             assert region_name in PIPELINE_TO_BONE, f"Missing mapping for {region_name}"

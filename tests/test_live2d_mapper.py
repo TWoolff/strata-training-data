@@ -91,9 +91,7 @@ class TestMapFragment:
 
     # --- Hips region (5) ---
 
-    @pytest.mark.parametrize(
-        "fragment_name", ["hip", "hips", "pelvis", "koshi", "waist"]
-    )
+    @pytest.mark.parametrize("fragment_name", ["hip", "hips", "pelvis", "koshi", "waist"])
     def test_hips_fragments(self, fragment_name: str) -> None:
         label, region_id = map_fragment(fragment_name)
         assert label == "hips"
@@ -104,26 +102,24 @@ class TestMapFragment:
     @pytest.mark.parametrize(
         "fragment_name, expected_label, expected_id",
         [
-            ("arm_upper_L", "upper_arm_l", 6),
-            ("upper_arm_L", "upper_arm_l", 6),
-            ("ude_ue_L", "upper_arm_l", 6),
-            ("arm_upper_left", "upper_arm_l", 6),
-            ("arm_lower_L", "lower_arm_l", 7),
-            ("arm_fore_L", "lower_arm_l", 7),
-            ("forearm_L", "lower_arm_l", 7),
-            ("forearm_left", "lower_arm_l", 7),
-            ("hand_L", "hand_l", 8),
-            ("hand_left", "hand_l", 8),
-            ("te_L", "hand_l", 8),
+            ("arm_upper_L", "upper_arm_l", 7),
+            ("upper_arm_L", "upper_arm_l", 7),
+            ("ude_ue_L", "upper_arm_l", 7),
+            ("arm_upper_left", "upper_arm_l", 7),
+            ("arm_lower_L", "forearm_l", 8),
+            ("arm_fore_L", "forearm_l", 8),
+            ("forearm_L", "forearm_l", 8),
+            ("forearm_left", "forearm_l", 8),
+            ("hand_L", "hand_l", 9),
+            ("hand_left", "hand_l", 9),
+            ("te_L", "hand_l", 9),
         ],
     )
     def test_left_arm_fragments(
         self, fragment_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == expected_label, (
-            f"{fragment_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Right arm regions ---
@@ -131,24 +127,22 @@ class TestMapFragment:
     @pytest.mark.parametrize(
         "fragment_name, expected_label, expected_id",
         [
-            ("arm_upper_R", "upper_arm_r", 9),
-            ("upper_arm_R", "upper_arm_r", 9),
-            ("ude_ue_R", "upper_arm_r", 9),
-            ("arm_lower_R", "lower_arm_r", 10),
-            ("arm_fore_R", "lower_arm_r", 10),
-            ("forearm_R", "lower_arm_r", 10),
-            ("hand_R", "hand_r", 11),
-            ("hand_right", "hand_r", 11),
-            ("te_R", "hand_r", 11),
+            ("arm_upper_R", "upper_arm_r", 11),
+            ("upper_arm_R", "upper_arm_r", 11),
+            ("ude_ue_R", "upper_arm_r", 11),
+            ("arm_lower_R", "forearm_r", 12),
+            ("arm_fore_R", "forearm_r", 12),
+            ("forearm_R", "forearm_r", 12),
+            ("hand_R", "hand_r", 13),
+            ("hand_right", "hand_r", 13),
+            ("te_R", "hand_r", 13),
         ],
     )
     def test_right_arm_fragments(
         self, fragment_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == expected_label, (
-            f"{fragment_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Left leg regions ---
@@ -156,25 +150,23 @@ class TestMapFragment:
     @pytest.mark.parametrize(
         "fragment_name, expected_label, expected_id",
         [
-            ("leg_upper_L", "upper_leg_l", 12),
-            ("thigh_L", "upper_leg_l", 12),
-            ("momo_L", "upper_leg_l", 12),
-            ("leg_lower_L", "lower_leg_l", 13),
-            ("leg_shin_L", "lower_leg_l", 13),
-            ("shin_L", "lower_leg_l", 13),
-            ("sune_L", "lower_leg_l", 13),
-            ("foot_L", "foot_l", 14),
-            ("foot_left", "foot_l", 14),
-            ("ashi_L", "foot_l", 14),
+            ("leg_upper_L", "upper_leg_l", 14),
+            ("thigh_L", "upper_leg_l", 14),
+            ("momo_L", "upper_leg_l", 14),
+            ("leg_lower_L", "lower_leg_l", 15),
+            ("leg_shin_L", "lower_leg_l", 15),
+            ("shin_L", "lower_leg_l", 15),
+            ("sune_L", "lower_leg_l", 15),
+            ("foot_L", "foot_l", 16),
+            ("foot_left", "foot_l", 16),
+            ("ashi_L", "foot_l", 16),
         ],
     )
     def test_left_leg_fragments(
         self, fragment_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == expected_label, (
-            f"{fragment_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Right leg regions ---
@@ -182,24 +174,22 @@ class TestMapFragment:
     @pytest.mark.parametrize(
         "fragment_name, expected_label, expected_id",
         [
-            ("leg_upper_R", "upper_leg_r", 15),
-            ("thigh_R", "upper_leg_r", 15),
-            ("momo_R", "upper_leg_r", 15),
-            ("leg_lower_R", "lower_leg_r", 16),
-            ("shin_R", "lower_leg_r", 16),
-            ("sune_R", "lower_leg_r", 16),
-            ("foot_R", "foot_r", 17),
-            ("foot_right", "foot_r", 17),
-            ("ashi_R", "foot_r", 17),
+            ("leg_upper_R", "upper_leg_r", 17),
+            ("thigh_R", "upper_leg_r", 17),
+            ("momo_R", "upper_leg_r", 17),
+            ("leg_lower_R", "lower_leg_r", 18),
+            ("shin_R", "lower_leg_r", 18),
+            ("sune_R", "lower_leg_r", 18),
+            ("foot_R", "foot_r", 19),
+            ("foot_right", "foot_r", 19),
+            ("ashi_R", "foot_r", 19),
         ],
     )
     def test_right_leg_fragments(
         self, fragment_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == expected_label, (
-            f"{fragment_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Shoulder regions ---
@@ -207,21 +197,19 @@ class TestMapFragment:
     @pytest.mark.parametrize(
         "fragment_name, expected_label, expected_id",
         [
-            ("shoulder_L", "shoulder_l", 18),
-            ("shoulder_left", "shoulder_l", 18),
-            ("kata_L", "shoulder_l", 18),
-            ("shoulder_R", "shoulder_r", 19),
-            ("shoulder_right", "shoulder_r", 19),
-            ("kata_R", "shoulder_r", 19),
+            ("shoulder_L", "shoulder_l", 6),
+            ("shoulder_left", "shoulder_l", 6),
+            ("kata_L", "shoulder_l", 6),
+            ("shoulder_R", "shoulder_r", 10),
+            ("shoulder_right", "shoulder_r", 10),
+            ("kata_R", "shoulder_r", 10),
         ],
     )
     def test_shoulder_fragments(
         self, fragment_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == expected_label, (
-            f"{fragment_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Accessories → background (0) ---
@@ -243,9 +231,7 @@ class TestMapFragment:
     )
     def test_accessory_fragments(self, fragment_name: str) -> None:
         label, region_id = map_fragment(fragment_name)
-        assert label == "background", (
-            f"{fragment_name!r} → {label}, expected 'background'"
-        )
+        assert label == "background", f"{fragment_name!r} → {label}, expected 'background'"
         assert region_id == 0
 
     # --- Unmapped ---

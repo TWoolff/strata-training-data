@@ -43,7 +43,7 @@ class TestMapJointName:
 
     def test_vrm_alias_match(self) -> None:
         jm = map_joint_name("leftUpperArm")
-        assert jm.region_id == 6
+        assert jm.region_id == 7
         assert jm.region_name == "upper_arm_l"
         assert jm.method == "vrm"
 
@@ -71,20 +71,20 @@ class TestMapJointName:
             "upperChest": 3,
             "spine": 4,
             "hips": 5,
-            "leftUpperArm": 6,
-            "leftLowerArm": 7,
-            "leftHand": 8,
-            "rightUpperArm": 9,
-            "rightLowerArm": 10,
-            "rightHand": 11,
-            "leftUpperLeg": 12,
-            "leftLowerLeg": 13,
-            "leftFoot": 14,
-            "rightUpperLeg": 15,
-            "rightLowerLeg": 16,
-            "rightFoot": 17,
-            "leftShoulder": 18,
-            "rightShoulder": 19,
+            "leftShoulder": 6,
+            "leftUpperArm": 7,
+            "leftLowerArm": 8,
+            "leftHand": 9,
+            "rightShoulder": 10,
+            "rightUpperArm": 11,
+            "rightLowerArm": 12,
+            "rightHand": 13,
+            "leftUpperLeg": 14,
+            "leftLowerLeg": 15,
+            "leftFoot": 16,
+            "rightUpperLeg": 17,
+            "rightLowerLeg": 18,
+            "rightFoot": 19,
         }
         for bone_name, expected_id in vrm_bones.items():
             jm = map_joint_name(bone_name)

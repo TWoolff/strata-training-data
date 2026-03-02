@@ -57,7 +57,7 @@ SHORTCUT_GROUPS: dict[str, list[str]] = {
     "4": ["spine"],
     "5": ["hips"],
     "6": ["upper_arm_l", "upper_arm_r"],
-    "7": ["lower_arm_l", "lower_arm_r", "hand_l", "hand_r"],
+    "7": ["forearm_l", "forearm_r", "hand_l", "hand_r"],
     "8": ["upper_leg_l", "upper_leg_r"],
     "9": ["lower_leg_l", "lower_leg_r", "foot_l", "foot_r"],
     "0": ["shoulder_l", "shoulder_r"],

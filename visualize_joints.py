@@ -27,13 +27,13 @@ SKELETON_CONNECTIONS: list[tuple[str, str]] = [
     # Left arm
     ("neck", "shoulder_l"),
     ("shoulder_l", "upper_arm_l"),
-    ("upper_arm_l", "lower_arm_l"),
-    ("lower_arm_l", "hand_l"),
+    ("upper_arm_l", "forearm_l"),
+    ("forearm_l", "hand_l"),
     # Right arm
     ("neck", "shoulder_r"),
     ("shoulder_r", "upper_arm_r"),
-    ("upper_arm_r", "lower_arm_r"),
-    ("lower_arm_r", "hand_r"),
+    ("upper_arm_r", "forearm_r"),
+    ("forearm_r", "hand_r"),
     # Left leg
     ("hips", "upper_leg_l"),
     ("upper_leg_l", "lower_leg_l"),
@@ -53,11 +53,11 @@ JOINT_COLORS: dict[str, tuple[int, int, int]] = {
     "hips": (0, 0, 255),           # red
     "shoulder_l": (255, 200, 0),   # cyan-ish
     "upper_arm_l": (255, 150, 0),  # blue-cyan
-    "lower_arm_l": (255, 100, 0),  # blue
+    "forearm_l": (255, 100, 0),  # blue
     "hand_l": (255, 50, 0),        # dark blue
     "shoulder_r": (200, 0, 255),   # magenta
     "upper_arm_r": (150, 0, 255),  # pink-magenta
-    "lower_arm_r": (100, 0, 255),  # pink
+    "forearm_r": (100, 0, 255),  # pink
     "hand_r": (50, 0, 255),        # dark pink
     "upper_leg_l": (0, 255, 0),    # green
     "lower_leg_l": (0, 200, 0),    # dark green

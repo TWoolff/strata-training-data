@@ -101,31 +101,31 @@ class TestTryFuzzyKeyword:
         "bone_name, expected_region",
         [
             # Blender-style rigs
-            ("upper_arm.L", 6),  # upper_arm_l
-            ("upper_arm.R", 9),  # upper_arm_r
+            ("upper_arm.L", 7),  # upper_arm_l
+            ("upper_arm.R", 11),  # upper_arm_r
             ("DEF-spine.001", 4),  # spine
-            ("DEF-upper_arm.L.001", 6),  # upper_arm_l (with numeric suffix)
-            ("forearm.R", 10),  # lower_arm_r
-            ("hand.L", 8),  # hand_l
-            ("thigh.R", 15),  # upper_leg_r
-            ("shin.L", 13),  # lower_leg_l
-            ("foot.R", 17),  # foot_r
+            ("DEF-upper_arm.L.001", 7),  # upper_arm_l (with numeric suffix)
+            ("forearm.R", 12),  # forearm_r
+            ("hand.L", 9),  # hand_l
+            ("thigh.R", 17),  # upper_leg_r
+            ("shin.L", 15),  # lower_leg_l
+            ("foot.R", 19),  # foot_r
             # Generic naming patterns
-            ("Arm_Upper_L", 6),  # upper_arm_l
-            ("L_Thigh", 12),  # upper_leg_l
-            ("R_Forearm", 10),  # lower_arm_r
+            ("Arm_Upper_L", 7),  # upper_arm_l
+            ("L_Thigh", 14),  # upper_leg_l
+            ("R_Forearm", 12),  # forearm_r
             # camelCase
-            ("leftUpperArm", 6),  # upper_arm_l
-            ("rightFoot", 17),  # foot_r
-            ("leftHand", 8),  # hand_l
+            ("leftUpperArm", 7),  # upper_arm_l
+            ("rightFoot", 19),  # foot_r
+            ("leftHand", 9),  # hand_l
             # Head / torso (no laterality)
             ("Head", 1),
             ("Neck", 2),
             ("Hips", 5),
             ("Pelvis", 5),
             # Shoulder
-            ("shoulder.L", 18),
-            ("clavicle.R", 19),
+            ("shoulder.L", 6),
+            ("clavicle.R", 10),
         ],
     )
     def test_correct_region(self, bone_name: str, expected_region: int) -> None:
@@ -145,9 +145,7 @@ class TestTryFuzzyKeyword:
             from pipeline.config import REGION_NAMES
 
             name = REGION_NAMES.get(region, "")
-            assert "_l" not in name, (
-                f"'leg' falsely matched left-side region: {name} (id={region})"
-            )
+            assert "_l" not in name, f"'leg' falsely matched left-side region: {name} (id={region})"
 
     def test_very_short_name_no_match(self) -> None:
         """Single-letter names should not produce confident matches."""

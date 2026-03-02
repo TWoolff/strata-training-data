@@ -19,10 +19,10 @@
 | 4 | spine | topwear *(partial)* | Strata = mid-torso bone region; See-through doesn't distinguish chest vs spine |
 | 5 | hips | bottomwear *(partial)* | Strata = pelvis bone region; See-through = clothing (skirts, pants waistband) |
 | 6 | upper_arm_l | topwear *(sleeves)* or handwear *(gloves)* | Strata = left upper arm bone; See-through = whatever covers it |
-| 7 | lower_arm_l | topwear *(sleeves)* or handwear | Same pattern — bone vs clothing |
+| 7 | forearm_l | topwear *(sleeves)* or handwear | Same pattern — bone vs clothing |
 | 8 | hand_l | handwear | Strata = left hand bone region; See-through = gloves/hand covering |
 | 9 | upper_arm_r | topwear *(sleeves)* or handwear | Mirror of upper_arm_l |
-| 10 | lower_arm_r | topwear *(sleeves)* or handwear | Mirror of lower_arm_l |
+| 10 | forearm_r | topwear *(sleeves)* or handwear | Mirror of forearm_l |
 | 11 | hand_r | handwear | Mirror of hand_l |
 | 12 | upper_leg_l | bottomwear or legwear | Strata = left thigh bone; See-through = pants/stockings covering it |
 | 13 | lower_leg_l | legwear or bottomwear | Strata = left shin bone; See-through = stockings/pants |
@@ -94,7 +94,7 @@ Strata v1 targets humanoid bipeds only. These map to no Strata region. When non-
 Strata ID 0 = `background`. See-through operates on pre-segmented characters with no background. This is a non-issue — background is a pipeline concern, not a taxonomy disagreement.
 
 ### Anatomical L/R Distinction (12 classes)
-Strata distinguishes left vs right for every limb: `upper_arm_l`/`upper_arm_r`, `lower_arm_l`/`lower_arm_r`, `hand_l`/`hand_r`, `upper_leg_l`/`upper_leg_r`, `lower_leg_l`/`lower_leg_r`, `foot_l`/`foot_r`. See-through has none of these — `handwear` covers both hands, `legwear` covers both legs.
+Strata distinguishes left vs right for every limb: `upper_arm_l`/`upper_arm_r`, `forearm_l`/`forearm_r`, `hand_l`/`hand_r`, `upper_leg_l`/`upper_leg_r`, `lower_leg_l`/`lower_leg_r`, `foot_l`/`foot_r`. See-through has none of these — `handwear` covers both hands, `legwear` covers both legs.
 
 **Why Strata needs L/R:** Skeleton rigging requires knowing which bone drives each pixel. The left arm and right arm are driven by different bones, so they must be different regions. Flip augmentation (swapping L/R labels during training) also requires explicit L/R labels.
 

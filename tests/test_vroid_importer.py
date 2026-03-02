@@ -56,34 +56,31 @@ class TestVrmBoneAliases:
             ("spine", 4),
             ("hips", 5),
             # Left arm chain
-            ("leftShoulder", 18),
-            ("leftUpperArm", 6),
-            ("leftLowerArm", 7),
-            ("leftHand", 8),
+            ("leftShoulder", 6),
+            ("leftUpperArm", 7),
+            ("leftLowerArm", 8),
+            ("leftHand", 9),
             # Right arm chain
-            ("rightShoulder", 19),
-            ("rightUpperArm", 9),
-            ("rightLowerArm", 10),
-            ("rightHand", 11),
+            ("rightShoulder", 10),
+            ("rightUpperArm", 11),
+            ("rightLowerArm", 12),
+            ("rightHand", 13),
             # Left leg chain
-            ("leftUpperLeg", 12),
-            ("leftLowerLeg", 13),
-            ("leftFoot", 14),
-            ("leftToes", 14),
+            ("leftUpperLeg", 14),
+            ("leftLowerLeg", 15),
+            ("leftFoot", 16),
+            ("leftToes", 16),
             # Right leg chain
-            ("rightUpperLeg", 15),
-            ("rightLowerLeg", 16),
-            ("rightFoot", 17),
-            ("rightToes", 17),
+            ("rightUpperLeg", 17),
+            ("rightLowerLeg", 18),
+            ("rightFoot", 19),
+            ("rightToes", 19),
         ],
     )
-    def test_vrm_bone_alias_mapping(
-        self, vrm_bone: str, expected_region: int
-    ) -> None:
+    def test_vrm_bone_alias_mapping(self, vrm_bone: str, expected_region: int) -> None:
         region = VRM_BONE_ALIASES.get(vrm_bone)
         assert region == expected_region, (
-            f"VRM bone {vrm_bone!r}: expected region {expected_region}, "
-            f"got {region}"
+            f"VRM bone {vrm_bone!r}: expected region {expected_region}, got {region}"
         )
 
     def test_vrm_finger_bones_map_to_hand(self) -> None:
@@ -124,13 +121,13 @@ class TestVrmBoneAliases:
         ]
 
         for bone in left_fingers:
-            assert VRM_BONE_ALIASES.get(bone) == 8, (
-                f"Left finger {bone!r} should map to region 8 (hand_l)"
+            assert VRM_BONE_ALIASES.get(bone) == 9, (
+                f"Left finger {bone!r} should map to region 9 (hand_l)"
             )
 
         for bone in right_fingers:
-            assert VRM_BONE_ALIASES.get(bone) == 11, (
-                f"Right finger {bone!r} should map to region 11 (hand_r)"
+            assert VRM_BONE_ALIASES.get(bone) == 13, (
+                f"Right finger {bone!r} should map to region 13 (hand_r)"
             )
 
     def test_all_19_regions_covered(self) -> None:
@@ -163,8 +160,7 @@ class TestVrmBoneAliases:
         ]
         for bone in vrm_specific:
             assert bone not in COMMON_BONE_ALIASES, (
-                f"VRM bone {bone!r} already in COMMON_BONE_ALIASES — "
-                f"may cause priority issues"
+                f"VRM bone {bone!r} already in COMMON_BONE_ALIASES — may cause priority issues"
             )
 
 
@@ -179,19 +175,17 @@ class TestVrmFuzzyMatching:
     @pytest.mark.parametrize(
         "bone_name, expected_region",
         [
-            ("leftUpperArm", 6),
-            ("rightLowerArm", 10),
-            ("leftUpperLeg", 12),
-            ("rightLowerLeg", 16),
-            ("leftFoot", 14),
-            ("rightHand", 11),
-            ("leftShoulder", 18),
-            ("rightShoulder", 19),
+            ("leftUpperArm", 7),
+            ("rightLowerArm", 12),
+            ("leftUpperLeg", 14),
+            ("rightLowerLeg", 18),
+            ("leftFoot", 16),
+            ("rightHand", 13),
+            ("leftShoulder", 6),
+            ("rightShoulder", 10),
         ],
     )
-    def test_vrm_camelcase_fuzzy_match(
-        self, bone_name: str, expected_region: int
-    ) -> None:
+    def test_vrm_camelcase_fuzzy_match(self, bone_name: str, expected_region: int) -> None:
         """VRM camelCase names should match via fuzzy even without alias table."""
         region, score = _try_fuzzy_keyword(bone_name)
         assert region == expected_region, (

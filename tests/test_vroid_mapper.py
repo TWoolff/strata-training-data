@@ -120,25 +120,23 @@ class TestMapMaterial:
     @pytest.mark.parametrize(
         "material_name, expected_label, expected_id",
         [
-            ("upper_arm_L", "upper_arm_l", 6),
-            ("arm_left", "upper_arm_l", 6),
-            ("L_arm", "upper_arm_l", 6),
-            ("forearm_L", "lower_arm_l", 7),
-            ("lower_arm_left", "lower_arm_l", 7),
-            ("L_forearm", "lower_arm_l", 7),
-            ("hand_L", "hand_l", 8),
-            ("hand_left", "hand_l", 8),
-            ("glove_L", "hand_l", 8),
-            ("finger_left", "hand_l", 8),
+            ("upper_arm_L", "upper_arm_l", 7),
+            ("arm_left", "upper_arm_l", 7),
+            ("L_arm", "upper_arm_l", 7),
+            ("forearm_L", "forearm_l", 8),
+            ("forearm_left", "forearm_l", 8),
+            ("L_forearm", "forearm_l", 8),
+            ("hand_L", "hand_l", 9),
+            ("hand_left", "hand_l", 9),
+            ("glove_L", "hand_l", 9),
+            ("finger_left", "hand_l", 9),
         ],
     )
     def test_left_arm_materials(
         self, material_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_material(material_name)
-        assert label == expected_label, (
-            f"{material_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{material_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Right arm regions ---
@@ -146,25 +144,23 @@ class TestMapMaterial:
     @pytest.mark.parametrize(
         "material_name, expected_label, expected_id",
         [
-            ("upper_arm_R", "upper_arm_r", 9),
-            ("arm_right", "upper_arm_r", 9),
-            ("R_arm", "upper_arm_r", 9),
-            ("forearm_R", "lower_arm_r", 10),
-            ("lower_arm_right", "lower_arm_r", 10),
-            ("R_forearm", "lower_arm_r", 10),
-            ("hand_R", "hand_r", 11),
-            ("hand_right", "hand_r", 11),
-            ("glove_R", "hand_r", 11),
-            ("finger_right", "hand_r", 11),
+            ("upper_arm_R", "upper_arm_r", 11),
+            ("arm_right", "upper_arm_r", 11),
+            ("R_arm", "upper_arm_r", 11),
+            ("forearm_R", "forearm_r", 12),
+            ("forearm_right", "forearm_r", 12),
+            ("R_forearm", "forearm_r", 12),
+            ("hand_R", "hand_r", 13),
+            ("hand_right", "hand_r", 13),
+            ("glove_R", "hand_r", 13),
+            ("finger_right", "hand_r", 13),
         ],
     )
     def test_right_arm_materials(
         self, material_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_material(material_name)
-        assert label == expected_label, (
-            f"{material_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{material_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Left leg regions ---
@@ -172,27 +168,25 @@ class TestMapMaterial:
     @pytest.mark.parametrize(
         "material_name, expected_label, expected_id",
         [
-            ("thigh_L", "upper_leg_l", 12),
-            ("upper_leg_left", "upper_leg_l", 12),
-            ("leg_left", "upper_leg_l", 12),
-            ("shin_L", "lower_leg_l", 13),
-            ("lower_leg_left", "lower_leg_l", 13),
-            ("calf_left", "lower_leg_l", 13),
-            ("foot_L", "foot_l", 14),
-            ("foot_left", "foot_l", 14),
-            ("shoe_L", "foot_l", 14),
-            ("boot_left", "foot_l", 14),
-            ("sock_L", "foot_l", 14),
-            ("toe_left", "foot_l", 14),
+            ("thigh_L", "upper_leg_l", 14),
+            ("upper_leg_left", "upper_leg_l", 14),
+            ("leg_left", "upper_leg_l", 14),
+            ("shin_L", "lower_leg_l", 15),
+            ("lower_leg_left", "lower_leg_l", 15),
+            ("calf_left", "lower_leg_l", 15),
+            ("foot_L", "foot_l", 16),
+            ("foot_left", "foot_l", 16),
+            ("shoe_L", "foot_l", 16),
+            ("boot_left", "foot_l", 16),
+            ("sock_L", "foot_l", 16),
+            ("toe_left", "foot_l", 16),
         ],
     )
     def test_left_leg_materials(
         self, material_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_material(material_name)
-        assert label == expected_label, (
-            f"{material_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{material_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Right leg regions ---
@@ -200,27 +194,25 @@ class TestMapMaterial:
     @pytest.mark.parametrize(
         "material_name, expected_label, expected_id",
         [
-            ("thigh_R", "upper_leg_r", 15),
-            ("upper_leg_right", "upper_leg_r", 15),
-            ("leg_right", "upper_leg_r", 15),
-            ("shin_R", "lower_leg_r", 16),
-            ("lower_leg_right", "lower_leg_r", 16),
-            ("calf_right", "lower_leg_r", 16),
-            ("foot_R", "foot_r", 17),
-            ("foot_right", "foot_r", 17),
-            ("shoe_R", "foot_r", 17),
-            ("boot_right", "foot_r", 17),
-            ("sock_R", "foot_r", 17),
-            ("toe_right", "foot_r", 17),
+            ("thigh_R", "upper_leg_r", 17),
+            ("upper_leg_right", "upper_leg_r", 17),
+            ("leg_right", "upper_leg_r", 17),
+            ("shin_R", "lower_leg_r", 18),
+            ("lower_leg_right", "lower_leg_r", 18),
+            ("calf_right", "lower_leg_r", 18),
+            ("foot_R", "foot_r", 19),
+            ("foot_right", "foot_r", 19),
+            ("shoe_R", "foot_r", 19),
+            ("boot_right", "foot_r", 19),
+            ("sock_R", "foot_r", 19),
+            ("toe_right", "foot_r", 19),
         ],
     )
     def test_right_leg_materials(
         self, material_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_material(material_name)
-        assert label == expected_label, (
-            f"{material_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{material_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Shoulder regions ---
@@ -228,19 +220,17 @@ class TestMapMaterial:
     @pytest.mark.parametrize(
         "material_name, expected_label, expected_id",
         [
-            ("shoulder_L", "shoulder_l", 18),
-            ("shoulder_left", "shoulder_l", 18),
-            ("shoulder_R", "shoulder_r", 19),
-            ("shoulder_right", "shoulder_r", 19),
+            ("shoulder_L", "shoulder_l", 6),
+            ("shoulder_left", "shoulder_l", 6),
+            ("shoulder_R", "shoulder_r", 10),
+            ("shoulder_right", "shoulder_r", 10),
         ],
     )
     def test_shoulder_materials(
         self, material_name: str, expected_label: str, expected_id: int
     ) -> None:
         label, region_id = map_material(material_name)
-        assert label == expected_label, (
-            f"{material_name!r} → {label}, expected {expected_label!r}"
-        )
+        assert label == expected_label, f"{material_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
     # --- Accessories → background (0) ---
@@ -267,9 +257,7 @@ class TestMapMaterial:
     )
     def test_accessory_materials(self, material_name: str) -> None:
         label, region_id = map_material(material_name)
-        assert label == "background", (
-            f"{material_name!r} → {label}, expected 'background'"
-        )
+        assert label == "background", f"{material_name!r} → {label}, expected 'background'"
         assert region_id == 0
 
     # --- Unmapped ---
@@ -309,25 +297,25 @@ class TestDisambiguateLR:
         """Negative X → left side (no flip)."""
         label, region_id = disambiguate_lr("Shoe_L", "foot_l", -0.5)
         assert label == "foot_l"
-        assert region_id == 14
+        assert region_id == 16
 
     def test_left_flips_to_right(self) -> None:
         """Positive X → flip from left to right."""
         label, region_id = disambiguate_lr("Shoe", "foot_l", 0.5)
         assert label == "foot_r"
-        assert region_id == 17
+        assert region_id == 19
 
     def test_right_stays_right(self) -> None:
         """Positive X → right side (no flip)."""
         label, region_id = disambiguate_lr("Glove_R", "hand_r", 0.5)
         assert label == "hand_r"
-        assert region_id == 11
+        assert region_id == 13
 
     def test_right_flips_to_left(self) -> None:
         """Negative X → flip from right to left."""
         label, region_id = disambiguate_lr("Glove", "hand_r", -0.5)
         assert label == "hand_l"
-        assert region_id == 8
+        assert region_id == 9
 
     def test_non_symmetric_region(self) -> None:
         """Non-symmetric regions (head, chest, etc.) are unchanged."""
@@ -339,18 +327,18 @@ class TestDisambiguateLR:
         """X=0 keeps the original mapping (no flip)."""
         label, region_id = disambiguate_lr("Shoe", "foot_l", 0.0)
         assert label == "foot_l"
-        assert region_id == 14
+        assert region_id == 16
 
     def test_all_lr_pairs(self) -> None:
         """All symmetric pairs can be flipped both directions."""
         pairs = [
-            ("shoulder_l", "shoulder_r", 18, 19),
-            ("upper_arm_l", "upper_arm_r", 6, 9),
-            ("lower_arm_l", "lower_arm_r", 7, 10),
-            ("hand_l", "hand_r", 8, 11),
-            ("upper_leg_l", "upper_leg_r", 12, 15),
-            ("lower_leg_l", "lower_leg_r", 13, 16),
-            ("foot_l", "foot_r", 14, 17),
+            ("shoulder_l", "shoulder_r", 6, 10),
+            ("upper_arm_l", "upper_arm_r", 7, 11),
+            ("forearm_l", "forearm_r", 8, 12),
+            ("hand_l", "hand_r", 9, 13),
+            ("upper_leg_l", "upper_leg_r", 14, 17),
+            ("lower_leg_l", "lower_leg_r", 15, 18),
+            ("foot_l", "foot_r", 16, 19),
         ]
         for left, right, left_id, right_id in pairs:
             # Left → Right (positive X)

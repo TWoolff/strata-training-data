@@ -43,9 +43,9 @@ class TestGetActiveRegions:
         mask = np.zeros((64, 64), dtype=np.uint8)
         mask[0:10, 0:10] = 1  # head
         mask[10:20, 10:20] = 3  # chest
-        mask[30:40, 30:40] = 12  # upper_leg_l
+        mask[30:40, 30:40] = 14  # upper_leg_l
         result = get_active_regions(mask)
-        assert result == [1, 3, 12]
+        assert result == [1, 3, 14]
 
     def test_empty_mask(self):
         mask = np.zeros((64, 64), dtype=np.uint8)
@@ -62,17 +62,17 @@ class TestGetActiveRegions:
     def test_excludes_background(self):
         mask = np.zeros((64, 64), dtype=np.uint8)
         mask[0:30, :] = 0  # background
-        mask[30:64, :] = 7  # lower_arm_l
+        mask[30:64, :] = 8  # forearm_l
         result = get_active_regions(mask)
         assert 0 not in result
-        assert result == [7]
+        assert result == [8]
 
     def test_all_regions(self):
         mask = np.zeros((64, 64), dtype=np.uint8)
-        for r in range(1, 20):
+        for r in range(1, 22):
             mask[r, 0] = r
         result = get_active_regions(mask)
-        assert result == list(range(1, 20))
+        assert result == list(range(1, 22))
 
     def test_ignores_out_of_range(self):
         mask = np.zeros((64, 64), dtype=np.uint8)
@@ -127,10 +127,10 @@ class TestExtractRegionLayers:
         frag_to_region = {
             "head_frag": 1,
             "chest_frag": 3,
-            "arm_frag": 6,
+            "arm_frag": 7,
         }
         layers = extract_region_layers(fragments, frag_to_region, resolution=128)
-        assert set(layers.keys()) == {1, 3, 6}
+        assert set(layers.keys()) == {1, 3, 7}
         for _rid, img in layers.items():
             assert img.size == (128, 128)
             assert img.mode == "RGBA"

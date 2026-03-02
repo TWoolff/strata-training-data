@@ -6,7 +6,7 @@ Blender-based pipeline that generates labeled training data for Strata's AI mode
 
 **Segmentation pipeline** — Takes rigged 3D characters (.fbx) and produces:
 - **Color images** rendered in multiple art styles (flat, cel, pixel art, painterly, sketch, unlit)
-- **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–19)
+- **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–21)
 - **Draw order maps** (per-pixel depth, grayscale PNG)
 - **Joint position JSON** (bone heads projected to 2D screen coords)
 - **Weight map JSON** (per-vertex bone weights)
@@ -38,7 +38,7 @@ strata-training-data/
 ├── pipeline/                          # Blender/Python segmentation pipeline (18 modules)
 │   ├── generate_dataset.py            #   Main entry point, orchestrates pipeline
 │   ├── config.py                      #   Region colors, bone mappings, defaults
-│   ├── bone_mapper.py                 #   Map bones → Strata's 19 regions
+│   ├── bone_mapper.py                 #   Map bones → Strata's 22 regions
 │   ├── renderer.py                    #   Render color + segmentation + multi-angle passes
 │   ├── draw_order_extractor.py        #   Compute per-pixel depth from render
 │   ├── live2d_mapper.py               #   Fragment name → Strata label mapping
@@ -97,20 +97,21 @@ Requires Blender 4.0+ (uses bundled Python 3.10+). No GPU needed — EEVEE flat 
 
 ## Key Technical Details
 
-### Strata Standard Skeleton (19 body regions + background)
+### Strata Standard Skeleton (21 body regions + background = 22 classes)
 
 | ID | Region | ID | Region |
 |----|--------|----|--------|
-| 0 | background | 10 | lower_arm_r |
-| 1 | head | 11 | hand_r |
-| 2 | neck | 12 | upper_leg_l |
-| 3 | chest | 13 | lower_leg_l |
-| 4 | spine | 14 | foot_l |
-| 5 | hips | 15 | upper_leg_r |
-| 6 | upper_arm_l | 16 | lower_leg_r |
-| 7 | lower_arm_l | 17 | foot_r |
-| 8 | hand_l | 18 | shoulder_l |
-| 9 | upper_arm_r | 19 | shoulder_r |
+| 0 | background | 11 | upper_arm_r |
+| 1 | head | 12 | forearm_r |
+| 2 | neck | 13 | hand_r |
+| 3 | chest | 14 | upper_leg_l |
+| 4 | spine | 15 | lower_leg_l |
+| 5 | hips | 16 | foot_l |
+| 6 | shoulder_l | 17 | upper_leg_r |
+| 7 | upper_arm_l | 18 | lower_leg_r |
+| 8 | forearm_l | 19 | foot_r |
+| 9 | hand_l | 20 | accessory |
+| 10 | shoulder_r | 21 | hair_back |
 
 ### Bone Mapping Priority
 
@@ -120,7 +121,7 @@ Mixamo characters should map 100% automatically. Non-Mixamo ~80% auto, ~20% manu
 
 ### Segmentation Mask Rendering
 
-- 20 Emission-only materials (one per region), no lighting
+- 22 Emission-only materials (one per region), no lighting
 - Each mesh face assigned to region by majority vote of vertex bone weights
 - No anti-aliasing, nearest-neighbor sampling — each pixel = exactly one region ID
 - Output: 8-bit single-channel grayscale PNG (pixel value = region ID)

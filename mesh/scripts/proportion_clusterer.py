@@ -46,7 +46,7 @@ TORSO_REGIONS = ("chest", "spine", "hips")
 
 # Regions used for arm length (upper_arm + lower_arm + hand), averaged L+R.
 ARM_UPPER_REGIONS = ("upper_arm_l", "upper_arm_r")
-ARM_LOWER_REGIONS = ("lower_arm_l", "lower_arm_r")
+ARM_LOWER_REGIONS = ("forearm_l", "forearm_r")
 HAND_REGIONS = ("hand_l", "hand_r")
 
 # Regions used for leg length (upper_leg + lower_leg + foot), averaged L+R.

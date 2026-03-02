@@ -63,13 +63,13 @@ Draw polygon outlines around each visible body region. The 19 body regions are:
 
 | ID | Region | ID | Region |
 |----|--------|----|--------|
-| 1  | head | 10 | lower_arm_r |
+| 1  | head | 10 | forearm_r |
 | 2  | neck | 11 | hand_r |
 | 3  | chest | 12 | upper_leg_l |
 | 4  | spine | 13 | lower_leg_l |
 | 5  | hips | 14 | foot_l |
 | 6  | upper_arm_l | 15 | upper_leg_r |
-| 7  | lower_arm_l | 16 | lower_leg_r |
+| 7  | forearm_l | 16 | lower_leg_r |
 | 8  | hand_l | 17 | foot_r |
 | 9  | upper_arm_r | 18 | shoulder_l |
 |    |      | 19 | shoulder_r |

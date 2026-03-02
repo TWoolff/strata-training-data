@@ -19,7 +19,8 @@ RegionId = int
 RGB = tuple[int, int, int]
 
 # ---------------------------------------------------------------------------
-# Strata Standard Skeleton — 19 body regions + background (20 total)
+# Strata Standard Skeleton — 21 body regions + background (22 total)
+# Matches Strata's src/types/skeleton.ts RegionId enum exactly.
 # ---------------------------------------------------------------------------
 
 REGION_NAMES: dict[RegionId, str] = {
@@ -29,20 +30,22 @@ REGION_NAMES: dict[RegionId, str] = {
     3: "chest",
     4: "spine",
     5: "hips",
-    6: "upper_arm_l",
-    7: "lower_arm_l",
-    8: "hand_l",
-    9: "upper_arm_r",
-    10: "lower_arm_r",
-    11: "hand_r",
-    12: "upper_leg_l",
-    13: "lower_leg_l",
-    14: "foot_l",
-    15: "upper_leg_r",
-    16: "lower_leg_r",
-    17: "foot_r",
-    18: "shoulder_l",
-    19: "shoulder_r",
+    6: "shoulder_l",
+    7: "upper_arm_l",
+    8: "forearm_l",
+    9: "hand_l",
+    10: "shoulder_r",
+    11: "upper_arm_r",
+    12: "forearm_r",
+    13: "hand_r",
+    14: "upper_leg_l",
+    15: "lower_leg_l",
+    16: "foot_l",
+    17: "upper_leg_r",
+    18: "lower_leg_r",
+    19: "foot_r",
+    20: "accessory",
+    21: "hair_back",
 }
 
 REGION_COLORS: dict[RegionId, RGB] = {
@@ -52,23 +55,25 @@ REGION_COLORS: dict[RegionId, RGB] = {
     3: (0, 0, 255),  # chest
     4: (255, 255, 0),  # spine
     5: (255, 0, 255),  # hips
-    6: (128, 0, 0),  # upper_arm_l
-    7: (0, 128, 0),  # lower_arm_l
-    8: (0, 0, 128),  # hand_l
-    9: (128, 128, 0),  # upper_arm_r
-    10: (128, 0, 128),  # lower_arm_r
-    11: (0, 128, 128),  # hand_r
-    12: (64, 0, 0),  # upper_leg_l
-    13: (0, 64, 0),  # lower_leg_l
-    14: (0, 0, 64),  # foot_l
-    15: (64, 64, 0),  # upper_leg_r
-    16: (64, 0, 64),  # lower_leg_r
-    17: (0, 64, 64),  # foot_r
-    18: (192, 64, 0),  # shoulder_l
-    19: (0, 64, 192),  # shoulder_r
+    6: (192, 64, 0),  # shoulder_l
+    7: (128, 0, 0),  # upper_arm_l
+    8: (0, 128, 0),  # forearm_l
+    9: (0, 0, 128),  # hand_l
+    10: (0, 64, 192),  # shoulder_r
+    11: (128, 128, 0),  # upper_arm_r
+    12: (128, 0, 128),  # forearm_r
+    13: (0, 128, 128),  # hand_r
+    14: (64, 0, 0),  # upper_leg_l
+    15: (0, 64, 0),  # lower_leg_l
+    16: (0, 0, 64),  # foot_l
+    17: (64, 64, 0),  # upper_leg_r
+    18: (64, 0, 64),  # lower_leg_r
+    19: (0, 64, 64),  # foot_r
+    20: (128, 128, 128),  # accessory
+    21: (200, 200, 50),  # hair_back
 }
 
-NUM_REGIONS: int = 20  # 0–19 inclusive
+NUM_REGIONS: int = 22  # 0–21 inclusive
 
 # ---------------------------------------------------------------------------
 # Mixamo bone name → region ID mapping
@@ -87,69 +92,69 @@ MIXAMO_BONE_MAP: dict[str, RegionId] = {
     "mixamorig:Spine": 4,  # spine
     "mixamorig:Hips": 5,
     # Left shoulder / arm
-    "mixamorig:LeftShoulder": 18,
-    "mixamorig:LeftArm": 6,
-    "mixamorig:LeftForeArm": 7,
-    "mixamorig:LeftHand": 8,
+    "mixamorig:LeftShoulder": 6,
+    "mixamorig:LeftArm": 7,
+    "mixamorig:LeftForeArm": 8,
+    "mixamorig:LeftHand": 9,
     # Left fingers → hand_l
-    "mixamorig:LeftHandThumb1": 8,
-    "mixamorig:LeftHandThumb2": 8,
-    "mixamorig:LeftHandThumb3": 8,
-    "mixamorig:LeftHandThumb4": 8,
-    "mixamorig:LeftHandIndex1": 8,
-    "mixamorig:LeftHandIndex2": 8,
-    "mixamorig:LeftHandIndex3": 8,
-    "mixamorig:LeftHandIndex4": 8,
-    "mixamorig:LeftHandMiddle1": 8,
-    "mixamorig:LeftHandMiddle2": 8,
-    "mixamorig:LeftHandMiddle3": 8,
-    "mixamorig:LeftHandMiddle4": 8,
-    "mixamorig:LeftHandRing1": 8,
-    "mixamorig:LeftHandRing2": 8,
-    "mixamorig:LeftHandRing3": 8,
-    "mixamorig:LeftHandRing4": 8,
-    "mixamorig:LeftHandPinky1": 8,
-    "mixamorig:LeftHandPinky2": 8,
-    "mixamorig:LeftHandPinky3": 8,
-    "mixamorig:LeftHandPinky4": 8,
+    "mixamorig:LeftHandThumb1": 9,
+    "mixamorig:LeftHandThumb2": 9,
+    "mixamorig:LeftHandThumb3": 9,
+    "mixamorig:LeftHandThumb4": 9,
+    "mixamorig:LeftHandIndex1": 9,
+    "mixamorig:LeftHandIndex2": 9,
+    "mixamorig:LeftHandIndex3": 9,
+    "mixamorig:LeftHandIndex4": 9,
+    "mixamorig:LeftHandMiddle1": 9,
+    "mixamorig:LeftHandMiddle2": 9,
+    "mixamorig:LeftHandMiddle3": 9,
+    "mixamorig:LeftHandMiddle4": 9,
+    "mixamorig:LeftHandRing1": 9,
+    "mixamorig:LeftHandRing2": 9,
+    "mixamorig:LeftHandRing3": 9,
+    "mixamorig:LeftHandRing4": 9,
+    "mixamorig:LeftHandPinky1": 9,
+    "mixamorig:LeftHandPinky2": 9,
+    "mixamorig:LeftHandPinky3": 9,
+    "mixamorig:LeftHandPinky4": 9,
     # Right shoulder / arm
-    "mixamorig:RightShoulder": 19,
-    "mixamorig:RightArm": 9,
-    "mixamorig:RightForeArm": 10,
-    "mixamorig:RightHand": 11,
+    "mixamorig:RightShoulder": 10,
+    "mixamorig:RightArm": 11,
+    "mixamorig:RightForeArm": 12,
+    "mixamorig:RightHand": 13,
     # Right fingers → hand_r
-    "mixamorig:RightHandThumb1": 11,
-    "mixamorig:RightHandThumb2": 11,
-    "mixamorig:RightHandThumb3": 11,
-    "mixamorig:RightHandThumb4": 11,
-    "mixamorig:RightHandIndex1": 11,
-    "mixamorig:RightHandIndex2": 11,
-    "mixamorig:RightHandIndex3": 11,
-    "mixamorig:RightHandIndex4": 11,
-    "mixamorig:RightHandMiddle1": 11,
-    "mixamorig:RightHandMiddle2": 11,
-    "mixamorig:RightHandMiddle3": 11,
-    "mixamorig:RightHandMiddle4": 11,
-    "mixamorig:RightHandRing1": 11,
-    "mixamorig:RightHandRing2": 11,
-    "mixamorig:RightHandRing3": 11,
-    "mixamorig:RightHandRing4": 11,
-    "mixamorig:RightHandPinky1": 11,
-    "mixamorig:RightHandPinky2": 11,
-    "mixamorig:RightHandPinky3": 11,
-    "mixamorig:RightHandPinky4": 11,
+    "mixamorig:RightHandThumb1": 13,
+    "mixamorig:RightHandThumb2": 13,
+    "mixamorig:RightHandThumb3": 13,
+    "mixamorig:RightHandThumb4": 13,
+    "mixamorig:RightHandIndex1": 13,
+    "mixamorig:RightHandIndex2": 13,
+    "mixamorig:RightHandIndex3": 13,
+    "mixamorig:RightHandIndex4": 13,
+    "mixamorig:RightHandMiddle1": 13,
+    "mixamorig:RightHandMiddle2": 13,
+    "mixamorig:RightHandMiddle3": 13,
+    "mixamorig:RightHandMiddle4": 13,
+    "mixamorig:RightHandRing1": 13,
+    "mixamorig:RightHandRing2": 13,
+    "mixamorig:RightHandRing3": 13,
+    "mixamorig:RightHandRing4": 13,
+    "mixamorig:RightHandPinky1": 13,
+    "mixamorig:RightHandPinky2": 13,
+    "mixamorig:RightHandPinky3": 13,
+    "mixamorig:RightHandPinky4": 13,
     # Left leg
-    "mixamorig:LeftUpLeg": 12,
-    "mixamorig:LeftLeg": 13,
-    "mixamorig:LeftFoot": 14,
-    "mixamorig:LeftToeBase": 14,
-    "mixamorig:LeftToe_End": 14,
+    "mixamorig:LeftUpLeg": 14,
+    "mixamorig:LeftLeg": 15,
+    "mixamorig:LeftFoot": 16,
+    "mixamorig:LeftToeBase": 16,
+    "mixamorig:LeftToe_End": 16,
     # Right leg
-    "mixamorig:RightUpLeg": 15,
-    "mixamorig:RightLeg": 16,
-    "mixamorig:RightFoot": 17,
-    "mixamorig:RightToeBase": 17,
-    "mixamorig:RightToe_End": 17,
+    "mixamorig:RightUpLeg": 17,
+    "mixamorig:RightLeg": 18,
+    "mixamorig:RightFoot": 19,
+    "mixamorig:RightToeBase": 19,
+    "mixamorig:RightToe_End": 19,
 }
 
 # ---------------------------------------------------------------------------
@@ -187,103 +192,103 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "root": 5,
     "Root": 5,
     # --- Left shoulder ---
-    "LeftShoulder": 18,
-    "shoulder.L": 18,
-    "Shoulder.L": 18,
-    "clavicle.L": 18,
-    "Clavicle.L": 18,
-    "L_clavicle": 18,
-    "l_clavicle": 18,
-    "L_shoulder": 18,
-    "l_shoulder": 18,
+    "LeftShoulder": 6,
+    "shoulder.L": 6,
+    "Shoulder.L": 6,
+    "clavicle.L": 6,
+    "Clavicle.L": 6,
+    "L_clavicle": 6,
+    "l_clavicle": 6,
+    "L_shoulder": 6,
+    "l_shoulder": 6,
     # --- Left arm ---
-    "upper_arm.L": 6,
-    "upperarm.L": 6,
-    "UpperArm.L": 6,
-    "L_upperarm": 6,
-    "l_upperarm": 6,
-    "LeftArm": 6,
-    "forearm.L": 7,
-    "Forearm.L": 7,
-    "lower_arm.L": 7,
-    "L_forearm": 7,
-    "l_forearm": 7,
-    "LeftForeArm": 7,
-    "hand.L": 8,
-    "Hand.L": 8,
-    "L_hand": 8,
-    "l_hand": 8,
-    "LeftHand": 8,
+    "upper_arm.L": 7,
+    "upperarm.L": 7,
+    "UpperArm.L": 7,
+    "L_upperarm": 7,
+    "l_upperarm": 7,
+    "LeftArm": 7,
+    "forearm.L": 8,
+    "Forearm.L": 8,
+    "lower_arm.L": 8,
+    "L_forearm": 8,
+    "l_forearm": 8,
+    "LeftForeArm": 8,
+    "hand.L": 9,
+    "Hand.L": 9,
+    "L_hand": 9,
+    "l_hand": 9,
+    "LeftHand": 9,
     # --- Right shoulder ---
-    "RightShoulder": 19,
-    "shoulder.R": 19,
-    "Shoulder.R": 19,
-    "clavicle.R": 19,
-    "Clavicle.R": 19,
-    "R_clavicle": 19,
-    "r_clavicle": 19,
-    "R_shoulder": 19,
-    "r_shoulder": 19,
+    "RightShoulder": 10,
+    "shoulder.R": 10,
+    "Shoulder.R": 10,
+    "clavicle.R": 10,
+    "Clavicle.R": 10,
+    "R_clavicle": 10,
+    "r_clavicle": 10,
+    "R_shoulder": 10,
+    "r_shoulder": 10,
     # --- Right arm ---
-    "upper_arm.R": 9,
-    "upperarm.R": 9,
-    "UpperArm.R": 9,
-    "R_upperarm": 9,
-    "r_upperarm": 9,
-    "RightArm": 9,
-    "forearm.R": 10,
-    "Forearm.R": 10,
-    "lower_arm.R": 10,
-    "R_forearm": 10,
-    "r_forearm": 10,
-    "RightForeArm": 10,
-    "hand.R": 11,
-    "Hand.R": 11,
-    "R_hand": 11,
-    "r_hand": 11,
-    "RightHand": 11,
+    "upper_arm.R": 11,
+    "upperarm.R": 11,
+    "UpperArm.R": 11,
+    "R_upperarm": 11,
+    "r_upperarm": 11,
+    "RightArm": 11,
+    "forearm.R": 12,
+    "Forearm.R": 12,
+    "lower_arm.R": 12,
+    "R_forearm": 12,
+    "r_forearm": 12,
+    "RightForeArm": 12,
+    "hand.R": 13,
+    "Hand.R": 13,
+    "R_hand": 13,
+    "r_hand": 13,
+    "RightHand": 13,
     # --- Left leg ---
-    "thigh.L": 12,
-    "Thigh.L": 12,
-    "upper_leg.L": 12,
-    "L_thigh": 12,
-    "l_thigh": 12,
-    "LeftUpLeg": 12,
-    "shin.L": 13,
-    "Shin.L": 13,
-    "lower_leg.L": 13,
-    "calf.L": 13,
-    "L_calf": 13,
-    "l_calf": 13,
-    "LeftLeg": 13,
-    "foot.L": 14,
-    "Foot.L": 14,
-    "L_foot": 14,
-    "l_foot": 14,
-    "LeftFoot": 14,
-    "toe.L": 14,
-    "LeftToeBase": 14,
+    "thigh.L": 14,
+    "Thigh.L": 14,
+    "upper_leg.L": 14,
+    "L_thigh": 14,
+    "l_thigh": 14,
+    "LeftUpLeg": 14,
+    "shin.L": 15,
+    "Shin.L": 15,
+    "lower_leg.L": 15,
+    "calf.L": 15,
+    "L_calf": 15,
+    "l_calf": 15,
+    "LeftLeg": 15,
+    "foot.L": 16,
+    "Foot.L": 16,
+    "L_foot": 16,
+    "l_foot": 16,
+    "LeftFoot": 16,
+    "toe.L": 16,
+    "LeftToeBase": 16,
     # --- Right leg ---
-    "thigh.R": 15,
-    "Thigh.R": 15,
-    "upper_leg.R": 15,
-    "R_thigh": 15,
-    "r_thigh": 15,
-    "RightUpLeg": 15,
-    "shin.R": 16,
-    "Shin.R": 16,
-    "lower_leg.R": 16,
-    "calf.R": 16,
-    "R_calf": 16,
-    "r_calf": 16,
-    "RightLeg": 16,
-    "foot.R": 17,
-    "Foot.R": 17,
-    "R_foot": 17,
-    "r_foot": 17,
-    "RightFoot": 17,
-    "toe.R": 17,
-    "RightToeBase": 17,
+    "thigh.R": 17,
+    "Thigh.R": 17,
+    "upper_leg.R": 17,
+    "R_thigh": 17,
+    "r_thigh": 17,
+    "RightUpLeg": 17,
+    "shin.R": 18,
+    "Shin.R": 18,
+    "lower_leg.R": 18,
+    "calf.R": 18,
+    "R_calf": 18,
+    "r_calf": 18,
+    "RightLeg": 18,
+    "foot.R": 19,
+    "Foot.R": 19,
+    "R_foot": 19,
+    "r_foot": 19,
+    "RightFoot": 19,
+    "toe.R": 19,
+    "RightToeBase": 19,
 }
 
 # ---------------------------------------------------------------------------
@@ -304,57 +309,57 @@ VRM_BONE_ALIASES: dict[str, RegionId] = {
     "spine": 4,
     "hips": 5,
     # Left shoulder / arm
-    "leftShoulder": 18,
-    "leftUpperArm": 6,
-    "leftLowerArm": 7,
-    "leftHand": 8,
+    "leftShoulder": 6,
+    "leftUpperArm": 7,
+    "leftLowerArm": 8,
+    "leftHand": 9,
     # Left fingers → hand_l
-    "leftThumbMetacarpal": 8,
-    "leftThumbProximal": 8,
-    "leftThumbDistal": 8,
-    "leftIndexProximal": 8,
-    "leftIndexIntermediate": 8,
-    "leftIndexDistal": 8,
-    "leftMiddleProximal": 8,
-    "leftMiddleIntermediate": 8,
-    "leftMiddleDistal": 8,
-    "leftRingProximal": 8,
-    "leftRingIntermediate": 8,
-    "leftRingDistal": 8,
-    "leftLittleProximal": 8,
-    "leftLittleIntermediate": 8,
-    "leftLittleDistal": 8,
+    "leftThumbMetacarpal": 9,
+    "leftThumbProximal": 9,
+    "leftThumbDistal": 9,
+    "leftIndexProximal": 9,
+    "leftIndexIntermediate": 9,
+    "leftIndexDistal": 9,
+    "leftMiddleProximal": 9,
+    "leftMiddleIntermediate": 9,
+    "leftMiddleDistal": 9,
+    "leftRingProximal": 9,
+    "leftRingIntermediate": 9,
+    "leftRingDistal": 9,
+    "leftLittleProximal": 9,
+    "leftLittleIntermediate": 9,
+    "leftLittleDistal": 9,
     # Right shoulder / arm
-    "rightShoulder": 19,
-    "rightUpperArm": 9,
-    "rightLowerArm": 10,
-    "rightHand": 11,
+    "rightShoulder": 10,
+    "rightUpperArm": 11,
+    "rightLowerArm": 12,
+    "rightHand": 13,
     # Right fingers → hand_r
-    "rightThumbMetacarpal": 11,
-    "rightThumbProximal": 11,
-    "rightThumbDistal": 11,
-    "rightIndexProximal": 11,
-    "rightIndexIntermediate": 11,
-    "rightIndexDistal": 11,
-    "rightMiddleProximal": 11,
-    "rightMiddleIntermediate": 11,
-    "rightMiddleDistal": 11,
-    "rightRingProximal": 11,
-    "rightRingIntermediate": 11,
-    "rightRingDistal": 11,
-    "rightLittleProximal": 11,
-    "rightLittleIntermediate": 11,
-    "rightLittleDistal": 11,
+    "rightThumbMetacarpal": 13,
+    "rightThumbProximal": 13,
+    "rightThumbDistal": 13,
+    "rightIndexProximal": 13,
+    "rightIndexIntermediate": 13,
+    "rightIndexDistal": 13,
+    "rightMiddleProximal": 13,
+    "rightMiddleIntermediate": 13,
+    "rightMiddleDistal": 13,
+    "rightRingProximal": 13,
+    "rightRingIntermediate": 13,
+    "rightRingDistal": 13,
+    "rightLittleProximal": 13,
+    "rightLittleIntermediate": 13,
+    "rightLittleDistal": 13,
     # Left leg
-    "leftUpperLeg": 12,
-    "leftLowerLeg": 13,
-    "leftFoot": 14,
-    "leftToes": 14,
+    "leftUpperLeg": 14,
+    "leftLowerLeg": 15,
+    "leftFoot": 16,
+    "leftToes": 16,
     # Right leg
-    "rightUpperLeg": 15,
-    "rightLowerLeg": 16,
-    "rightFoot": 17,
-    "rightToes": 17,
+    "rightUpperLeg": 17,
+    "rightLowerLeg": 18,
+    "rightFoot": 19,
+    "rightToes": 19,
 }
 
 # ---------------------------------------------------------------------------
@@ -400,24 +405,24 @@ PRIMARY_BONE_KEYWORDS: dict[RegionId, list[str]] = {
     3: ["Spine2"],  # chest — Spine2 is upper torso
     4: ["Spine1"],  # spine — Spine1 is mid-torso
     5: ["Hips"],
-    6: ["LeftArm", "upper_arm.L", "L_upperarm"],
-    7: ["LeftForeArm", "forearm.L", "L_forearm"],
-    8: ["LeftHand", "hand.L", "L_hand"],
-    9: ["RightArm", "upper_arm.R", "R_upperarm"],
-    10: ["RightForeArm", "forearm.R", "R_forearm"],
-    11: ["RightHand", "hand.R", "R_hand"],
-    12: ["LeftUpLeg", "thigh.L", "L_thigh"],
-    13: ["LeftLeg", "shin.L", "L_calf"],
-    14: ["LeftFoot", "foot.L", "L_foot"],
-    15: ["RightUpLeg", "thigh.R", "R_thigh"],
-    16: ["RightLeg", "shin.R", "R_calf"],
-    17: ["RightFoot", "foot.R", "R_foot"],
-    18: ["LeftShoulder", "shoulder.L", "clavicle.L"],
-    19: ["RightShoulder", "shoulder.R", "clavicle.R"],
+    6: ["LeftShoulder", "shoulder.L", "clavicle.L"],
+    7: ["LeftArm", "upper_arm.L", "L_upperarm"],
+    8: ["LeftForeArm", "forearm.L", "L_forearm"],
+    9: ["LeftHand", "hand.L", "L_hand"],
+    10: ["RightShoulder", "shoulder.R", "clavicle.R"],
+    11: ["RightArm", "upper_arm.R", "R_upperarm"],
+    12: ["RightForeArm", "forearm.R", "R_forearm"],
+    13: ["RightHand", "hand.R", "R_hand"],
+    14: ["LeftUpLeg", "thigh.L", "L_thigh"],
+    15: ["LeftLeg", "shin.L", "L_calf"],
+    16: ["LeftFoot", "foot.L", "L_foot"],
+    17: ["RightUpLeg", "thigh.R", "R_thigh"],
+    18: ["RightLeg", "shin.R", "R_calf"],
+    19: ["RightFoot", "foot.R", "R_foot"],
 }
 
 # Number of joint regions (body regions only, excluding background)
-NUM_JOINT_REGIONS: int = 19  # regions 1–19
+NUM_JOINT_REGIONS: int = 19  # regions 1–19 (core body; accessory/hair_back handled separately)
 
 # Bounding box padding for joint extraction (fraction of bbox dimension)
 JOINT_BBOX_PADDING: float = 0.05
@@ -435,82 +440,82 @@ SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
     (["hip"], 5),
     (["pelvis"], 5),
     # Shoulders (before arm to avoid "shoulder" matching "arm")
-    (["shoulder", "left"], 18),
-    (["shoulder", "l"], 18),
-    (["clavicle", "left"], 18),
-    (["clavicle", "l"], 18),
-    (["shoulder", "right"], 19),
-    (["shoulder", "r"], 19),
-    (["clavicle", "right"], 19),
-    (["clavicle", "r"], 19),
+    (["shoulder", "left"], 6),
+    (["shoulder", "l"], 6),
+    (["clavicle", "left"], 6),
+    (["clavicle", "l"], 6),
+    (["shoulder", "right"], 10),
+    (["shoulder", "r"], 10),
+    (["clavicle", "right"], 10),
+    (["clavicle", "r"], 10),
     # Left arm (forearm before arm to avoid false match)
-    (["forearm", "left"], 7),
-    (["forearm", "l"], 7),
-    (["lower", "arm", "left"], 7),
-    (["lower", "arm", "l"], 7),
-    (["arm", "left", "up"], 6),
-    (["arm", "left"], 6),
-    (["arm", "l", "up"], 6),
-    (["upper", "arm", "l"], 6),
+    (["forearm", "left"], 8),
+    (["forearm", "l"], 8),
+    (["lower", "arm", "left"], 8),
+    (["lower", "arm", "l"], 8),
+    (["arm", "left", "up"], 7),
+    (["arm", "left"], 7),
+    (["arm", "l", "up"], 7),
+    (["upper", "arm", "l"], 7),
     # Left hand / fingers
-    (["hand", "left"], 8),
-    (["hand", "l"], 8),
-    (["finger", "left"], 8),
-    (["finger", "l"], 8),
-    (["thumb", "left"], 8),
-    (["thumb", "l"], 8),
+    (["hand", "left"], 9),
+    (["hand", "l"], 9),
+    (["finger", "left"], 9),
+    (["finger", "l"], 9),
+    (["thumb", "left"], 9),
+    (["thumb", "l"], 9),
     # Right arm
-    (["forearm", "right"], 10),
-    (["forearm", "r"], 10),
-    (["lower", "arm", "right"], 10),
-    (["lower", "arm", "r"], 10),
-    (["arm", "right", "up"], 9),
-    (["arm", "right"], 9),
-    (["arm", "r", "up"], 9),
-    (["upper", "arm", "r"], 9),
+    (["forearm", "right"], 12),
+    (["forearm", "r"], 12),
+    (["lower", "arm", "right"], 12),
+    (["lower", "arm", "r"], 12),
+    (["arm", "right", "up"], 11),
+    (["arm", "right"], 11),
+    (["arm", "r", "up"], 11),
+    (["upper", "arm", "r"], 11),
     # Right hand / fingers
-    (["hand", "right"], 11),
-    (["hand", "r"], 11),
-    (["finger", "right"], 11),
-    (["finger", "r"], 11),
-    (["thumb", "right"], 11),
-    (["thumb", "r"], 11),
+    (["hand", "right"], 13),
+    (["hand", "r"], 13),
+    (["finger", "right"], 13),
+    (["finger", "r"], 13),
+    (["thumb", "right"], 13),
+    (["thumb", "r"], 13),
     # Left leg (shin/calf before generic leg)
-    (["shin", "left"], 13),
-    (["shin", "l"], 13),
-    (["calf", "left"], 13),
-    (["calf", "l"], 13),
-    (["lower", "leg", "left"], 13),
-    (["lower", "leg", "l"], 13),
-    (["thigh", "left"], 12),
-    (["thigh", "l"], 12),
-    (["upper", "leg", "left"], 12),
-    (["upper", "leg", "l"], 12),
-    (["leg", "left", "up"], 12),
-    (["leg", "l", "up"], 12),
+    (["shin", "left"], 15),
+    (["shin", "l"], 15),
+    (["calf", "left"], 15),
+    (["calf", "l"], 15),
+    (["lower", "leg", "left"], 15),
+    (["lower", "leg", "l"], 15),
+    (["thigh", "left"], 14),
+    (["thigh", "l"], 14),
+    (["upper", "leg", "left"], 14),
+    (["upper", "leg", "l"], 14),
+    (["leg", "left", "up"], 14),
+    (["leg", "l", "up"], 14),
     # Left foot / toes
-    (["foot", "left"], 14),
-    (["foot", "l"], 14),
-    (["toe", "left"], 14),
-    (["toe", "l"], 14),
+    (["foot", "left"], 16),
+    (["foot", "l"], 16),
+    (["toe", "left"], 16),
+    (["toe", "l"], 16),
     # Right leg
-    (["shin", "right"], 16),
-    (["shin", "r"], 16),
-    (["calf", "right"], 16),
-    (["calf", "r"], 16),
-    (["lower", "leg", "right"], 16),
-    (["lower", "leg", "r"], 16),
-    (["thigh", "right"], 15),
-    (["thigh", "r"], 15),
-    (["upper", "leg", "right"], 15),
-    (["upper", "leg", "r"], 15),
-    (["leg", "right", "up"], 15),
-    (["leg", "r", "up"], 15),
+    (["shin", "right"], 18),
+    (["shin", "r"], 18),
+    (["calf", "right"], 18),
+    (["calf", "r"], 18),
+    (["lower", "leg", "right"], 18),
+    (["lower", "leg", "r"], 18),
+    (["thigh", "right"], 17),
+    (["thigh", "r"], 17),
+    (["upper", "leg", "right"], 17),
+    (["upper", "leg", "r"], 17),
+    (["leg", "right", "up"], 17),
+    (["leg", "r", "up"], 17),
     # Right foot / toes
-    (["foot", "right"], 17),
-    (["foot", "r"], 17),
-    (["toe", "right"], 17),
-    (["toe", "r"], 17),
+    (["foot", "right"], 19),
+    (["foot", "r"], 19),
+    (["toe", "right"], 19),
+    (["toe", "r"], 19),
 ]
 
 # ---------------------------------------------------------------------------
@@ -544,53 +549,53 @@ FUZZY_KEYWORD_PATTERNS: list[tuple[tuple[str, ...], RegionId]] = [
     (("pelvis",), 5),
     (("root",), 5),
     # Left shoulder
-    (("shoulder", "left"), 18),
-    (("clavicle", "left"), 18),
+    (("shoulder", "left"), 6),
+    (("clavicle", "left"), 6),
     # Right shoulder
-    (("shoulder", "right"), 19),
-    (("clavicle", "right"), 19),
+    (("shoulder", "right"), 10),
+    (("clavicle", "right"), 10),
     # Left arm — forearm/lower before upper to avoid false match
-    (("forearm", "left"), 7),
-    (("lower", "arm", "left"), 7),
-    (("upper", "arm", "left"), 6),
-    (("arm", "upper", "left"), 6),
-    (("bicep", "left"), 6),
+    (("forearm", "left"), 8),
+    (("lower", "arm", "left"), 8),
+    (("upper", "arm", "left"), 7),
+    (("arm", "upper", "left"), 7),
+    (("bicep", "left"), 7),
     # Left hand
-    (("hand", "left"), 8),
-    (("finger", "left"), 8),
-    (("thumb", "left"), 8),
-    (("wrist", "left"), 8),
+    (("hand", "left"), 9),
+    (("finger", "left"), 9),
+    (("thumb", "left"), 9),
+    (("wrist", "left"), 9),
     # Right arm
-    (("forearm", "right"), 10),
-    (("lower", "arm", "right"), 10),
-    (("upper", "arm", "right"), 9),
-    (("arm", "upper", "right"), 9),
-    (("bicep", "right"), 9),
+    (("forearm", "right"), 12),
+    (("lower", "arm", "right"), 12),
+    (("upper", "arm", "right"), 11),
+    (("arm", "upper", "right"), 11),
+    (("bicep", "right"), 11),
     # Right hand
-    (("hand", "right"), 11),
-    (("finger", "right"), 11),
-    (("thumb", "right"), 11),
-    (("wrist", "right"), 11),
+    (("hand", "right"), 13),
+    (("finger", "right"), 13),
+    (("thumb", "right"), 13),
+    (("wrist", "right"), 13),
     # Left leg — lower before upper
-    (("shin", "left"), 13),
-    (("calf", "left"), 13),
-    (("lower", "leg", "left"), 13),
-    (("thigh", "left"), 12),
-    (("upper", "leg", "left"), 12),
+    (("shin", "left"), 15),
+    (("calf", "left"), 15),
+    (("lower", "leg", "left"), 15),
+    (("thigh", "left"), 14),
+    (("upper", "leg", "left"), 14),
     # Left foot
-    (("foot", "left"), 14),
-    (("toe", "left"), 14),
-    (("ankle", "left"), 14),
+    (("foot", "left"), 16),
+    (("toe", "left"), 16),
+    (("ankle", "left"), 16),
     # Right leg
-    (("shin", "right"), 16),
-    (("calf", "right"), 16),
-    (("lower", "leg", "right"), 16),
-    (("thigh", "right"), 15),
-    (("upper", "leg", "right"), 15),
+    (("shin", "right"), 18),
+    (("calf", "right"), 18),
+    (("lower", "leg", "right"), 18),
+    (("thigh", "right"), 17),
+    (("upper", "leg", "right"), 17),
     # Right foot
-    (("foot", "right"), 17),
-    (("toe", "right"), 17),
-    (("ankle", "right"), 17),
+    (("foot", "right"), 19),
+    (("toe", "right"), 19),
+    (("ankle", "right"), 19),
 ]
 
 # Laterality aliases: map short/long forms to canonical "left" / "right".
@@ -715,29 +720,31 @@ SCALE_FACTORS: list[float] = [0.85, 1.0, 1.15]  # scale factors to apply
 
 # Left↔right region ID swap pairs for flip augmentation
 FLIP_REGION_SWAP: dict[RegionId, RegionId] = {
-    6: 9,  # upper_arm_l ↔ upper_arm_r
-    7: 10,  # lower_arm_l ↔ lower_arm_r
-    8: 11,  # hand_l ↔ hand_r
-    9: 6,
-    10: 7,
-    11: 8,
-    12: 15,  # upper_leg_l ↔ upper_leg_r
-    13: 16,  # lower_leg_l ↔ lower_leg_r
-    14: 17,  # foot_l ↔ foot_r
-    15: 12,
-    16: 13,
+    6: 10,  # shoulder_l ↔ shoulder_r
+    7: 11,  # upper_arm_l ↔ upper_arm_r
+    8: 12,  # forearm_l ↔ forearm_r
+    9: 13,  # hand_l ↔ hand_r
+    10: 6,
+    11: 7,
+    12: 8,
+    13: 9,
+    14: 17,  # upper_leg_l ↔ upper_leg_r
+    15: 18,  # lower_leg_l ↔ lower_leg_r
+    16: 19,  # foot_l ↔ foot_r
     17: 14,
-    18: 19,  # shoulder_l ↔ shoulder_r
-    19: 18,
+    18: 15,
+    19: 16,
 }
 
 # Left↔right joint name swap pairs for flip augmentation
 FLIP_JOINT_SWAP: dict[str, str] = {
+    "shoulder_l": "shoulder_r",
     "upper_arm_l": "upper_arm_r",
-    "lower_arm_l": "lower_arm_r",
+    "forearm_l": "forearm_r",
     "hand_l": "hand_r",
+    "shoulder_r": "shoulder_l",
     "upper_arm_r": "upper_arm_l",
-    "lower_arm_r": "lower_arm_l",
+    "forearm_r": "forearm_l",
     "hand_r": "hand_l",
     "upper_leg_l": "upper_leg_r",
     "lower_leg_l": "lower_leg_r",
@@ -745,8 +752,6 @@ FLIP_JOINT_SWAP: dict[str, str] = {
     "upper_leg_r": "upper_leg_l",
     "lower_leg_r": "lower_leg_l",
     "foot_r": "foot_l",
-    "shoulder_l": "shoulder_r",
-    "shoulder_r": "shoulder_l",
 }
 
 # ---------------------------------------------------------------------------
@@ -861,7 +866,7 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     # --- Left arm (forearm/lower before upper to avoid substring clash) ---
     (
         r"arm.*(?:lower|fore).*[lL]|arm.*(?:lower|fore).*left|forearm.*[lL]|forearm.*left",
-        "lower_arm_l",
+        "forearm_l",
     ),
     (
         r"arm.*upper.*[lL]|arm.*upper.*left|ude.*ue.*[lL]|ude.*ue.*left|upper.*arm.*[lL]",
@@ -871,7 +876,7 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     # --- Right arm ---
     (
         r"arm.*(?:lower|fore).*[rR]|arm.*(?:lower|fore).*right|forearm.*[rR]|forearm.*right",
-        "lower_arm_r",
+        "forearm_r",
     ),
     (
         r"arm.*upper.*[rR]|arm.*upper.*right|ude.*ue.*[rR]|ude.*ue.*right|upper.*arm.*[rR]",
@@ -913,10 +918,10 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"脖|颈", "neck"),
     (r"肩.*左|左.*肩", "shoulder_l"),
     (r"肩.*右|右.*肩", "shoulder_r"),
-    (r"前臂.*左|左.*前臂|小臂.*左|左.*小臂", "lower_arm_l"),
+    (r"前臂.*左|左.*前臂|小臂.*左|左.*小臂", "forearm_l"),
     (r"大臂.*左|左.*大臂|上臂.*左|左.*上臂", "upper_arm_l"),
     (r"手.*左|左.*手", "hand_l"),
-    (r"前臂.*右|右.*前臂|小臂.*右|右.*小臂", "lower_arm_r"),
+    (r"前臂.*右|右.*前臂|小臂.*右|右.*小臂", "forearm_r"),
     (r"大臂.*右|右.*大臂|上臂.*右|右.*上臂", "upper_arm_r"),
     (r"手.*右|右.*手", "hand_r"),
     (r"小腿.*左|左.*小腿", "lower_leg_l"),
@@ -960,7 +965,7 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
     # --- Left arm (forearm/lower before upper) ---
     (
         r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:left|[-_]l\b)|(?:left|l[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)",
-        "lower_arm_l",
+        "forearm_l",
     ),
     (
         r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:left|[-_]l\b)|(?:left|l[-_]).*upper[-_]?arm",
@@ -973,7 +978,7 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
     # --- Right arm ---
     (
         r"(?:front|rear)?[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm).*(?:right|[-_]r\b)|(?:right|r[-_]).*(?:fore[-_]?arm|bracer|lower[-_]?arm)",
-        "lower_arm_r",
+        "forearm_r",
     ),
     (
         r"(?:front|rear)?[-_]?upper[-_]?arm.*(?:right|[-_]r\b)|(?:right|r[-_]).*upper[-_]?arm",
@@ -1007,10 +1012,10 @@ SPINE_BONE_PATTERNS: list[tuple[str, str]] = [
         "foot_r",
     ),
     # --- Front/rear without explicit side (Spine convention: front=left, rear=right) ---
-    (r"\bfront[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_l"),
+    (r"\bfront[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "forearm_l"),
     (r"\bfront[-_]?upper[-_]?arm", "upper_arm_l"),
     (r"\bfront[-_]?(?:fist|hand|finger|thumb)", "hand_l"),
-    (r"\brear[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "lower_arm_r"),
+    (r"\brear[-_]?(?:fore[-_]?arm|bracer|lower[-_]?arm)", "forearm_r"),
     (r"\brear[-_]?upper[-_]?arm", "upper_arm_r"),
     (r"\brear[-_]?(?:fist|hand|finger|thumb)", "hand_r"),
     (r"\bfront[-_]?(?:shin|lower[-_]?leg|calf)", "lower_leg_l"),
@@ -1062,7 +1067,7 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
     # --- Left arm (lower/forearm before upper to avoid substring clash) ---
     (
         r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
-        "lower_arm_l",
+        "forearm_l",
     ),
     (
         r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)",
@@ -1075,7 +1080,7 @@ VROID_MATERIAL_PATTERNS: list[tuple[str, str]] = [
     # --- Right arm ---
     (
         r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
-        "lower_arm_r",
+        "forearm_r",
     ),
     (
         r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)",
@@ -1151,7 +1156,7 @@ PSD_LAYER_PATTERNS: list[tuple[str, str]] = [
     # --- Left arm (forearm/lower before upper to avoid substring clash) ---
     (
         r"(?:fore[-_]?arm|lower[-_]?arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
-        "lower_arm_l",
+        "forearm_l",
     ),
     (
         r"(?:upper[-_]?arm|arm).*(?:left|[-_.]?[lL]\b)|(?:left|[lL][-_.]).*(?:upper[-_]?arm|arm)",
@@ -1164,7 +1169,7 @@ PSD_LAYER_PATTERNS: list[tuple[str, str]] = [
     # --- Right arm ---
     (
         r"(?:fore[-_]?arm|lower[-_]?arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:fore[-_]?arm|lower[-_]?arm)",
-        "lower_arm_r",
+        "forearm_r",
     ),
     (
         r"(?:upper[-_]?arm|arm).*(?:right|[-_.]?[rR]\b)|(?:right|[rR][-_.]).*(?:upper[-_]?arm|arm)",
@@ -1335,20 +1340,22 @@ CONTOUR_REGION_COLORS: dict[RegionId, RGB] = {
     3: (50, 100, 200),  # chest — blue
     4: (80, 150, 80),  # spine — green
     5: (150, 80, 150),  # hips — purple
-    6: (200, 130, 50),  # upper_arm_l — orange
-    7: (50, 170, 170),  # lower_arm_l — teal
-    8: (200, 50, 120),  # hand_l — magenta
-    9: (200, 130, 50),  # upper_arm_r — orange
-    10: (50, 170, 170),  # lower_arm_r — teal
-    11: (200, 50, 120),  # hand_r — magenta
-    12: (80, 80, 200),  # upper_leg_l — indigo
-    13: (50, 150, 50),  # lower_leg_l — green
-    14: (180, 50, 50),  # foot_l — crimson
-    15: (80, 80, 200),  # upper_leg_r — indigo
-    16: (50, 150, 50),  # lower_leg_r — green
-    17: (180, 50, 50),  # foot_r — crimson
-    18: (160, 120, 80),  # shoulder_l — tan
-    19: (160, 120, 80),  # shoulder_r — tan
+    6: (160, 120, 80),  # shoulder_l — tan
+    7: (200, 130, 50),  # upper_arm_l — orange
+    8: (50, 170, 170),  # forearm_l — teal
+    9: (200, 50, 120),  # hand_l — magenta
+    10: (160, 120, 80),  # shoulder_r — tan
+    11: (200, 130, 50),  # upper_arm_r — orange
+    12: (50, 170, 170),  # forearm_r — teal
+    13: (200, 50, 120),  # hand_r — magenta
+    14: (80, 80, 200),  # upper_leg_l — indigo
+    15: (50, 150, 50),  # lower_leg_l — green
+    16: (180, 50, 50),  # foot_l — crimson
+    17: (80, 80, 200),  # upper_leg_r — indigo
+    18: (50, 150, 50),  # lower_leg_r — green
+    19: (180, 50, 50),  # foot_r — crimson
+    20: (100, 100, 100),  # accessory — gray
+    21: (180, 180, 50),  # hair_back — gold
 }
 
 # ---------------------------------------------------------------------------
