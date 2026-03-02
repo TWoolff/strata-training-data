@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v6 — vroid_lite ingested + uploaded, Live2D GitHub scraper built)
+**Last updated:** March 2, 2026 (v7 — .moc3 binary parser + atlas fragment extractor built, issue #146)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -28,9 +28,10 @@
 | **Training infrastructure** | Implemented | configs, data loaders, utils, model architectures (issues #122-124) |
 | **VRoid Lite** | Ingested + uploaded | 9,302 files (788 MB) in bucket — 4,651 images from 16 CC0 VRoid chars |
 | **Live2D GitHub scraper** | Implemented | `run_live2d_scrape.py` — searches GitHub for .moc3 repos, sparse checkout, CSV manifest |
+| **.moc3 parser + atlas extractor** | Implemented | `pipeline/moc3_parser.py` + atlas fragment extraction in `live2d_renderer.py` (issue #146) |
 | **Label Studio integration** | Ready | import/export pipeline + config XML |
 | **CMU action labels** | Tracked | `animation/labels/cmu_action_labels.csv` (80 clips labeled) |
-| **Test suite** | 37 test files, 1287 tests | Covering all pipeline modules, adapters, and utilities |
+| **Test suite** | 39 test files | Covering all pipeline modules, adapters, and utilities |
 | **Documentation** | Complete | data-sources, preprocessed-datasets, labeling-guide, annotation-guide, taxonomy-comparison |
 
 ### What's in the Hetzner Bucket
@@ -97,7 +98,7 @@
 - [ ] Download remaining pre-processed datasets (NOVA-Human, StdGEN, UniRig)
 - [ ] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
 - [ ] Download more Mixamo characters (currently 61, target 150-250)
-- [ ] Download Mixamo animation clips to `data/poses/`
+- [x] Download Mixamo animation clips to `data/poses/` (2,021 FBX clips)
 
 ---
 
@@ -377,7 +378,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Item | Target Volume | Current | Status |
 |------|--------------|---------|--------|
 | Character FBX models | 150–250 | 61 | ~40% downloaded |
-| Animation FBX clips | 50–100 | ~180 | In `data/poses/` |
+| Animation FBX clips | 50–100 | 2,021 | ✅ In `data/poses/` |
 | Diverse body types | Cover all 8 archetypes | Partial | Need more variety |
 | Male/female split | ~50/50 | Unknown | Check distribution |
 
@@ -447,7 +448,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** The See-through paper team collected ~9,100 Live2D models. If they release their dataset or data engine code, that would supersede manual collection. Monitor their repo.
 
-**Status:** Pipeline implemented (renderer, review UI, Live2D mapper). GitHub scraper built (`run_live2d_scrape.py`) — searches GitHub for .moc3 repos, filters by license, downloads via sparse checkout. No models downloaded yet.
+**Status:** Pipeline implemented (renderer, review UI, Live2D mapper, .moc3 parser, atlas fragment extractor). GitHub scraper built (`run_live2d_scrape.py`). .moc3 binary parser + atlas fragment extraction working (issue #146) — can now process atlas-only models by parsing mesh UVs and triangle indices from .moc3 binary. Chinese body-part regex patterns added to config.
 
 ---
 
@@ -635,12 +636,12 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ## INFRASTRUCTURE COMPLETED
 
-### Pipeline Modules (31 implemented + 1 scraper)
+### Pipeline Modules (32 implemented + 1 scraper)
 
 **Core rendering:** generate_dataset, renderer, layer_extractor, draw_order_extractor, exporter, importer, joint_extractor
 **Data processing:** bone_mapper, live2d_mapper, vroid_mapper, vroid_importer, weight_extractor, measurement_ground_truth
 **Post-processing:** style_augmentor, contour_augmenter, contour_renderer, psd_extractor, pose_estimator, pose_applicator
-**2D character support:** spine_parser, live2d_renderer, live2d_review_ui
+**2D character support:** spine_parser, live2d_renderer, live2d_review_ui, moc3_parser
 **Dataset management:** validator, manifest, splitter, multiview_validator, dataset_merger, measurement_extractor
 **Data acquisition:** run_live2d_scrape (GitHub .moc3 repo search + sparse checkout download)
 **Configuration:** config, accessory_detector
@@ -746,6 +747,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Ingest anime_seg_v2 | Done | 13K images in bucket | ✅ Done |
 | Ingest vroid_lite | Done | 4,651 images in bucket | ✅ Done |
 | Build Live2D GitHub scraper | Done | `run_live2d_scrape.py` for .moc3 repos | ✅ Done |
+| Build .moc3 parser + extractor | Done | Parses binary mesh data, extracts fragments from atlas | ✅ Done |
 | Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
 | Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
