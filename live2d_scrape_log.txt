@@ -1,0 +1,135 @@
+INFO __main__: Loaded 1 existing models from manifest
+INFO __main__: === Search strategy 1: extension:moc3 ===
+INFO __main__: Code search page 1: extension:moc3
+INFO __main__: Code search page 2: extension:moc3
+INFO __main__: Code search page 3: extension:moc3
+INFO __main__: === Search strategy 2: filename:model3.json live2d ===
+INFO __main__: Code search page 1: filename:model3.json live2d
+INFO __main__: Code search page 2: filename:model3.json live2d
+INFO __main__: Code search page 3: filename:model3.json live2d
+INFO __main__: Code search page 4: filename:model3.json live2d
+INFO __main__: === Search strategy 3: repo search for 'live2d model' ===
+INFO __main__: Repo search page 1: live2d model
+INFO __main__: Repo search page 2: live2d model
+INFO __main__: Repo search page 3: live2d model
+INFO __main__: Found 337 unique repos across all searches
+INFO __main__: Found 337 unique repos
+INFO __main__: Processing: 1Natsume/live2d_model
+INFO __main__:   1Natsume/live2d_model: no license detected (including as unverified)
+INFO __main__:   1Natsume/live2d_model: tree API empty/truncated, using contents API walk
+INFO __main__:   1Natsume/live2d_model: found 1 model dir(s): ['xinnong_5']
+INFO __main__:   Skipping 1Natsume/live2d_model/xinnong_5 (already downloaded)
+INFO __main__: Processing: 4014ovo/PVZ-live2d-model
+INFO __main__:   4014ovo/PVZ-live2d-model: no license detected (including as unverified)
+INFO __main__:   4014ovo/PVZ-live2d-model: tree API empty/truncated, using contents API walk
+INFO __main__:   4014ovo/PVZ-live2d-model: no qualifying model directories found
+INFO __main__: Processing: 412845222/A-frameWebVR
+INFO __main__:   412845222/A-frameWebVR: no license detected (including as unverified)
+INFO __main__:   412845222/A-frameWebVR: tree API empty/truncated, using contents API walk
+INFO __main__:   412845222/A-frameWebVR: no qualifying model directories found
+INFO __main__: Processing: 4xura/AxuraDesign
+INFO __main__:   4xura/AxuraDesign: tree API empty/truncated, using contents API walk
+INFO __main__:   4xura/AxuraDesign: no qualifying model directories found
+INFO __main__: Processing: 51hhh/51hhh.github.io
+INFO __main__:   51hhh/51hhh.github.io: no license detected (including as unverified)
+INFO __main__:   51hhh/51hhh.github.io: tree API empty/truncated, using contents API walk
+INFO __main__:   51hhh/51hhh.github.io: found 2 model dir(s): ['live2d-model-xiaohei', 'live2d-model-xiaohei/表情']
+INFO __main__:   Downloading 51hhh/51hhh.github.io/live2d-model-xiaohei -> data/live2d/002
+INFO __main__:   Downloaded live2d_002: 1 PNG files, license=
+INFO __main__: Saved manifest with 2 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Downloading 51hhh/51hhh.github.io/live2d-model-xiaohei/表情 -> data/live2d/003
+INFO __main__:   Downloaded live2d_003: 0 PNG files, license=
+INFO __main__: Saved manifest with 3 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__: Processing: 58Q83/58Q83.github.io
+INFO __main__:   58Q83/58Q83.github.io: no license detected (including as unverified)
+INFO __main__:   58Q83/58Q83.github.io: tree API empty/truncated, using contents API walk
+INFO __main__:   58Q83/58Q83.github.io: no qualifying model directories found
+INFO __main__: Processing: Aaaazdy/VirtualPersonalAssistant
+INFO __main__:   Aaaazdy/VirtualPersonalAssistant: tree API empty/truncated, using contents API walk
+INFO __main__:   Aaaazdy/VirtualPersonalAssistant: no qualifying model directories found
+INFO __main__: Processing: Adam-fei/live2d
+INFO __main__:   Adam-fei/live2d: no license detected (including as unverified)
+INFO __main__:   Adam-fei/live2d: tree API empty/truncated, using contents API walk
+INFO __main__:   Adam-fei/live2d: no qualifying model directories found
+INFO __main__: Processing: Adicwu/live2d-models
+INFO __main__:   Adicwu/live2d-models: no license detected (including as unverified)
+INFO __main__:   Adicwu/live2d-models: tree API empty/truncated, using contents API walk
+INFO __main__:   Adicwu/live2d-models: no qualifying model directories found
+INFO __main__: Processing: AkHiL667/react-live2d-starter
+INFO __main__:   AkHiL667/react-live2d-starter: no license detected (including as unverified)
+INFO __main__:   AkHiL667/react-live2d-starter: tree API empty/truncated, using contents API walk
+INFO __main__:   AkHiL667/react-live2d-starter: no qualifying model directories found
+INFO __main__: Processing: AkagawaTsurunaki/ZerolanPlayground
+INFO __main__:   AkagawaTsurunaki/ZerolanPlayground: no license detected (including as unverified)
+INFO __main__:   AkagawaTsurunaki/ZerolanPlayground: tree API empty/truncated, using contents API walk
+INFO __main__:   AkagawaTsurunaki/ZerolanPlayground: no qualifying model directories found
+INFO __main__: Processing: AlanLui0821/live2d-chat-room
+INFO __main__:   AlanLui0821/live2d-chat-room: no license detected (including as unverified)
+INFO __main__:   AlanLui0821/live2d-chat-room: tree API empty/truncated, using contents API walk
+INFO __main__:   AlanLui0821/live2d-chat-room: no qualifying model directories found
+INFO __main__: Processing: AlexGreenal/live2d-tororo-model
+INFO __main__:   AlexGreenal/live2d-tororo-model: no license detected (including as unverified)
+INFO __main__:   AlexGreenal/live2d-tororo-model: tree API empty/truncated, using contents API walk
+INFO __main__:   AlexGreenal/live2d-tororo-model: no qualifying model directories found
+INFO __main__: Processing: Alexgiraffeblues/live2d_model
+INFO __main__:   Alexgiraffeblues/live2d_model: no license detected (including as unverified)
+INFO __main__:   Alexgiraffeblues/live2d_model: tree API empty/truncated, using contents API walk
+INFO __main__:   Alexgiraffeblues/live2d_model: no qualifying model directories found
+INFO __main__: Processing: Arisego/UnrealLive2D
+INFO __main__:   Arisego/UnrealLive2D: tree API empty/truncated, using contents API walk
+INFO __main__:   Arisego/UnrealLive2D: found 5 model dir(s): ['Content/Samples/Haru', 'Content/Samples/Hiyori', 'Content/Samples/Mark', 'Content/Samples/Natori', 'Content/Samples/Rice']
+INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Haru -> data/live2d/004
+INFO __main__:   Downloaded live2d_004: 0 PNG files, license=MIT
+INFO __main__: Saved manifest with 4 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Hiyori -> data/live2d/005
+INFO __main__:   Downloaded live2d_005: 0 PNG files, license=MIT
+INFO __main__: Saved manifest with 5 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Mark -> data/live2d/006
+INFO __main__:   Downloaded live2d_006: 0 PNG files, license=MIT
+INFO __main__: Saved manifest with 6 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Natori -> data/live2d/007
+INFO __main__:   Downloaded live2d_007: 0 PNG files, license=MIT
+INFO __main__: Saved manifest with 7 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Rice -> data/live2d/008
+INFO __main__:   Downloaded live2d_008: 0 PNG files, license=MIT
+INFO __main__: Saved manifest with 8 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__: Processing: Arkueid/lpk2moc3
+INFO __main__:   Arkueid/lpk2moc3: no license detected (including as unverified)
+INFO __main__:   Arkueid/lpk2moc3: tree API empty/truncated, using contents API walk
+INFO __main__:   Arkueid/lpk2moc3: no qualifying model directories found
+INFO __main__: Processing: AshLander13/live2d-model-assets
+INFO __main__:   AshLander13/live2d-model-assets: no license detected (including as unverified)
+INFO __main__:   AshLander13/live2d-model-assets: tree API empty/truncated, using contents API walk
+INFO __main__:   AshLander13/live2d-model-assets: no qualifying model directories found
+INFO __main__: Processing: Auto-SK/Live2D-Models
+INFO __main__:   Auto-SK/Live2D-Models: no license detected (including as unverified)
+INFO __main__:   Auto-SK/Live2D-Models: tree API empty/truncated, using contents API walk
+INFO __main__:   Auto-SK/Live2D-Models: no qualifying model directories found
+INFO __main__: Processing: AvailableNameToT/game-model-display
+INFO __main__:   AvailableNameToT/game-model-display: no license detected (including as unverified)
+INFO __main__:   AvailableNameToT/game-model-display: tree API empty/truncated, using contents API walk
+INFO __main__:   AvailableNameToT/game-model-display: no qualifying model directories found
+INFO __main__: Processing: AzharRizkiZ/Live2D-Model
+INFO __main__:   AzharRizkiZ/Live2D-Model: tree API empty/truncated, using contents API walk
+INFO __main__:   AzharRizkiZ/Live2D-Model: no qualifying model directories found
+INFO __main__: Processing: BaneBeetle/waifubeetle2
+INFO __main__:   BaneBeetle/waifubeetle2: no license detected (including as unverified)
+INFO __main__:   BaneBeetle/waifubeetle2: tree API empty/truncated, using contents API walk
+INFO __main__:   BaneBeetle/waifubeetle2: found 1 model dir(s): ['frontend/live2d-models/REM']
+INFO __main__:   Downloading BaneBeetle/waifubeetle2/frontend/live2d-models/REM -> data/live2d/009
+WARNING __main__: Sparse checkout failed for BaneBeetle/waifubeetle2/frontend/live2d-models/REM: Command '['git', '-C', '/var/folders/ny/twn2x3qn4hj7k2k0x7v3mmrh0000gn/T/tmp7pee4k_l/repo', 'checkout']' returned non-zero exit status 128.
+INFO __main__: Processing: Barzan737/Barzan
+INFO __main__:   Barzan737/Barzan: no license detected (including as unverified)
+INFO __main__:   Barzan737/Barzan: tree API empty/truncated, using contents API walk
+INFO __main__:   Barzan737/Barzan: no qualifying model directories found
+INFO __main__: Processing: BluePengcho/Open_Source_Hand_Tracking_Live2D_Model
+INFO __main__:   BluePengcho/Open_Source_Hand_Tracking_Live2D_Model: no license detected (including as unverified)
+INFO __main__:   BluePengcho/Open_Source_Hand_Tracking_Live2D_Model: tree API empty/truncated, using contents API walk
+INFO __main__:   BluePengcho/Open_Source_Hand_Tracking_Live2D_Model: no qualifying model directories found
+INFO __main__: Processing: BluePengcho/Unity_3D_Arm_Tracking_To_Live2D
+INFO __main__:   BluePengcho/Unity_3D_Arm_Tracking_To_Live2D: no license detected (including as unverified)
+INFO __main__:   BluePengcho/Unity_3D_Arm_Tracking_To_Live2D: tree API empty/truncated, using contents API walk
+INFO __main__:   BluePengcho/Unity_3D_Arm_Tracking_To_Live2D: no qualifying model directories found
+INFO __main__: Processing: CNbysec/Live2d-Model
+INFO __main__:   CNbysec/Live2d-Model: no license detected (including as unverified)
+INFO __main__:   CNbysec/Live2d-Model: tree API empty/truncated, using contents API walk

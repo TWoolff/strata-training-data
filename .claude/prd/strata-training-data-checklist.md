@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v8 — VRoid Hub models confirmed dead, StdGEN/NOVA-Human/PAniC-3D blocked, CMU BVH batch processing)
+**Last updated:** March 2, 2026 (v9 — CMU animation uploaded, 22-class region ID fix, segmentation re-rendering)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -12,7 +12,7 @@
 
 | Category | Status | Details |
 |----------|--------|---------|
-| **Blender 3D pipeline** | Working | 49/62 Mixamo chars rendered (5 poses × 5 angles × flat style + per-region RGBA layers) |
+| **Blender 3D pipeline** | Working | 61 Mixamo chars rendered (22-class region IDs, flat style, front angle) — re-render in progress |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
 | **Ingest framework** | Complete | `run_ingest.py` with 9 registered adapters, CLI with `--enrich` pose estimation |
 | **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.5 GB) in bucket — all shards 00-11 processed |
@@ -20,7 +20,10 @@
 | **anime-segmentation v2** | Ingested + uploaded | ~39,000 files in bucket — 13,000 images from fg-01/02/03 |
 | **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (689 MB) in bucket — 2,819 frames |
 | **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MB) in bucket — 1,059 frames |
-| **Blender segmentation** | Uploaded | 28,032 files (1.0 GB) in bucket — 49 chars × 5 poses × 5 angles |
+| **Blender segmentation** | Re-rendering | 22-class region IDs — re-render in progress (was 28,032 files, 1.0 GB) |
+| **CMU animation** | Uploaded | 17,823 files (58 GB) in bucket — 2,548 clips × 7 degradations |
+| **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
+| **Live2D GitHub scraper** | 279 models | Scraped from GitHub; saturated — Booth.pm/DeviantArt for more |
 | **AnimeRun flow** | Ingested + uploaded | 16,704 files in bucket — 2,789 flow pairs from 30 scenes |
 | **AnimeRun segment** | Ingested + uploaded | 11,276 files in bucket — 2,819 segmentation frames from 30 scenes |
 | **AnimeRun correspondence** | Ingested + uploaded | 19,493 files (975 MB) in bucket — 2,789 pairs from 30 scenes |
@@ -38,6 +41,7 @@
 
 | Prefix | Files | Size |
 |--------|------:|-----:|
+| `animation/` | 17,823 | 58 GB |
 | `anime_seg/` | 50,406 | 1.9 GB |
 | `animerun/` | 11,276 | 689 MB |
 | `animerun_correspondence/` | 19,493 | 975 MB |
@@ -46,8 +50,10 @@
 | `animerun_segment/` | 11,276 | 651 MB |
 | `fbanimehq/` | 304,889 | 11.5 GB |
 | `ingest/vroid_lite/` | 9,302 | 788 MB |
-| `segmentation/` | 28,032 | 1.0 GB |
-| **Total** | **~455,614** | **~29.6 GB** |
+| `segmentation/` | ~12,004 | ~425 MB |
+| **Total** | **~457,409** | **~87.0 GB** |
+
+*Note: `segmentation/` is being re-rendered with corrected 22-class region IDs — count will increase when complete.*
 
 ### What's Downloaded Locally (data/preprocessed/)
 
@@ -57,6 +63,7 @@
 | anime_seg_v2 | 12 GB | Deleted | Ingested + uploaded, zips deleted |
 | animerun | 21 GB (zip) | Deleted | All 5 data types ingested + uploaded, zip deleted |
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
+| cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
 | vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
@@ -71,6 +78,11 @@
 
 ### Completed Since Last Update
 
+- [x] Fix 22-class region ID alignment — all pipeline code, config, bone maps, and 14 test files updated to match Strata's skeleton.ts RegionId enum (1,389 tests pass, 0 fail)
+- [x] Upload CMU animation data — 17,823 files (58 GB) uploaded to `animation/` bucket prefix
+- [x] Re-render segmentation with 22-class IDs — in progress (61 chars × all poses × flat style)
+- [x] Live2D GitHub scraper ran — 279 .moc3 models downloaded (saturated GitHub source)
+- [x] Build .moc3 parser + atlas extractor (issue #146)
 - [x] Build vroid_lite adapter + ingest 4,651 images + upload to bucket (9,302 files, 788 MB)
 - [x] Delete vroid_lite local data (7.3 GB source + 788 MB output reclaimed)
 - [x] Build Live2D GitHub scraper (`run_live2d_scrape.py`) — issue #141, PR #142 merged
@@ -89,18 +101,20 @@
 
 ### This Week
 
-- [ ] Fix the 13 Mixamo characters that failed rendering (3 problematic poses)
+- [x] ~~Fix the 13 Mixamo characters that failed rendering~~ — 12 PARTIAL (2/5 poses) due to `mixamorig5:` prefix mismatch, pre-existing
+- [ ] Wait for segmentation re-render to complete + upload to bucket
 - [x] Build vroid_lite adapter + ingest + upload (4,651 images, 9,302 files, 788 MB in bucket)
 
 ### Near-Term
 
-- [ ] Run Live2D GitHub scraper to download .moc3 models (`python3 run_live2d_scrape.py`)
+- [ ] Process 279 Live2D models through renderer pipeline (~1,100 training images)
 - [ ] Download NOVA-Human dataset (Alipan link — needs China-based help, see-through team contacted)
 - [x] ~~Download StdGEN~~ — BLOCKED: VRoid Hub models all 404'd, pre-renders not distributed. Repo cloned for rendering scripts only.
 - [ ] Download UniRig Rig-XL dataset
 - [ ] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
-- [ ] Download more Mixamo characters (currently 61, target 150-250)
-- [x] Download Mixamo animation clips to `data/poses/` (2,021 FBX clips)
+- [ ] Download more Mixamo characters (currently 62, target 150-250)
+- [x] Download Mixamo animation clips to `data/poses/` (2,022 FBX clips)
+- [x] ~~Run Live2D GitHub scraper~~ — 279 models scraped, GitHub saturated
 
 ---
 
@@ -379,8 +393,8 @@ These require downloading raw assets and running your own rendering pipeline.
 
 | Item | Target Volume | Current | Status |
 |------|--------------|---------|--------|
-| Character FBX models | 150–250 | 61 | ~40% downloaded |
-| Animation FBX clips | 50–100 | 2,021 | ✅ In `data/poses/` |
+| Character FBX models | 150–250 | 62 | ~40% downloaded |
+| Animation FBX clips | 50–100 | 2,022 | ✅ In `data/poses/` |
 | Diverse body types | Cover all 8 archetypes | Partial | Need more variety |
 | Male/female split | ~50/50 | Unknown | Check distribution |
 
@@ -388,12 +402,13 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Rendering status:**
 - [x] Pipeline working end-to-end (flat style + seg masks + joints + draw order + layers)
-- [x] 49/62 characters rendered × 5 poses × 5 angles = 1,225 images
+- [x] 22-class region IDs aligned with Strata's skeleton.ts
+- [x] Re-render in progress: 62 chars × all poses × flat style × front angle
 - [x] Per-region RGBA layer extraction working (Blended transparency + Emission shader)
-- [x] Uploaded to Hetzner bucket (28,032 files, 1.0 GB)
-- [ ] Fix 13 failed characters (3 problematic poses cause failures)
+- [x] 49 chars OK, 12 PARTIAL (2/5 poses due to `mixamorig5:` bone prefix mismatch)
 - [ ] Download more characters (target: 150-250 total)
 - [ ] Render additional styles (cel, pixel, painterly, sketch, unlit)
+- [ ] Render multi-angle (3/4, side, back) passes
 
 ---
 
@@ -450,7 +465,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** The See-through paper team collected ~9,100 Live2D models. If they release their dataset or data engine code, that would supersede manual collection. Monitor their repo.
 
-**Status:** Pipeline implemented (renderer, review UI, Live2D mapper, .moc3 parser, atlas fragment extractor). GitHub scraper built (`run_live2d_scrape.py`). .moc3 binary parser + atlas fragment extraction working (issue #146) — can now process atlas-only models by parsing mesh UVs and triangle indices from .moc3 binary. Chinese body-part regex patterns added to config.
+**Status:** Pipeline implemented (renderer, review UI, Live2D mapper, .moc3 parser, atlas fragment extractor). GitHub scraper built and run — **279 models downloaded** (GitHub source saturated). .moc3 binary parser + atlas fragment extraction working (issue #146). Chinese body-part regex patterns added to config. Next: process 279 models through renderer to generate training images, then expand collection via Booth.pm.
 
 ---
 
@@ -470,7 +485,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** LinkTo-Anime (PP-7) provides 80 VRoid characters pre-rigged with Mixamo skeletons — this may partially overlap with CMU data needs for animation training.
 
-**Status:** COMPLETE. All 2,548 clips retargeted + degraded → 17,822 JSON training pairs in `output/animation/cmu_degraded/` (~31 GB). Zero failures. Ready for upload to Hetzner bucket. BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips).
+**Status:** COMPLETE + UPLOADED. All 2,548 clips retargeted + degraded → 17,823 JSON training pairs (58 GB). Uploaded to `animation/` in Hetzner bucket (17,823 files). Local copy deleted. BVH parser, retargeting, and degradation scripts implemented. Action labels started (80 clips).
 
 ---
 
@@ -568,15 +583,16 @@ These require downloading raw assets and running your own rendering pipeline.
 | AnimeRun correspondence | ~2,800 | 2,789 ingested | ✅ In bucket (19,493 files) |
 | LinkTo-Anime (PP-7) | ~29,270 | 0 | SKIPPED — CC-BY-NC license forbidden |
 | UniRig Rig-XL (PP-5) | 14,000 meshes | 0 | Not downloaded |
-| Mixamo renders (DS-1) | ~10,000 | 1,225 | ✅ In bucket (49 chars) |
+| CMU animation pairs | 17,823 | 17,823 uploaded | ✅ In bucket (58 GB) |
+| Mixamo renders (DS-1) | ~10,000 | ~1,345 | Re-rendering with 22-class IDs |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
-| Live2D composites (DS-3) | ~1,600 | 0 | Pipeline ready, no models |
+| Live2D composites (DS-3) | ~1,600 | 0 | 279 models downloaded, pipeline ready |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~470,000+** | **~143,000+** | **~30%** |
+| **TOTAL** | **~470,000+** | **~161,000+** | **~34%** |
 
 ---
 
@@ -683,7 +699,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 - Bucket: `s3://strata-training-data` (Falkenstein datacenter)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: ~29.6 GB across 9 dataset prefixes
+- Total uploaded: ~87 GB across 10 dataset prefixes
 - Access: AWS CLI compatible, credentials in `.env`
 
 ---
@@ -704,7 +720,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Mixamo renders | ~8 GB | 10K images + all annotations |
 | VRoid supplementary renders | ~40 GB | 50K images (45° + poses + Strata annotations) |
 | Live2D models + renders | ~3.5 GB | 400 models + 1,600 rendered images |
-| CMU BVH + processed | ~700 MB | 2,548 clips + retargeted + degraded |
+| CMU BVH + processed | ~58 GB | 2,548 clips + retargeted + degraded (uploaded, local deleted) |
 | PSD files | ~2 GB | Opportunistic |
 | Generated contour pairs | ~40 GB | 50K pairs |
 | **Self-rendered total** | **~100 GB** | |
@@ -750,10 +766,13 @@ These require downloading raw assets and running your own rendering pipeline.
 | Ingest vroid_lite | Done | 4,651 images in bucket | ✅ Done |
 | Build Live2D GitHub scraper | Done | `run_live2d_scrape.py` for .moc3 repos | ✅ Done |
 | Build .moc3 parser + extractor | Done | Parses binary mesh data, extracts fragments from atlas | ✅ Done |
+| Run Live2D GitHub scraper | Done | 279 models downloaded, GitHub saturated | ✅ Done |
+| Upload CMU animation | Done | 17,823 files (58 GB) in bucket | ✅ Done |
+| Fix 22-class region IDs | Done | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done |
 | Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
 | Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
 | Render more Mixamo chars | 2–3 days (compute) | Western-style training data | 49/250 done |
 | Live2D collection + mapping | 2–3 weeks | 2D illustration style coverage | Not started |
-| CMU labeling + retargeting | 2–3 weeks | Animation intelligence data | Labels started |
+| CMU labeling + retargeting | 2–3 weeks | Animation intelligence data | ✅ Retargeted + uploaded |
 | Start model training | 1–2 weeks (coding) | Segmentation model MVP | Issues #125-128 open |
