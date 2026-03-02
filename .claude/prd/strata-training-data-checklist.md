@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v10 — Live2D rendered + uploaded, 105 Mixamo chars, mixamorig5: bone fix, UniRig Rig-XL downloading)
+**Last updated:** March 2, 2026 (v11 — new datasets researched: HumanRig, Anymate, MagicAnime, AnimeDrawingsDataset, Body Part Seg Anime (Ou 2024), ChildlikeSHAPES, See-through)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -65,6 +65,7 @@
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
 | cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
 | vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
+| humanrig | 36 GB (zip) | Yes | Downloaded, extracting — `humanrig.zip` on external HD |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
@@ -384,6 +385,228 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ---
 
+### PP-9: HumanRig Dataset ⭐ HIGH PRIORITY — READY TO DOWNLOAD
+
+**What:** 11,434 T-posed humanoid meshes with uniform Mixamo skeleton topology, skinning weights, and joint positions
+**Source:** https://github.com/c8241998/HumanRig | Dataset: https://huggingface.co/datasets/jellyczd/HumanRig
+**License:** MIT (code repo) + CC-BY-NC-4.0 (dataset) — non-commercial training use OK
+**Paper:** "HumanRig: Learning Automatic Rigging for Humanoid Character in a Large Scale Dataset" CVPR 2025
+
+**What's included:**
+- 11,434 AI-generated T-posed meshes in Parquet format (diverse styles: realistic, cartoon, anthropomorphic)
+- Uniform Mixamo skeleton topology — maps directly to Strata's 19-bone standard
+- Varied head-to-body ratios (good diversity for non-standard proportions)
+- Skinning weights + 3D joint positions + **2D joint positions** + camera parameters + front-view image per sample
+- Train/val/test splits: 80/10/10
+
+**What this gives you:**
+- Ground truth skeleton + weight data for weight prediction MLP training
+- Humanoid-only (unlike UniRig which is mixed categories) — no filtering needed
+- Mixamo-compatible skeleton means adapter is trivial
+- Includes pre-rendered **2D front-view images + 2D joint positions** — directly usable for joint CNN training without rendering step
+
+**What's missing:**
+- CC-BY-NC-4.0 — non-commercial only, same as AnimeRun
+- No segmentation masks or draw order annotations
+- Parquet format requires pandas/pyarrow to load
+
+**Skeleton joint names (22 joints, Mixamo naming — maps directly to Strata):**
+`Hips, Spine, Spine1, Spine2, Neck, Head, LeftShoulder, LeftArm, LeftForeArm, LeftHand, RightShoulder, RightArm, RightForeArm, RightHand, LeftUpLeg, LeftLeg, LeftFoot, LeftToeBase, RightUpLeg, RightLeg, RightFoot, RightToeBase`
+
+**Action items:**
+- [x] Download: `humanrig.zip` (36 GB) downloaded to `data/preprocessed/humanrig/` on external HD
+- [ ] Wait for extraction to complete (running in background)
+- [ ] Inspect extracted structure + verify content
+- [ ] Build `humanrig_skeleton_mapper.py` adapter (maps to Strata 22-bone hierarchy)
+- [ ] Ingest 2D images + joint positions as joint refinement training data (no rendering needed)
+- [ ] Optionally render 3D meshes with Blender for segmentation training images
+
+**Status:** DOWNLOADING/EXTRACTING. 36 GB zip downloaded, extraction in progress. On external HD at `data/preprocessed/humanrig/`.
+
+---
+
+### PP-10: Anymate Dataset ⭐ HIGH PRIORITY — READY TO DOWNLOAD
+
+**What:** 230K rigged 3D assets with expert-crafted skeleton + skinning weights, curated from Objaverse-XL
+**Source:** https://github.com/yfde/Anymate | Dataset: https://huggingface.co/datasets/yfdeng/Anymate
+**License:** Not specified in repo — check HuggingFace dataset card before use
+**Paper:** "Anymate: A Dataset and Baselines for Learning 3D Object Rigging" SIGGRAPH 2025
+
+**What's included:**
+- 230K diverse 3D assets (humanoids, animals, vehicles, furniture, etc.)
+- Artist-created rigging: joint positions, bone connectivity, skinning weights per vertex
+- 70× larger than any prior public rigging dataset
+- PyTorch `.pt` format: 9 files (Anymate_test.pt + Anymate_train_0.pt through Anymate_train_7.pt)
+- Downloaded via `bash Anymate/get_datasets.sh` (fetches from HuggingFace)
+
+**What this gives you:**
+- Massive scale for weight prediction MLP training (230K > UniRig's 14K)
+- Ground truth artist-crafted weights (higher quality than auto-computed)
+- Humanoid subset (filter needed) could give 20K+ high-quality humanoid rigs
+
+**What's missing:**
+- License not stated — verify before training use
+- Mixed categories — need to filter to humanoid subset
+- No 2D renders or segmentation annotations included
+- Skeleton topology varies per asset (not uniform Mixamo — harder to map than HumanRig)
+- Size unknown — likely very large (230K meshes with skinning data)
+
+**Action items:**
+- [ ] Check HuggingFace dataset card for license: https://huggingface.co/datasets/yfdeng/Anymate
+- [ ] If license OK: run `bash Anymate/get_datasets.sh` to download
+- [ ] Filter to humanoid subset (estimate ~20–40K of 230K)
+- [ ] Map diverse skeleton topologies → Strata 19-bone standard
+- [ ] Build `anymate_skeleton_mapper.py` adapter
+
+**Status:** READY (pending license verification). Direct HuggingFace download via get_datasets.sh script.
+
+---
+
+### PP-11: MagicAnime Dataset — Keypoint Subset
+
+**What:** 400K cartoon video clips with a 50K-clip subset with 133 whole-body keypoint annotations (incl. 68 facial)
+**Source:** https://arxiv.org/abs/2507.20368 — "MagicAnime: A Hierarchically Annotated, Multimodal and Multitasking Dataset" (July 2025)
+**License:** Research-only, restricted access — requires institutional affiliation + application + signed agreement
+
+**What's included:**
+- 50K video clip + whole-body keypoint annotation pairs (133 keypoints per frame incl. 68 facial)
+- Cartoon animation style (not 3D render style)
+- Temporal sequences (useful for animation intelligence)
+
+**What this gives you:**
+- Large-scale whole-body joint annotation data for cartoon characters
+- Joint refinement CNN training on non-3D-rendered style (fills domain gap)
+- Temporal sequences for animation intelligence data
+
+**What's missing:**
+- **BLOCKED: Restricted access** — requires institutional affiliation + formal application process
+- No body part segmentation masks
+- Video-based — need frame extraction
+- No GitHub or HuggingFace link provided in paper
+
+**Action items:**
+- [ ] Contact authors via arXiv email if institutional access is available
+- [ ] Otherwise, deprioritise — restricted access makes this impractical
+
+**Status:** BLOCKED on access. Restricted to research institutions via application. Not downloadable without approval.
+
+---
+
+### PP-12: AnimeDrawingsDataset — Anime/Manga Joint Keypoints
+
+**What:** 2,000 annotated anime/manga images with 9 skeleton joint positions
+**Source:** https://github.com/dragonmeteor/AnimeDrawingsDataset
+**License:** Not specified in repository
+
+**What's included:**
+- 2,000 images (1,400 train / 100 val / 500 test)
+- 9 joint keypoints per image (head, neck, shoulders, hips, elbows, wrists, knees, ankles, feet)
+- JSON format annotations
+- Actual hand-drawn anime/manga style images (not 3D renders)
+
+**What this gives you:**
+- Joint training data in authentic illustrated style — fills domain gap vs 3D render data
+- Small but high-quality; good for fine-tuning joint refinement CNN on 2D art style
+
+**What's missing:**
+- Only 9 joints (Strata needs 19) — spine, chest, forearms not covered
+- Very small dataset (2K images)
+- No body part segmentation masks
+- No license specified
+
+**Action items:**
+- [ ] Clone repo: `git clone https://github.com/dragonmeteor/AnimeDrawingsDataset`
+- [ ] Install Ruby + bundler, run `bundle install && rake build` to download images
+- [ ] Or use Docker: `docker run dragonmeteor/animedrawingsdataset`
+- [ ] Check license (contact author if unclear)
+- [ ] Build adapter to map 9 joints → Strata's 19-bone subset (9-joint subset usable)
+- [ ] Ingest as supplementary joint training data
+
+**Status:** READY. Small dataset (~2K images) but directly addresses illustrated-style joint domain gap. Download via Ruby/rake build or Docker.
+
+---
+
+### PP-13: Body Part Segmentation of Anime Characters (Ou et al. 2024)
+
+**What:** Body part segmentation dataset specifically for anime characters — multiple semantic regions
+**Source:** https://onlinelibrary.wiley.com/doi/10.1002/cav.2295 (CGI 2024 / Computer Animation and Virtual Worlds)
+**License:** Unknown — academic paper, dataset availability unclear
+
+**What this gives you:**
+- Anime-specific body part segmentation ground truth (most relevant to Strata's segmentation model)
+- 2D illustration style — directly fills the domain gap vs 3D renders
+- Part labels align with Strata's 22-region taxonomy (details need verification)
+
+**Action items:**
+- [ ] Access paper (may need institutional access or email authors)
+- [ ] Check if dataset is publicly released
+- [ ] If released, download and assess annotation quality + label taxonomy
+- [ ] Map their label taxonomy → Strata's 22-region taxonomy
+
+**Status:** Not started. Paper is paywalled — email authors for dataset access.
+
+---
+
+### PP-14: See-through Live2D Layer Decomposition Dataset ⏳ AVAILABLE LATE MARCH 2026
+
+**What:** 9,102 annotated 2.5D Live2D models with pixel-perfect body part segmentation + draw order
+**Source:** https://arxiv.org/abs/2602.03749 (SIGGRAPH Asia 2025)
+**License:** Not yet specified — authors committed to releasing dataset on paper acceptance
+
+**What's included:**
+- 9,102 fully annotated 2.5D Live2D models (7,404 train / 851 val / 847 test)
+- 19 semantic body part classes with pixel-perfect boundaries
+- Occluded region labels (hidden anatomy behind overlapping parts)
+- Fragment-level draw order (pseudo-depth values) — exactly what Strata's draw_order.png requires
+- Sourced from ArtStation, Booth, DeviantArt
+
+**What this gives you:**
+- Draw order ground truth from real Live2D models — directly trains Strata's draw order prediction head
+- 19-class body part segmentation aligned with Strata's taxonomy
+- Occluded region data: unique annotation type not available in any other dataset
+- 2D illustration style characters — fills domain gap vs 3D renders
+
+**Action items:**
+- [ ] Monitor https://arxiv.org/abs/2602.03749 and author GitHub for dataset release (expected late March 2026)
+- [ ] Request early access from authors (contact via paper email)
+- [ ] When released: download, verify label taxonomy matches Strata's 22 regions
+- [ ] Build `see_through_adapter.py` to ingest annotations
+
+**Status:** PENDING RELEASE. Highest-value dataset found — directly provides draw order + 19-class segmentation for Live2D illustrated characters. Check back late March 2026.
+
+---
+
+### PP-15: ChildlikeSHAPES — Hand-drawn Figure Segmentation
+
+**What:** 16,075 annotated hand-drawn childlike figure drawings with 25-class semantic segmentation
+**Source:** https://arxiv.org/abs/2504.08022
+**License:** Not yet specified — authors plan to release on paper acceptance
+
+**What's included:**
+- 16,075 manually annotated drawings (14,075 train / 2,000 test)
+- 25 semantic classes: body parts + facial features (eyes, nose, mouth, ears, eyebrows)
+- Built from the Amateur Drawings Dataset
+- Pixel-level masks per class
+
+**What this gives you:**
+- Segmentation training data for sketch/hand-drawn art style inputs
+- Bridges the gap to Strata's sketch style output (one of 6 render styles)
+- 25-class taxonomy overlaps substantially with Strata's 22 regions
+
+**What's missing:**
+- Childlike/schematic drawing style — more abstract than typical anime/game characters
+- No joint positions or draw order annotations
+- Dataset pending release (paper under review)
+
+**Action items:**
+- [ ] Monitor arXiv paper for acceptance + dataset release
+- [ ] When released: download, map 25-class taxonomy → Strata's 22 regions
+- [ ] Use primarily for sketch-style generalization in segmentation model
+
+**Status:** PENDING RELEASE. Watch paper for acceptance.
+
+---
+
 ## PRIMARY DATA SOURCES (Gather + Render)
 
 These require downloading raw assets and running your own rendering pipeline.
@@ -580,6 +803,13 @@ These require downloading raw assets and running your own rendering pipeline.
 |--------|--------|--------|--------|
 | NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
+| HumanRig (PP-9) | 11,434 meshes + 2D images | 0 | DOWNLOADING — 36 GB zip on external HD, extracting |
+| Anymate (PP-10) | 230K assets (humanoid subset ~20-40K) | 0 | READY (pending license check) — HuggingFace via get_datasets.sh |
+| MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
+| AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | READY — clone + rake build or Docker |
+| Body Part Seg Anime Ou 2024 (PP-13) | Unknown | 0 | Not started — email authors |
+| See-through Live2D (PP-14) | 9,102 annotated chars | 0 | PENDING — expected late March 2026 |
+| ChildlikeSHAPES (PP-15) | 16,075 drawings | 0 | PENDING — awaiting paper acceptance |
 | AnimeRun contour pairs (PP-6) | ~8,000 | 2,819 ingested | ✅ In bucket |
 | AnimeRun linearea (PP-6) | ~1,000 | 1,059 ingested | ✅ In bucket |
 | AnimeRun flow | ~2,800 | 2,789 ingested | ✅ In bucket (16,704 files) |
@@ -684,6 +914,10 @@ These require downloading raw assets and running your own rendering pipeline.
 | `linkto_adapter.py` | — | ✅ Implemented (not registered) |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_skeleton_mapper.py` | — | 📋 Planned |
+| `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
+| `anymate_skeleton_mapper.py` | — | 📋 Planned (PP-10) |
+| `anime_drawings_adapter.py` | — | 📋 Planned (PP-12) |
+| `see_through_adapter.py` | — | 📋 Planned (PP-14, pending release) |
 
 ### Training Infrastructure (issues #122-133)
 
@@ -773,6 +1007,13 @@ These require downloading raw assets and running your own rendering pipeline.
 | Run Live2D GitHub scraper | Done | 279 models downloaded, GitHub saturated | ✅ Done |
 | Upload CMU animation | Done | 17,823 files (58 GB) in bucket | ✅ Done |
 | Fix 22-class region IDs | Done | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done |
+| Download HumanRig (PP-9) | 1 hour | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0 | READY — `huggingface-cli download jellyczd/HumanRig` |
+| Check Anymate license + download (PP-10) | 30 min + 1 day | 230K rigged meshes, humanoid subset ~20-40K | READY (check license first) |
+| Contact MagicAnime authors (PP-11) | 30 min | 50K cartoon clips with 133-keypoint annotations | BLOCKED — institutional access only |
+| Download AnimeDrawingsDataset (PP-12) | 30 min | 2K anime/manga joint annotations (illustrated style) | READY — clone + rake build |
+| Email Ou 2024 authors for dataset (PP-13) | 30 min | Anime body part seg ground truth (2D style) | Not started |
+| Monitor See-through release (PP-14) | — | 9.1K Live2D chars with draw order + 19-class seg | Late March 2026 |
+| Monitor ChildlikeSHAPES release (PP-15) | — | 16K hand-drawn figures with 25-class seg masks | Pending paper accept |
 | Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
 | Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
