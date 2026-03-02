@@ -1,4 +1,4 @@
-INFO __main__: Loaded 1 existing models from manifest
+INFO __main__: Loaded 8 existing models from manifest
 INFO __main__: === Search strategy 1: extension:moc3 ===
 INFO __main__: Code search page 1: extension:moc3
 INFO __main__: Code search page 2: extension:moc3
@@ -34,12 +34,8 @@ INFO __main__: Processing: 51hhh/51hhh.github.io
 INFO __main__:   51hhh/51hhh.github.io: no license detected (including as unverified)
 INFO __main__:   51hhh/51hhh.github.io: tree API empty/truncated, using contents API walk
 INFO __main__:   51hhh/51hhh.github.io: found 2 model dir(s): ['live2d-model-xiaohei', 'live2d-model-xiaohei/表情']
-INFO __main__:   Downloading 51hhh/51hhh.github.io/live2d-model-xiaohei -> data/live2d/002
-INFO __main__:   Downloaded live2d_002: 1 PNG files, license=
-INFO __main__: Saved manifest with 2 models to data/live2d/labels/live2d_manifest.csv
-INFO __main__:   Downloading 51hhh/51hhh.github.io/live2d-model-xiaohei/表情 -> data/live2d/003
-INFO __main__:   Downloaded live2d_003: 0 PNG files, license=
-INFO __main__: Saved manifest with 3 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Skipping 51hhh/51hhh.github.io/live2d-model-xiaohei (already downloaded)
+INFO __main__:   Skipping 51hhh/51hhh.github.io/live2d-model-xiaohei/表情 (already downloaded)
 INFO __main__: Processing: 58Q83/58Q83.github.io
 INFO __main__:   58Q83/58Q83.github.io: no license detected (including as unverified)
 INFO __main__:   58Q83/58Q83.github.io: tree API empty/truncated, using contents API walk
@@ -78,21 +74,11 @@ INFO __main__:   Alexgiraffeblues/live2d_model: no qualifying model directories 
 INFO __main__: Processing: Arisego/UnrealLive2D
 INFO __main__:   Arisego/UnrealLive2D: tree API empty/truncated, using contents API walk
 INFO __main__:   Arisego/UnrealLive2D: found 5 model dir(s): ['Content/Samples/Haru', 'Content/Samples/Hiyori', 'Content/Samples/Mark', 'Content/Samples/Natori', 'Content/Samples/Rice']
-INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Haru -> data/live2d/004
-INFO __main__:   Downloaded live2d_004: 0 PNG files, license=MIT
-INFO __main__: Saved manifest with 4 models to data/live2d/labels/live2d_manifest.csv
-INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Hiyori -> data/live2d/005
-INFO __main__:   Downloaded live2d_005: 0 PNG files, license=MIT
-INFO __main__: Saved manifest with 5 models to data/live2d/labels/live2d_manifest.csv
-INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Mark -> data/live2d/006
-INFO __main__:   Downloaded live2d_006: 0 PNG files, license=MIT
-INFO __main__: Saved manifest with 6 models to data/live2d/labels/live2d_manifest.csv
-INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Natori -> data/live2d/007
-INFO __main__:   Downloaded live2d_007: 0 PNG files, license=MIT
-INFO __main__: Saved manifest with 7 models to data/live2d/labels/live2d_manifest.csv
-INFO __main__:   Downloading Arisego/UnrealLive2D/Content/Samples/Rice -> data/live2d/008
-INFO __main__:   Downloaded live2d_008: 0 PNG files, license=MIT
-INFO __main__: Saved manifest with 8 models to data/live2d/labels/live2d_manifest.csv
+INFO __main__:   Skipping Arisego/UnrealLive2D/Content/Samples/Haru (already downloaded)
+INFO __main__:   Skipping Arisego/UnrealLive2D/Content/Samples/Hiyori (already downloaded)
+INFO __main__:   Skipping Arisego/UnrealLive2D/Content/Samples/Mark (already downloaded)
+INFO __main__:   Skipping Arisego/UnrealLive2D/Content/Samples/Natori (already downloaded)
+INFO __main__:   Skipping Arisego/UnrealLive2D/Content/Samples/Rice (already downloaded)
 INFO __main__: Processing: Arkueid/lpk2moc3
 INFO __main__:   Arkueid/lpk2moc3: no license detected (including as unverified)
 INFO __main__:   Arkueid/lpk2moc3: tree API empty/truncated, using contents API walk
@@ -117,7 +103,7 @@ INFO __main__:   BaneBeetle/waifubeetle2: no license detected (including as unve
 INFO __main__:   BaneBeetle/waifubeetle2: tree API empty/truncated, using contents API walk
 INFO __main__:   BaneBeetle/waifubeetle2: found 1 model dir(s): ['frontend/live2d-models/REM']
 INFO __main__:   Downloading BaneBeetle/waifubeetle2/frontend/live2d-models/REM -> data/live2d/009
-WARNING __main__: Sparse checkout failed for BaneBeetle/waifubeetle2/frontend/live2d-models/REM: Command '['git', '-C', '/var/folders/ny/twn2x3qn4hj7k2k0x7v3mmrh0000gn/T/tmp7pee4k_l/repo', 'checkout']' returned non-zero exit status 128.
+WARNING __main__: Sparse checkout failed for BaneBeetle/waifubeetle2/frontend/live2d-models/REM: Command '['git', '-C', '/var/folders/ny/twn2x3qn4hj7k2k0x7v3mmrh0000gn/T/tmppyh777xu/repo', 'checkout']' returned non-zero exit status 128.
 INFO __main__: Processing: Barzan737/Barzan
 INFO __main__:   Barzan737/Barzan: no license detected (including as unverified)
 INFO __main__:   Barzan737/Barzan: tree API empty/truncated, using contents API walk

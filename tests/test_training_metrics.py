@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from training.utils.metrics import JointMetrics, SegmentationMetrics
+from training.utils.metrics import JointMetrics, SegmentationMetrics, WeightMetrics
 
 # ---------------------------------------------------------------------------
 # SegmentationMetrics
@@ -329,3 +329,129 @@ class TestJointMetricsStreaming:
         errors = m.per_joint_error()
         assert errors["hips"] == pytest.approx(1.0)
         assert errors["spine"] == pytest.approx(4.0)
+
+
+# ---------------------------------------------------------------------------
+# WeightMetrics
+# ---------------------------------------------------------------------------
+
+
+class TestWeightMetricsBasic:
+    """Core weight MAE and confidence accuracy."""
+
+    def test_perfect_predictions(self):
+        """Zero MAE when predictions match ground truth."""
+        m = WeightMetrics(num_bones=3)
+        gt = np.array([[[0.6, 0.0], [0.4, 0.0], [0.0, 1.0]]])  # [1, 3, 2]
+        conf = np.array([[1.0, 1.0]])  # [1, 2]
+        m.update(
+            pred_weights=gt,
+            gt_weights=gt,
+            pred_confidence=conf.astype(bool),
+            gt_confidence=conf,
+        )
+        assert m.mae() == pytest.approx(0.0)
+
+    def test_known_mae(self):
+        """Hand-computed MAE for known weights.
+
+        Bone 0: pred=0.5 gt=0.7 → abs_err = 0.2
+        Bone 1: pred=0.5 gt=0.3 → abs_err = 0.2
+        Mean = (0.2 + 0.2) / 2 = 0.2
+        """
+        m = WeightMetrics(num_bones=2)
+        pred = np.array([[[0.5], [0.5]]])  # [1, 2, 1]
+        gt = np.array([[[0.7], [0.3]]])
+        conf = np.array([[1.0]])
+        m.update(
+            pred_weights=pred,
+            gt_weights=gt,
+            pred_confidence=conf.astype(bool),
+            gt_confidence=conf,
+        )
+        assert m.mae() == pytest.approx(0.2)
+
+    def test_zero_confidence_excluded(self):
+        """Vertices without GT data should not contribute to MAE."""
+        m = WeightMetrics(num_bones=2)
+        pred = np.array([[[0.5, 99.0], [0.5, 99.0]]])
+        gt = np.array([[[0.7, 0.0], [0.3, 0.0]]])
+        conf = np.array([[1.0, 0.0]])  # Only first vertex has GT
+        m.update(
+            pred_weights=pred,
+            gt_weights=gt,
+            pred_confidence=conf.astype(bool),
+            gt_confidence=conf,
+        )
+        # Only vertex 0 counted
+        assert m.mae() == pytest.approx(0.2)
+
+    def test_empty_metrics(self):
+        """No updates → zero MAE and accuracy."""
+        m = WeightMetrics(num_bones=3)
+        assert m.mae() == 0.0
+        assert m.confidence_accuracy() == 0.0
+
+    def test_confidence_accuracy(self):
+        """Confidence accuracy = correct / total."""
+        m = WeightMetrics(num_bones=2)
+        pred = np.zeros((1, 2, 3))
+        gt = np.zeros((1, 2, 3))
+        pred_conf = np.array([[True, False, True]])
+        gt_conf = np.array([[1.0, 0.0, 0.0]])  # 2 correct, 1 wrong
+        m.update(
+            pred_weights=pred,
+            gt_weights=gt,
+            pred_confidence=pred_conf,
+            gt_confidence=gt_conf,
+        )
+        assert m.confidence_accuracy() == pytest.approx(2 / 3, abs=1e-4)
+
+
+class TestWeightMetricsStreaming:
+    """Multi-batch accumulation and reset."""
+
+    def test_reset_clears_state(self):
+        """Reset should zero all accumulators."""
+        m = WeightMetrics(num_bones=2)
+        pred = np.array([[[0.5], [0.5]]])
+        gt = np.array([[[0.7], [0.3]]])
+        conf = np.array([[1.0]])
+        m.update(
+            pred_weights=pred,
+            gt_weights=gt,
+            pred_confidence=conf.astype(bool),
+            gt_confidence=conf,
+        )
+        m.reset()
+        assert m.mae() == 0.0
+        assert m.confidence_accuracy() == 0.0
+
+    def test_per_bone_mae_names(self):
+        """per_bone_mae should use BONE_ORDER names for 20-bone setup."""
+        m = WeightMetrics(num_bones=20)
+        errors = m.per_bone_mae()
+        assert "hips" in errors
+        assert "head" in errors
+        assert "hair_back" in errors
+        assert len(errors) == 20
+
+    def test_respects_num_vertices(self):
+        """Should only consider vertices up to num_vertices."""
+        m = WeightMetrics(num_bones=2)
+        pred = np.zeros((1, 2, 10))
+        gt = np.zeros((1, 2, 10))
+        pred[0, :, 5:] = 99.0  # Junk in padded region
+        gt[0, :, :5] = 0.5
+        conf = np.ones((1, 10))
+        num_verts = np.array([5])
+        m.update(
+            pred_weights=pred,
+            gt_weights=gt,
+            pred_confidence=conf.astype(bool),
+            gt_confidence=conf,
+            num_vertices=num_verts,
+        )
+        # Should only see error from first 5 vertices
+        assert m.mae() == pytest.approx(0.5)
+        assert m._conf_total == 5

@@ -1,33 +1,26 @@
 model:
-  backbone: "mobilenet_v3_large"
-  num_bones: 20                    # 20 bones matching BONE_ORDER
-  pretrained_backbone: true
+  num_features: 31               # 31-dim per-vertex feature vector
+  num_bones: 20                   # 20 bones matching BONE_ORDER
 
 data:
   dataset_dirs: ["../output/segmentation"]
-  resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
-
-augmentation:
-  horizontal_flip: true
-  color_jitter: {brightness: 0.2, contrast: 0.2, saturation: 0.2, hue: 0.05}
-  random_rotation: 10
-  random_scale: [0.9, 1.1]
+  max_vertices: 2048              # Zero-pad to this vertex count
 
 training:
-  batch_size: 8
+  batch_size: 16
   num_workers: 4
-  epochs: 200
+  epochs: 100
   optimizer: "adam"
-  learning_rate: 1.0e-4
+  learning_rate: 1.0e-3
   weight_decay: 1.0e-5
   scheduler: "cosine"
   warmup_epochs: 5
 
 loss:
-  weight_map_weight: 1.0
-  sparsity_weight: 0.1
+  weight_loss_weight: 1.0         # KL divergence for soft weight labels
+  confidence_weight: 0.5          # BCE for per-vertex confidence
 
 checkpointing:
   save_dir: "./checkpoints/weights"
