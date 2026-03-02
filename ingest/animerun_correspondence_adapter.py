@@ -59,13 +59,14 @@ _UNMATCHED_FWD_DIR = "UnmatchedForward"
 _UNMATCHED_BWD_DIR = "UnmatchedBackward"
 _ANIME_DIR = "Frame_Anime"
 _ANIME_VARIANT = "original"
+_SEG_MATCHING_SUBDIR = "forward"  # SegMatching files live in forward/ subdir.
 
 # Dataset split directories.
 _SPLIT_DIRS = ("train", "test")
 
 # Supported file extensions.
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
-_DATA_EXTENSIONS = _IMAGE_EXTENSIONS | {".npy"}
+_DATA_EXTENSIONS = _IMAGE_EXTENSIONS | {".npy", ".json"}
 
 # Annotations that this adapter does NOT provide.
 _MISSING_ANNOTATIONS = [
@@ -115,15 +116,30 @@ class AdapterResult:
 
 
 def load_correspondence_map(path: Path) -> np.ndarray | None:
-    """Load a segment correspondence map from .npy or image file.
+    """Load a segment correspondence map from .json, .npy, or image file.
+
+    AnimeRun SegMatching JSON format: ``{"0": [5], "1": [3], ...}``
+    where keys are source segment indices and values are single-element
+    lists of matched target segment indices (-1 = unmatched).
 
     Args:
         path: Path to the correspondence data file.
 
     Returns:
-        2D or 3D numpy array, or None if loading fails.
+        1D float32 array (from JSON) or 2D/3D array (from npy/image),
+        or None if loading fails.
     """
     try:
+        if path.suffix.lower() == ".json":
+            with open(path, encoding="utf-8") as f:
+                match_dict = json.load(f)
+            if not match_dict:
+                return None
+            n = max(int(k) for k in match_dict) + 1
+            arr = np.full(n, -1, dtype=np.float32)
+            for k, v in match_dict.items():
+                arr[int(k)] = int(v[0]) if isinstance(v, list) else int(v)
+            return arr
         if path.suffix.lower() == ".npy":
             return np.load(path)
         # Image file — load as grayscale array.
@@ -132,7 +148,7 @@ def load_correspondence_map(path: Path) -> np.ndarray | None:
         if img.mode != "L":
             img = img.convert("L")
         return np.array(img, dtype=np.uint8)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, KeyError) as exc:
         logger.warning("Failed to load correspondence map %s: %s", path, exc)
         return None
 
@@ -330,7 +346,7 @@ def discover_pairs(
     Returns:
         List of CorrespondencePair objects, sorted by frame name.
     """
-    seg_dir = scene_dir / _SEG_MATCHING_DIR / scene_id
+    seg_dir = scene_dir / _SEG_MATCHING_DIR / scene_id / _SEG_MATCHING_SUBDIR
     anime_dir = scene_dir / _ANIME_DIR / scene_id / _ANIME_VARIANT
     if not anime_dir.is_dir():
         anime_dir = scene_dir / _ANIME_DIR / scene_id
@@ -356,6 +372,12 @@ def discover_pairs(
         for p in seg_dir.iterdir():
             if p.suffix.lower() in _DATA_EXTENSIONS and p.is_file():
                 seg_by_stem[p.stem] = p
+    if not seg_by_stem:
+        logger.warning(
+            "No SegMatching files found in %s (dir exists: %s)",
+            seg_dir,
+            seg_dir.is_dir(),
+        )
 
     # Index UnmatchedForward files by stem.
     fwd_by_stem: dict[str, Path] = {}

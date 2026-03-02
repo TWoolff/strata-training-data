@@ -2,6 +2,10 @@
 
 These tests exercise the pure-Python adapter logic without requiring
 the actual AnimeRun dataset.
+
+SegMatching files in the real dataset live under
+``SegMatching/{scene}/forward/*.json`` and contain segment-to-segment
+index mappings: ``{"0": [5], "1": [3], "2": [-1], ...}``.
 """
 
 from __future__ import annotations
@@ -62,6 +66,21 @@ def _create_seg_matching(size: tuple[int, int] = (256, 256)) -> np.ndarray:
     return arr
 
 
+def _create_seg_matching_json(num_segments: int = 8) -> dict[str, list[int]]:
+    """Create a fake segment matching JSON dict.
+
+    Matches each segment to the next one (wrapping around), with
+    the last segment unmatched (-1).
+    """
+    d: dict[str, list[int]] = {}
+    for i in range(num_segments):
+        if i == num_segments - 1:
+            d[str(i)] = [-1]
+        else:
+            d[str(i)] = [i + 1]
+    return d
+
+
 def _setup_scene_dir(
     tmp_path: Path,
     split: str = "train",
@@ -73,8 +92,12 @@ def _setup_scene_dir(
     with_fwd: bool = False,
     with_bwd: bool = False,
     use_npy: bool = False,
+    use_json: bool = True,
 ) -> Path:
     """Create a fake AnimeRun v2 scene directory with correspondence data.
+
+    SegMatching files go into ``SegMatching/{scene}/forward/`` to match
+    the real dataset layout.
 
     Args:
         tmp_path: Pytest tmp_path fixture.
@@ -85,7 +108,8 @@ def _setup_scene_dir(
         with_anime: Create Frame_Anime directory.
         with_fwd: Create UnmatchedForward directory.
         with_bwd: Create UnmatchedBackward directory.
-        use_npy: Use .npy format instead of .png.
+        use_npy: Use .npy format instead of .png for SegMatching.
+        use_json: Use .json format for SegMatching (default, matches real data).
 
     Returns:
         Path to the root AnimeRun directory.
@@ -94,13 +118,19 @@ def _setup_scene_dir(
     split_dir = root / split
 
     if with_seg_matching:
-        seg_dir = split_dir / "SegMatching" / scene_name
+        seg_dir = split_dir / "SegMatching" / scene_name / "forward"
         seg_dir.mkdir(parents=True)
         for i in range(num_frames):
-            data = _create_seg_matching()
-            if use_npy:
+            if use_json:
+                data = _create_seg_matching_json()
+                (seg_dir / f"frame_{i:04d}.json").write_text(
+                    json.dumps(data), encoding="utf-8"
+                )
+            elif use_npy:
+                data = _create_seg_matching()
                 np.save(seg_dir / f"frame_{i:04d}.npy", data)
             else:
+                data = _create_seg_matching()
                 img = Image.fromarray(data, mode="L")
                 img.save(seg_dir / f"frame_{i:04d}.png")
 
@@ -163,6 +193,26 @@ class TestLoadCorrespondenceMap:
         assert loaded is not None
         assert loaded.shape == (64, 64)
         np.testing.assert_array_equal(loaded, data)
+
+    def test_load_json(self, tmp_path: Path) -> None:
+        data = {"0": [5], "1": [3], "2": [-1]}
+        path = tmp_path / "seg.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = load_correspondence_map(path)
+        assert loaded is not None
+        assert loaded.dtype == np.float32
+        assert len(loaded) == 3
+        assert loaded[0] == 5.0
+        assert loaded[1] == 3.0
+        assert loaded[2] == -1.0
+
+    def test_load_json_empty(self, tmp_path: Path) -> None:
+        path = tmp_path / "empty.json"
+        path.write_text("{}", encoding="utf-8")
+
+        loaded = load_correspondence_map(path)
+        assert loaded is None
 
     def test_returns_none_on_missing_file(self, tmp_path: Path) -> None:
         result = load_correspondence_map(tmp_path / "nonexistent.npy")
@@ -367,7 +417,7 @@ class TestDiscoverScenes:
     def test_discovers_train_and_test(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A")
         # Add a test scene.
-        test_seg = root / "test" / "SegMatching" / "scene_B"
+        test_seg = root / "test" / "SegMatching" / "scene_B" / "forward"
         test_seg.mkdir(parents=True)
         test_anime = root / "test" / "Frame_Anime" / "scene_B" / "original"
         test_anime.mkdir(parents=True)
@@ -380,13 +430,13 @@ class TestDiscoverScenes:
 
     def test_skips_scene_without_anime(self, tmp_path: Path) -> None:
         root = tmp_path / "animerun"
-        (root / "train" / "SegMatching" / "bad_scene").mkdir(parents=True)
+        (root / "train" / "SegMatching" / "bad_scene" / "forward").mkdir(parents=True)
         scenes = discover_scenes(root)
         assert len(scenes) == 0
 
     def test_skips_hidden_dirs(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A")
-        hidden = root / "train" / "SegMatching" / ".hidden"
+        hidden = root / "train" / "SegMatching" / ".hidden" / "forward"
         hidden.mkdir(parents=True)
 
         scenes = discover_scenes(root)
@@ -402,7 +452,7 @@ class TestDiscoverScenes:
     def test_nested_animerun_v2(self, tmp_path: Path) -> None:
         outer = tmp_path / "data"
         outer.mkdir()
-        inner = outer / "AnimeRun_v2" / "train" / "SegMatching" / "sc1"
+        inner = outer / "AnimeRun_v2" / "train" / "SegMatching" / "sc1" / "forward"
         inner.mkdir(parents=True)
         anime = outer / "AnimeRun_v2" / "train" / "Frame_Anime" / "sc1" / "original"
         anime.mkdir(parents=True)
@@ -458,13 +508,22 @@ class TestDiscoverPairs:
         assert all(p.unmatched_bwd_path is None for p in pairs)
 
     def test_npy_seg_matching(self, tmp_path: Path) -> None:
-        root = _setup_scene_dir(tmp_path, num_frames=2, use_npy=True)
+        root = _setup_scene_dir(tmp_path, num_frames=2, use_npy=True, use_json=False)
         split_dir = root / "train"
 
         pairs = discover_pairs(split_dir, "train", "scene_001")
         assert len(pairs) == 1
         assert pairs[0].seg_matching_path is not None
         assert pairs[0].seg_matching_path.suffix == ".npy"
+
+    def test_json_seg_matching(self, tmp_path: Path) -> None:
+        root = _setup_scene_dir(tmp_path, num_frames=2, use_json=True)
+        split_dir = root / "train"
+
+        pairs = discover_pairs(split_dir, "train", "scene_001")
+        assert len(pairs) == 1
+        assert pairs[0].seg_matching_path is not None
+        assert pairs[0].seg_matching_path.suffix == ".json"
 
 
 # ---------------------------------------------------------------------------
@@ -592,13 +651,13 @@ class TestConvertDirectory:
     def test_converts_multiple_scenes(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A", num_frames=3)
         # Add second scene.
-        seg_b = root / "train" / "SegMatching" / "scene_B"
+        seg_b = root / "train" / "SegMatching" / "scene_B" / "forward"
         seg_b.mkdir(parents=True)
         anime_b = root / "train" / "Frame_Anime" / "scene_B" / "original"
         anime_b.mkdir(parents=True)
-        data = _create_seg_matching()
-        Image.fromarray(data, mode="L").save(seg_b / "f001.png")
-        Image.fromarray(data, mode="L").save(seg_b / "f002.png")
+        data = _create_seg_matching_json()
+        (seg_b / "f001.json").write_text(json.dumps(data), encoding="utf-8")
+        (seg_b / "f002.json").write_text(json.dumps(data), encoding="utf-8")
         _create_test_image().save(anime_b / "f001.png")
         _create_test_image().save(anime_b / "f002.png")
 
@@ -612,12 +671,12 @@ class TestConvertDirectory:
 
     def test_max_scenes(self, tmp_path: Path) -> None:
         root = _setup_scene_dir(tmp_path, "train", "scene_A", num_frames=2)
-        seg_b = root / "train" / "SegMatching" / "scene_B"
+        seg_b = root / "train" / "SegMatching" / "scene_B" / "forward"
         seg_b.mkdir(parents=True)
         anime_b = root / "train" / "Frame_Anime" / "scene_B" / "original"
         anime_b.mkdir(parents=True)
-        data = _create_seg_matching()
-        Image.fromarray(data, mode="L").save(seg_b / "f001.png")
+        data = _create_seg_matching_json()
+        (seg_b / "f001.json").write_text(json.dumps(data), encoding="utf-8")
         _create_test_image().save(anime_b / "f001.png")
 
         output_dir = tmp_path / "output"
