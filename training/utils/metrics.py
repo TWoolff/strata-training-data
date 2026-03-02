@@ -216,3 +216,107 @@ class JointMetrics:
         if self._presence_total == 0:
             return 0.0
         return float(self._presence_correct / self._presence_total)
+
+
+# ---------------------------------------------------------------------------
+# Weight prediction metrics
+# ---------------------------------------------------------------------------
+
+
+class WeightMetrics:
+    """Streaming metrics for per-vertex weight prediction.
+
+    Tracks mean absolute error between predicted and ground-truth bone
+    weight distributions, and binary confidence accuracy.
+
+    Only considers vertices with ground-truth data (confidence_target == 1).
+
+    Args:
+        num_bones: Number of bones (default 20, matching BONE_ORDER).
+    """
+
+    def __init__(self, num_bones: int = 20) -> None:
+        self.num_bones = num_bones
+        self._abs_errors = np.zeros(num_bones, dtype=np.float64)
+        self._vertex_counts = np.zeros(num_bones, dtype=np.int64)
+        self._total_mae_sum = 0.0
+        self._total_mae_count = 0
+        self._conf_correct = 0
+        self._conf_total = 0
+
+    def update(
+        self,
+        pred_weights: np.ndarray,
+        gt_weights: np.ndarray,
+        pred_confidence: np.ndarray,
+        gt_confidence: np.ndarray,
+        num_vertices: np.ndarray | None = None,
+    ) -> None:
+        """Accumulate a batch of weight predictions.
+
+        Args:
+            pred_weights: Predicted weights, shape ``[B, num_bones, N]``.
+            gt_weights: Ground-truth weights, shape ``[B, num_bones, N]``.
+            pred_confidence: Predicted confidence, shape ``[B, N]`` (0/1).
+            gt_confidence: Ground-truth confidence, shape ``[B, N]`` (0/1).
+            num_vertices: Actual vertex counts per sample ``[B]``. If None,
+                all vertices are considered.
+        """
+        batch_size = gt_weights.shape[0]
+        n = gt_weights.shape[2]
+
+        for b in range(batch_size):
+            max_v = int(num_vertices[b]) if num_vertices is not None else n
+            gt_conf = gt_confidence[b, :max_v].astype(bool)
+
+            if gt_conf.any():
+                # Per-bone MAE on vertices with GT data
+                abs_err = np.abs(
+                    pred_weights[b, :, :max_v] - gt_weights[b, :, :max_v]
+                )  # [num_bones, max_v]
+                for bone_idx in range(self.num_bones):
+                    self._abs_errors[bone_idx] += abs_err[bone_idx, gt_conf].sum()
+                    self._vertex_counts[bone_idx] += int(gt_conf.sum())
+
+                # Overall MAE across all bones
+                mean_abs = abs_err[:, gt_conf].mean()
+                self._total_mae_sum += float(mean_abs) * int(gt_conf.sum())
+                self._total_mae_count += int(gt_conf.sum())
+
+            # Confidence accuracy (on all vertices up to max_v)
+            pred_conf_binary = pred_confidence[b, :max_v].astype(bool)
+            gt_conf_all = gt_confidence[b, :max_v].astype(bool)
+            self._conf_correct += int((pred_conf_binary == gt_conf_all).sum())
+            self._conf_total += max_v
+
+    def reset(self) -> None:
+        """Zero all accumulators."""
+        self._abs_errors[:] = 0.0
+        self._vertex_counts[:] = 0
+        self._total_mae_sum = 0.0
+        self._total_mae_count = 0
+        self._conf_correct = 0
+        self._conf_total = 0
+
+    def mae(self) -> float:
+        """Mean absolute error across all bones and vertices with GT data."""
+        if self._total_mae_count == 0:
+            return 0.0
+        return self._total_mae_sum / self._total_mae_count
+
+    def per_bone_mae(self) -> dict[str, float]:
+        """Return ``{bone_name: MAE}`` for each bone."""
+        result: dict[str, float] = {}
+        for j in range(self.num_bones):
+            name = BONE_ORDER[j] if j < len(BONE_ORDER) else f"bone_{j}"
+            if self._vertex_counts[j] > 0:
+                result[name] = float(self._abs_errors[j] / self._vertex_counts[j])
+            else:
+                result[name] = 0.0
+        return result
+
+    def confidence_accuracy(self) -> float:
+        """Binary accuracy of per-vertex confidence prediction."""
+        if self._conf_total == 0:
+            return 0.0
+        return float(self._conf_correct / self._conf_total)

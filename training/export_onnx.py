@@ -20,6 +20,8 @@ ONNX contracts (must match Rust runtime exactly):
   ``offsets[40]``, ``confidence[20]``, ``present[20]``
 - ``weight_prediction.onnx``: input ``[1,3,512,512]`` →
   ``weights[1,20,N,1]``, ``confidence[1,1,N,1]``
+- ``weight_prediction_vertex.onnx``: input ``[1,31,2048,1]`` →
+  ``weights[1,20,2048,1]``, ``confidence[1,1,2048,1]``
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ if TYPE_CHECKING:
 from training.models.joint_model import JointModel
 from training.models.segmentation_model import SegmentationModel
 from training.models.weight_model import WeightModel
+from training.models.weight_prediction_model import WeightPredictionModel
 from training.utils.checkpoint import load_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -95,6 +98,23 @@ class WeightWrapper(nn.Module):
         return w, c
 
 
+class WeightPredictionWrapper(nn.Module):
+    """Wraps WeightPredictionModel for ONNX export (dict → tuple).
+
+    The per-vertex model already outputs [B, C, N, 1] tensors, so no
+    reshaping is needed. Outputs are raw logits — softmax/sigmoid applied
+    at inference by the Rust runtime.
+    """
+
+    def __init__(self, model: WeightPredictionModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        out = self.model(x)
+        return out["weights"], out["confidence"]
+
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -134,6 +154,19 @@ MODEL_CONFIGS: dict[str, dict] = {
             "confidence": {0: "batch", 2: "vertices"},
         },
         "default_filename": "weight_prediction.onnx",
+    },
+    "weights_vertex": {
+        "model_class": WeightPredictionModel,
+        "wrapper_class": WeightPredictionWrapper,
+        "model_kwargs": {"num_features": 31, "num_bones": 20},
+        "output_names": ["weights", "confidence"],
+        "dynamic_axes": {
+            "input": {0: "batch"},
+            "weights": {0: "batch", 2: "vertices"},
+            "confidence": {0: "batch", 2: "vertices"},
+        },
+        "default_filename": "weight_prediction_vertex.onnx",
+        "input_shape": (1, 31, 2048, 1),
     },
 }
 
@@ -177,8 +210,9 @@ def export_model(
     wrapper = config["wrapper_class"](model)
     wrapper.eval()
 
-    # Dummy input
-    dummy_input = torch.randn(1, 3, RESOLUTION, RESOLUTION)
+    # Dummy input — use custom shape if specified (e.g. per-vertex models)
+    input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
+    dummy_input = torch.randn(*input_shape)
 
     # Export
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,8 +281,9 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
             f"Output name mismatch for {model_name}. Expected {expected_names}, got {actual_names}"
         )
 
-    # Run dummy inference
-    dummy = np.random.randn(1, 3, RESOLUTION, RESOLUTION).astype(np.float32)
+    # Run dummy inference — use custom input shape if specified
+    input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
+    dummy = np.random.randn(*input_shape).astype(np.float32)
     results = session.run(None, {"input": dummy})
 
     # Shape validation per model
@@ -258,6 +293,8 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
         _validate_joint_outputs(results, expected_names)
     elif model_name == "weights":
         _validate_weight_outputs(results, expected_names)
+    elif model_name == "weights_vertex":
+        _validate_weight_vertex_outputs(results, expected_names)
 
     logger.info("Validation passed for %s", model_name)
 
@@ -305,6 +342,19 @@ def _validate_weight_outputs(results: list[np.ndarray], names: list[str]) -> Non
         raise ValueError(f"confidence out of [0,1] range: [{confidence.min()}, {confidence.max()}]")
 
 
+def _validate_weight_vertex_outputs(results: list[np.ndarray], names: list[str]) -> None:
+    weights, confidence = results
+    max_vertices = 2048
+    if weights.shape != (1, 20, max_vertices, 1):
+        raise ValueError(f"weights shape: expected (1,20,{max_vertices},1), got {weights.shape}")
+    if confidence.shape != (1, 1, max_vertices, 1):
+        raise ValueError(
+            f"confidence shape: expected (1,1,{max_vertices},1), got {confidence.shape}"
+        )
+    # Per-vertex model outputs raw logits — no range constraint on weights
+    # (softmax applied at inference by Rust runtime)
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -317,7 +367,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["segmentation", "joints", "weights"],
+        choices=["segmentation", "joints", "weights", "weights_vertex"],
         help="Model to export.",
     )
     parser.add_argument(
@@ -376,6 +426,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "segmentation": Path("checkpoints/segmentation/best.pt"),
         "joints": Path("checkpoints/joints/best.pt"),
         "weights": Path("checkpoints/weights/best.pt"),
+        "weights_vertex": Path("checkpoints/weights/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():
