@@ -18,8 +18,8 @@ Usage:
     # Resume after interruption (skips already-downloaded models)
     python run_live2d_scrape.py
 
-    # Include repos with no license for manual review
-    python run_live2d_scrape.py --include_unverified --dry_run
+    # Only download from repos with explicit permissive licenses
+    python run_live2d_scrape.py --strict_license --dry_run
 """
 
 from __future__ import annotations
@@ -49,6 +49,22 @@ ACCEPTED_LICENSES = {
     "0BSD",
     "Unlicense",
     "ISC",
+}
+
+# Licenses that explicitly forbid our use case (redistribution / commercial training data).
+# Repos with these are always skipped regardless of flags.
+REJECTED_LICENSES = {
+    "GPL-2.0",
+    "GPL-3.0",
+    "AGPL-3.0",
+    "CC-BY-NC-4.0",
+    "CC-BY-NC-SA-4.0",
+    "CC-BY-NC-3.0",
+    "CC-BY-NC-SA-3.0",
+    "CC-BY-NC-ND-4.0",
+    "CC-BY-NC-ND-3.0",
+    "CC-BY-ND-4.0",
+    "CC-BY-ND-3.0",
 }
 
 SEARCH_DELAY_S = 2.5
@@ -312,28 +328,47 @@ def fetch_repo_info(repo: RepoInfo) -> bool:
         return False
 
 
-def check_license(repo: RepoInfo, *, include_unverified: bool = False) -> bool:
-    """Check if a repo's license is in the accepted list.
+def check_license(repo: RepoInfo, *, strict: bool = False) -> bool:
+    """Check if a repo's license allows downloading.
+
+    By default, repos with no license or unrecognized licenses are accepted
+    (flagged as license_verified=False in the manifest). Only explicitly
+    restrictive licenses (GPL, CC-NC, CC-ND) are rejected.
+
+    With strict=True, only repos with an explicit permissive license pass.
 
     Args:
         repo: Repository to check.
-        include_unverified: If True, accept repos with no detected license.
+        strict: If True, require an explicit permissive license.
 
     Returns:
         True if the license is acceptable.
     """
-    if not repo.license_key or repo.license_key == "NOASSERTION":
-        if include_unverified:
-            logger.info("  %s: no license detected (including as unverified)", repo.full_name)
-            return True
-        logger.info("  %s: skipped (no license detected)", repo.full_name)
+    # Always reject explicitly restrictive licenses
+    if repo.license_key in REJECTED_LICENSES:
+        logger.info("  %s: skipped (restrictive license: %s)", repo.full_name, repo.license_key)
         return False
 
+    # Explicitly permissive -- always accept
     if repo.license_key in ACCEPTED_LICENSES:
         return True
 
-    logger.info("  %s: skipped (license: %s)", repo.full_name, repo.license_key)
-    return False
+    # No license or unrecognized license
+    if not repo.license_key or repo.license_key == "NOASSERTION":
+        if strict:
+            logger.info("  %s: skipped (no license detected, strict mode)", repo.full_name)
+            return False
+        logger.info("  %s: no license detected (including as unverified)", repo.full_name)
+        return True
+
+    # Unrecognized license string (not in accepted or rejected)
+    if strict:
+        logger.info("  %s: skipped (unknown license: %s)", repo.full_name, repo.license_key)
+        return False
+    logger.info(
+        "  %s: unknown license %s (including as unverified)", repo.full_name, repo.license_key
+    )
+    return True
 
 
 def find_model_dirs(repo: RepoInfo) -> list[str]:
@@ -653,10 +688,10 @@ def parse_args() -> argparse.Namespace:
         help="Maximum number of models to download (0 = unlimited)",
     )
     parser.add_argument(
-        "--include_unverified",
+        "--strict_license",
         action="store_true",
         default=False,
-        help="Include repos with no detected license (for manual review)",
+        help="Only download from repos with an explicit permissive license",
     )
     return parser.parse_args()
 
@@ -704,7 +739,7 @@ def main() -> None:
             continue
 
         # Check license
-        if not check_license(repo, include_unverified=args.include_unverified):
+        if not check_license(repo, strict=args.strict_license):
             skipped_license += 1
             continue
 
