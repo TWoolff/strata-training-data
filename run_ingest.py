@@ -65,6 +65,7 @@ def parse_args() -> argparse.Namespace:
             "animerun_segment",
             "animerun_correspondence",
             "animerun_linearea",
+            "vroid_lite",
         ],
         help="Which dataset adapter to use.",
     )
@@ -337,6 +338,29 @@ def _run_animerun_linearea(args: argparse.Namespace) -> int:
     return 0 if total_saved > 0 or total_skipped > 0 else 1
 
 
+def _run_vroid_lite(args: argparse.Namespace) -> int:
+    """Run the VRoid-Lite adapter."""
+    from ingest.vroid_lite_adapter import convert_directory
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+    )
+
+    print("\nVRoid-Lite ingestion complete:")
+    print(f"  Images processed: {result.images_processed}")
+    print(f"  Images skipped:   {result.images_skipped}")
+    print(f"  Errors:           {len(result.errors)}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -346,6 +370,7 @@ _ADAPTERS = {
     "animerun_segment": _run_animerun_segment,
     "animerun_correspondence": _run_animerun_correspondence,
     "animerun_linearea": _run_animerun_linearea,
+    "vroid_lite": _run_vroid_lite,
 }
 
 
