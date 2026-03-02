@@ -102,7 +102,7 @@
 ### This Week
 
 - [x] ~~Fix the 13 Mixamo characters that failed rendering~~ — 12 PARTIAL (2/5 poses) due to `mixamorig5:` prefix mismatch, pre-existing
-- [ ] Wait for segmentation re-render to complete + upload to bucket
+- [x] Wait for segmentation re-render to complete + upload to bucket
 - [x] Build vroid_lite adapter + ingest + upload (4,651 images, 9,302 files, 788 MB in bucket)
 
 ### Near-Term
@@ -111,7 +111,7 @@
 - [ ] Download NOVA-Human dataset (Alipan link — needs China-based help, see-through team contacted)
 - [x] ~~Download StdGEN~~ — BLOCKED: VRoid Hub models all 404'd, pre-renders not distributed. Repo cloned for rendering scripts only.
 - [ ] Download UniRig Rig-XL dataset
-- [ ] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
+- [x] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
 - [ ] Download more Mixamo characters (currently 62, target 150-250)
 - [x] Download Mixamo animation clips to `data/poses/` (2,022 FBX clips)
 - [x] ~~Run Live2D GitHub scraper~~ — 279 models scraped, GitHub saturated
