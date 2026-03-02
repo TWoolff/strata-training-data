@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import cv2
 import numpy as np
 from PIL import Image, ImageEnhance
 
@@ -296,6 +297,169 @@ def _load_textures(model: Live2DModel) -> list[Image.Image]:
             textures.append(Image.new("RGBA", (1, 1), (0, 0, 0, 0)))
 
     return textures
+
+
+# ---------------------------------------------------------------------------
+# .moc3 binary extraction
+# ---------------------------------------------------------------------------
+
+
+def _find_moc3(model_dir: Path) -> Path | None:
+    """Find the .moc3 binary file in a model directory."""
+    candidates = sorted(model_dir.glob("*.moc3"))
+    return candidates[0] if candidates else None
+
+
+def _rasterize_mesh_from_atlas(
+    atlas: np.ndarray,
+    uvs: list[tuple[float, float]],
+    triangle_indices: list[int],
+    opacity: float = 1.0,
+) -> np.ndarray:
+    """Rasterize a single ArtMesh from a texture atlas.
+
+    Creates a full-atlas-sized RGBA canvas and fills in the triangles
+    defined by the mesh's UV coordinates and triangle indices.  All
+    triangles are batched into a single ``cv2.fillPoly`` call for speed.
+
+    Args:
+        atlas: Texture atlas as RGBA numpy array (H, W, 4).
+        uvs: Per-vertex UV coordinates in [0, 1] range.
+        triangle_indices: Flat list of triangle vertex indices (len divisible by 3).
+        opacity: Opacity multiplier for the alpha channel.
+
+    Returns:
+        RGBA numpy array at atlas resolution with rasterized mesh.
+    """
+    h, w = atlas.shape[:2]
+
+    num_triangles = len(triangle_indices) // 3
+    if num_triangles == 0:
+        return np.zeros((h, w, 4), dtype=np.uint8)
+
+    # Convert UVs to pixel coordinates as numpy array
+    uv_arr = np.array(uvs, dtype=np.float32)
+    pixel_x = (uv_arr[:, 0] * w).astype(np.int32)
+    pixel_y = (uv_arr[:, 1] * h).astype(np.int32)
+
+    # Build list of triangle polygons for batch fillPoly
+    idx = np.array(triangle_indices, dtype=np.int32)
+    idx = idx[: num_triangles * 3].reshape(num_triangles, 3)
+    # Each triangle is 3 (x, y) points
+    tri_pts = np.stack([pixel_x[idx], pixel_y[idx]], axis=-1)  # (N, 3, 2)
+
+    # Compute bounding box of all triangles to minimize canvas size
+    all_x = pixel_x[idx.ravel()]
+    all_y = pixel_y[idx.ravel()]
+    x_min = max(0, int(all_x.min()))
+    x_max = min(w, int(all_x.max()) + 1)
+    y_min = max(0, int(all_y.min()))
+    y_max = min(h, int(all_y.max()) + 1)
+
+    if x_max <= x_min or y_max <= y_min:
+        return np.zeros((h, w, 4), dtype=np.uint8)
+
+    # Work in cropped coordinate space for speed
+    crop_h = y_max - y_min
+    crop_w = x_max - x_min
+    tri_pts_shifted = tri_pts.copy()
+    tri_pts_shifted[:, :, 0] -= x_min
+    tri_pts_shifted[:, :, 1] -= y_min
+
+    # Rasterize all triangles at once
+    tri_mask = np.zeros((crop_h, crop_w), dtype=np.uint8)
+    cv2.fillPoly(tri_mask, list(tri_pts_shifted), 255)
+
+    # Copy atlas pixels into full-sized canvas
+    canvas = np.zeros((h, w, 4), dtype=np.uint8)
+    mask_bool = tri_mask > 0
+    canvas[y_min:y_max, x_min:x_max][mask_bool] = atlas[y_min:y_max, x_min:x_max][mask_bool]
+
+    # Apply opacity
+    if opacity < 1.0:
+        alpha_region = canvas[y_min:y_max, x_min:x_max, 3]
+        canvas[y_min:y_max, x_min:x_max, 3] = (alpha_region.astype(np.float32) * opacity).astype(
+            np.uint8
+        )
+
+    return canvas
+
+
+def _extract_fragments_from_moc3(
+    model_dir: Path,
+    textures: list[Image.Image],
+    cdi_names: dict[str, str],
+) -> list[tuple[str, Image.Image, int]]:
+    """Extract individual body-part fragment images from .moc3 + atlas.
+
+    Parses the .moc3 binary to get per-ArtMesh UV data, then rasterizes each
+    mesh's triangles from the texture atlas into a full-atlas-sized RGBA image.
+
+    Args:
+        model_dir: Directory containing the .moc3 file.
+        textures: Loaded texture atlas images (one per page).
+        cdi_names: CDI display name mapping (internal_id → display_name).
+
+    Returns:
+        List of (fragment_name, PIL Image, draw_order) tuples, or empty list.
+    """
+    from .moc3_parser import parse_moc3
+
+    moc3_path = _find_moc3(model_dir)
+    if moc3_path is None:
+        return []
+
+    model = parse_moc3(moc3_path)
+    if model is None or not model.meshes:
+        return []
+
+    # Convert texture atlases to numpy arrays
+    atlas_arrays = [np.array(tex) for tex in textures]
+
+    fragments: list[tuple[str, Image.Image, int]] = []
+    skipped_no_tex = 0
+    skipped_empty = 0
+
+    for mesh in model.meshes:
+        # Skip meshes referencing a texture page we don't have
+        if mesh.texture_no < 0 or mesh.texture_no >= len(atlas_arrays):
+            skipped_no_tex += 1
+            continue
+
+        atlas = atlas_arrays[mesh.texture_no]
+
+        # Rasterize the mesh
+        canvas = _rasterize_mesh_from_atlas(
+            atlas,
+            mesh.uvs,
+            mesh.triangle_indices,
+            mesh.opacity,
+        )
+
+        # Skip fully transparent fragments
+        if canvas[:, :, 3].max() == 0:
+            skipped_empty += 1
+            continue
+
+        # Resolve fragment name: CDI display name → Part ID → ArtMesh ID
+        name = cdi_names.get(mesh.mesh_id, "")
+        if not name:
+            name = cdi_names.get(mesh.parent_part_id, "")
+        if not name:
+            name = mesh.parent_part_id or mesh.mesh_id
+
+        frag_image = Image.fromarray(canvas, "RGBA")
+        fragments.append((name, frag_image, mesh.draw_order))
+
+    logger.info(
+        "Extracted %d fragments from .moc3 (%d skipped: %d no texture, %d empty)",
+        len(fragments),
+        skipped_no_tex + skipped_empty,
+        skipped_no_tex,
+        skipped_empty,
+    )
+
+    return fragments
 
 
 # ---------------------------------------------------------------------------
@@ -786,6 +950,52 @@ def generate_augmentations(
 # ---------------------------------------------------------------------------
 
 
+def _build_render_result(
+    model_name: str,
+    loaded_fragments: list[tuple[str, Image.Image, int]],
+    fragment_to_region: dict[str, RegionId],
+    unmapped: list[str],
+    resolution: int,
+) -> Live2DRenderResult | None:
+    """Composite fragments and build a render result.
+
+    Shared logic for both pre-extracted PNG and .moc3 extraction paths.
+    """
+    total_count = len(loaded_fragments)
+    mapped_count = total_count - len(unmapped)
+
+    logger.info(
+        "Live2D mapping for %s: %d/%d mapped (%.0f%%), %d unmapped",
+        model_name,
+        mapped_count,
+        total_count,
+        (mapped_count / total_count * 100) if total_count else 0,
+        len(unmapped),
+    )
+    if unmapped:
+        logger.warning("Unmapped fragments in %s: %s", model_name, unmapped[:20])
+
+    image, mask, draw_order_map = _composite_from_fragments(
+        loaded_fragments, fragment_to_region, resolution
+    )
+    region_layers = extract_region_layers(loaded_fragments, fragment_to_region, resolution)
+    joint_data = _extract_joints_from_mask(mask, resolution)
+
+    char_id = f"live2d_{model_name}"
+
+    return Live2DRenderResult(
+        char_id=char_id,
+        image=image,
+        mask=mask,
+        draw_order_map=draw_order_map,
+        joint_data=joint_data,
+        fragment_count=total_count,
+        mapped_count=mapped_count,
+        unmapped_fragments=unmapped,
+        region_layers=region_layers if region_layers else None,
+    )
+
+
 def process_live2d_model(
     model_dir: Path,
     resolution: int = RENDER_RESOLUTION,
@@ -823,17 +1033,39 @@ def process_live2d_model(
     fragment_images_raw = _discover_fragment_images(model_dir)
 
     if not fragment_images_raw:
-        # Try loading from texture atlas paths in model JSON
+        # Try .moc3 binary extraction path
         if model and model.texture_paths:
             textures = _load_textures(model)
-            # If we have textures but no fragments, we can't proceed
-            # (would need .moc3 binary parsing for UV data)
             if textures:
-                logger.warning(
-                    "Model %s has texture atlases but no fragment images. "
-                    "Binary .moc3 parsing not supported — skipping.",
-                    model_name,
-                )
+                moc3_fragments = _extract_fragments_from_moc3(model_dir, textures, cdi_names)
+                if moc3_fragments:
+                    logger.info(
+                        "Extracted %d fragments from .moc3 for model %s",
+                        len(moc3_fragments),
+                        model_name,
+                    )
+                    # Map and filter .moc3 fragments
+                    fragment_to_region: dict[str, RegionId] = {}
+                    unmapped: list[str] = []
+                    loaded_fragments: list[tuple[str, Image.Image, int]] = []
+
+                    for frag_name, frag_img, draw_order in moc3_fragments:
+                        _, region_id = map_fragment(frag_name)
+                        if region_id >= 0:
+                            fragment_to_region[frag_name] = region_id
+                        else:
+                            fragment_to_region[frag_name] = 0
+                            unmapped.append(frag_name)
+                        loaded_fragments.append((frag_name, frag_img, draw_order))
+
+                    return _build_render_result(
+                        model_name,
+                        loaded_fragments,
+                        fragment_to_region,
+                        unmapped,
+                        resolution,
+                    )
+
         logger.warning("No fragment images found for model %s", model_name)
         return None
 
@@ -872,42 +1104,12 @@ def process_live2d_model(
         logger.error("No fragment images could be loaded for model %s", model_name)
         return None
 
-    mapped_count = len(fragment_images_raw) - len(unmapped)
-    total_count = len(fragment_images_raw)
-    logger.info(
-        "Live2D mapping for %s: %d/%d mapped (%.0f%%), %d unmapped",
+    return _build_render_result(
         model_name,
-        mapped_count,
-        total_count,
-        (mapped_count / total_count * 100) if total_count else 0,
-        len(unmapped),
-    )
-    if unmapped:
-        logger.warning("Unmapped fragments in %s: %s", model_name, unmapped)
-
-    # Composite character
-    image, mask, draw_order_map = _composite_from_fragments(
-        loaded_fragments, fragment_to_region, resolution
-    )
-
-    # Extract per-region RGBA layers
-    region_layers = extract_region_layers(loaded_fragments, fragment_to_region, resolution)
-
-    # Extract joints from mask centroids
-    joint_data = _extract_joints_from_mask(mask, resolution)
-
-    char_id = f"live2d_{model_name}"
-
-    return Live2DRenderResult(
-        char_id=char_id,
-        image=image,
-        mask=mask,
-        draw_order_map=draw_order_map,
-        joint_data=joint_data,
-        fragment_count=total_count,
-        mapped_count=mapped_count,
-        unmapped_fragments=unmapped,
-        region_layers=region_layers if region_layers else None,
+        loaded_fragments,
+        fragment_to_region,
+        unmapped,
+        resolution,
     )
 
 

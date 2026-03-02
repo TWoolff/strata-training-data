@@ -908,6 +908,30 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     # --- Torso / body (general — after specific regions and accessories) ---
     (r"body|torso|karada|chest|mune|bust", "chest"),
     (r"spine|senaka|back(?!ground)", "spine"),
+    # --- Chinese body-part names (CDI display names from CNbysec/Live2d-Model) ---
+    (r"眼|瞳|眉|嘴|唇|鼻|耳|发|刘海|前髪|脸|颊|面|头", "head"),
+    (r"脖|颈", "neck"),
+    (r"肩.*左|左.*肩", "shoulder_l"),
+    (r"肩.*右|右.*肩", "shoulder_r"),
+    (r"前臂.*左|左.*前臂|小臂.*左|左.*小臂", "lower_arm_l"),
+    (r"大臂.*左|左.*大臂|上臂.*左|左.*上臂", "upper_arm_l"),
+    (r"手.*左|左.*手", "hand_l"),
+    (r"前臂.*右|右.*前臂|小臂.*右|右.*小臂", "lower_arm_r"),
+    (r"大臂.*右|右.*大臂|上臂.*右|右.*上臂", "upper_arm_r"),
+    (r"手.*右|右.*手", "hand_r"),
+    (r"小腿.*左|左.*小腿", "lower_leg_l"),
+    (r"大腿.*左|左.*大腿|腿.*左|左.*腿", "upper_leg_l"),
+    (r"脚.*左|左.*脚|足.*左|左.*足", "foot_l"),
+    (r"小腿.*右|右.*小腿", "lower_leg_r"),
+    (r"大腿.*右|右.*大腿|腿.*右|右.*腿", "upper_leg_r"),
+    (r"脚.*右|右.*脚|足.*右|右.*足", "foot_r"),
+    (r"臀|腰|裆|下半身", "hips"),
+    (r"裙|裤|帽|饰|带|结|装|甲|武|盾|弓|领|围巾|蝴蝶|氛围|光|特效|背景|道具", "background"),
+    (r"胸|上身|身体|躯干", "chest"),
+    (r"臂|腕", "chest"),  # unlateralized arm/wrist → chest fallback
+    (r"腿|脚|足", "hips"),  # unlateralized leg/foot → hips fallback
+    (r"肩", "chest"),  # unlateralized shoulder → chest fallback
+    (r"手", "chest"),  # unlateralized hand → chest fallback
 ]
 
 # ---------------------------------------------------------------------------
