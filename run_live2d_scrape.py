@@ -84,6 +84,7 @@ MANIFEST_COLUMNS = [
 
 MODEL_FILE_EXTENSIONS = {".moc3", ".model3.json"}
 TEXTURE_SUBDIRS = {"textures", "parts", "images"}
+CONTENTS_WALK_MAX_DEPTH = 3  # max directory depth for contents API fallback
 
 
 @dataclass
@@ -371,12 +372,124 @@ def check_license(repo: RepoInfo, *, strict: bool = False) -> bool:
     return True
 
 
+def _match_model_dirs_from_tree(
+    file_entries: list[tuple[str, str]],
+    repo_name: str,
+) -> list[str]:
+    """Given a flat list of (path, type) entries, find model directories.
+
+    A model directory contains .moc3 or .model3.json AND has .png files
+    in the same directory, a texture subdirectory, or the parent directory.
+
+    Args:
+        file_entries: List of (path, entry_type) tuples from the tree/contents API.
+        repo_name: Repo full_name for logging.
+
+    Returns:
+        Sorted list of directory paths containing qualifying models.
+    """
+    model_file_dirs: set[str] = set()
+    png_dirs: set[str] = set()
+
+    for path, entry_type in file_entries:
+        if entry_type != "blob":
+            continue
+
+        lower_path = path.lower()
+        if lower_path.endswith(".moc3") or lower_path.endswith(".model3.json"):
+            model_file_dirs.add(str(Path(path).parent))
+        if lower_path.endswith(".png"):
+            png_dirs.add(str(Path(path).parent))
+
+    model_dirs: list[str] = []
+    for model_dir in sorted(model_file_dirs):
+        has_textures = model_dir in png_dirs
+        if not has_textures:
+            for subdir_name in TEXTURE_SUBDIRS:
+                candidate = f"{model_dir}/{subdir_name}" if model_dir != "." else subdir_name
+                if candidate in png_dirs:
+                    has_textures = True
+                    break
+        if not has_textures and "/" in model_dir:
+            parent = str(Path(model_dir).parent)
+            if parent in png_dirs:
+                has_textures = True
+
+        if has_textures:
+            model_dirs.append(model_dir)
+        else:
+            logger.debug(
+                "  %s: model files in %s but no textures found nearby",
+                repo_name,
+                model_dir,
+            )
+
+    return model_dirs
+
+
+def _walk_contents_api(
+    repo: RepoInfo,
+    dir_path: str = "",
+    depth: int = 0,
+) -> list[tuple[str, str]]:
+    """Walk a repo using the Contents API (breadth-first, depth-limited).
+
+    Fallback for repos where the Git Trees API returns empty/truncated results.
+    Makes one API call per directory level.
+
+    Args:
+        repo: Repository to walk.
+        dir_path: Directory path relative to repo root (empty string = root).
+        depth: Current recursion depth.
+
+    Returns:
+        List of (path, "blob"|"tree") entries found.
+    """
+    if depth > CONTENTS_WALK_MAX_DEPTH:
+        return []
+
+    api_path = (
+        f"repos/{repo.full_name}/contents/{dir_path}"
+        if dir_path
+        else f"repos/{repo.full_name}/contents/"
+    )
+    try:
+        result = _run_gh(["api", api_path])
+        items = json.loads(result.stdout)
+        time.sleep(CORE_API_DELAY_S)
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        logger.debug("  Contents API failed for %s/%s: %s", repo.full_name, dir_path, e)
+        return []
+
+    if not isinstance(items, list):
+        return []
+
+    entries: list[tuple[str, str]] = []
+    subdirs: list[str] = []
+
+    for item in items:
+        item_type = item.get("type", "")
+        item_path = item.get("path", "")
+
+        if item_type == "file":
+            entries.append((item_path, "blob"))
+        elif item_type == "dir":
+            entries.append((item_path, "tree"))
+            subdirs.append(item_path)
+
+    # Recurse into subdirectories
+    for subdir in subdirs:
+        entries.extend(_walk_contents_api(repo, subdir, depth + 1))
+
+    return entries
+
+
 def find_model_dirs(repo: RepoInfo) -> list[str]:
     """Fetch the repo's file tree and identify directories containing Live2D models.
 
-    A model directory is one that contains:
-    - A .moc3 or .model3.json file, AND
-    - .png files in the same directory or in textures/parts/images/ subdirectories.
+    Tries the Git Trees API first (single call, fast). If the tree is empty or
+    truncated (common for repos >100MB), falls back to the Contents API which
+    walks directories breadth-first up to CONTENTS_WALK_MAX_DEPTH levels.
 
     Args:
         repo: Repository to inspect.
@@ -384,6 +497,10 @@ def find_model_dirs(repo: RepoInfo) -> list[str]:
     Returns:
         List of directory paths (relative to repo root) containing models.
     """
+    # Try Git Trees API first (fast, single call)
+    tree_entries: list[tuple[str, str]] = []
+    use_fallback = False
+
     try:
         result = _run_gh(
             [
@@ -394,63 +511,25 @@ def find_model_dirs(repo: RepoInfo) -> list[str]:
             ]
         )
         data = json.loads(result.stdout)
-        tree = data.get("tree", [])
+        raw_tree = data.get("tree", [])
         time.sleep(CORE_API_DELAY_S)
-    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-        logger.warning("Failed to fetch tree for %s: %s", repo.full_name, e)
+
+        if not raw_tree or data.get("truncated"):
+            use_fallback = True
+        else:
+            tree_entries = [(e.get("path", ""), e.get("type", "")) for e in raw_tree]
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        use_fallback = True
+
+    # Fallback: Contents API walk for large/truncated repos
+    if use_fallback:
+        logger.info("  %s: tree API empty/truncated, using contents API walk", repo.full_name)
+        tree_entries = _walk_contents_api(repo)
+
+    if not tree_entries:
         return []
 
-    if data.get("truncated"):
-        logger.warning(
-            "  %s: tree truncated (repo too large), may miss some models", repo.full_name
-        )
-
-    # Build sets of paths by type
-    model_file_dirs: set[str] = set()
-    png_dirs: set[str] = set()
-
-    for entry in tree:
-        path = entry.get("path", "")
-        if entry.get("type") != "blob":
-            continue
-
-        lower_path = path.lower()
-
-        # Check for model files
-        if lower_path.endswith(".moc3") or lower_path.endswith(".model3.json"):
-            parent = str(Path(path).parent)
-            model_file_dirs.add(parent)
-
-        # Check for PNG textures
-        if lower_path.endswith(".png"):
-            parent = str(Path(path).parent)
-            png_dirs.add(parent)
-
-    # A model directory has model files AND nearby PNGs
-    model_dirs: list[str] = []
-    for model_dir in sorted(model_file_dirs):
-        # Check if PNGs exist in the same dir or in texture subdirectories
-        has_textures = model_dir in png_dirs
-        if not has_textures:
-            for subdir_name in TEXTURE_SUBDIRS:
-                candidate = f"{model_dir}/{subdir_name}" if model_dir != "." else subdir_name
-                if candidate in png_dirs:
-                    has_textures = True
-                    break
-        # Also check parent dir for PNGs (some repos put model + textures in parent)
-        if not has_textures and "/" in model_dir:
-            parent = str(Path(model_dir).parent)
-            if parent in png_dirs:
-                has_textures = True
-
-        if has_textures:
-            model_dirs.append(model_dir)
-        else:
-            logger.debug(
-                "  %s: model files in %s but no textures found nearby", repo.full_name, model_dir
-            )
-
-    return model_dirs
+    return _match_model_dirs_from_tree(tree_entries, repo.full_name)
 
 
 def _count_pngs(directory: Path) -> int:
