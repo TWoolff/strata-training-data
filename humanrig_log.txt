@@ -89,3 +89,67 @@ INFO ingest.humanrig_adapter: Processed 8200/11434 samples (71.7%) — 32800 exa
 INFO ingest.humanrig_adapter: Processed 8300/11434 samples (72.6%) — 33200 examples saved so far
 INFO ingest.humanrig_adapter: Processed 8400/11434 samples (73.5%) — 33600 examples saved so far
 INFO ingest.humanrig_adapter: Processed 8500/11434 samples (74.3%) — 34000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 8600/11434 samples (75.2%) — 34400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 8700/11434 samples (76.1%) — 34800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 8800/11434 samples (77.0%) — 35200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 8900/11434 samples (77.8%) — 35600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9000/11434 samples (78.7%) — 36000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9100/11434 samples (79.6%) — 36400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9200/11434 samples (80.5%) — 36800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9300/11434 samples (81.3%) — 37200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9400/11434 samples (82.2%) — 37600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9500/11434 samples (83.1%) — 38000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9600/11434 samples (84.0%) — 38400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9700/11434 samples (84.8%) — 38800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9800/11434 samples (85.7%) — 39200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 9900/11434 samples (86.6%) — 39600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10000/11434 samples (87.5%) — 40000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10100/11434 samples (88.3%) — 40400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10200/11434 samples (89.2%) — 40800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10300/11434 samples (90.1%) — 41200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10400/11434 samples (91.0%) — 41600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10500/11434 samples (91.8%) — 42000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10600/11434 samples (92.7%) — 42400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10700/11434 samples (93.6%) — 42800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10800/11434 samples (94.5%) — 43200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 10900/11434 samples (95.3%) — 43600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11000/11434 samples (96.2%) — 44000 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11100/11434 samples (97.1%) — 44400 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11200/11434 samples (98.0%) — 44800 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11300/11434 samples (98.8%) — 45200 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11400/11434 samples (99.7%) — 45600 examples saved so far
+INFO ingest.humanrig_adapter: Processed 11434/11434 samples (100.0%) — 45736 examples saved so far
+INFO ingest.humanrig_adapter: HumanRig conversion complete: 45736 examples saved, 0 skipped, 0 errors
+
+HumanRig ingestion complete:
+  Examples produced: 45736
+  Examples skipped:  0
+  Errors:            0
+  Angles per sample: 4
+  Output directory:  output/humanrig
+  Elapsed:           1101.5s
+
+    Free disk after ingest: 80Gi
+
+=== Phase 2: Upload to bucket ===
+    Uploading humanrig (102907 files, 1.3G)...
+    Upload complete.
+
+=== Done at Mon Mar  2 20:27:09 CET 2026 ===
+    Total runtime: 81 minutes
+    Free disk: 76Gi
+
+=== Bucket contents ===
+                           PRE animation/
+                           PRE anime_seg/
+                           PRE animerun/
+                           PRE animerun_correspondence/
+                           PRE animerun_flow/
+                           PRE animerun_linearea/
+                           PRE animerun_segment/
+                           PRE fbanimehq/
+                           PRE humanrig/
+                           PRE ingest/
+                           PRE live2d/
+                           PRE segmentation/
+                           PRE unirig/

@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Ingest HumanRig dataset (11,434 samples × 4 angles) and upload to Hetzner bucket.
+# Render additional camera angles for HumanRig and upload to Hetzner bucket.
 #
-# Pipeline:
-#   Phase 1 (~13 min)  — Pure Python: resize front.png to 512px, project joints
-#                        for all 4 angles, write joints.json + metadata.json.
-#   Phase 2 (~6 hours) — Blender Cycles: render three_quarter, side, back views
-#                        as RGBA PNGs and fill in image.png for those angles.
-#   Phase 3 (~2 min)   — Upload ./output/humanrig/ to S3 bucket.
+# Run this after run_ingest.py (Phase 1) has already completed.
+# It renders three_quarter, side, and back views via Blender Cycles
+# for all samples that don't already have image.png, then syncs to S3.
 #
 # Usage:
-#   caffeinate -dims bash run_humanrig.sh 2>&1 | tee humanrig_log.txt
+#   caffeinate -dims bash run_humanrig_blender.sh 2>&1 | tee humanrig_render_log.txt
 
 set -uo pipefail
 cd "$(dirname "$0")"
@@ -25,7 +22,7 @@ OUTPUT_DIR="./output/humanrig"
 BLENDER="/Applications/Blender.app/Contents/MacOS/Blender"
 
 START_TIME=$(date +%s)
-echo "=== HumanRig pipeline started at $(date) ==="
+echo "=== HumanRig Blender render started at $(date) ==="
 echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 echo ""
 
@@ -44,34 +41,16 @@ if [ ! -f "$BLENDER" ]; then
     exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Phase 1: Pure-Python ingest
-#   - Resizes front.png 1024→512
-#   - Projects joints for all 4 angles (front, three_quarter, side, back)
-#   - Writes joints.json + metadata.json per example directory
-# ---------------------------------------------------------------------------
-echo "=== Phase 1: Python ingest ==="
-python3 run_ingest.py \
-    --adapter humanrig \
-    --input_dir "$HUMANRIG_INPUT" \
-    --output_dir "$OUTPUT_DIR" \
-    --angles front,three_quarter,side,back \
-    --only_new \
-    || { echo "ERROR: Python ingest failed"; exit 1; }
-
-PHASE1_END=$(date +%s)
-echo "    Phase 1 complete. Elapsed: $(( (PHASE1_END - START_TIME) / 60 )) min"
-echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
-echo ""
+if [ ! -d "$OUTPUT_DIR" ]; then
+    echo "ERROR: Output directory not found at $OUTPUT_DIR"
+    echo "       Run Phase 1 first: python3 run_ingest.py --adapter humanrig ..."
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
-# Phase 2: Blender render
-#   - Imports rigged.glb for each sample
-#   - Renders three_quarter (45°), side (90°), back (180°) as RGBA PNGs
-#   - Writes image.png into the existing example directories
-#   - Updates has_rendered_image in metadata.json
+# Phase 1: Blender render (three_quarter, side, back)
 # ---------------------------------------------------------------------------
-echo "=== Phase 2: Blender render (three_quarter + side + back) ==="
+echo "=== Phase 1: Blender render (three_quarter + side + back) ==="
 "$BLENDER" --background --python run_humanrig_render.py -- \
     --input_dir "$HUMANRIG_INPUT" \
     --output_dir "$OUTPUT_DIR" \
@@ -79,15 +58,15 @@ echo "=== Phase 2: Blender render (three_quarter + side + back) ==="
     --only_new \
     || { echo "ERROR: Blender render failed"; exit 1; }
 
-PHASE2_END=$(date +%s)
-echo "    Phase 2 complete. Elapsed: $(( (PHASE2_END - START_TIME) / 60 )) min"
+RENDER_END=$(date +%s)
+echo "    Render complete. Elapsed: $(( (RENDER_END - START_TIME) / 60 )) min"
 echo "    Free disk: $(df -h . | tail -1 | awk '{print $4}')"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Phase 3: Upload to Hetzner bucket
+# Phase 2: Upload to Hetzner bucket
 # ---------------------------------------------------------------------------
-echo "=== Phase 3: Upload to bucket ==="
+echo "=== Phase 2: Upload to bucket ==="
 file_count=$(find "$OUTPUT_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
 size=$(du -sh "$OUTPUT_DIR" 2>/dev/null | cut -f1)
 echo "    Uploading humanrig ($file_count files, $size)..."
