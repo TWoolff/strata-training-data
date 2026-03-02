@@ -262,6 +262,7 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "L_thigh": 14,
     "l_thigh": 14,
     "LeftUpLeg": 14,
+    "J_Bip_L_UpperLeg": 14,
     "shin.L": 15,
     "Shin.L": 15,
     "lower_leg.L": 15,
@@ -269,6 +270,7 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "L_calf": 15,
     "l_calf": 15,
     "LeftLeg": 15,
+    "J_Bip_L_LowerLeg": 15,
     "foot.L": 16,
     "Foot.L": 16,
     "L_foot": 16,
@@ -276,6 +278,8 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "LeftFoot": 16,
     "toe.L": 16,
     "LeftToeBase": 16,
+    "J_Bip_L_Foot": 16,
+    "J_Bip_L_ToeBase": 16,
     # --- Right leg ---
     "thigh.R": 17,
     "Thigh.R": 17,
@@ -283,6 +287,7 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "R_thigh": 17,
     "r_thigh": 17,
     "RightUpLeg": 17,
+    "J_Bip_R_UpperLeg": 17,
     "shin.R": 18,
     "Shin.R": 18,
     "lower_leg.R": 18,
@@ -290,6 +295,7 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "R_calf": 18,
     "r_calf": 18,
     "RightLeg": 18,
+    "J_Bip_R_LowerLeg": 18,
     "foot.R": 19,
     "Foot.R": 19,
     "R_foot": 19,
@@ -297,6 +303,8 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "RightFoot": 19,
     "toe.R": 19,
     "RightToeBase": 19,
+    "J_Bip_R_Foot": 19,
+    "J_Bip_R_ToeBase": 19,
 }
 
 # ---------------------------------------------------------------------------

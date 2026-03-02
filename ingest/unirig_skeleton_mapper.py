@@ -74,10 +74,10 @@ _REQUIRED_REGIONS = frozenset(
         1,  # head
         3,  # chest
         5,  # hips
-        6,  # upper_arm_l
-        9,  # upper_arm_r
-        12,  # upper_leg_l
-        15,  # upper_leg_r
+        7,  # upper_arm_l
+        11,  # upper_arm_r
+        14,  # upper_leg_l
+        17,  # upper_leg_r
     }
 )
 
@@ -328,8 +328,8 @@ def validate_skeleton(mapping: CharacterSkeletonMapping) -> SkeletonValidation:
     validation = SkeletonValidation()
     validation.has_root = 5 in mapped_regions  # hips
     validation.has_head = 1 in mapped_regions
-    validation.has_symmetric_arms = 6 in mapped_regions and 9 in mapped_regions
-    validation.has_symmetric_legs = 12 in mapped_regions and 15 in mapped_regions
+    validation.has_symmetric_arms = 7 in mapped_regions and 11 in mapped_regions
+    validation.has_symmetric_legs = 14 in mapped_regions and 17 in mapped_regions
     validation.has_limbs = validation.has_symmetric_arms and validation.has_symmetric_legs
 
     missing = _REQUIRED_REGIONS - mapped_regions

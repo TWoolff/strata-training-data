@@ -406,23 +406,40 @@ def _run_anime_instance_seg(args: argparse.Namespace) -> int:
 
 
 def _run_unirig(args: argparse.Namespace) -> int:
-    """Run the UniRig / Rig-XL adapter."""
-    from ingest.unirig_adapter import convert_directory
+    """Run the UniRig / Rig-XL adapter via Blender.
 
-    max_ex = args.max_images if args.max_images > 0 else None
+    The UniRig adapter requires Blender for mesh import and rendering.
+    This function re-launches itself inside Blender's Python runtime.
+    """
+    import shutil
+    import subprocess
 
-    stats = convert_directory(
-        args.input_dir,
-        args.output_dir,
-        max_examples=max_ex,
-        only_new=args.only_new,
-    )
+    blender = shutil.which("blender") or "/Applications/Blender.app/Contents/MacOS/Blender"
+    if not Path(blender).is_file():
+        print("ERROR: Blender not found. Install Blender or set it on PATH.")
+        print("  Expected: blender (on PATH) or /Applications/Blender.app/Contents/MacOS/Blender")
+        return 1
 
-    print("\nUniRig ingestion complete:")
-    print(f"  {stats.summary()}")
-    print(f"  Output directory: {args.output_dir}")
+    script = Path(__file__).resolve().parent / "run_unirig.py"
+    if not script.is_file():
+        print(f"ERROR: Blender entry-point script not found: {script}")
+        return 1
 
-    return 0 if stats.converted > 0 or stats.skipped > 0 else 1
+    cmd = [
+        blender,
+        "--background",
+        "--python", str(script),
+        "--",
+        "--input_dir", str(args.input_dir),
+        "--output_dir", str(args.output_dir),
+        "--max_images", str(args.max_images),
+    ]
+    if args.only_new:
+        cmd.append("--only_new")
+
+    print(f"Launching Blender: {' '.join(cmd)}")
+    result = subprocess.run(cmd, check=False)
+    return result.returncode
 
 
 _ADAPTERS = {

@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +44,21 @@ logger = logging.getLogger(__name__)
 
 UNIRIG_SOURCE = "unirig"
 STRATA_RESOLUTION = 512
+
+
+def _eevee_engine() -> str:
+    """Return the correct EEVEE engine enum for this Blender version.
+
+    Blender 4.2–4.4 used ``BLENDER_EEVEE_NEXT``; Blender 5.0+ renamed it
+    back to ``BLENDER_EEVEE``.
+    """
+    import bpy
+
+    try:
+        bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
+        return "BLENDER_EEVEE_NEXT"
+    except TypeError:
+        return "BLENDER_EEVEE"
 
 # Humanoid filter: minimum fraction of vertices assigned to a known region.
 # Non-humanoids (quadrupeds, objects) typically fail this threshold.
@@ -167,8 +182,10 @@ def _import_npz_to_blender(fields: dict, name: str) -> tuple | None:
         (mesh_obj, armature_obj) tuple or None on failure.
     """
     try:
-        import bpy
+        import contextlib
+
         import bmesh
+        import bpy
 
         vertices = fields["vertices"].astype(np.float32)
         faces = fields["faces"].astype(np.int32)
@@ -184,10 +201,8 @@ def _import_npz_to_blender(fields: dict, name: str) -> tuple | None:
             bm.verts.new(v.tolist())
         bm.verts.ensure_lookup_table()
         for f in faces:
-            try:
+            with contextlib.suppress(Exception):
                 bm.faces.new([bm.verts[int(i)] for i in f])
-            except Exception:
-                pass  # Skip degenerate faces
         bm.to_mesh(mesh)
         bm.free()
         mesh.update()
@@ -215,8 +230,6 @@ def _assign_region_vertex_colors(
         bone_to_region: Bone index → Strata region ID.
         region_colors: Region ID → (R, G, B) tuple (0–255 ints).
     """
-    import bpy
-
     mesh = obj.data
     skin = fields["skin"].astype(np.float32)  # (N, J)
     dominant_bone = np.argmax(skin, axis=1)  # (N,)
@@ -307,7 +320,7 @@ def _render_segmentation(output_path: Path, resolution: int) -> bool:
         import bpy
 
         scene = bpy.context.scene
-        scene.render.engine = "BLENDER_EEVEE_NEXT"
+        scene.render.engine = _eevee_engine()
         scene.render.resolution_x = resolution
         scene.render.resolution_y = resolution
         scene.render.film_transparent = True
@@ -382,7 +395,7 @@ def _convert_one(
     Returns:
         "converted", "skipped", or "error".
     """
-    from ingest.unirig_skeleton_mapper import map_skeleton, validate_skeleton
+    from ingest.unirig_skeleton_mapper import map_skeleton
 
     character_id = npz_path.parent.name  # e.g. "00000"
     example_base = output_dir / character_id
@@ -395,7 +408,6 @@ def _convert_one(
         return "error"
 
     names = [str(n) for n in fields["names"]]
-    skin = fields["skin"].astype(np.float32)  # (N, J)
     n_joints = len(names)
 
     # Map bones to Strata regions
@@ -511,7 +523,7 @@ def _render_color(output_path: Path, resolution: int) -> bool:
         import bpy
 
         scene = bpy.context.scene
-        scene.render.engine = "BLENDER_EEVEE_NEXT"
+        scene.render.engine = _eevee_engine()
         scene.render.resolution_x = resolution
         scene.render.resolution_y = resolution
         scene.render.film_transparent = True
