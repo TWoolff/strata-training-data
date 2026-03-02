@@ -79,11 +79,14 @@ CMU_TO_STRATA: dict[str, str] = {
     "RightFoot": "foot_r",
 }
 
-# Bones that should never produce "unmapped" warnings (End Sites, fingers, toes)
+# Bones that should never produce "unmapped" warnings (End Sites, fingers, toes,
+# hip connectors).  Checked with endswith() so "LThumb" matches "Thumb".
 _SILENTLY_IGNORED_SUFFIXES: tuple[str, ...] = (
     "_End",
-    "Thumb", "Index", "Middle", "Ring", "Pinky",
+    "Thumb", "Index", "Index1", "Middle", "Ring", "Pinky",
     "ToeBase", "Toe_End", "Toe",
+    "FingerBase",
+    "HipJoint",
 )
 
 
@@ -133,33 +136,54 @@ class RetargetedAnimation:
 def _resolve_spine_mapping(skeleton: BVHSkeleton) -> dict[str, str]:
     """Determine the correct spine bone mapping for this skeleton.
 
-    CMU skeletons may have Spine, Spine1, Spine2 — or just Spine.
-    Rules:
-        - If Spine1 + Spine2 exist: Spine1→spine, Spine2→chest, Spine→ignored
-        - If only Spine1 exists (no Spine2): Spine1→spine
-        - If only Spine exists (no Spine1/Spine2): Spine→spine
+    CMU skeletons have varying spine chains.  The two common layouts:
+
+    Layout A (cgspeed BVH conversion):
+        Hips → LowerBack → Spine → Spine1 → Neck
+        Maps: LowerBack→spine, Spine1→chest, Spine→ignored
+
+    Layout B (generic/Mixamo-like):
+        Hips → Spine → Spine1 → Spine2 → Neck
+        Maps: Spine1→spine, Spine2→chest, Spine→ignored
+
+    Fallbacks:
+        - Only Spine1 (no Spine2, no LowerBack): Spine1→spine
+        - Only Spine (no Spine1): Spine→spine
 
     Args:
         skeleton: Parsed BVH skeleton.
 
     Returns:
-        Mapping of CMU spine bone names to Strata bone names.
+        Mapping of spine bone names to Strata bone names.
     """
     joint_names = set(skeleton.joints.keys())
     mapping: dict[str, str] = {}
 
+    has_lower_back = "LowerBack" in joint_names
     has_spine = "Spine" in joint_names
     has_spine1 = "Spine1" in joint_names
     has_spine2 = "Spine2" in joint_names
 
-    if has_spine1 and has_spine2:
-        # Full CMU spine chain: ignore Spine, use Spine1→spine, Spine2→chest
+    if has_lower_back and has_spine1:
+        # Layout A: LowerBack → Spine → Spine1 → Neck
+        mapping["LowerBack"] = "spine"
+        mapping["Spine1"] = "chest"
+        # Spine is mid-chain, ignored (subsumed by LowerBack + Spine1)
+        logger.debug(
+            "CMU spine layout A: LowerBack→spine, Spine1→chest, Spine ignored"
+        )
+    elif has_lower_back and has_spine:
+        # LowerBack + Spine but no Spine1
+        mapping["LowerBack"] = "spine"
+        mapping["Spine"] = "chest"
+        logger.debug("CMU spine: LowerBack→spine, Spine→chest")
+    elif has_spine1 and has_spine2:
+        # Layout B: Spine → Spine1 → Spine2 → Neck
         mapping["Spine1"] = "spine"
         mapping["Spine2"] = "chest"
-        if has_spine:
-            logger.debug(
-                "Multi-spine collapse: Spine ignored, Spine1→spine, Spine2→chest"
-            )
+        logger.debug(
+            "Multi-spine collapse: Spine ignored, Spine1→spine, Spine2→chest"
+        )
     elif has_spine1:
         mapping["Spine1"] = "spine"
     elif has_spine:
@@ -217,11 +241,11 @@ def _build_bone_map(skeleton: BVHSkeleton) -> tuple[dict[str, str], list[str]]:
             mapped[joint_name] = spine_overrides[joint_name]
             continue
 
-        # Skip Spine if it was collapsed (Spine1/Spine2 took over)
+        # Skip Spine if it was collapsed (LowerBack or Spine1/Spine2 took over)
         if (
             joint_name == "Spine"
             and "Spine" not in spine_overrides
-            and "Spine1" in skeleton.joints
+            and ("Spine1" in skeleton.joints or "LowerBack" in skeleton.joints)
         ):
             logger.debug("Spine ignored due to multi-spine collapse")
             continue
@@ -406,13 +430,22 @@ def check_strata_compatibility(
     bone_map, unmapped = _build_bone_map(bvh.skeleton)
     mapped_names = set(bone_map.keys())
 
-    # Collect ALL non-Strata bones (including silently-ignored fingers/toes)
+    # Collect non-Strata bones, excluding silently-ignored ones (fingers, toes,
+    # hip connectors) and mid-chain spine bones that were collapsed.
     non_strata: list[str] = list(unmapped)
     seen = set(non_strata)
     for joint_name in bvh.skeleton.joint_order:
         if joint_name in mapped_names or joint_name in seen:
             continue
         if not bvh.skeleton.joints[joint_name].channels:
+            continue
+        if any(joint_name.endswith(suffix) for suffix in _SILENTLY_IGNORED_SUFFIXES):
+            continue
+        # Skip mid-chain Spine when collapsed by LowerBack or Spine1/Spine2
+        if (
+            joint_name == "Spine"
+            and ("Spine1" in bvh.skeleton.joints or "LowerBack" in bvh.skeleton.joints)
+        ):
             continue
         non_strata.append(joint_name)
         seen.add(joint_name)
