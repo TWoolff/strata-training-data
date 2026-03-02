@@ -48,3 +48,12 @@
 
 ## Open Questions
 - None — the issue spec is very detailed with exact tensor contracts
+
+## Implementation Notes
+- **JointModel**: MobileNetV3-Large features → AdaptiveAvgPool → 3 FC heads (offsets, confidence, presence). Confidence uses sigmoid; presence outputs raw logits for BCEWithLogitsLoss during training.
+- **WeightModel**: DeepLabV3+ MobileNetV3-Large backbone (same as segmentation) → 2 conv heads for bone weights (softmax over bones dim) and confidence (sigmoid).
+- **WeightWrapper reshaping**: The weight model outputs `[B, 20, H, W]` per-pixel predictions. The wrapper reshapes to `[B, 20, H*W, 1]` to match the Rust runtime's vertex-indexed tensor layout. For 512×512 input, N=262144 (dynamic axis allows other resolutions).
+- **JointWrapper squeeze**: Batch dimension is squeezed to match Rust's flat `[40]`, `[20]`, `[20]` tensor contract.
+- **Lazy imports**: `onnx` and `onnxruntime` are imported inside functions (not at module level) so wrapper classes and model configs can be imported without ONNX deps installed. This allows unit tests for wrappers/models to run even without `onnxscript`.
+- **Test skip strategy**: Tests split into two tiers — model/wrapper tests need only torch+torchvision; end-to-end export tests additionally need onnx+onnxruntime+onnxscript. The `onnxscript` dep is required by newer PyTorch's `torch.onnx.export()`.
+- **Pre-existing failures**: 2 tests in `test_segmentation_dataset.py` fail (per-example layout detection) — unrelated to this PR.
