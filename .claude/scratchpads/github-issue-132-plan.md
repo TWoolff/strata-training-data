@@ -107,3 +107,13 @@ All acceptance criteria from the issue have been addressed:
 - **ONNX model name**: `weights_vertex` in MODEL_CONFIGS to distinguish from the image-based `weights` model
 - **Loss function**: KL divergence (not CrossEntropy) because GT labels are soft distributions, and KL is the natural divergence measure between probability distributions
 - **No augmentation**: Per-vertex data doesn't benefit from image augmentations (no color jitter, flipping, etc.)
+
+### Code simplifier pass
+
+Applied simplifications (commit `db99b5a`):
+- Removed unused `re` import and `_STYLE_SUFFIXES` regex constant from `weight_dataset.py`
+- Hoisted `PIPELINE_TO_BONE` import to top-level (was deferred inside `_parse_joint_positions()`)
+- Removed unused `_img_w, _img_h` unpacking in `build_features()`
+- Simplified `bone_positions` construction from 5-line loop to 1-line list comprehension
+- Added `weights_vertex` example to `export_onnx.py` usage docstring
+- `weight_prediction_model.py`, `train_weights.py`, and `metrics.py` were already clean — no changes needed
