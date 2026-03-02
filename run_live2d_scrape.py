@@ -6,10 +6,10 @@ and organizes them into data/live2d/NNN/ directories.
 
 The directory naming uses plain numeric IDs (001, 002, ...) because the downstream
 Live2D renderer (pipeline/live2d_renderer.py) prepends "live2d_" to the directory
-name when constructing char_id. So directory "001" → char_id "live2d_001".
+name when constructing char_id. So directory "001" becomes char_id "live2d_001".
 
 Usage:
-    # Dry run — search and report without downloading
+    # Dry run -- search and report without downloading
     python run_live2d_scrape.py --dry_run
 
     # Download up to 50 models
@@ -127,7 +127,7 @@ def _run_gh(args: list[str], *, retries: int = MAX_RETRIES) -> subprocess.Comple
             time.sleep(wait)
             continue
 
-        # Non-rate-limit error — fail immediately
+        # Non-rate-limit error -- fail immediately
         result.check_returncode()
 
     # All retries exhausted
