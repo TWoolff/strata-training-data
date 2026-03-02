@@ -9,6 +9,7 @@ Usage::
     python training/export_onnx.py --model segmentation --checkpoint best.pt --output seg.onnx
     python training/export_onnx.py --model joints --checkpoint best.pt --output joints.onnx
     python training/export_onnx.py --model weights --checkpoint best.pt --output weights.onnx
+    python training/export_onnx.py --model weights_vertex --checkpoint best.pt --output wv.onnx
     python training/export_onnx.py --all --output-dir ./models/
 
 ONNX contracts (must match Rust runtime exactly):

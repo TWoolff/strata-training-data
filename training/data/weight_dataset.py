@@ -35,14 +35,13 @@ from __future__ import annotations
 import json
 import logging
 import math
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 from training.data.split_loader import character_id_from_example, load_or_generate_splits
-from training.data.transforms import BONE_ORDER, BONE_TO_INDEX
+from training.data.transforms import BONE_ORDER, BONE_TO_INDEX, PIPELINE_TO_BONE
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +52,6 @@ logger = logging.getLogger(__name__)
 MAX_VERTICES: int = 2048
 NUM_BONES: int = 20
 NUM_FEATURES: int = 31
-
-# Regex to strip style suffix from flat-layout filenames.
-_STYLE_SUFFIXES = re.compile(r"_(flat|cel|pixel|painterly|sketch|unlit)$")
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +178,6 @@ def _parse_joint_positions(
     data = json.loads(joints_path.read_text(encoding="utf-8"))
     joints_dict = data.get("joints", {})
 
-    from training.data.transforms import PIPELINE_TO_BONE
-
     positions: dict[str, tuple[float, float]] = {}
     for pipeline_name, joint_info in joints_dict.items():
         bone_name = PIPELINE_TO_BONE.get(pipeline_name, pipeline_name)
@@ -218,7 +212,6 @@ def build_features(
         - ``num_vertices``: actual vertex count before padding
     """
     n = min(len(vertices), max_vertices)
-    _img_w, _img_h = image_size
 
     features = np.zeros((NUM_FEATURES, max_vertices, 1), dtype=np.float32)
     weights_target = np.zeros((NUM_BONES, max_vertices), dtype=np.float32)
@@ -237,12 +230,7 @@ def build_features(
         range_x = range_y = 1.0
 
     # Precompute bone positions (in pixel coords)
-    bone_positions: list[tuple[float, float]] = []
-    for bone_name in BONE_ORDER:
-        if bone_name in joint_positions:
-            bone_positions.append(joint_positions[bone_name])
-        else:
-            bone_positions.append((0.0, 0.0))
+    bone_positions = [joint_positions.get(name, (0.0, 0.0)) for name in BONE_ORDER]
 
     # Max distance for normalization (bounding box diagonal)
     max_dist = max(math.sqrt(range_x**2 + range_y**2), 1.0)
