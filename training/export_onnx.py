@@ -63,7 +63,7 @@ class SegmentationWrapper(nn.Module):
 
 
 class JointWrapper(nn.Module):
-    """Wraps JointModel for ONNX export (dict → tuple, squeeze batch dim)."""
+    """Wraps JointModel for ONNX export (dict → tuple, flatten + squeeze batch dim)."""
 
     def __init__(self, model: JointModel) -> None:
         super().__init__()
@@ -71,8 +71,10 @@ class JointWrapper(nn.Module):
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         out = self.model(x)
-        # Squeeze batch dimension — Rust runtime expects flat tensors
-        return out["offsets"].squeeze(0), out["confidence"].squeeze(0), out["present"].squeeze(0)
+        # Flatten [B, 2, 20] → [B, 40] then squeeze batch → [40]
+        # Layout: first 20 = dx, next 20 = dy (matches Rust runtime)
+        offsets = out["offsets"].flatten(1).squeeze(0)
+        return offsets, out["confidence"].squeeze(0), out["present"].squeeze(0)
 
 
 class WeightWrapper(nn.Module):

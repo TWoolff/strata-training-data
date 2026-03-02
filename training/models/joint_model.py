@@ -5,9 +5,13 @@ from an RGB image input, using a MobileNetV3-Large backbone with regression head
 
 ONNX contract (from ``strata/src-tauri/src/ai/joints.rs``):
 - Input ``"input"``: ``[1, 3, 512, 512]`` float32
-- Output ``"offsets"``: ``[40]`` (20 joints × 2 xy offsets)
-- Output ``"confidence"``: ``[20]`` per-joint confidence
+- Output ``"offsets"``: ``[40]`` flat — first 20 = dx, next 20 = dy
+- Output ``"confidence"``: ``[20]`` per-joint confidence (raw logits)
 - Output ``"present"``: ``[20]`` joint visibility logits
+
+Offset layout is NOT interleaved ``[dx0,dy0,dx1,dy1,...]``. It is split:
+``[dx0,dx1,...,dx19,dy0,dy1,...,dy19]``. The model outputs ``[B, 2, 20]``
+which naturally produces this when flattened (channel 0 = all dx, channel 1 = all dy).
 """
 
 from __future__ import annotations
@@ -46,7 +50,7 @@ class JointModel(nn.Module):
         backbone_channels = self._detect_backbone_channels()
         logger.info("Joint model backbone channels: %d", backbone_channels)
 
-        # Offset head: predicts (x, y) for each joint → flat [num_joints * 2]
+        # Offset head: predicts [B, 2, 20] — channel 0 = dx, channel 1 = dy
         self.offset_head = nn.Sequential(
             nn.Linear(backbone_channels, 256),
             nn.ReLU(inplace=True),
@@ -54,12 +58,11 @@ class JointModel(nn.Module):
             nn.Linear(256, num_joints * 2),
         )
 
-        # Confidence head: per-joint confidence score
+        # Confidence head: per-joint confidence (raw logits, sigmoid at Rust inference)
         self.confidence_head = nn.Sequential(
             nn.Linear(backbone_channels, 128),
             nn.ReLU(inplace=True),
             nn.Linear(128, num_joints),
-            nn.Sigmoid(),
         )
 
         # Presence head: per-joint visibility logit
@@ -84,14 +87,16 @@ class JointModel(nn.Module):
             x: Input tensor ``[B, 3, H, W]``.
 
         Returns:
-            Dict with keys ``"offsets"`` ``[B, num_joints * 2]``,
+            Dict with keys ``"offsets"`` ``[B, 2, num_joints]``,
             ``"confidence"`` ``[B, num_joints]``,
             ``"present"`` ``[B, num_joints]``.
         """
         features = self.features(x)
         pooled = self.pool(features).flatten(1)  # [B, C]
 
-        offsets = self.offset_head(pooled)  # [B, num_joints * 2]
+        offsets_flat = self.offset_head(pooled)  # [B, num_joints * 2]
+        offsets = offsets_flat.view(-1, 2, self.num_joints)  # [B, 2, 20]
+
         confidence = self.confidence_head(pooled)  # [B, num_joints]
         present = self.presence_head(pooled)  # [B, num_joints]
 
