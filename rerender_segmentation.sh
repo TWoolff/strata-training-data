@@ -27,7 +27,7 @@ POSE_DIR="./data/poses"
 OUTPUT_DIR="./output/segmentation"
 RESOLUTION=512
 STYLES="flat"
-POSES_PER_CHARACTER=0
+POSES_PER_CHARACTER=50
 ANGLES="front"
 
 # ---------------------------------------------------------------------------
