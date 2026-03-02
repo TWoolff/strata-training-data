@@ -65,7 +65,7 @@
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
 | cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
 | vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
-| humanrig | 36 GB (zip) | Yes | Downloaded, extracting — `humanrig.zip` on external HD |
+| humanrig | 163 GB (extracted) | Yes | ✅ Downloaded + extracted — 11,434 samples in `data/54T/.../humanrig_opensource_final/` |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
@@ -413,15 +413,18 @@ These are already rendered, annotated, or both. Downloading and converting them 
 **Skeleton joint names (22 joints, Mixamo naming — maps directly to Strata):**
 `Hips, Spine, Spine1, Spine2, Neck, Head, LeftShoulder, LeftArm, LeftForeArm, LeftHand, RightShoulder, RightArm, RightForeArm, RightHand, LeftUpLeg, LeftLeg, LeftFoot, LeftToeBase, RightUpLeg, RightLeg, RightFoot, RightToeBase`
 
+**Extracted structure:** `data/54T/chuzedong/autorig/preprocess/humanrig_opensource_final/{id}/`
+Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `vertices.json`, `extrinsic.npy`, `intrinsics.npy`
+
 **Action items:**
 - [x] Download: `humanrig.zip` (36 GB) downloaded to `data/preprocessed/humanrig/` on external HD
-- [ ] Wait for extraction to complete (running in background)
-- [ ] Inspect extracted structure + verify content
+- [x] Extract: all 11,434 samples extracted (163 GB total)
 - [ ] Build `humanrig_skeleton_mapper.py` adapter (maps to Strata 22-bone hierarchy)
-- [ ] Ingest 2D images + joint positions as joint refinement training data (no rendering needed)
-- [ ] Optionally render 3D meshes with Blender for segmentation training images
+- [ ] Ingest 2D `front.png` + `bone_2d.json` as joint refinement training data (no rendering needed)
+- [ ] Ingest `rigged.glb` + skinning weights for weight prediction training
+- [ ] Optionally render additional poses/angles from 3D meshes for segmentation training
 
-**Status:** DOWNLOADING/EXTRACTING. 36 GB zip downloaded, extraction in progress. On external HD at `data/preprocessed/humanrig/`.
+**Status:** ✅ DOWNLOADED + EXTRACTED. 11,434 samples on external HD at `data/preprocessed/humanrig/`. Ready to build adapter.
 
 ---
 
@@ -803,7 +806,7 @@ These require downloading raw assets and running your own rendering pipeline.
 |--------|--------|--------|--------|
 | NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
-| HumanRig (PP-9) | 11,434 meshes + 2D images | 0 | DOWNLOADING — 36 GB zip on external HD, extracting |
+| HumanRig (PP-9) | 11,434 meshes + 2D images | 0 ingested | ✅ Downloaded + extracted (163 GB on external HD) — adapter needed |
 | Anymate (PP-10) | 230K assets (humanoid subset ~20-40K) | 0 | READY (pending license check) — HuggingFace via get_datasets.sh |
 | MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
 | AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | READY — clone + rake build or Docker |

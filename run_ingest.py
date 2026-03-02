@@ -68,6 +68,7 @@ def parse_args() -> argparse.Namespace:
             "animerun_linearea",
             "vroid_lite",
             "unirig",
+            "humanrig",
         ],
         help="Which dataset adapter to use.",
     )
@@ -119,6 +120,16 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Dataset split to process (e.g. 'train', 'val'). Used by anime_instance_seg.",
+    )
+    parser.add_argument(
+        "--angles",
+        type=str,
+        default=None,
+        help=(
+            "Comma-separated camera angles for multi-angle adapters (humanrig). "
+            "Options: front,three_quarter,side,back. "
+            "Default: all four angles."
+        ),
     )
 
     # --- Pose enrichment flags ---
@@ -442,6 +453,36 @@ def _run_unirig(args: argparse.Namespace) -> int:
     return result.returncode
 
 
+def _run_humanrig(args: argparse.Namespace) -> int:
+    """Run the HumanRig adapter."""
+    from ingest.humanrig_adapter import convert_directory
+
+    angles: list[str] | None = None
+    if args.angles:
+        angles = [a.strip() for a in args.angles.split(",") if a.strip()]
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+        angles=angles,
+    )
+
+    n_angles = len(angles) if angles else 4
+    print("\nHumanRig ingestion complete:")
+    print(f"  Examples produced: {result.images_processed}")
+    print(f"  Examples skipped:  {result.images_skipped}")
+    print(f"  Errors:            {len(result.errors)}")
+    print(f"  Angles per sample: {n_angles}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -454,6 +495,7 @@ _ADAPTERS = {
     "animerun_linearea": _run_animerun_linearea,
     "vroid_lite": _run_vroid_lite,
     "unirig": _run_unirig,
+    "humanrig": _run_humanrig,
 }
 
 
