@@ -1,0 +1,74 @@
+=== Overnight batch #5 started at Mon Mar  2 05:48:46 CET 2026 ===
+    Free disk: 93Gi
+
+    Zip size:  21G
+
+=== Phase 1: AnimeRun Correspondence (SegMatching + occlusion) ===
+    Free disk: 93Gi
+  Extracting SegMatching + UnmatchedForward + UnmatchedBackward + Frame_Anime...
+  Extracted. Free disk: 54Gi
+  Ingesting via animerun_correspondence adapter...
+INFO ingest.animerun_correspondence_adapter: Found 30 correspondence scenes in data/preprocessed/animerun/AnimeRun_v2
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_basement2_weapon_approach (train): 63 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor1_sitting (train): 178 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor3_headbutt (train): 72 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor4_dodges (train): 44 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor5_push_down (train): 49 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor6_push_button (train): 88 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_01_02_C (train): 30 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_01_02_aberry (train): 220 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_01_06_A (train): 81 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_02_01_A (train): 135 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_02_03_A (train): 24 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_02_04_A (train): 56 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_03_01_B (train): 92 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_06_03_A(renew_background) (train): 64 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_06_05_A(renew_background) (train): 88 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_09_03_A (train): 113 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_010_0020_A (train): 207 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_070_0010 (train): 57 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_130_0090_A (train): 43 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_140_0080_A (train): 36 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_basement1_descent (test): 137 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene agent_indoor2_fighting (test): 102 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_02_05_A (test): 50 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_03_01_A (test): 90 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_06_04_A (test): 75 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_07_01_A_part1 (test): 86 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_07_01_A_part2 (test): 105 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene cami_10_1_A (test): 240 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_050_0150_A (test): 79 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence scene sprite_080_0010_A (test): 85 saved, 0 skipped
+INFO ingest.animerun_correspondence_adapter: AnimeRun correspondence conversion complete: 30 scenes, 2789 pairs total
+
+AnimeRun correspondence ingestion complete:
+  Scenes processed: 30
+  Pairs saved:      2789
+  Pairs skipped:    0
+  Output directory:  output/animerun_correspondence
+  Elapsed:           274.2s
+  Cleaning up extracted data...
+  Cleaned. Free disk: 91Gi
+  Uploading animerun_correspondence (19493 files, 975M)...
+  Upload complete. Deleting local copy...
+  animerun_correspondence: uploaded and cleaned. Free disk: 92Gi
+  Deleting AnimeRun zip...
+  Free disk: 113Gi
+=== Phase 1 complete at Mon Mar  2 06:09:23 CET 2026 (20 min) ===
+
+
+=== All phases complete ===
+    Total runtime: 20 minutes (0h 20m)
+    Free disk: 113Gi
+
+=== Bucket contents ===
+                           PRE anime_seg/
+                           PRE animerun/
+                           PRE animerun_correspondence/
+                           PRE animerun_flow/
+                           PRE animerun_linearea/
+                           PRE animerun_segment/
+                           PRE fbanimehq/
+                           PRE segmentation/
+
+=== Done at Mon Mar  2 06:09:25 CET 2026 ===

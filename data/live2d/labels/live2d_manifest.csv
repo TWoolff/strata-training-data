@@ -1,0 +1,9 @@
+model_id,source,url,license,license_verified,fragment_count,notes
+live2d_001,1Natsume/live2d_model,https://github.com/1Natsume/live2d_model,,False,1,xinnong_5
+live2d_002,51hhh/51hhh.github.io,https://github.com/51hhh/51hhh.github.io,,False,1,live2d-model-xiaohei
+live2d_003,51hhh/51hhh.github.io,https://github.com/51hhh/51hhh.github.io,,False,0,live2d-model-xiaohei/表情
+live2d_004,Arisego/UnrealLive2D,https://github.com/Arisego/UnrealLive2D,MIT,True,0,Content/Samples/Haru
+live2d_005,Arisego/UnrealLive2D,https://github.com/Arisego/UnrealLive2D,MIT,True,0,Content/Samples/Hiyori
+live2d_006,Arisego/UnrealLive2D,https://github.com/Arisego/UnrealLive2D,MIT,True,0,Content/Samples/Mark
+live2d_007,Arisego/UnrealLive2D,https://github.com/Arisego/UnrealLive2D,MIT,True,0,Content/Samples/Natori
+live2d_008,Arisego/UnrealLive2D,https://github.com/Arisego/UnrealLive2D,MIT,True,0,Content/Samples/Rice
