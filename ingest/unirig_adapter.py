@@ -213,16 +213,18 @@ def _import_npz_to_blender(fields: dict, name: str) -> tuple | None:
         return None
 
 
-def _assign_region_vertex_colors(
+def _assign_region_materials(
     obj,
     fields: dict,
     bone_to_region: dict[int, int],
     region_colors: dict[int, tuple],
 ) -> None:
-    """Assign per-vertex region colors by dominant bone weight.
+    """Assign per-face emission materials by dominant bone weight.
 
-    Creates a vertex color layer 'strata_region' with the region color
-    for each vertex's dominant bone.
+    Creates one Emission material per region (keyed by name so they are
+    reused across meshes) and assigns each face to its dominant-bone
+    region's material slot.  This matches the main FBX pipeline approach
+    and produces clean, non-interpolated region boundaries.
 
     Args:
         obj: Blender mesh object.
@@ -230,32 +232,51 @@ def _assign_region_vertex_colors(
         bone_to_region: Bone index → Strata region ID.
         region_colors: Region ID → (R, G, B) tuple (0–255 ints).
     """
+    import bpy
+
     mesh = obj.data
     skin = fields["skin"].astype(np.float32)  # (N, J)
     dominant_bone = np.argmax(skin, axis=1)  # (N,)
 
-    # Map vertex index → region color (linear float)
-    def _to_linear(c: int) -> float:
-        return (c / 255.0) ** 2.2  # sRGB → linear approx
+    # Build or retrieve one Emission material per region ID
+    def _get_or_create_mat(region_id: int) -> bpy.types.Material:
+        mat_name = f"unirig_region_{region_id}"
+        mat = bpy.data.materials.get(mat_name)
+        if mat is None:
+            mat = bpy.data.materials.new(mat_name)
+            mat.use_nodes = True
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+            nodes.clear()
+            rgb = region_colors.get(region_id, (0, 0, 0))
+            emission = nodes.new("ShaderNodeEmission")
+            emission.inputs["Color"].default_value = (
+                rgb[0] / 255.0,
+                rgb[1] / 255.0,
+                rgb[2] / 255.0,
+                1.0,
+            )
+            emission.inputs["Strength"].default_value = 1.0
+            output = nodes.new("ShaderNodeOutputMaterial")
+            links.new(emission.outputs["Emission"], output.inputs["Surface"])
+        return mat
 
-    vertex_colors: list[tuple[float, float, float, float]] = []
-    for bone_idx in dominant_bone:
-        region_id = bone_to_region.get(int(bone_idx), 0)
-        rgb = region_colors.get(region_id, (0, 0, 0))
-        vertex_colors.append((
-            _to_linear(rgb[0]),
-            _to_linear(rgb[1]),
-            _to_linear(rgb[2]),
-            1.0,
-        ))
+    # Add all region materials as slots (slot index == region_id)
+    from pipeline.config import NUM_REGIONS
+    mesh.materials.clear()
+    for rid in range(NUM_REGIONS):
+        mesh.materials.append(_get_or_create_mat(rid))
 
-    # Apply per-loop (Blender vertex colors are per-loop, not per-vertex)
-    if not mesh.vertex_colors:
-        mesh.vertex_colors.new(name="strata_region")
-    vcol_layer = mesh.vertex_colors["strata_region"]
-
-    for loop in mesh.loops:
-        vcol_layer.data[loop.index].color = vertex_colors[loop.vertex_index]
+    # Assign each face to its dominant-bone region via majority vote
+    for polygon in mesh.polygons:
+        # Count region votes from all vertices of this face
+        from collections import Counter
+        votes: Counter[int] = Counter()
+        for vi in polygon.vertices:
+            bone_idx = int(dominant_bone[vi])
+            region_id = bone_to_region.get(bone_idx, 0)
+            votes[region_id] += 1
+        polygon.material_index = votes.most_common(1)[0][0]
 
 
 def _setup_orthographic_camera(obj, azimuth_deg: float = 0.0) -> None:
@@ -306,51 +327,89 @@ def _setup_orthographic_camera(obj, azimuth_deg: float = 0.0) -> None:
     bpy.context.scene.camera = cam_obj
 
 
-def _render_segmentation(output_path: Path, resolution: int) -> bool:
-    """Render a flat-shaded segmentation pass using vertex colors.
+def _render_segmentation(
+    output_path: Path,
+    resolution: int,
+    region_colors: dict[int, tuple],
+) -> bool:
+    """Render a flat segmentation pass and convert to grayscale region IDs.
+
+    Renders with emission materials (no lighting, no AA), then converts the
+    RGB color output to an 8-bit grayscale PNG where pixel value == region ID.
 
     Args:
-        output_path: Path to save the PNG.
+        output_path: Path to save the final grayscale PNG.
         resolution: Output resolution in pixels.
+        region_colors: Region ID → (R, G, B) tuple for reverse lookup.
 
     Returns:
         True on success.
     """
     try:
         import bpy
+        from PIL import Image
 
         scene = bpy.context.scene
         scene.render.engine = _eevee_engine()
         scene.render.resolution_x = resolution
         scene.render.resolution_y = resolution
+        scene.render.resolution_percentage = 100
         scene.render.film_transparent = True
+
+        # No anti-aliasing — clean pixel boundaries
+        scene.render.filter_size = 0.0
+
+        # Raw color management — no tone mapping or gamma
+        scene.view_settings.view_transform = "Raw"
+        scene.view_settings.look = "None"
+
+        # Disable compositing/sequencer post-processing
+        scene.render.use_compositing = False
+        scene.render.use_sequencer = False
+
+        # Output: RGBA PNG
         scene.render.image_settings.file_format = "PNG"
         scene.render.image_settings.color_mode = "RGBA"
+        scene.render.image_settings.color_depth = "8"
+        scene.render.image_settings.compression = 0
 
-        # Use vertex color output — set up a simple material
-        # that reads from the 'strata_region' vertex color layer
-        for obj in bpy.context.scene.objects:
-            if obj.type != "MESH":
-                continue
-            mat = bpy.data.materials.new("unirig_seg_mat")
-            mat.use_nodes = True
-            nodes = mat.node_tree.nodes
-            links = mat.node_tree.links
-            nodes.clear()
-
-            vcol = nodes.new("ShaderNodeVertexColor")
-            vcol.layer_name = "strata_region"
-            emission = nodes.new("ShaderNodeEmission")
-            output = nodes.new("ShaderNodeOutputMaterial")
-            links.new(vcol.outputs["Color"], emission.inputs["Color"])
-            links.new(emission.outputs["Emission"], output.inputs["Surface"])
-
-            obj.data.materials.clear()
-            obj.data.materials.append(mat)
-
+        # Render to a temp file, then convert to region-ID grayscale
+        tmp_path = output_path.with_suffix(".tmp.png")
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        scene.render.filepath = str(output_path)
+        scene.render.filepath = str(tmp_path)
         bpy.ops.render.render(write_still=True)
+
+        # Build reverse color→region lookup
+        color_to_region: dict[tuple, int] = {v: k for k, v in region_colors.items()}
+
+        # Convert RGB render to grayscale region IDs
+        rgb_img = Image.open(tmp_path).convert("RGBA")
+        rgb_arr = np.array(rgb_img)
+
+        # Alpha=0 pixels → background (region 0)
+        alpha = rgb_arr[:, :, 3]
+        rgb_only = rgb_arr[:, :, :3]
+
+        # For each pixel, find closest region color
+        seg = np.zeros((resolution, resolution), dtype=np.uint8)
+        if color_to_region:
+            # Vectorized nearest-color lookup
+            colors_arr = np.array(list(color_to_region.keys()), dtype=np.float32)  # (N, 3)
+            region_ids = np.array(list(color_to_region.values()), dtype=np.uint8)
+
+            flat_rgb = rgb_only.reshape(-1, 3).astype(np.float32)  # (H*W, 3)
+            # Euclidean distance to each region color
+            diffs = flat_rgb[:, None, :] - colors_arr[None, :, :]  # (H*W, N, 3)
+            dists = np.sum(diffs ** 2, axis=2)  # (H*W, N)
+            nearest = np.argmin(dists, axis=1)  # (H*W,)
+            seg_flat = region_ids[nearest]
+            seg = seg_flat.reshape(resolution, resolution)
+
+        # Transparent pixels → background
+        seg[alpha == 0] = 0
+
+        Image.fromarray(seg, mode="L").save(output_path)
+        tmp_path.unlink(missing_ok=True)
         return True
     except Exception as exc:
         logger.warning("Render failed: %s", exc)
@@ -446,15 +505,15 @@ def _convert_one(
                 continue
             obj, _ = result
 
-            # Assign vertex region colors
-            _assign_region_vertex_colors(obj, fields, bone_to_region, region_colors)
+            # Assign per-face emission materials by dominant bone
+            _assign_region_materials(obj, fields, bone_to_region, region_colors)
 
             # Set up camera
             _setup_orthographic_camera(obj, azimuth_deg=float(azimuth))
 
-            # Render segmentation
+            # Render segmentation (flat emission → grayscale region IDs)
             seg_path = view_dir / "segmentation.png"
-            if not _render_segmentation(seg_path, STRATA_RESOLUTION):
+            if not _render_segmentation(seg_path, STRATA_RESOLUTION, region_colors):
                 continue
 
             # For the color image, render with a simple diffuse material
@@ -530,7 +589,14 @@ def _render_color(output_path: Path, resolution: int) -> bool:
         scene.render.image_settings.file_format = "PNG"
         scene.render.image_settings.color_mode = "RGBA"
 
-        # Add a simple sun light
+        # World ambient light for fill
+        world = bpy.data.worlds.new("unirig_world")
+        world.use_nodes = True
+        world.node_tree.nodes["Background"].inputs["Color"].default_value = (1, 1, 1, 1)
+        world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.7
+        scene.world = world
+
+        # Key sun light
         sun_data = bpy.data.lights.new("sun", type="SUN")
         sun_data.energy = 2.0
         sun_obj = bpy.data.objects.new("sun", sun_data)
@@ -543,6 +609,7 @@ def _render_color(output_path: Path, resolution: int) -> bool:
 
         bpy.data.objects.remove(sun_obj, do_unlink=True)
         bpy.data.lights.remove(sun_data)
+        bpy.data.worlds.remove(world)
         return True
     except Exception as exc:
         logger.warning("Color render failed: %s", exc)
