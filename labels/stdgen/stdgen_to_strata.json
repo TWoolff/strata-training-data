@@ -1,0 +1,53 @@
+{
+  "description": "StdGEN 4-class to Strata 20-class semantic mapping definition",
+  "source": "stdgen",
+  "source_paper": "StdGEN (CVPR 2025) — 10,811 VRoid-derived anime characters",
+  "stdgen_classes": {
+    "body": {
+      "strata_mapping": "per_bone_weight",
+      "notes": "Split into 16 body sub-regions using VRM skeleton bone weights. Each vertex is assigned the region of its highest-weight bone via VRM_BONE_ALIASES."
+    },
+    "clothes": {
+      "strata_mapping": "underlying_body_region",
+      "notes": "Maps to the body region underneath. Determined by dominant bone weight of each vertex, same as body class."
+    },
+    "hair": {
+      "strata_id": 1,
+      "strata_name": "head",
+      "notes": "Direct mapping. All hair geometry maps to head region."
+    },
+    "face": {
+      "strata_id": 1,
+      "strata_name": "head",
+      "notes": "Direct mapping. All facial features map to head region."
+    }
+  },
+  "strata_regions": {
+    "0": "background",
+    "1": "head",
+    "2": "neck",
+    "3": "chest",
+    "4": "spine",
+    "5": "hips",
+    "6": "upper_arm_l",
+    "7": "lower_arm_l",
+    "8": "hand_l",
+    "9": "upper_arm_r",
+    "10": "lower_arm_r",
+    "11": "hand_r",
+    "12": "upper_leg_l",
+    "13": "lower_leg_l",
+    "14": "foot_l",
+    "15": "upper_leg_r",
+    "16": "lower_leg_r",
+    "17": "foot_r",
+    "18": "shoulder_l",
+    "19": "shoulder_r"
+  },
+  "bone_weight_source": "VRM_BONE_ALIASES (pipeline/config.py)",
+  "fallback_region": {
+    "id": 3,
+    "name": "chest",
+    "notes": "Vertices with no valid bone weights default to chest as a safe central region."
+  }
+}
