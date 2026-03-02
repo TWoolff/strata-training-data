@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v9 — CMU animation uploaded, 22-class region ID fix, segmentation re-rendering)
+**Last updated:** March 2, 2026 (v10 — Live2D rendered + uploaded, 105 Mixamo chars, mixamorig5: bone fix, UniRig Rig-XL downloading)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -12,7 +12,7 @@
 
 | Category | Status | Details |
 |----------|--------|---------|
-| **Blender 3D pipeline** | Working | 61 Mixamo chars rendered (22-class region IDs, flat style, front angle) — re-render in progress |
+| **Blender 3D pipeline** | Working | 105 Mixamo chars downloaded; re-rendering with 22-class IDs + mixamorig5: bone fix |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
 | **Ingest framework** | Complete | `run_ingest.py` with 9 registered adapters, CLI with `--enrich` pose estimation |
 | **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.5 GB) in bucket — all shards 00-11 processed |
@@ -20,10 +20,11 @@
 | **anime-segmentation v2** | Ingested + uploaded | ~39,000 files in bucket — 13,000 images from fg-01/02/03 |
 | **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (689 MB) in bucket — 2,819 frames |
 | **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MB) in bucket — 1,059 frames |
-| **Blender segmentation** | Re-rendering | 22-class region IDs — re-render in progress (was 28,032 files, 1.0 GB) |
+| **Blender segmentation** | Uploaded | 12,216 files (619 MB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
 | **CMU animation** | Uploaded | 17,823 files (58 GB) in bucket — 2,548 clips × 7 degradations |
 | **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
-| **Live2D GitHub scraper** | 279 models | Scraped from GitHub; saturated — Booth.pm/DeviantArt for more |
+| **mixamorig5: bone fix** | Complete | 12 PARTIAL characters now fully mappable — `MIXAMO_BONE_MAP` + `COMMON_PREFIXES` updated |
+| **Live2D models** | Rendered + uploaded | 4,764 files (327 MB) in bucket — 1,112 images from 279 models |
 | **AnimeRun flow** | Ingested + uploaded | 16,704 files in bucket — 2,789 flow pairs from 30 scenes |
 | **AnimeRun segment** | Ingested + uploaded | 11,276 files in bucket — 2,819 segmentation frames from 30 scenes |
 | **AnimeRun correspondence** | Ingested + uploaded | 19,493 files (975 MB) in bucket — 2,789 pairs from 30 scenes |
@@ -50,10 +51,9 @@
 | `animerun_segment/` | 11,276 | 651 MB |
 | `fbanimehq/` | 304,889 | 11.5 GB |
 | `ingest/vroid_lite/` | 9,302 | 788 MB |
-| `segmentation/` | ~12,004 | ~425 MB |
-| **Total** | **~457,409** | **~87.0 GB** |
-
-*Note: `segmentation/` is being re-rendered with corrected 22-class region IDs — count will increase when complete.*
+| `live2d/` | 4,764 | 327 MB |
+| `segmentation/` | 12,216 | 619 MB |
+| **Total** | **~462,385** | **~87.5 GB** |
 
 ### What's Downloaded Locally (data/preprocessed/)
 
@@ -80,8 +80,12 @@
 
 - [x] Fix 22-class region ID alignment — all pipeline code, config, bone maps, and 14 test files updated to match Strata's skeleton.ts RegionId enum (1,389 tests pass, 0 fail)
 - [x] Upload CMU animation data — 17,823 files (58 GB) uploaded to `animation/` bucket prefix
-- [x] Re-render segmentation with 22-class IDs — in progress (61 chars × all poses × flat style)
+- [x] Re-render segmentation with 22-class IDs + mixamorig5: bone fix — complete (105 chars × 50 poses, 12,216 files, 619 MB uploaded)
 - [x] Live2D GitHub scraper ran — 279 .moc3 models downloaded (saturated GitHub source)
+- [x] Process 279 Live2D models — 1,112 images rendered, 4,764 files (327 MB) uploaded to `live2d/` bucket prefix
+- [x] Fix mixamorig5: bone prefix — 12 previously PARTIAL characters now fully mappable
+- [x] Download all 105 available Mixamo characters (108 total on site, 105 downloaded)
+- [x] UniRig Rig-XL downloaded + extracted — 16,641 meshes (66 GB) in `data/preprocessed/unirig/rigxl/`
 - [x] Build .moc3 parser + atlas extractor (issue #146)
 - [x] Build vroid_lite adapter + ingest 4,651 images + upload to bucket (9,302 files, 788 MB)
 - [x] Delete vroid_lite local data (7.3 GB source + 788 MB output reclaimed)
@@ -107,12 +111,12 @@
 
 ### Near-Term
 
-- [ ] Process 279 Live2D models through renderer pipeline (~1,100 training images)
+- [x] Process 279 Live2D models through renderer pipeline — 1,112 images, 4,764 files (327 MB) uploaded to bucket
 - [ ] Download NOVA-Human dataset (Alipan link — needs China-based help, see-through team contacted)
 - [x] ~~Download StdGEN~~ — BLOCKED: VRoid Hub models all 404'd, pre-renders not distributed. Repo cloned for rendering scripts only.
-- [ ] Download UniRig Rig-XL dataset
+- [x] Download UniRig Rig-XL dataset
 - [x] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
-- [ ] Download more Mixamo characters (currently 62, target 150-250)
+- [x] Download more Mixamo characters (currently 62, target 150-250)
 - [x] Download Mixamo animation clips to `data/poses/` (2,022 FBX clips)
 - [x] ~~Run Live2D GitHub scraper~~ — 279 models scraped, GitHub saturated
 
@@ -393,7 +397,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 | Item | Target Volume | Current | Status |
 |------|--------------|---------|--------|
-| Character FBX models | 150–250 | 62 | ~40% downloaded |
+| Character FBX models | 150–250 | 105 | 100% of available (108 total on Mixamo) |
 | Animation FBX clips | 50–100 | 2,022 | ✅ In `data/poses/` |
 | Diverse body types | Cover all 8 archetypes | Partial | Need more variety |
 | Male/female split | ~50/50 | Unknown | Check distribution |
@@ -582,17 +586,17 @@ These require downloading raw assets and running your own rendering pipeline.
 | AnimeRun segment | ~2,800 | 2,819 ingested | ✅ In bucket (11,276 files) |
 | AnimeRun correspondence | ~2,800 | 2,789 ingested | ✅ In bucket (19,493 files) |
 | LinkTo-Anime (PP-7) | ~29,270 | 0 | SKIPPED — CC-BY-NC license forbidden |
-| UniRig Rig-XL (PP-5) | 14,000 meshes | 0 | Not downloaded |
+| UniRig Rig-XL (PP-5) | 14,000 meshes | 16,641 meshes | ✅ Downloaded + extracted (66 GB in `data/preprocessed/unirig/rigxl/`) |
 | CMU animation pairs | 17,823 | 17,823 uploaded | ✅ In bucket (58 GB) |
-| Mixamo renders (DS-1) | ~10,000 | ~1,345 | Re-rendering with 22-class IDs |
+| Mixamo renders (DS-1) | ~10,000 | 5,250 rendered | ✅ In bucket (12,216 files, 619 MB) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
-| Live2D composites (DS-3) | ~1,600 | 0 | 279 models downloaded, pipeline ready |
+| Live2D composites (DS-3) | ~1,600 | 1,112 rendered | ✅ In bucket (4,764 files, 327 MB) |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~470,000+** | **~161,000+** | **~34%** |
+| **TOTAL** | **~470,000+** | **~164,000+** | **~35%** |
 
 ---
 
@@ -686,14 +690,14 @@ These require downloading raw assets and running your own rendering pipeline.
 | Component | Issue | Status |
 |-----------|-------|--------|
 | Dataset loader | #125 | ✅ Implemented |
-| Multi-head DeepLabV3+ model | #126 | Open |
-| Training metrics (mIoU) | #127 | Open |
-| Segmentation training script | #128 | Open |
-| ONNX export pipeline | #129 | Open |
-| ONNX validation script | #130 | Open |
-| Joint refinement training | #131 | Open |
-| Weight prediction training | #132 | Open |
-| Evaluation/visualization | #133 | Open |
+| Multi-head DeepLabV3+ model | #126 | ✅ Implemented |
+| Training metrics (mIoU) | #127 | ✅ Implemented |
+| Segmentation training script | #128 | ✅ Implemented |
+| ONNX export pipeline | #129 | ✅ Implemented |
+| ONNX validation script | #130 | ✅ Implemented |
+| Joint refinement training | #131 | ✅ Implemented |
+| Weight prediction training | #132 | ✅ Implemented |
+| Evaluation/visualization | #133 | ✅ Implemented |
 
 ### Cloud Storage (Hetzner Object Storage)
 

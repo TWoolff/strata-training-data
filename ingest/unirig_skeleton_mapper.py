@@ -346,6 +346,8 @@ def validate_skeleton(mapping: CharacterSkeletonMapping) -> SkeletonValidation:
 def load_joint_names_npz(npz_path: Path) -> list[str] | None:
     """Load joint names from a UniRig .npz file.
 
+    Supports both ``joint_names`` (legacy schema) and ``names`` (Rig-XL schema).
+
     Args:
         npz_path: Path to the .npz file.
 
@@ -354,11 +356,12 @@ def load_joint_names_npz(npz_path: Path) -> list[str] | None:
     """
     try:
         data = np.load(npz_path, allow_pickle=True)
-        if "joint_names" not in data:
-            logger.warning("No 'joint_names' key in %s", npz_path)
+        # Rig-XL uses 'names'; older schema used 'joint_names'
+        key = "names" if "names" in data else "joint_names" if "joint_names" in data else None
+        if key is None:
+            logger.warning("No 'names' or 'joint_names' key in %s", npz_path)
             return None
-        names = data["joint_names"]
-        return [str(n) for n in names]
+        return [str(n) for n in data[key]]
     except (OSError, ValueError) as exc:
         logger.warning("Failed to load %s: %s", npz_path, exc)
         return None
@@ -523,12 +526,16 @@ def convert_directory(
         logger.error("UniRig directory not found: %s", unirig_dir)
         return AdapterResult(errors=["Directory not found"])
 
-    # Discover character files (.npz and .json)
-    candidates: list[Path] = sorted(
-        p
-        for p in unirig_dir.iterdir()
-        if p.is_file() and p.suffix in (".npz", ".json") and not p.name.startswith(".")
-    )
+    # Discover character files: flat .npz/.json files OR subdirectories
+    # containing raw_data.npz (Rig-XL layout: rigxl/00000/raw_data.npz)
+    candidates: list[Path] = []
+    for p in sorted(unirig_dir.iterdir()):
+        if p.is_dir():
+            raw = p / "raw_data.npz"
+            if raw.is_file():
+                candidates.append(raw)
+        elif p.is_file() and p.suffix in (".npz", ".json") and not p.name.startswith("."):
+            candidates.append(p)
 
     if not candidates:
         logger.warning("No character files found in %s", unirig_dir)
@@ -543,7 +550,11 @@ def convert_directory(
     result = AdapterResult()
 
     for char_path in candidates:
-        character_id = char_path.stem
+        # Use parent dir name for subdirectory layout (e.g. "00000"), else stem
+        if char_path.name == "raw_data.npz":
+            character_id = char_path.parent.name
+        else:
+            character_id = char_path.stem
         output_path = output_dir / f"{character_id}_mapping.json"
 
         if only_new and output_path.exists():

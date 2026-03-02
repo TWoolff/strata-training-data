@@ -1,4 +1,6 @@
-# Raw data (large, downloadable from source)
+# Raw data (large, downloadable from source or on external HD)
+# The data/ subdirs are symlinks to /Volumes/TAWoolff EXT/data/
+# Symlinks themselves are tracked; their contents are ignored below.
 data/fbx/**
 data/poses/**
 data/mocap/**
@@ -7,12 +9,11 @@ data/live2d/**
 data/vroid/**
 data/psd/**
 data/preprocessed/**
-data/preprocessed/
 
 # Generated output (reproducible)
 output/
 
-# Keep README files inside ignored directories
+# Keep READMEs, label files, and metadata inside ignored directories
 !data/fbx/README.md
 !data/poses/README.md
 !data/mocap/README.md
@@ -26,6 +27,7 @@ output/
 !data/psd/README.md
 !data/preprocessed/*/
 !data/preprocessed/*/README.md
+!data/preprocessed/stdgen/stdgen_to_strata.json
 
 # ONNX model weights (downloaded, not tracked)
 models/*.onnx
@@ -40,3 +42,15 @@ __pycache__/
 .ruff_cache/
 
 .env
+
+data/fbx_ch_only/
+
+# Render logs (not useful in repo)
+rerender_log.txt
+rerender_ch_log.txt
+rerender_ch_log2.txt
+live2d_render_log.txt
+live2d_upload_log.txt
+
+# External dataset folder downloaded alongside repo (not part of pipeline)
+AnimeInstanceSegmentationDataset/

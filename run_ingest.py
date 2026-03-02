@@ -60,12 +60,14 @@ def parse_args() -> argparse.Namespace:
             "fbanimehq",
             "nova_human",
             "anime_seg",
+            "anime_instance_seg",
             "animerun",
             "animerun_flow",
             "animerun_segment",
             "animerun_correspondence",
             "animerun_linearea",
             "vroid_lite",
+            "unirig",
         ],
         help="Which dataset adapter to use.",
     )
@@ -110,6 +112,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Skip already-converted examples.",
+    )
+
+    parser.add_argument(
+        "--split",
+        type=str,
+        default=None,
+        help="Dataset split to process (e.g. 'train', 'val'). Used by anime_instance_seg.",
     )
 
     # --- Pose enrichment flags ---
@@ -361,16 +370,73 @@ def _run_vroid_lite(args: argparse.Namespace) -> int:
     return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
+def _run_anime_instance_seg(args: argparse.Namespace) -> int:
+    """Run the AnimeInstanceSegmentation adapter."""
+    from ingest.anime_instance_seg_adapter import convert_dataset, convert_split
+
+    max_ex = args.max_images if args.max_images > 0 else None
+
+    if args.split:
+        stats = convert_split(
+            args.input_dir,
+            args.output_dir,
+            split=args.split,
+            max_examples=max_ex,
+        )
+        results = {args.split: stats}
+    else:
+        results = convert_dataset(
+            args.input_dir,
+            args.output_dir,
+            max_examples=max_ex,
+        )
+
+    total_converted = sum(r.converted for r in results.values())
+    total_skipped = sum(r.skipped for r in results.values())
+    total_errors = sum(r.errors for r in results.values())
+    print("\nAnimeInstanceSeg ingestion complete:")
+    for split, stats in results.items():
+        print(f"  [{split}] {stats.summary()}")
+    print(f"  Total converted:  {total_converted}")
+    print(f"  Total skipped:    {total_skipped}")
+    print(f"  Total errors:     {total_errors}")
+    print(f"  Output directory: {args.output_dir}")
+
+    return 0 if total_converted > 0 or total_skipped > 0 else 1
+
+
+def _run_unirig(args: argparse.Namespace) -> int:
+    """Run the UniRig / Rig-XL adapter."""
+    from ingest.unirig_adapter import convert_directory
+
+    max_ex = args.max_images if args.max_images > 0 else None
+
+    stats = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        max_examples=max_ex,
+        only_new=args.only_new,
+    )
+
+    print("\nUniRig ingestion complete:")
+    print(f"  {stats.summary()}")
+    print(f"  Output directory: {args.output_dir}")
+
+    return 0 if stats.converted > 0 or stats.skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
     "anime_seg": _run_anime_seg,
+    "anime_instance_seg": _run_anime_instance_seg,
     "animerun": _run_animerun,
     "animerun_flow": _run_animerun_flow,
     "animerun_segment": _run_animerun_segment,
     "animerun_correspondence": _run_animerun_correspondence,
     "animerun_linearea": _run_animerun_linearea,
     "vroid_lite": _run_vroid_lite,
+    "unirig": _run_unirig,
 }
 
 

@@ -157,6 +157,14 @@ MIXAMO_BONE_MAP: dict[str, RegionId] = {
     "mixamorig:RightToe_End": 19,
 }
 
+# Add mixamorig#: prefix variants — used by Ch##_nonPBR characters (numbered 1-12)
+for _n in range(1, 13):
+    MIXAMO_BONE_MAP.update(
+        {k.replace("mixamorig:", f"mixamorig{_n}:", 1): v
+         for k, v in list(MIXAMO_BONE_MAP.items())
+         if k.startswith("mixamorig:")}
+    )
+
 # ---------------------------------------------------------------------------
 # Common bone name aliases for non-Mixamo rigs
 # ---------------------------------------------------------------------------
@@ -369,6 +377,18 @@ VRM_BONE_ALIASES: dict[str, RegionId] = {
 
 COMMON_PREFIXES: list[str] = [
     "mixamorig:",
+    "mixamorig1:",
+    "mixamorig2:",
+    "mixamorig3:",
+    "mixamorig4:",
+    "mixamorig5:",
+    "mixamorig6:",
+    "mixamorig7:",
+    "mixamorig8:",
+    "mixamorig9:",
+    "mixamorig10:",
+    "mixamorig11:",
+    "mixamorig12:",
     "Bip01_",
     "Bip001_",
     "Bip01 ",
@@ -516,6 +536,29 @@ SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
     (["foot", "r"], 19),
     (["toe", "right"], 19),
     (["toe", "r"], 19),
+    # VRoid/UniRig finger bones (J_Bip_L/R_Index*, Thumb*, Little*, etc.)
+    (["index", "l"], 9),
+    (["middle", "l"], 9),
+    (["ring", "l"], 9),
+    (["little", "l"], 9),
+    (["thumb", "l"], 9),
+    (["index", "r"], 13),
+    (["middle", "r"], 13),
+    (["ring", "r"], 13),
+    (["little", "r"], 13),
+    (["thumb", "r"], 13),
+    # VRoid/UniRig secondary/adjustment bones
+    (["hairjoint"], 21),   # HairJoint-* UUID bones → hair_back
+    (["hair"], 21),        # generic hair bones → hair_back
+    (["bust"], 3),         # J_Sec_*_Bust* → chest
+    (["breast"], 3),       # breast physics → chest
+    (["faceeye"], 1),      # J_Adj_*_FaceEye → head
+    (["facemoutha"], 1),   # face adjustment bones → head
+    (["facemouthb"], 1),
+    (["skirt"], 5),        # skirt physics → hips
+    (["cloth"], 5),        # cloth sim → hips (best guess)
+    (["sleeve"], 9),       # sleeve tip → hand (closest body region)
+    (["tipsleeve"], 9),
 ]
 
 # ---------------------------------------------------------------------------

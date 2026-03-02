@@ -113,20 +113,45 @@ download_animerun() {
 
 download_unirig() {
     local dest="$DATA_DIR/unirig"
-    skip_if_exists "$dest" && return 0
+    local processed_dir="$dest/processed"
 
-    info "Downloading UniRig / Rig-XL (~20 GB) ..."
-    require_cmd git
-
-    mkdir -p "$dest"
-    if [ ! -d "$dest/.repo" ]; then
-        git clone --depth 1 \
-            https://github.com/VAST-AI-Research/UniRig.git \
-            "$dest/.repo"
+    if [ -d "$processed_dir" ] && [ "$(ls -A "$processed_dir" 2>/dev/null | wc -l)" -gt 100 ]; then
+        info "UniRig already extracted at $processed_dir — skipping."
+        return 0
     fi
 
-    info "UniRig repo cloned to $dest/.repo"
-    info "Follow the download instructions in $dest/.repo/README.md for Rig-XL dataset."
+    info "Downloading UniRig / Rig-XL (~5 GB compressed) ..."
+    require_cmd curl
+
+    mkdir -p "$dest"
+
+    # Download processed.7z (~4.87 GB) and mapping.json from HuggingFace
+    if [ ! -f "$dest/processed.7z" ]; then
+        info "Downloading processed.7z ..."
+        curl -L \
+            "https://huggingface.co/VAST-AI/UniRig/resolve/main/data/rigxl/processed.7z?download=true" \
+            -o "$dest/processed.7z" \
+            --progress-bar
+    fi
+
+    if [ ! -f "$dest/mapping.json" ]; then
+        info "Downloading mapping.json ..."
+        curl -L \
+            "https://huggingface.co/VAST-AI/UniRig/resolve/main/data/rigxl/mapping.json?download=true" \
+            -o "$dest/mapping.json" \
+            --progress-bar
+    fi
+
+    # Extract the archive
+    if [ ! -d "$processed_dir" ]; then
+        info "Extracting processed.7z ..."
+        require_cmd 7z
+        7z x "$dest/processed.7z" -o"$dest" -y
+        info "Extraction complete."
+    fi
+
+    info "UniRig dataset ready at $processed_dir"
+    info "Run: python run_ingest.py --adapter unirig --input_dir $processed_dir --output_dir ./output/unirig"
 }
 
 download_linkto_anime() {

@@ -1114,8 +1114,8 @@ def process_live2d_model(
 
 
 def process_live2d_directory(
-    live2d_dir: Path,
-    output_dir: Path,
+    live2d_dir: Path | str,
+    output_dir: Path | str,
     *,
     resolution: int = RENDER_RESOLUTION,
     styles: list[str] | None = None,
@@ -1148,6 +1148,9 @@ def process_live2d_directory(
     apply_post_render_style = None
     if needs_style_augmentor:
         from .style_augmentor import apply_post_render_style
+
+    live2d_dir = Path(live2d_dir)
+    output_dir = Path(output_dir)
 
     # Discover model directories (each subdirectory = one model)
     model_dirs: list[Path] = sorted(p for p in live2d_dir.iterdir() if p.is_dir())

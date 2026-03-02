@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -317,6 +318,67 @@ def _get_action_frame_range(armature: bpy.types.Object) -> tuple[int, int] | Non
 # ---------------------------------------------------------------------------
 
 
+def _detect_bone_prefix(bone_names: list[str]) -> str:
+    """Detect the common mixamorig prefix from a list of bone names.
+
+    Returns the prefix string (e.g. ``"mixamorig:"`` or ``"mixamorig5:"``),
+    or an empty string if no mixamorig-style prefix is found.
+    """
+    for name in bone_names:
+        m = re.match(r"^(mixamorig\d*:)", name)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _iter_action_fcurves(action: bpy.types.Action):
+    """Yield all FCurves from an action, handling both Blender 4.x and 5.0+.
+
+    Blender 4.x (legacy): FCurves are on ``action.fcurves``.
+    Blender 5.0+ (layered): FCurves are inside
+    ``action.layers[i].strips[j].channelbags[k].fcurves``.
+    """
+    if action.is_action_legacy:
+        # Blender 4.x / legacy format
+        yield from action.fcurves
+    else:
+        # Blender 5.0+ layered action system
+        for layer in action.layers:
+            for strip in layer.strips:
+                for channelbag in strip.channelbags:
+                    yield from channelbag.fcurves
+
+
+def _remap_action_prefix(
+    action: bpy.types.Action,
+    from_prefix: str,
+    to_prefix: str,
+) -> None:
+    """Rewrite FCurve data paths in an action to use a different bone prefix.
+
+    Mixamo pose FBX files use ``mixamorig:`` in their FCurve paths, but
+    some Ch##_nonPBR characters use numbered prefixes like ``mixamorig12:``.
+    Remapping the action paths lets Blender evaluate the animation against
+    the character's actual bone names.
+
+    Modifies the action in-place.
+    """
+    if not from_prefix or not to_prefix or from_prefix == to_prefix:
+        return
+    replaced = 0
+    for fcurve in _iter_action_fcurves(action):
+        if from_prefix in fcurve.data_path:
+            fcurve.data_path = fcurve.data_path.replace(from_prefix, to_prefix)
+            replaced += 1
+    if replaced:
+        logger.debug(
+            "Remapped %d FCurves: %s → %s",
+            replaced,
+            from_prefix,
+            to_prefix,
+        )
+
+
 def _apply_animation_pose(
     character_armature: bpy.types.Object,
     anim_armature: bpy.types.Object,
@@ -350,6 +412,13 @@ def _apply_animation_pose(
         logger.error("No action found on animation armature %s", anim_armature.name)
         return 0
 
+    # Detect bone prefix mismatch between animation and character armatures.
+    # Some Ch##_nonPBR characters use mixamorig#: while pose FBXs use mixamorig:
+    anim_prefix = _detect_bone_prefix([b.name for b in anim_armature.pose.bones])
+    char_prefix = _detect_bone_prefix([b.name for b in character_armature.pose.bones])
+    if anim_prefix and char_prefix and anim_prefix != char_prefix:
+        _remap_action_prefix(action, anim_prefix, char_prefix)
+
     # Bind action to character armature
     if character_armature.animation_data is None:
         character_armature.animation_data_create()
@@ -372,7 +441,10 @@ def _apply_animation_pose(
     # Count how many bones have matching names (for logging)
     anim_bone_names = {b.name for b in anim_armature.pose.bones}
     char_bone_names = {b.name for b in character_armature.pose.bones}
-    transferred = len(anim_bone_names & char_bone_names)
+    # After prefix remapping, count effective matches via normalized names
+    anim_norm = {_normalize_bone_name(n) for n in anim_bone_names}
+    char_norm = {_normalize_bone_name(n) for n in char_bone_names}
+    transferred = len(anim_norm & char_norm)
 
     logger.debug(
         "Transferred %d bones at frame %d via action binding",
