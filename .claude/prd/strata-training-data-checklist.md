@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v5 — updated after batch 4+5 results, all AnimeRun data types ingested)
+**Last updated:** March 2, 2026 (v6 — vroid_lite ingested + uploaded, Live2D GitHub scraper built)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -14,7 +14,7 @@
 |----------|--------|---------|
 | **Blender 3D pipeline** | Working | 49/62 Mixamo chars rendered (5 poses × 5 angles × flat style + per-region RGBA layers) |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
-| **Ingest framework** | Complete | `run_ingest.py` with 8 registered adapters, CLI with `--enrich` pose estimation |
+| **Ingest framework** | Complete | `run_ingest.py` with 9 registered adapters, CLI with `--enrich` pose estimation |
 | **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.5 GB) in bucket — all shards 00-11 processed |
 | **anime-segmentation v1** | Ingested + uploaded | 35,406 files (1.8 GB) in bucket — 11,802 images |
 | **anime-segmentation v2** | Ingested + uploaded | ~39,000 files in bucket — 13,000 images from fg-01/02/03 |
@@ -26,6 +26,8 @@
 | **AnimeRun correspondence** | Ingested + uploaded | 19,493 files (975 MB) in bucket — 2,789 pairs from 30 scenes |
 | **AnimeRun linearea adapter** | Implemented | `animerun_linearea_adapter.py` + 32 tests passing |
 | **Training infrastructure** | Implemented | configs, data loaders, utils, model architectures (issues #122-124) |
+| **VRoid Lite** | Ingested + uploaded | 9,302 files (788 MB) in bucket — 4,651 images from 16 CC0 VRoid chars |
+| **Live2D GitHub scraper** | Implemented | `run_live2d_scrape.py` — searches GitHub for .moc3 repos, sparse checkout, CSV manifest |
 | **Label Studio integration** | Ready | import/export pipeline + config XML |
 | **CMU action labels** | Tracked | `animation/labels/cmu_action_labels.csv` (80 clips labeled) |
 | **Test suite** | 37 test files, 1287 tests | Covering all pipeline modules, adapters, and utilities |
@@ -42,8 +44,9 @@
 | `animerun_linearea/` | 4,236 | 119 MB |
 | `animerun_segment/` | 11,276 | 651 MB |
 | `fbanimehq/` | 304,889 | 11.5 GB |
+| `ingest/vroid_lite/` | 9,302 | 788 MB |
 | `segmentation/` | 28,032 | 1.0 GB |
-| **Total** | **~446,312** | **~28.8 GB** |
+| **Total** | **~455,614** | **~29.6 GB** |
 
 ### What's Downloaded Locally (data/preprocessed/)
 
@@ -53,7 +56,7 @@
 | anime_seg_v2 | 12 GB | Deleted | Ingested + uploaded, zips deleted |
 | animerun | 21 GB (zip) | Deleted | All 5 data types ingested + uploaded, zip deleted |
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
-| vroid_lite | 7.3 GB | Yes | No adapter yet |
+| vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
@@ -67,6 +70,9 @@
 
 ### Completed Since Last Update
 
+- [x] Build vroid_lite adapter + ingest 4,651 images + upload to bucket (9,302 files, 788 MB)
+- [x] Delete vroid_lite local data (7.3 GB source + 788 MB output reclaimed)
+- [x] Build Live2D GitHub scraper (`run_live2d_scrape.py`) — issue #141, PR #142 merged
 - [x] Run overnight batch 4 — AnimeRun flow (2,789 pairs) + segment (2,819 frames) uploaded successfully
 - [x] Fix correspondence adapter bug — SegMatching path missing `forward/` subdir + files are `.json` not `.png`
 - [x] Run overnight batch 5 — AnimeRun correspondence (2,789 pairs, 19,493 files) uploaded successfully
@@ -83,10 +89,11 @@
 ### This Week
 
 - [ ] Fix the 13 Mixamo characters that failed rendering (3 problematic poses)
-- [ ] Build vroid_lite adapter (4,651 PNG renders, 7.3 GB local)
+- [x] Build vroid_lite adapter + ingest + upload (4,651 images, 9,302 files, 788 MB in bucket)
 
 ### Near-Term
 
+- [ ] Run Live2D GitHub scraper to download .moc3 models (`python3 run_live2d_scrape.py`)
 - [ ] Download remaining pre-processed datasets (NOVA-Human, StdGEN, UniRig)
 - [ ] Start training pipeline (issues #125-133 — dataset loader, model, training script, ONNX export)
 - [ ] Download more Mixamo characters (currently 61, target 150-250)
@@ -418,7 +425,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Expected new rendering work:** ~10,000 characters × 1 new angle (45°) × 5 poses = ~50,000 images to render. Much less than the original plan of rendering everything from scratch.
 
-**Status:** VRoid lite set downloaded (7.3 GB). VRoid importer + mapper implemented. Full download pipeline not yet started.
+**Status:** VRoid lite set ingested + uploaded to bucket (9,302 files, 788 MB), local copy deleted. VRoid importer + mapper implemented. Full download pipeline not yet started.
 
 ---
 
@@ -440,7 +447,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** The See-through paper team collected ~9,100 Live2D models. If they release their dataset or data engine code, that would supersede manual collection. Monitor their repo.
 
-**Status:** Pipeline implemented (renderer, review UI, Live2D mapper). No models downloaded yet.
+**Status:** Pipeline implemented (renderer, review UI, Live2D mapper). GitHub scraper built (`run_live2d_scrape.py`) — searches GitHub for .moc3 repos, filters by license, downloads via sparse checkout. No models downloaded yet.
 
 ---
 
@@ -559,13 +566,14 @@ These require downloading raw assets and running your own rendering pipeline.
 | LinkTo-Anime (PP-7) | ~29,270 | 0 | Not downloaded |
 | UniRig Rig-XL (PP-5) | 14,000 meshes | 0 | Not downloaded |
 | Mixamo renders (DS-1) | ~10,000 | 1,225 | ✅ In bucket (49 chars) |
+| VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | Pipeline ready, no VRM files |
 | Live2D composites (DS-3) | ~1,600 | 0 | Pipeline ready, no models |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~465,000+** | **~138,000+** | **~30%** |
+| **TOTAL** | **~470,000+** | **~143,000+** | **~30%** |
 
 ---
 
@@ -627,16 +635,17 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ## INFRASTRUCTURE COMPLETED
 
-### Pipeline Modules (31 implemented)
+### Pipeline Modules (31 implemented + 1 scraper)
 
 **Core rendering:** generate_dataset, renderer, layer_extractor, draw_order_extractor, exporter, importer, joint_extractor
 **Data processing:** bone_mapper, live2d_mapper, vroid_mapper, vroid_importer, weight_extractor, measurement_ground_truth
 **Post-processing:** style_augmentor, contour_augmenter, contour_renderer, psd_extractor, pose_estimator, pose_applicator
 **2D character support:** spine_parser, live2d_renderer, live2d_review_ui
 **Dataset management:** validator, manifest, splitter, multiview_validator, dataset_merger, measurement_extractor
+**Data acquisition:** run_live2d_scrape (GitHub .moc3 repo search + sparse checkout download)
 **Configuration:** config, accessory_detector
 
-### Ingest Adapters (8 registered + supporting modules)
+### Ingest Adapters (9 registered + supporting modules)
 
 | Adapter | CLI name | Status |
 |---------|----------|--------|
@@ -648,6 +657,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_segment_adapter.py` | `--adapter animerun_segment` | ✅ Working (#136 complete) |
 | `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
+| `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
 | `linkto_adapter.py` | — | ✅ Implemented (not registered) |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_skeleton_mapper.py` | — | 📋 Planned |
@@ -670,7 +680,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 - Bucket: `s3://strata-training-data` (Falkenstein datacenter)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: ~28.8 GB across 8 dataset prefixes
+- Total uploaded: ~29.6 GB across 9 dataset prefixes
 - Access: AWS CLI compatible, credentials in `.env`
 
 ---
@@ -734,6 +744,8 @@ These require downloading raw assets and running your own rendering pipeline.
 | Ingest AnimeRun (flow/seg/corr) | Done (batch 4+5) | All data types in bucket | ✅ Done |
 | Ingest FBAnimeHQ shards 08-11 | Done | All shards in bucket | ✅ Done |
 | Ingest anime_seg_v2 | Done | 13K images in bucket | ✅ Done |
+| Ingest vroid_lite | Done | 4,651 images in bucket | ✅ Done |
+| Build Live2D GitHub scraper | Done | `run_live2d_scrape.py` for .moc3 repos | ✅ Done |
 | Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
 | Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
