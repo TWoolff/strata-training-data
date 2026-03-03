@@ -75,7 +75,7 @@
 | `anime_seg_v2/` | 12 GB | ✅ | Different dataset by a different author, built on top of v1 but heavily curated (removed half, added new images, manual quality pass). 26,000 total images (~13,000 fg). Format: `fg-01/02/03.zip` + `bg-01/02/03.zip`. Same RGBA PNG format as v1. Bucket: `anime_seg/` (combined with v1) |
 | `animerun/` | 21 GB | ✅ | `AnimeRun_v2.2.zip`. Bucket: 5 animerun* prefixes |
 | `vroid_lite/` | 9.4 GB | ✅ | `vroid_dataset/` source. Bucket: `ingest/vroid_lite/` (9,302 files, 771 MiB) |
-| `anime_instance_seg/` | 98 GB | ❌ not yet ingested | `anime_instance_dataset/` with 91,082 train + 7,496 val images (~98,578 total) + COCO-format annotations (det/refine train+val + instances JSON). Adapter built + registered (`anime_instance_seg_adapter.py`, `--adapter anime_instance_seg`). Not yet run. |
+| `anime_instance_seg/` | 98 GB | ✅ uploading | 98,428 ingested (90,944 train + 7,484 val), 150 skipped (0.15%), 0 errors. 35 GB output. Bucket: `anime_instance_seg/` (uploading). |
 | `stdgen/` | 232 MB | ❌ blocked | Repo + scraper + mapping JSON only. No VRM files (all 404). |
 | `nova_human/` | — | ❌ blocked | README only. Download blocked (Alipan, China-only). |
 | `linkto_anime/` | — | ❌ skipped | README only. CC-BY-NC license forbidden. |
@@ -383,12 +383,15 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 **Combined bucket output:** 50,406 files, 2.5 GiB under `anime_seg/` prefix
 
-**dreMaz/AnimeInstanceSegmentationDataset** (`anime_instance_seg/`) ✅ DOWNLOADED — adapter built, not yet ingested
+**dreMaz/AnimeInstanceSegmentationDataset** (`anime_instance_seg/`) ✅ FULLY INGESTED
 - Instance segmentation (which pixels belong to which character in multi-character scenes)
-- 91,082 train + 7,496 val images (~98,578 total), COCO-format annotations (det_train/val, refine_train/val, instances JSON)
-- Adapter built + registered: `anime_instance_seg_adapter.py` (`--adapter anime_instance_seg`)
+- 91,082 train + 7,496 val images (~98,578 total), COCO-format annotations
+- Adapter: `anime_instance_seg_adapter.py` (`--adapter anime_instance_seg`) — uses pycocotools for RLE decoding
+- Ingested: 98,428 examples (90,944 train + 7,484 val), 150 skipped (0.15%), 0 errors, 35 GB output
+- Output format: 512×512 image.png + binary segmentation.png (0/255) + metadata.json per example
 - [x] Download to `data/preprocessed/anime_instance_seg/` (98 GB on HD)
-- [ ] Run ingest + upload to bucket
+- [x] Run ingest (train: 90,944/91,082, val: 7,484/7,496)
+- [x] Upload to bucket (`anime_instance_seg/` prefix)
 
 **skytnt/fbanimehq** (HuggingFace) ✅ DOWNLOADED + FULLY INGESTED
 - 112,806 full-body anime character images at 1024×512, background-removed
@@ -909,7 +912,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
-| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (data on HD, not yet run) |
+| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, 35 GB in bucket) |
 | `linkto_adapter.py` | — | ✅ Implemented (not registered) |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
