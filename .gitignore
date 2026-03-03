@@ -54,3 +54,5 @@ live2d_upload_log.txt
 
 # External dataset folder downloaded alongside repo (not part of pipeline)
 AnimeInstanceSegmentationDataset/
+
+tools/live2d_renderer/node_modules

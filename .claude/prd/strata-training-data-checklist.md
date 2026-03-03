@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 3, 2026 (v12 — deep research pass: animation principles, inbetweening, locomotion style, draw order, occlusion, illustrated pose, rigging scale datasets)
+**Last updated:** March 3, 2026 (v14 — clarified anime_segmentation v1 vs anime_seg_v2 relationship; both confirmed ingested)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -15,22 +15,21 @@
 | **Blender 3D pipeline** | Working | 105 Mixamo chars downloaded; re-rendering with 22-class IDs + mixamorig5: bone fix |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
 | **Ingest framework** | Complete | `run_ingest.py` with 9 registered adapters, CLI with `--enrich` pose estimation |
-| **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.5 GB) in bucket — all shards 00-11 processed |
-| **anime-segmentation v1** | Ingested + uploaded | 35,406 files (1.8 GB) in bucket — 11,802 images |
-| **anime-segmentation v2** | Ingested + uploaded | ~39,000 files in bucket — 13,000 images from fg-01/02/03 |
-| **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (689 MB) in bucket — 2,819 frames |
-| **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MB) in bucket — 1,059 frames |
-| **Blender segmentation** | Uploaded | 12,216 files (619 MB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
-| **CMU animation** | Uploaded | 17,823 files (58 GB) in bucket — 2,548 clips × 7 degradations |
+| **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.4 GiB) in bucket — all shards 00-11 processed |
+| **anime-segmentation v1+v2** | Ingested + uploaded | 50,406 files (2.5 GiB) in bucket — v1 (`skytnt/anime-segmentation`): 11,802 fg images in `data/fg/`…`data/fg 6/`; v2 (curated variant, different author): 13,000 fg images from `fg-01/02/03.zip`. Both use RGBA PNG format (alpha = fg/bg mask). Combined under `anime_seg/` prefix. |
+| **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (663 MiB) in bucket — 2,819 frames |
+| **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MiB) in bucket — 1,059 frames |
+| **Blender segmentation** | Uploaded | 12,216 files (599 MiB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
+| **CMU animation** | Uploaded | 17,823 files (58.1 GiB) in bucket — 2,548 clips × 7 degradations |
 | **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
 | **mixamorig5: bone fix** | Complete | 12 PARTIAL characters now fully mappable — `MIXAMO_BONE_MAP` + `COMMON_PREFIXES` updated |
-| **Live2D models** | Rendered + uploaded | 4,764 files (327 MB) in bucket — 1,112 images from 279 models |
-| **AnimeRun flow** | Ingested + uploaded | 16,704 files in bucket — 2,789 flow pairs from 30 scenes |
-| **AnimeRun segment** | Ingested + uploaded | 11,276 files in bucket — 2,819 segmentation frames from 30 scenes |
-| **AnimeRun correspondence** | Ingested + uploaded | 19,493 files (975 MB) in bucket — 2,789 pairs from 30 scenes |
+| **Live2D models** | Rendered + uploaded | 280 .moc3 models rendered — 211 succeeded, 844 examples, 3,587 files (212 MiB) in bucket |
+| **AnimeRun flow** | Ingested + uploaded | 16,704 files (11.6 GiB) in bucket — 2,789 flow pairs from 30 scenes |
+| **AnimeRun segment** | Ingested + uploaded | 11,276 files (628 MiB) in bucket — 2,819 segmentation frames from 30 scenes |
+| **AnimeRun correspondence** | Ingested + uploaded | 19,493 files (930 MiB) in bucket — 2,789 pairs from 30 scenes |
 | **AnimeRun linearea adapter** | Implemented | `animerun_linearea_adapter.py` + 32 tests passing |
 | **Training infrastructure** | Implemented | configs, data loaders, utils, model architectures (issues #122-124) |
-| **VRoid Lite** | Ingested + uploaded | 9,302 files (788 MB) in bucket — 4,651 images from 16 CC0 VRoid chars |
+| **VRoid Lite** | Ingested + uploaded | 9,302 files (771 MiB) in bucket — 4,651 images from 16 CC0 VRoid chars |
 | **Live2D GitHub scraper** | Implemented | `run_live2d_scrape.py` — searches GitHub for .moc3 repos, sparse checkout, CSV manifest |
 | **.moc3 parser + atlas extractor** | Implemented | `pipeline/moc3_parser.py` + atlas fragment extraction in `live2d_renderer.py` (issue #146) |
 | **Label Studio integration** | Ready | import/export pipeline + config XML |
@@ -42,40 +41,59 @@
 
 ### What's in the Hetzner Bucket
 
-| Prefix | Files | Size |
-|--------|------:|-----:|
-| `animation/` | 17,823 | 58 GB |
-| `anime_seg/` | 50,406 | 1.9 GB |
-| `animerun/` | 11,276 | 689 MB |
-| `animerun_correspondence/` | 19,493 | 975 MB |
-| `animerun_flow/` | 16,704 | 12 GB |
-| `animerun_linearea/` | 4,236 | 119 MB |
-| `animerun_segment/` | 11,276 | 651 MB |
-| `fbanimehq/` | 304,889 | 11.5 GB |
-| `humanrig/` | 137,209 | 5.6 GB |
-| `ingest/vroid_lite/` | 9,302 | 788 MB |
-| `live2d/` | 4,764 | 327 MB |
-| `segmentation/` | 12,216 | 619 MB |
-| `unirig/` | 66,030 | 42.6 GB |
-| **Total** | **~665,624** | **~136.3 GB** |
+> **Verified March 3, 2026** via `aws s3 ls --recursive --summarize` against `fsn1.your-objectstorage.com`. Live2D added March 3, 2026.
 
-### What's Downloaded Locally (data/preprocessed/)
+| Prefix | Files | Size (actual) |
+|--------|------:|--------------:|
+| `animation/` | 17,823 | 58.1 GiB |
+| `anime_seg/` | 50,406 | 2.5 GiB |
+| `animerun/` | 11,276 | 663 MiB |
+| `animerun_correspondence/` | 19,493 | 930 MiB |
+| `animerun_flow/` | 16,704 | 11.6 GiB |
+| `animerun_linearea/` | 4,236 | 119 MiB |
+| `animerun_segment/` | 11,276 | 628 MiB |
+| `fbanimehq/` | 304,889 | 11.4 GiB |
+| `humanrig/` | 137,209 | 5.6 GiB |
+| `ingest/vroid_lite/` | 9,302 | 771 MiB |
+| `live2d/` | 3,587 | 212 MiB |
+| `segmentation/` | 12,216 | 599 MiB |
+| `unirig/` | 66,030 | 42.6 GiB |
+| **Total** | **664,447** | **~136.7 GiB** |
 
-| Dataset | Size | Downloaded | Status |
-|---------|------|-----------|--------|
-| anime_segmentation (v1) | 17 GB | Deleted | Ingested + uploaded, local copy deleted (batch 4) |
-| anime_seg_v2 | 12 GB | Deleted | Ingested + uploaded, zips deleted |
-| animerun | 21 GB (zip) | Deleted | All 5 data types ingested + uploaded, zip deleted |
-| fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
-| cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
-| vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
-| humanrig | 163 GB (extracted) | Deleted | ✅ Ingested + uploaded — 137,209 files (5.6 GB) in `humanrig/` bucket prefix; local deleted |
-| nova_human | — | Structure only |
-| linkto_anime | — | Structure only |
-| stdgen | — | Structure only |
-| charactergen | — | Structure only |
-| unirig | 66 GB | Deleted | ✅ Ingested + uploaded — 66,030 files (42.6 GB) in `unirig/` bucket prefix; local deleted |
-| anime_instance_seg | — | Structure only |
+### What's on External HD TAMWoolff
+
+> **Verified March 3, 2026** via `ls` + `du -sh` on `/Volumes/TAMWoolff/`.
+> **Storage policy:** All raw source data lives on the external HD permanently — never delete.
+> The Hetzner bucket holds only training-ready ingested output.
+
+**`data/preprocessed/` — downloaded external datasets:**
+
+| Dataset | Size on HD | Ingested to Bucket | Notes |
+|---------|----------:|:------------------:|-------|
+| `fbanimehq/` | 31 GB | ✅ | 12 zip files. Bucket: `fbanimehq/` (304,889 files, 11.4 GiB) |
+| `anime_segmentation/` | 29 GB | ✅ | Original `skytnt/anime-segmentation` dataset. Structure: `data/fg/`…`data/fg 6/` (6 dirs × ~2K RGBA PNGs = 11,802 fg images) + bg dirs + `imgs-masks/` (imgs+masks pairs). Bucket: `anime_seg/` (combined with v2, 50,406 files, 2.5 GiB) |
+| `anime_seg_v2/` | 12 GB | ✅ | Different dataset by a different author, built on top of v1 but heavily curated (removed half, added new images, manual quality pass). 26,000 total images (~13,000 fg). Format: `fg-01/02/03.zip` + `bg-01/02/03.zip`. Same RGBA PNG format as v1. Bucket: `anime_seg/` (combined with v1) |
+| `animerun/` | 21 GB | ✅ | `AnimeRun_v2.2.zip`. Bucket: 5 animerun* prefixes |
+| `vroid_lite/` | 9.4 GB | ✅ | `vroid_dataset/` source. Bucket: `ingest/vroid_lite/` (9,302 files, 771 MiB) |
+| `anime_instance_seg/` | 98 GB | ❌ not yet ingested | `anime_instance_dataset/` with 91,082 train + 7,496 val images (~98,578 total) + COCO-format annotations (det/refine train+val + instances JSON). Adapter built + registered (`anime_instance_seg_adapter.py`, `--adapter anime_instance_seg`). Not yet run. |
+| `stdgen/` | 232 MB | ❌ blocked | Repo + scraper + mapping JSON only. No VRM files (all 404). |
+| `nova_human/` | — | ❌ blocked | README only. Download blocked (Alipan, China-only). |
+| `linkto_anime/` | — | ❌ skipped | README only. CC-BY-NC license forbidden. |
+| `charactergen/` | — | ❌ not started | README only. Not downloaded yet. |
+| `humanrig/` | 234 GB (zip + extracted) | ✅ in bucket | `humanrig.zip` + `data/` extracted (234 GB total) ✅. Bucket: `humanrig/` (137,209 files, 5.6 GiB) |
+| `unirig/` | 4.5 GB + 123 GB extracted | ✅ in bucket | `processed.7z` + `processed/rigxl/` (123 GB). Fully extracted ✅. Bucket: `unirig/` (66,030 files, 42.6 GiB) |
+
+**Other HD directories (`data/`):**
+
+| Directory | Size on HD | Ingested to Bucket | Notes |
+|-----------|----------:|:------------------:|-------|
+| `fbx/` | 3.7 GB | ✅ (via render) | 106 Mixamo FBX characters → `segmentation/` in bucket |
+| `poses/` | 2.1 GB | ✅ (via render) | 2,022 Mixamo animation FBX clips — used in rendering |
+| `mocap/cmu/` | 5.7 GB | ✅ | CMU BVH files → `animation/` in bucket (58.1 GiB processed) |
+| `live2d/` | 15 GB | ✅ rendered + uploaded | 280 .moc3 model dirs on HD — 211/280 succeeded, 844 examples, 3,587 files (212 MiB) in bucket |
+| `vroid/` | — | ❌ blocked | README + labels/ only; no VRM files (VRoid Hub all 404) |
+| `sprites/` | — | ❌ not started | README only; no sprites collected yet |
+| `psd/` | — | ❌ not started | README only; no PSD files collected yet |
 
 ---
 
@@ -86,27 +104,27 @@
 - [x] Fix 22-class region ID alignment — all pipeline code, config, bone maps, and 14 test files updated to match Strata's skeleton.ts RegionId enum (1,389 tests pass, 0 fail)
 - [x] Upload CMU animation data — 17,823 files (58 GB) uploaded to `animation/` bucket prefix
 - [x] Re-render segmentation with 22-class IDs + mixamorig5: bone fix — complete (105 chars × 50 poses, 12,216 files, 619 MB uploaded)
-- [x] Live2D GitHub scraper ran — 279 .moc3 models downloaded (saturated GitHub source)
-- [x] Process 279 Live2D models — 1,112 images rendered, 4,764 files (327 MB) uploaded to `live2d/` bucket prefix
+- [x] Live2D GitHub scraper ran — 279 .moc3 models downloaded to external HD (saturated GitHub source)
+- [x] Process 280 Live2D models through renderer — 211/280 succeeded (844 examples), 3,587 files (212 MiB) uploaded to `live2d/` bucket prefix
 - [x] Fix mixamorig5: bone prefix — 12 previously PARTIAL characters now fully mappable
 - [x] Download all 105 available Mixamo characters (108 total on site, 105 downloaded)
 - [x] UniRig Rig-XL downloaded + extracted — 16,641 meshes (66 GB) in `data/preprocessed/unirig/rigxl/`
 - [x] Build .moc3 parser + atlas extractor (issue #146)
-- [x] Build vroid_lite adapter + ingest 4,651 images + upload to bucket (9,302 files, 788 MB)
-- [x] Delete vroid_lite local data (7.3 GB source + 788 MB output reclaimed)
+- [x] Build vroid_lite adapter + ingest 4,651 images + upload to bucket (9,302 files, 771 MiB)
 - [x] Build Live2D GitHub scraper (`run_live2d_scrape.py`) — issue #141, PR #142 merged
 - [x] Run overnight batch 4 — AnimeRun flow (2,789 pairs) + segment (2,819 frames) uploaded successfully
 - [x] Fix correspondence adapter bug — SegMatching path missing `forward/` subdir + files are `.json` not `.png`
 - [x] Run overnight batch 5 — AnimeRun correspondence (2,789 pairs, 19,493 files) uploaded successfully
-- [x] Delete v1 anime_segmentation local copy (17 GB reclaimed, batch 4 phase 4)
-- [x] Delete AnimeRun zip (all data types fully ingested)
 - [x] Finish AnimeRun segment adapter (#136) — implemented + tests passing
 - [x] Finish AnimeRun correspondence adapter (#137) — implemented + 43 tests passing
 - [x] Build AnimeRun LineArea adapter — implemented + 32 tests passing
 - [x] Run overnight batch 3 — FBAnimeHQ shards 08-11 succeeded
 - [x] Ingest anime_seg_v2 (13,000 images from fg-01/02/03)
-- [x] Clean FBAnimeHQ leftovers (~17 GB reclaimed)
-- [x] Delete anime_seg_v2 fg zips after ingestion
+
+### Storage Corrections Needed
+
+- [x] Re-download UniRig Rig-XL raw data to external HD — `processed.7z` downloaded + extracted to `processed/rigxl/` (123 GB) ✅
+- [x] Re-download HumanRig raw data to external HD — `humanrig.zip` downloaded + extracted to `data/` (234 GB total) ✅
 
 ### This Week
 
@@ -116,7 +134,7 @@
 
 ### Near-Term
 
-- [x] Process 279 Live2D models through renderer pipeline — 1,112 images, 4,764 files (327 MB) uploaded to bucket
+- [x] Process 280 Live2D models through renderer pipeline — 211/280 succeeded (844 examples), 3,587 files (212 MiB) uploaded to `live2d/` bucket prefix
 - [ ] Download NOVA-Human dataset (Alipan link — needs China-based help, see-through team contacted)
 - [x] ~~Download StdGEN~~ — BLOCKED: VRoid Hub models all 404'd, pre-renders not distributed. Repo cloned for rendering scripts only.
 - [x] Download UniRig Rig-XL dataset
@@ -271,12 +289,13 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - A pre-trained auto-rigging model as potential fallback for unusual character shapes
 
 **Action items:**
-- [ ] Download Rig-XL dataset from UniRig releases
-- [ ] Extract humanoid subset for skeleton/weight ground truth
-- [ ] Map their skeleton conventions to Strata's 20-bone hierarchy
+- [x] Download Rig-XL dataset — `processed.7z` downloaded + extracted to `processed/rigxl/` (123 GB on external HD)
+- [x] Build adapter (`unirig_adapter.py` + `unirig_skeleton_mapper.py`)
+- [x] Ingest + upload — 66,030 files, 42.6 GiB in `unirig/` bucket prefix
+- [ ] Extract humanoid subset for skeleton/weight ground truth (post-ingest analysis)
 - [ ] Use as validation set for weight painting prediction
 
-**Status:** Adapter planned (`unirig_skeleton_mapper.py` exists). Not yet downloaded.
+**Status:** ✅ COMPLETE. Downloaded + ingested + uploaded. 16,641 meshes → 66,030 files (42.6 GiB) in bucket.
 
 ---
 
@@ -350,20 +369,26 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ### PP-8: Supplementary Datasets
 
-**skytnt/anime-segmentation** (HuggingFace) ✅ DOWNLOADED + FULLY INGESTED
-- Figure/background segmentation for anime characters
-- v1: 17 GB downloaded, 11,802 images ingested and uploaded to bucket (1.8 GB)
-- v2: 12 GB downloaded, 13,000 images ingested and uploaded to bucket
-- Combined: ~50,406 files in bucket under `anime_seg/`
-- [x] Download v1
-- [x] Ingest v1 (11,802 images → 35,406 files in bucket)
-- [x] Download v2
-- [x] Ingest v2 (13,000 images from fg-01/02/03 → ~15,000 files in bucket)
+**anime-segmentation v1 + v2** ✅ DOWNLOADED + FULLY INGESTED (both are separate datasets)
 
-**dreMaz/AnimeInstanceSegmentationDataset** (HuggingFace)
+**v1 — `skytnt/anime-segmentation`** (HuggingFace, 29 GB on HD)
+- Original dataset by skytnt. Structure: `data/fg/`…`data/fg 6/` (6 dirs, ~2K RGBA PNGs each = 11,802 fg images) + bg dirs + `imgs-masks/` (real image + mask pairs). Alpha channel = fg/bg mask.
+- [x] Download v1 (29 GB → `data/preprocessed/anime_segmentation/`)
+- [x] Ingest v1 (11,802 fg images ingested via `anime_seg_adapter.py`)
+
+**v2 — curated variant** (HuggingFace, 12 GB on HD, different author)
+- Built on top of v1 but heavily curated: removed >50% of v1 images for quality issues (stray pixels, cut-off images, semi-transparent areas, drop shadows), added many new images including game sprites, VN characters, male characters, non-human creatures. 26,000 total images (~13,000 fg). Same RGBA PNG format. Structure: `fg-01/02/03.zip` + `bg-01/02/03.zip`.
+- [x] Download v2 (12 GB → `data/preprocessed/anime_seg_v2/`)
+- [x] Ingest v2 (13,000 fg images from fg-01/02/03 via same `anime_seg_adapter.py`)
+
+**Combined bucket output:** 50,406 files, 2.5 GiB under `anime_seg/` prefix
+
+**dreMaz/AnimeInstanceSegmentationDataset** (`anime_instance_seg/`) ✅ DOWNLOADED — adapter built, not yet ingested
 - Instance segmentation (which pixels belong to which character in multi-character scenes)
-- Useful for multi-character handling, not body-part segmentation
-- [ ] Download: `git clone https://huggingface.co/datasets/dreMaz/AnimeInstanceSegmentationDataset`
+- 91,082 train + 7,496 val images (~98,578 total), COCO-format annotations (det_train/val, refine_train/val, instances JSON)
+- Adapter built + registered: `anime_instance_seg_adapter.py` (`--adapter anime_instance_seg`)
+- [x] Download to `data/preprocessed/anime_instance_seg/` (98 GB on HD)
+- [ ] Run ingest + upload to bucket
 
 **skytnt/fbanimehq** (HuggingFace) ✅ DOWNLOADED + FULLY INGESTED
 - 112,806 full-body anime character images at 1024×512, background-removed
@@ -665,7 +690,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 **Note:** The See-through paper team collected ~9,100 Live2D models. If they release their dataset or data engine code, that would supersede manual collection. Monitor their repo.
 
-**Status:** Pipeline implemented (renderer, review UI, Live2D mapper, .moc3 parser, atlas fragment extractor). GitHub scraper built and run — **279 models downloaded** (GitHub source saturated). .moc3 binary parser + atlas fragment extraction working (issue #146). Chinese body-part regex patterns added to config. Next: process 279 models through renderer to generate training images, then expand collection via Booth.pm.
+**Status:** Pipeline implemented (renderer, review UI, Live2D mapper, .moc3 parser, atlas fragment extractor). GitHub scraper built and run — **279 models downloaded to external HD** (GitHub source saturated). .moc3 binary parser + atlas fragment extraction working (issue #146). Chinese body-part regex patterns added to config. **Rendering not yet run** — next step is to process the 279 models through the renderer to generate training images, then expand collection via Booth.pm.
 
 ---
 
@@ -794,7 +819,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Mixamo renders (DS-1) | ~10,000 | 5,250 rendered | ✅ In bucket (12,216 files, 619 MB) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
-| Live2D composites (DS-3) | ~1,600 | 1,112 rendered | ✅ In bucket (4,764 files, 327 MB) |
+| Live2D composites (DS-3) | ~1,600 | 0 | ❌ Not yet rendered — 279 models on HD, pipeline ready |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
@@ -811,7 +836,7 @@ These require downloading raw assets and running your own rendering pipeline.
 - [ ] **Clone StdGEN repo** (PP-2) — get train/test lists, rendering scripts, semantic annotation code
 - [ ] **Clone PAniC-3D vroid-dataset** (PP-3) — get downloader + metadata.json
 - [ ] **Clone CharacterGen repo** (PP-4) — get alternative rendering scripts
-- [ ] **Download UniRig Rig-XL dataset** (PP-5) — rigged mesh ground truth
+- [x] **Download UniRig Rig-XL dataset** (PP-5) — rigged mesh ground truth
 - [x] **Download AnimeRun dataset** (PP-6) — contour line pairs ✅
 - [ ] **Check LinkTo-Anime availability** (PP-7) — if released, download
 - [x] Download Mixamo FBX characters (61/250 downloaded) — need more
@@ -884,9 +909,10 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
+| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (data on HD, not yet run) |
 | `linkto_adapter.py` | — | ✅ Implemented (not registered) |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
-| `unirig_skeleton_mapper.py` | — | 📋 Planned |
+| `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
 | `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
 | `anymate_adapter.py` | `--adapter anymate` | ❌ SKIPPED — 3D weights unusable without 2D render pipeline |
 | `anime_drawings_adapter.py` | — | 📋 Planned (PP-12) |
@@ -908,10 +934,10 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ### Cloud Storage (Hetzner Object Storage)
 
-- Bucket: `s3://strata-training-data` (Falkenstein datacenter)
+- Bucket: `s3://strata-training-data` (Falkenstein datacenter, endpoint: `fsn1.your-objectstorage.com`)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: ~87 GB across 10 dataset prefixes
-- Access: AWS CLI compatible, credentials in `.env`
+- Total uploaded: **665,624 files / ~136.8 GiB** across 13 prefixes (verified March 3, 2026)
+- Access: AWS CLI compatible, credentials in `.env` (`BUCKET_ACCESS_KEY` / `BUCKET_SECRET`)
 
 ---
 
@@ -963,37 +989,38 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ## QUICK REFERENCE: What's Free vs What Costs Time
 
-| Task | Effort | Impact | Status |
-|------|--------|--------|--------|
-| Download NOVA-Human | 1 day (bandwidth) | 204K multi-view anime images | Not started |
-| Download StdGEN lists + scripts | 1 hour | Quality-filtered model IDs + render pipeline | Not started |
-| Download UniRig Rig-XL | 1 day (bandwidth) | 14K rigged meshes with weights | Not started |
-| Download AnimeRun | 2 hours | 8K contour/color pairs | ✅ Done |
-| Download FBAnimeHQ | 1 day (bandwidth) | 112K full-body anime images (unlabeled) | ✅ Done |
-| Download anime-segmentation | 4 hours | 22K+ fg/bg segmentation pairs | ✅ Done |
-| Ingest AnimeRun (flow/seg/corr) | Done (batch 4+5) | All data types in bucket | ✅ Done |
-| Ingest FBAnimeHQ shards 08-11 | Done | All shards in bucket | ✅ Done |
-| Ingest anime_seg_v2 | Done | 13K images in bucket | ✅ Done |
-| Ingest vroid_lite | Done | 4,651 images in bucket | ✅ Done |
-| Build Live2D GitHub scraper | Done | `run_live2d_scrape.py` for .moc3 repos | ✅ Done |
-| Build .moc3 parser + extractor | Done | Parses binary mesh data, extracts fragments from atlas | ✅ Done |
-| Run Live2D GitHub scraper | Done | 279 models downloaded, GitHub saturated | ✅ Done |
-| Upload CMU animation | Done | 17,823 files (58 GB) in bucket | ✅ Done |
-| Fix 22-class region IDs | Done | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done |
-| Download HumanRig (PP-9) | 1 hour | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0 | READY — `huggingface-cli download jellyczd/HumanRig` |
-| Anymate (PP-10) | — | 230K rigged meshes, 3D weights only | ❌ SKIPPED — unusable without render pipeline |
-| Contact MagicAnime authors (PP-11) | 30 min | 50K cartoon clips with 133-keypoint annotations | BLOCKED — institutional access only |
-| Download AnimeDrawingsDataset (PP-12) | 30 min | 2K anime/manga joint annotations (illustrated style) | READY — clone + rake build |
-| Email Ou 2024 authors for dataset (PP-13) | 30 min | Anime body part seg ground truth (2D style) | Not started |
-| Monitor See-through release (PP-14) | — | 9.1K Live2D chars with draw order + 19-class seg | Late March 2026 |
-| Monitor ChildlikeSHAPES release (PP-15) | — | 16K hand-drawn figures with 25-class seg masks | Pending paper accept |
-| Run PAniC-3D downloader | 2–3 days | Source VRM files for custom rendering | Not started |
-| Extend StdGEN Blender script | 3–5 days (coding) | Adds all Strata-specific outputs | Not started |
-| Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data | Not started |
-| Render more Mixamo chars | 2–3 days (compute) | Western-style training data | 49/250 done |
-| Live2D collection + mapping | 2–3 weeks | 2D illustration style coverage | Not started |
-| CMU labeling + retargeting | 2–3 weeks | Animation intelligence data | ✅ Retargeted + uploaded |
-| Start model training | 1–2 weeks (coding) | Segmentation model MVP | ✅ Done |
+| Task                                          | Effort              | Impact                                                      | Status                                       |
+| --------------------------------------------- | ------------------- | ----------------------------------------------------------- | -------------------------------------------- |
+| Download NOVA-Human                           | 1 day (bandwidth)   | 204K multi-view anime images                                | Not started                                  |
+| Download StdGEN lists + scripts               | 1 hour              | Quality-filtered model IDs + render pipeline                | Not started                                  |
+| Download UniRig Rig-XL                        | 1 day (bandwidth)   | 14K rigged meshes with weights                              | ✅ Done                                       |
+| Download AnimeRun                             | 2 hours             | 8K contour/color pairs                                      | ✅ Done                                       |
+| Download FBAnimeHQ                            | 1 day (bandwidth)   | 112K full-body anime images (unlabeled)                     | ✅ Done                                       |
+| Download anime-segmentation                   | 4 hours             | 22K+ fg/bg segmentation pairs                               | ✅ Done                                       |
+| Ingest AnimeRun (flow/seg/corr)               | Done (batch 4+5)    | All data types in bucket                                    | ✅ Done                                       |
+| Ingest FBAnimeHQ shards 08-11                 | Done                | All shards in bucket                                        | ✅ Done                                       |
+| Ingest anime_seg_v2                           | Done                | 13K images in bucket                                        | ✅ Done                                       |
+| Ingest vroid_lite                             | Done                | 4,651 images in bucket                                      | ✅ Done                                       |
+| Build Live2D GitHub scraper                   | Done                | `run_live2d_scrape.py` for .moc3 repos                      | ✅ Done                                       |
+| Build .moc3 parser + extractor                | Done                | Parses binary mesh data, extracts fragments from atlas      | ✅ Done                                       |
+| Run Live2D GitHub scraper                     | Done                | 279 models on external HD, GitHub saturated                 | ✅ Done                                       |
+| Run Live2D renderer on 279 models             | 1–2 days (compute)  | Generates training images + uploads to bucket               | ❌ Not started                                |
+| Upload CMU animation                          | Done                | 17,823 files (58 GB) in bucket                              | ✅ Done                                       |
+| Fix 22-class region IDs                       | Done                | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done                                       |
+| Download HumanRig (PP-9)                      | 1 hour              | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0    | ✅ Done                                       |
+| Anymate (PP-10)                               | —                   | 230K rigged meshes, 3D weights only                         | ❌ SKIPPED — unusable without render pipeline |
+| Contact MagicAnime authors (PP-11)            | 30 min              | 50K cartoon clips with 133-keypoint annotations             | BLOCKED — institutional access only          |
+| Download AnimeDrawingsDataset (PP-12)         | 30 min              | 2K anime/manga joint annotations (illustrated style)        | READY — clone + rake build                   |
+| Email Ou 2024 authors for dataset (PP-13)     | 30 min              | Anime body part seg ground truth (2D style)                 | Not started                                  |
+| Monitor See-through release (PP-14)           | —                   | 9.1K Live2D chars with draw order + 19-class seg            | Late March 2026                              |
+| Monitor ChildlikeSHAPES release (PP-15)       | —                   | 16K hand-drawn figures with 25-class seg masks              | Pending paper accept                         |
+| Run PAniC-3D downloader                       | 2–3 days            | Source VRM files for custom rendering                       | Not started                                  |
+| Extend StdGEN Blender script                  | 3–5 days (coding)   | Adds all Strata-specific outputs                            | Not started                                  |
+| Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data                               | Not started                                  |
+| Render more Mixamo chars                      | 2–3 days (compute)  | Western-style training data                                 | 49/250 done                                  |
+| Live2D collection + mapping                   | 2–3 weeks           | 2D illustration style coverage                              | Not started                                  |
+| CMU labeling + retargeting                    | 2–3 weeks           | Animation intelligence data                                 | ✅ Retargeted + uploaded                      |
+| Start model training                          | 1–2 weeks (coding)  | Segmentation model MVP                                      | ✅ Done                                       |
 
 ---
 

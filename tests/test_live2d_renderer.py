@@ -492,10 +492,12 @@ class TestProcessLive2DModel:
         result = process_live2d_model(tmp_model_dir, resolution=256)
 
         assert result is not None
-        # "head" and "body" and "arm_upper_L" should map
+        # "head" and "body" and "arm_upper_L" should map to body regions
         assert result.mapped_count >= 3
-        # "shadow_overlay" should be unmapped
-        assert "shadow_overlay" in result.unmapped_fragments
+        # "shadow_overlay" maps to background (rid=0) — not a body region,
+        # but no longer "unmapped" since it's explicitly categorised as accessory/background.
+        # Verify it's not in unmapped (it's intentionally background).
+        assert "shadow_overlay" not in result.unmapped_fragments
 
     def test_mask_has_region_ids(self, tmp_model_dir: Path) -> None:
         result = process_live2d_model(tmp_model_dir, resolution=256)

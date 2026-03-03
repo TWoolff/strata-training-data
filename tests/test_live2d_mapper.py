@@ -44,10 +44,8 @@ class TestMapFragment:
             "face",
             "kao",
             "hair_front",
-            "hair_back",
             "bangs",
             "maegami",
-            "ushirogami",
             "eye_L",
             "eye_R",
             "me_l",
@@ -69,6 +67,20 @@ class TestMapFragment:
         label, region_id = map_fragment(fragment_name)
         assert label == "head", f"{fragment_name!r} → {label}, expected 'head'"
         assert region_id == 1
+
+    # --- Hair back region (21) ---
+
+    @pytest.mark.parametrize(
+        "fragment_name",
+        [
+            "hair_back",
+            "ushirogami",
+        ],
+    )
+    def test_hair_back_fragments(self, fragment_name: str) -> None:
+        label, region_id = map_fragment(fragment_name)
+        assert label == "hair_back", f"{fragment_name!r} → {label}, expected 'hair_back'"
+        assert region_id == 21
 
     # --- Neck region (2) ---
 
@@ -212,7 +224,7 @@ class TestMapFragment:
         assert label == expected_label, f"{fragment_name!r} → {label}, expected {expected_label!r}"
         assert region_id == expected_id
 
-    # --- Accessories → background (0) ---
+    # --- Accessories / non-body → background (0) ---
 
     @pytest.mark.parametrize(
         "fragment_name",
@@ -227,6 +239,8 @@ class TestMapFragment:
             "armor_chest",
             "weapon",
             "shield",
+            "ArtMesh42",
+            "shadow_overlay",
         ],
     )
     def test_accessory_fragments(self, fragment_name: str) -> None:
@@ -240,9 +254,7 @@ class TestMapFragment:
         "fragment_name",
         [
             "unknown_mesh_3",
-            "ArtMesh42",
             "deformer_ctrl",
-            "shadow_overlay",
         ],
     )
     def test_unmapped_fragments(self, fragment_name: str) -> None:
