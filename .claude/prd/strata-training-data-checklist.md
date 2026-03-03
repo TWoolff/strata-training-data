@@ -69,12 +69,12 @@
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
 | cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
 | vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
-| humanrig | 163 GB (extracted) | Yes | ✅ Ingested + uploaded — 137,209 files (5.6 GB) in `humanrig/` bucket prefix |
+| humanrig | 163 GB (extracted) | Deleted | ✅ Ingested + uploaded — 137,209 files (5.6 GB) in `humanrig/` bucket prefix; local deleted |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
 | charactergen | — | Structure only |
-| unirig | 66 GB | Yes | ✅ Ingested + uploaded — 66,030 files (42.6 GB) in `unirig/` bucket prefix |
+| unirig | 66 GB | Deleted | ✅ Ingested + uploaded — 66,030 files (42.6 GB) in `unirig/` bucket prefix; local deleted |
 | anime_instance_seg | — | Structure only |
 
 ---
@@ -433,49 +433,6 @@ Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `ver
 
 ---
 
-### PP-10: Anymate Dataset ⭐ HIGH PRIORITY — READY TO DOWNLOAD
-
-**What:** 230K rigged 3D assets with expert-crafted skeleton + skinning weights, curated from Objaverse-XL
-**Source:** https://github.com/yfde/Anymate | Dataset: https://huggingface.co/datasets/yfdeng/Anymate
-**License:** Not specified in repo — check HuggingFace dataset card before use
-**Paper:** "Anymate: A Dataset and Baselines for Learning 3D Object Rigging" SIGGRAPH 2025
-
-**What's included:**
-- 230K diverse 3D assets (humanoids, animals, vehicles, furniture, etc.)
-- Artist-created rigging: joint positions, bone connectivity, skinning weights per vertex
-- 70× larger than any prior public rigging dataset
-- PyTorch `.pt` format: 9 files (Anymate_test.pt + Anymate_train_0.pt through Anymate_train_7.pt)
-- Downloaded via `bash Anymate/get_datasets.sh` (fetches from HuggingFace)
-
-**What this gives you:**
-- Massive scale for weight prediction MLP training (230K > UniRig's 14K)
-- Ground truth artist-crafted weights (higher quality than auto-computed)
-- Humanoid subset (filter needed) could give 20K+ high-quality humanoid rigs
-
-**What's missing:**
-- ~~License not stated~~ — **Apache-2.0** (confirmed from HuggingFace dataset card README)
-- Mixed categories — humanoid filter implemented (bilateral symmetry + joint count heuristic)
-- No 2D renders or segmentation annotations included
-- Skeleton topology varies per asset (non-uniform — output is bone positions + parent indices, not Strata skeleton)
-- 84.4 GB total (8 × 10 GB train + 4.4 GB test), ~230K samples
-
-**Action items:**
-- [x] Check HuggingFace dataset card for license — **Apache-2.0** ✅
-- [x] Download all 9 shards (Anymate_test.pt + Anymate_train_0-7.pt) — 84.4 GB on external HD
-- [x] Build `anymate_adapter.py` with humanoid filter + weights + skeleton output
-- [x] Register `--adapter anymate` in `run_ingest.py`
-- [ ] Run full ingest: `python run_ingest.py --adapter anymate --input_dir data/preprocessed/anymate --output_dir output/anymate`
-- [ ] Upload to bucket after ingest
-
-**Status:** ✅ DOWNLOADED + ADAPTER BUILT. Ready to run ingest.
-
-**Humanoid filter results (test shard sample):** 45% pass rate on first 100 items. Estimated ~100K humanoid samples across all shards.
-
-**Data format per converted example:**
-- `skeleton.json` — bone positions (head/tail 3D), parent indices
-- `weights.json` — per-vertex skinning weights (up to 4 bones per vertex)
-- `metadata.json` — asset name, joint count, filter status, Apache-2.0 license
-
 ---
 
 ### PP-11: MagicAnime Dataset — Keypoint Subset
@@ -820,7 +777,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
 | HumanRig (PP-9) | 11,434 meshes + 2D images | 34,302 rendered | ✅ Ingested + uploaded (137,209 files, 5.6 GB in bucket) |
-| Anymate (PP-10) | 230K assets (~100K humanoid est.) | 0 ingested | ✅ Downloaded (84.4 GB) + adapter built — ready to run ingest |
+| Anymate (PP-10) | 230K assets (~100K humanoid est.) | — | ❌ SKIPPED — 3D weights only, unusable without 2D render pipeline |
 | MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
 | AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | READY — clone + rake build or Docker |
 | Body Part Seg Anime Ou 2024 (PP-13) | Unknown | 0 | Not started — email authors |
@@ -931,7 +888,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_skeleton_mapper.py` | — | 📋 Planned |
 | `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
-| `anymate_adapter.py` | `--adapter anymate` | ✅ Implemented (Apache-2.0, humanoid filter, weights + skeleton output) |
+| `anymate_adapter.py` | `--adapter anymate` | ❌ SKIPPED — 3D weights unusable without 2D render pipeline |
 | `anime_drawings_adapter.py` | — | 📋 Planned (PP-12) |
 | `see_through_adapter.py` | — | 📋 Planned (PP-14, pending release) |
 
@@ -1024,7 +981,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Upload CMU animation | Done | 17,823 files (58 GB) in bucket | ✅ Done |
 | Fix 22-class region IDs | Done | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done |
 | Download HumanRig (PP-9) | 1 hour | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0 | READY — `huggingface-cli download jellyczd/HumanRig` |
-| Check Anymate license + download (PP-10) | 30 min + 1 day | 230K rigged meshes, humanoid subset ~20-40K | READY (check license first) |
+| Anymate (PP-10) | — | 230K rigged meshes, 3D weights only | ❌ SKIPPED — unusable without render pipeline |
 | Contact MagicAnime authors (PP-11) | 30 min | 50K cartoon clips with 133-keypoint annotations | BLOCKED — institutional access only |
 | Download AnimeDrawingsDataset (PP-12) | 30 min | 2K anime/manga joint annotations (illustrated style) | READY — clone + rake build |
 | Email Ou 2024 authors for dataset (PP-13) | 30 min | Anime body part seg ground truth (2D style) | Not started |
@@ -1380,7 +1337,7 @@ Predicts what a body part looks like even when partially hidden — directly sup
 **Size:** 2.7K models
 
 **Why this matters:**
-The foundational public rigging dataset. Skinning weight format matches what Strata's weight prediction MLP needs. 2,703 diverse 3D characters (humanoid and non-humanoid) with ground-truth weights. Smaller than HumanRig/Anymate but well-validated and widely benchmarked.
+The foundational public rigging dataset. Skinning weight format matches what Strata's weight prediction MLP needs. 2,703 diverse 3D characters (humanoid and non-humanoid) with ground-truth weights. Smaller than HumanRig but well-validated and widely benchmarked.
 
 **Action items:**
 - [ ] Download from project page

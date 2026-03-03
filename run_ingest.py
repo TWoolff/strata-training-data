@@ -483,36 +483,6 @@ def _run_humanrig(args: argparse.Namespace) -> int:
     return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
-def _run_anymate(args: argparse.Namespace) -> int:
-    """Run the Anymate adapter."""
-    from ingest.anymate_adapter import convert_directory
-
-    shards: list[str] | None = None
-    if getattr(args, "shards", None):
-        shards = [s.strip() for s in args.shards.split(",") if s.strip()]
-
-    result = convert_directory(
-        args.input_dir,
-        args.output_dir,
-        humanoid_only=not getattr(args, "no_humanoid_only", False),
-        only_new=args.only_new,
-        max_samples=args.max_images,
-        random_sample=args.random_sample,
-        seed=args.seed,
-        shards=shards,
-        include_mesh=getattr(args, "include_mesh", False),
-    )
-
-    print("\nAnymate ingestion complete:")
-    print(f"  Examples written:  {result.examples_written}")
-    print(f"  Filtered out:      {result.examples_skipped_filter}")
-    print(f"  Already existed:   {result.examples_skipped_existing}")
-    print(f"  Errors:            {len(result.errors)}")
-    print(f"  Output directory:  {args.output_dir}")
-
-    return 0 if result.examples_written > 0 or result.examples_skipped_existing > 0 else 1
-
-
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -526,7 +496,6 @@ _ADAPTERS = {
     "vroid_lite": _run_vroid_lite,
     "unirig": _run_unirig,
     "humanrig": _run_humanrig,
-    "anymate": _run_anymate,
 }
 
 
