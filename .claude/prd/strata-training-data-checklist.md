@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 2, 2026 (v11 — new datasets researched: HumanRig, Anymate, MagicAnime, AnimeDrawingsDataset, Body Part Seg Anime (Ou 2024), ChildlikeSHAPES, See-through)
+**Last updated:** March 3, 2026 (v12 — deep research pass: animation principles, inbetweening, locomotion style, draw order, occlusion, illustrated pose, rigging scale datasets)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -1023,4 +1023,429 @@ These require downloading raw assets and running your own rendering pipeline.
 | Render more Mixamo chars | 2–3 days (compute) | Western-style training data | 49/250 done |
 | Live2D collection + mapping | 2–3 weeks | 2D illustration style coverage | Not started |
 | CMU labeling + retargeting | 2–3 weeks | Animation intelligence data | ✅ Retargeted + uploaded |
-| Start model training | 1–2 weeks (coding) | Segmentation model MVP | Issues #125-128 open |
+| Start model training | 1–2 weeks (coding) | Segmentation model MVP | ✅ Done |
+
+---
+
+## NEW DATASETS FOUND (v12 Research — March 2026)
+
+Deep research pass covering: animation principles as ML data, inbetweening/timing datasets, locomotion style, draw order/occlusion, illustrated character pose, and large-scale rigging datasets.
+
+---
+
+### ILLUSTRATED CHARACTER POSE + SEGMENTATION
+
+#### NEW-1: Meta Animated Drawings + Amateur Drawings Dataset ⭐ HIGHEST PRIORITY
+
+**What:** 178,000+ hand-drawn human figure drawings with bounding boxes, segmentation masks, and 15-joint keypoint annotations
+**Source:** https://github.com/facebookresearch/AnimatedDrawings
+**License:** **MIT** — commercially usable, no restrictions
+**Size:** 178K images, diverse styles (children's drawings, stick figures, anime, realistic)
+
+**Why this matters for Strata:**
+This is the single most important gap-filler for Strata's joint placement model. All current training data uses anime-illustration or 3D-render style characters with standard proportions. Real Strata users will draw characters that look like this dataset — hand-drawn, non-standard proportions, abstract. The MIT license makes it freely usable for commercial training.
+- 15-joint annotations → maps to Strata's 19-joint skeleton (spine/forearm slots need synthetic addition)
+- Huge proportion variety: stick figures through realistic through chibi
+- Binary segmentation masks per character
+
+**Action items:**
+- [ ] Clone repo and download dataset
+- [ ] Build adapter mapping 15-joint format → Strata 19-joint skeleton
+- [ ] Use for joint refinement CNN fine-tuning (illustrated style domain)
+
+**Status:** Not started. **Download immediately.**
+
+---
+
+#### NEW-2: Bizarre Pose Dataset ⭐ HIGH PRIORITY
+
+**What:** COCO-format keypoint annotations for illustrated anime/manga characters; 2× prior anime pose datasets with more diverse poses
+**Source:** https://github.com/ShuhongChen/bizarre-pose-estimator
+**License:** Public (Google Drive) — check terms
+**Size:** ~4K+ images
+
+**Why this matters:**
+The only COCO-format keypoint dataset specifically for anime/illustrated characters. Directly trains Strata's joint placement model on the illustrated domain. Also includes a 1,062-class Danbooru tagging rulebook useful for style-based filtering.
+
+**Action items:**
+- [ ] Clone repo and download from linked Google Drive
+- [ ] Build adapter for COCO keypoint → Strata 19-joint format
+
+**Status:** Not started.
+
+---
+
+#### NEW-3: CoNR Dataset (Collaborative Neural Rendering) ⭐ HIGH PRIORITY
+
+**What:** 700,000+ hand-drawn and synthesized anime character images organized as character sheets (multi-view: front/side/back of same character)
+**Source:** https://github.com/megvii-research/IJCAI2023-CoNR
+**License:** **CC-BY 4.0** — commercially usable
+**Size:** 700K images
+
+**Why this matters:**
+Large-scale permissive-license anime illustration pairs across poses. The character sheet structure (front/side/back of same character) directly supports Strata's multi-angle rendering needs. 700K scale provides substantial training variety.
+
+**Action items:**
+- [ ] Download from Google Drive / Baidu links in GitHub repo
+- [ ] Build adapter for Strata segmentation training format
+
+**Status:** Not started.
+
+---
+
+#### NEW-4: Manga109 + CVPR 2025 Segmentation
+
+**What:** 109 manga volumes (21,142 pages) with CVPR 2025 pixel-level body segmentation annotations
+**Source:** https://huggingface.co/datasets/MS92/MangaSegmentation | manga109.org
+**License:** Academic (109 volumes); 87 volumes CC-BY for commercial orgs ("Manga109-s")
+**Size:** 21K pages
+
+**Why this matters:**
+Lineart/sketch-style body region segmentation. Trains Strata's segmentation model to recognize body regions before color is added — useful for supporting sketch-style Strata inputs.
+
+**Action items:**
+- [ ] Request access via manga109.org (email required)
+- [ ] Build adapter mapping manga body annotations → Strata 22-region IDs
+
+**Status:** Not started.
+
+---
+
+### ANIMATION TIMING + INBETWEENING
+
+#### NEW-5: ATD-12K (Animation Triplet Dataset) ⭐ HIGH PRIORITY
+
+**What:** 12,000 frame triplets (keyframe A, inbetween, keyframe B) from 30 animation movies. Includes difficulty levels and motion category tags per triplet.
+**Source:** https://arxiv.org/abs/2104.02495 | "Deep Animation Video Interpolation in the Wild" (CVPR 2021)
+**License:** Research (movie-sourced)
+**Size:** 12K triplets, 25+ hours of animation
+
+**Why this matters for Strata:**
+The inbetween frame encodes the animator's timing and spacing decision. The motion category tags (fast/slow, large/small motion) are a primitive timing taxonomy — the closest publicly available ML signal to "animation timing annotations." Can train a model to predict correct intermediate frames for Strata's animation playback interpolation.
+
+**Action items:**
+- [ ] Find download link from CVPR 2021 supplementary / GitHub
+- [ ] Use triplets to train or evaluate inbetween quality
+
+**Status:** Not started.
+
+---
+
+#### NEW-6: STD-12K (Sketch Triplet Dataset)
+
+**What:** 12,000 sketch triplets from 30 2D animation series; stroke-level correspondence between frames
+**Source:** https://github.com/none-master/SAIN | ACM MM 2024
+**License:** Research
+**Size:** 12K triplets
+
+**Why this matters:**
+Real 2D sketch animation timing data — not 3D-derived. Stroke correspondence between keyframes encodes exactly how professional animators track lines in time. Strata already tracks AnimeRun; this fills the sketch-specific gap.
+
+**Action items:**
+- [ ] Check GitHub for download availability
+- [ ] Use for animation timing reference / inbetween quality metrics
+
+**Status:** Not started. Already tracked as STD-12K in quick reference table above; adding here for completeness.
+
+---
+
+#### NEW-7: MixamoLine240
+
+**What:** 240 sequences of Mixamo characters rendered as cel-shaded cartoon line art in Blender, with ground-truth vertex correspondence between frames
+**Source:** https://github.com/lisiyao21/AnimeInbet | ICCV 2023
+**License:** Research
+**Size:** 240 sequences, 19,930 training frames
+
+**Why this matters:**
+Built on the **same Mixamo + Blender pipeline** as Strata. The geometric inbetweening formulation (vertices as graph nodes with inter-frame correspondence) is directly applicable to Strata's joint position interpolation model. Can use this as a validation reference for Strata's animation blueprint system.
+
+**Action items:**
+- [ ] Download from GitHub
+- [ ] Study geometric correspondence format for joint interpolation application
+
+**Status:** Not started.
+
+---
+
+#### NEW-8: Anita Dataset (Professional Hand-drawn Animation)
+
+**What:** 16,000+ professional hand-drawn keyframes at 1080p from 14 anime productions. Includes tie-down sketches, segment color, and composition — actual production-pipeline intermediate files.
+**Source:** https://github.com/zhenglinpan/AnitaDataset
+**License:** CC BY-NC-SA 4.0 (non-commercial) / CC BY (some components)
+**Size:** 16K+ frames, 212 sketch cuts, 137 color cuts, 18 compositions
+
+**Why this matters:**
+The only publicly licensed dataset from real 2D animation production files. Tie-down sketches paired with cleaned/colored frames = clean-up training signal. Scene structure provides implicit timing ground truth from professional animators. Trains Strata's style augmentation (sketch→color pipeline) and animation timing model.
+
+**Action items:**
+- [ ] Download from GitHub
+- [ ] Use sketch-color pairs for style augmentation training
+- [ ] Check if NC license permits Strata's commercial training use
+
+**Status:** Not started.
+
+---
+
+#### NEW-9: Sakuga-42M
+
+**What:** ~42 million keyframes from ~150,000 cartoon videos (1950s–2020s); includes timing annotations ("on-ones", "on-twos", "on-threes" per clip)
+**Source:** https://zhenglinpan.github.io/sakuga_dataset_webpage/ | https://github.com/KytraScript/SakugaDataset
+**License:** CC BY-NC-SA 4.0 (non-commercial)
+**Size:** 42M keyframes, 1.2M clips
+
+**Why this matters:**
+The timing-on-twos/threes annotation is the most structured publicly available proxy for animation timing conventions. "On-twos" (12fps) = standard anime timing; "on-ones" (24fps) = full animation; "on-threes" (8fps) = limited. This directly trains Strata's understanding of how fast to play animation blueprints. Annotation parquet files are separate from video data.
+
+**Action items:**
+- [ ] Download annotation parquet files (small) separately from video data
+- [ ] Use on-ones/twos/threes labels for timing blueprint classification
+
+**Status:** Not started.
+
+---
+
+### LOCOMOTION STYLE + MOTION DIVERSITY
+
+#### NEW-10: 100STYLE Dataset ⭐ HIGH PRIORITY
+
+**What:** 4,779,750 frames across 100 locomotion styles × 10 motion contents (walk forward/backward/side, run, idle, turn, etc.)
+**Source:** https://ianxmason.github.io/100style/ | https://zenodo.org/records/8127870
+**License:** **CC BY 4.0** — commercially usable
+**Size:** 4.7M frames, BVH + processed format (joint positions, rotations, velocities, motion phases)
+
+**Why this matters for Strata:**
+100 locomotion "personalities" (tired, happy, active, sneaking, injured, etc.) directly encode character-specific timing and movement style. This is how Strata's animation blueprints gain personality — not just "walk" but "happy walk", "tired walk". Motion phase labels enable spacing analysis. CC BY 4.0 makes it commercially usable. This is a **must-have** for animation intelligence.
+
+**Action items:**
+- [ ] Download from Zenodo
+- [ ] Retarget all 100 styles × 10 contents to Strata 19-bone skeleton
+- [ ] Label with style + content taxonomy for blueprint library
+- [ ] Add to animation/ data pipeline
+
+**Status:** Not started. **Download immediately.**
+
+---
+
+#### NEW-11: AIST++ Dance Motion Dataset
+
+**What:** 5.2 hours, 1,408 sequences, 10 dance genres, 9 camera angles, 10.1M frames
+**Source:** https://google.github.io/aistplusplus_dataset/
+**License:** Research (AIST Dance DB sub-license terms)
+**Size:** 10.1M annotated frames
+
+**Why this matters:**
+Dance motions are rich in animation principles: anticipation (wind-up before jumps), follow-through (hair/clothing lag), weight-shifting, rhythmic timing. 10 dance genres × 30 subjects × 9 camera angles. SMPL pose parameters retargetable to Strata's 19-bone skeleton. Music-synchronized motion = timing reference relative to BPM.
+
+**Action items:**
+- [ ] Register and download
+- [ ] Retarget SMPL params → Strata skeleton
+- [ ] Add dance genre + BPM metadata for blueprint classification
+
+**Status:** Not started.
+
+---
+
+#### NEW-12: AMASS (Archive of Motion Capture as Surface Shapes)
+
+**What:** Unifies 15 MoCap datasets into common SMPL parameterization. Hundreds of hours of motion across dozens of action categories.
+**Source:** https://amass.is.tue.mpg.de/
+**License:** Academic (free registration); commercial use requires contacting MPI
+**Size:** Hundreds of hours
+
+**Why this matters:**
+AMASS is the foundation that HumanML3D, Motion-X, and BEDLAM all build on. For Strata's animation blueprint system, AMASS is the raw material: broader action coverage than CMU/SFU BVH, standardized SMPL parameterization, retargetable to Strata skeleton. Significant overlap with CMU BVH already ingested — evaluate overlap before downloading.
+
+**Action items:**
+- [ ] Evaluate overlap with CMU BVH (2,548 clips) already in bucket
+- [ ] If significant new coverage: register and download incremental content
+- [ ] Retarget to Strata skeleton
+
+**Status:** Not started (evaluate overlap first).
+
+---
+
+#### NEW-13: Bandai Namco Research Motion Dataset
+
+**What:** Dataset-1: 36,673 frames; Dataset-2: 400,000+ frames. 17 content types × 15 style labels (active, tired, happy, etc.) — paired annotations of the same motion in different emotional styles
+**Source:** https://github.com/BandaiNamcoResearchInc/Bandai-Namco-Research-Motiondataset
+**License:** Research (check repository terms)
+**Size:** 400K+ frames
+
+**Why this matters:**
+Explicit content × style separation: the same walk path annotated as "tired", "active", "happy". This is the most direct operationalization of emotional timing/weight for Strata's animation blueprints. Game studio data = motion types directly relevant to character animation.
+
+**Action items:**
+- [ ] Check license terms and download
+- [ ] Map style labels to Strata blueprint taxonomy
+
+**Status:** Not started.
+
+---
+
+### DRAW ORDER + OCCLUSION
+
+#### NEW-14: Layered Temporal Dataset for Anime Drawings ⭐ HIGH PRIORITY
+
+**What:** 20,000 PSD files of anime drawings with full layer structure (1.6 TB raw)
+**Source:** https://layered-anime.github.io/
+**License:** Check project page (contact authors for terms)
+**Size:** 20K PSD files, ~1.6 TB raw
+
+**Why this matters:**
+PSD layer stack order = natural, free draw order annotation. Each layer in a PSD file is a partial body region with an explicit stacking order (what's in front of what). This is ground truth for Strata's draw_order.png output, body region segmentation, AND inpainting (each layer can be composited independently). The temporal drawing replay shows the artist's draw-order decisions directly.
+
+**Action items:**
+- [ ] Contact authors for access and license terms
+- [ ] Build PSD layer extraction adapter (parse layer stack order → per-pixel draw order)
+- [ ] Use layer masks as body region segmentation annotations
+
+**Status:** Not started. Significant pre-processing needed (PSD parsing). High reward.
+
+---
+
+#### NEW-15: InstaOrder Dataset
+
+**What:** 2.9M pairwise occlusion + depth ordering annotations across 101K COCO images
+**Source:** https://github.com/POSTECH-CVLab/InstaOrder
+**License:** **CC BY-SA** — commercially usable
+**Size:** 2.9M annotations, 101K images
+
+**Why this matters:**
+Per-pair depth ordering (who is in front of whom) is the semantic equivalent of Strata's draw_order.png at the instance level. While images are natural photos (not illustrations), the depth ordering relationships generalize. Provides the largest labeled dataset for the "which region is in front" task.
+
+**Action items:**
+- [ ] Download from GitHub (COCO images separate download; InstaOrder adds ordering annotations)
+- [ ] Use as additional training signal for draw order prediction head
+
+**Status:** Not started.
+
+---
+
+#### NEW-16: OCHuman (Occluded Human)
+
+**What:** ~6,700 images, 11,000+ human instances with severe occlusion; 17 COCO keypoints with visibility flags (visible vs. occluded)
+**Source:** https://github.com/liruilong940607/OCHumanApi
+**License:** Research
+**Size:** 6.7K images
+
+**Why this matters:**
+Keypoints annotated even when the limb is behind another body part → teaches Strata's joint placement model to infer hidden joint positions. The visibility flags (visible/occluded) directly map to what Strata needs to output in joints.json. Extremely challenging (avg MaxIoU = 0.67).
+
+**Action items:**
+- [ ] Download via GitHub API
+- [ ] Build adapter for occlusion-aware joint training
+
+**Status:** Not started.
+
+---
+
+#### NEW-17: Amodal Intra-Class Instance Segmentation (WACV 2024)
+
+**What:** 267K+ images with amodal segmentation (visible mask + full mask including hidden region)
+**Source:** https://github.com/saraao/amodal-dataset
+**License:** Research
+**Size:** 267K images
+
+**Why this matters:**
+Predicts what a body part looks like even when partially hidden — directly supports Strata's occluded region inference. The full-appearance annotation is ground truth for any system that needs to reconstruct occluded limbs (Strata's inpainting model, v2.0).
+
+**Action items:**
+- [ ] Download from GitHub
+- [ ] Use for amodal segmentation training (occluded body part reconstruction)
+
+**Status:** Not started.
+
+---
+
+### RIGGING DATASETS (ADDITIONAL SCALE)
+
+#### NEW-18: RigNet Dataset
+
+**What:** 2,703 rigged 3D models (2,163 train / 270 val / 270 test) in FBX format. 1K–5K vertices each.
+**Source:** https://zhan-xu.github.io/rig-net/ | https://github.com/zhan-xu/RigNet
+**License:** Research
+**Size:** 2.7K models
+
+**Why this matters:**
+The foundational public rigging dataset. Skinning weight format matches what Strata's weight prediction MLP needs. 2,703 diverse 3D characters (humanoid and non-humanoid) with ground-truth weights. Smaller than HumanRig/Anymate but well-validated and widely benchmarked.
+
+**Action items:**
+- [ ] Download from project page
+- [ ] Filter humanoid subset
+- [ ] Use for weight prediction baseline training / evaluation
+
+**Status:** Not started.
+
+---
+
+#### NEW-19: RigAnything (Adobe Research, SIGGRAPH TOG 2025)
+
+**What:** Trained on RigNet (2,354 quality-filtered) + Objaverse (9,686 filtered rigged shapes). Diverse object types.
+**Source:** https://github.com/Isabella98Liu/RigAnything | HuggingFace: `Isabellaliu/RigAnything`
+**License:** Research
+**Size:** ~12K quality-filtered training models
+
+**Why this matters:**
+The Objaverse-filtered subset of 9,686 high-quality rigged shapes is a curated superset of RigNet. Provides additional training signal for weight prediction. The autoregressive joint prediction approach is also architecturally relevant to Strata's joint placement model design.
+
+**Action items:**
+- [ ] Download training data descriptions from paper
+- [ ] Check if Objaverse-filtered rigged shapes are downloadable separately
+
+**Status:** Not started.
+
+---
+
+### ANIMATION PRINCIPLES (TARGETED DATA STRATEGY)
+
+#### Note on 12 Principles as ML Training Data
+
+No public dataset directly labels animation with all 12 Disney principles (squash/stretch, anticipation, follow-through, etc.). The gap is real. However, specific principles can be operationalized:
+
+**Timing/spacing (on-ones/twos/threes):** Use Sakuga-42M annotations (NEW-9)
+
+**Locomotion style (weight, personality):** Use 100STYLE's 100 personality-labeled styles (NEW-10)
+
+**Follow-through / secondary motion:** PhysAnimator (CVPR 2025, arXiv:2501.16550) provides a 20-image test benchmark with physics-driven secondary motion on anime illustrations. Their approach (physics simulation on illustrated characters) can generate synthetic training data.
+
+**Smear frames (squash-stretch in time):** SMEAR method (SIGGRAPH 2024, https://github.com/MoStyle/SMEAR) automatically generates smear frames from 3D animation. Could synthesize smear-labeled training pairs from Strata's Mixamo + Blender pipeline.
+
+**Inbetweening / ease curves:** ATD-12K (NEW-5) triplets encode animator spacing decisions implicitly.
+
+**Recommended custom annotation strategy:** Take 100STYLE's 100 walk styles + CMU BVH clips already in bucket → have animators label which principles each clip demonstrates (anticipation, follow-through, weight) → build first-of-kind animation principles label set on top of existing data.
+
+---
+
+### UPDATED TOTAL VOLUME SUMMARY
+
+| Dataset | Priority | License | Size | Strata Models | Status |
+|---------|----------|---------|------|---------------|--------|
+| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | Not started |
+| 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | Not started |
+| CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
+| Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
+| ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
+| Bizarre Pose Dataset | ⭐⭐ | Public | ~4K images | Joint CNN (illustrated) | Not started |
+| InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | Not started |
+| Sakuga-42M (annotations) | ⭐⭐ | CC BY-NC-SA | 42M keyframes | Timing classification | Not started |
+| Anita Dataset | ⭐ | CC BY-NC-SA | 16K frames | Style augmentation | Not started |
+| AIST++ | ⭐ | Research | 10.1M frames | Animation blueprints | Not started |
+| MixamoLine240 | ⭐ | Research | 19.9K frames | Joint interpolation | Not started |
+| OCHuman | ⭐ | Research | 6.7K images | Joint CNN (occlusion) | Not started |
+| RigNet | ⭐ | Research | 2.7K meshes | Weight prediction baseline | Not started |
+| RigAnything | ⭐ | Research | 12K meshes | Weight prediction | Not started |
+| Manga109 Seg | ⭐ | Academic | 21K pages | Segmentation (lineart) | Not started |
+| Bandai Namco Motion | ⭐ | Research | 400K frames | Animation style labels | Not started |
+| AMASS | ○ | Academic | 100s of hrs | Blueprints (eval overlap) | Not started |
+| Amodal WACV 2024 | ○ | Research | 267K images | Inpainting (v2.0) | Not started |
+
+---
+
+### META-RESOURCES (Track These)
+
+- **Awesome-Animation-Research:** https://github.com/zhenglinpan/Awesome-Animation-Research — datasets + papers on 2D cartoon video research
+- **Awesome-2D-Animation:** https://github.com/MarkMoHR/Awesome-2D-Animation — inbetweening and 2D animation tools
+- **Awesome-AI4Animation:** https://github.com/yunlong10/Awesome-AI4Animation — ICCVW 2025 survey; most recent comprehensive AI4animation resource
+- **Survey paper:** "Generative AI for Cel-Animation" arXiv:2501.06250 — accepted ICCV 2025 AISTORY Workshop
+- **Daniel Holden on Animation Quality:** https://www.daniel-holden.com/page/animation-quality — best public discussion of what makes motion timing high vs. low quality at a signal level
+

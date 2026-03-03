@@ -200,3 +200,8 @@ Automated (run after every batch):
 - v1 is humanoid bipeds only. Non-humanoid (quadruped, bird, serpentine) is future work.
 - Accessories: hide for v1 (cleaner training data). Flag with `has_accessories: true` in metadata.
 
+## Storage Policy
+
+- **Hetzner bucket** — upload only training-ready output (validated `output/` data: images, masks, joints, metadata). No raw source assets.
+- **External hard drive** — store all raw/source data locally: FBX characters, BVH mocap, VRM files, sprite sheets, Live2D models, pre-processed external datasets. Download and process from here; do not upload raw data to the cloud bucket.
+
