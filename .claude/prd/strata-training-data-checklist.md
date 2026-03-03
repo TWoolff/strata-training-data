@@ -1150,17 +1150,24 @@ Real 2D sketch animation timing data — not 3D-derived. Stroke correspondence b
 
 **What:** 240 sequences of Mixamo characters rendered as cel-shaded cartoon line art in Blender, with ground-truth vertex correspondence between frames
 **Source:** https://github.com/lisiyao21/AnimeInbet | ICCV 2023
-**License:** Research
-**Size:** 240 sequences, 19,930 training frames
+**License:** CC BY-NC-SA 4.0 (non-commercial — reference only, not for training)
+**Size:** 244 sequences (100 train + 44 test + ~100 ml100), ~49K total frames, 720×720 RGB PNG + JSON vertex labels
 
 **Why this matters:**
 Built on the **same Mixamo + Blender pipeline** as Strata. The geometric inbetweening formulation (vertices as graph nodes with inter-frame correspondence) is directly applicable to Strata's joint position interpolation model. Can use this as a validation reference for Strata's animation blueprint system.
 
 **Action items:**
-- [ ] Download from GitHub
-- [ ] Study geometric correspondence format for joint interpolation application
+- [x] Download from GitHub (4.5GB zip via gdown from Google Drive)
+- [x] Study geometric correspondence format for joint interpolation application
 
-**Status:** Not started.
+**Findings:**
+Each JSON label contains `vertex location` (2D pixel coords), `connection` (adjacency list), and `original index` (3D mesh vertex ID). Correspondence works by matching `original index` across frames — ~92% of vertices correspond between consecutive frames, with ~8% appearing/disappearing from occlusion. ~1,500–1,600 vertices per frame. This is vertex-level (not joint-level) correspondence, but the graph-based matching and motion propagation from matched→unmatched nodes is directly applicable to occluded joint prediction in Strata.
+
+**Decision:** Reference only — no adapter needed. License prohibits training use, and vertex-level format doesn't map directly to Strata's 19-bone joint representation.
+
+**Storage:** `/Volumes/TAMWoolff/data/preprocessed/mixamo_line240/` (~97GB extracted)
+
+**Status:** Complete (reference study). See `.claude/scratchpads/github-issue-169-plan.md` for detailed notes.
 
 ---
 

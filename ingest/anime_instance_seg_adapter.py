@@ -28,13 +28,13 @@ from __future__ import annotations
 
 import json
 import logging
-import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from PIL import Image
+from pycocotools import mask as maskutils
 
 logger = logging.getLogger(__name__)
 
@@ -98,51 +98,19 @@ class ConversionStats:
 def _decode_rle(rle: dict) -> np.ndarray:
     """Decode a COCO compressed RLE mask to a binary numpy array.
 
+    Uses pycocotools (the COCO reference implementation) for reliable decoding.
+
     Args:
         rle: Dict with ``size`` (H, W) and ``counts`` (compressed RLE string).
 
     Returns:
-        Boolean mask array of shape (H, W).
+        uint8 mask array of shape (H, W), values 0 or 1.
     """
-    h, w = rle["size"]
-    counts_str: str = rle["counts"]
-
-    # COCO uses LEB128-like compressed RLE. Decode the string to run lengths.
-    # Each character encodes 6 bits (offset 48). Values ≥ 32 continue to next char.
-    counts: list[int] = []
-    m = 0
-    p = 0
-    more = True
-    i = 0
-    while i < len(counts_str):
-        x = ord(counts_str[i]) - 48
-        i += 1
-        more = bool(x & 32)
-        x &= 31
-        m |= x << p
-        p += 5
-        if not more:
-            if m & 1:
-                m = ~m
-            m >>= 1
-            if counts:
-                m += counts[-1]
-            counts.append(m)
-            m = 0
-            p = 0
-
-    # Build the mask: alternating runs of 0 and 1, column-major order
-    mask = np.zeros(h * w, dtype=np.uint8)
-    idx = 0
-    val = 0
-    for run in counts:
-        if val == 1:
-            mask[idx : idx + run] = 1
-        idx += run
-        val = 1 - val
-
-    # COCO masks are stored in column-major (Fortran) order
-    return mask.reshape((h, w), order="F")
+    counts = rle["counts"]
+    if isinstance(counts, str):
+        counts = counts.encode("utf-8")
+    coco_rle = {"size": rle["size"], "counts": counts}
+    return maskutils.decode(coco_rle)
 
 
 def _masks_to_fg(annotations: list[dict], height: int, width: int) -> np.ndarray:
