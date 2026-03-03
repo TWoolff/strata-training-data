@@ -1050,10 +1050,10 @@ This is the single most important gap-filler for Strata's joint placement model.
 
 **Action items:**
 - [x] Clone repo and download dataset
-- [ ] Build adapter mapping 15-joint format → Strata 19-joint skeleton
+- [x] Build adapter mapping 15-joint format → Strata 19-joint skeleton
 - [ ] Use for joint refinement CNN fine-tuning (illustrated style domain)
 
-**Status:** Downloaded + extracted (March 3, 2026). Adapter not yet built.
+**Status:** ✅ Adapter built (`ingest/animated_drawings_adapter.py`). 178,166 images, 17 COCO keypoints → 19 Strata joints (6 synthetic interpolated). COCO polygon segmentation → binary fg/bg mask. Registered as `--adapter animated_drawings` in `run_ingest.py`. 25 tests passing.
 
 ---
 
@@ -1427,7 +1427,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
-| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Downloaded — adapter pending |
+| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Adapter built — ready for ingestion |
 | 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Downloaded — retargeting pending |
 | CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
