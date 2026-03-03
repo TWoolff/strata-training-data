@@ -57,6 +57,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         required=True,
         choices=[
+            "animated_drawings",
             "fbanimehq",
             "nova_human",
             "anime_seg",
@@ -170,6 +171,29 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 # Adapter dispatch
 # ---------------------------------------------------------------------------
+
+
+def _run_animated_drawings(args: argparse.Namespace) -> int:
+    """Run the Meta Animated Drawings adapter."""
+    from ingest.animated_drawings_adapter import convert_directory
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+    )
+
+    print("\nAnimated Drawings ingestion complete:")
+    print(f"  Images processed: {result.images_processed}")
+    print(f"  Images skipped:   {result.images_skipped}")
+    print(f"  Errors:           {len(result.errors)}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
 def _run_fbanimehq(args: argparse.Namespace) -> int:
@@ -439,11 +463,15 @@ def _run_unirig(args: argparse.Namespace) -> int:
     cmd = [
         blender,
         "--background",
-        "--python", str(script),
+        "--python",
+        str(script),
         "--",
-        "--input_dir", str(args.input_dir),
-        "--output_dir", str(args.output_dir),
-        "--max_images", str(args.max_images),
+        "--input_dir",
+        str(args.input_dir),
+        "--output_dir",
+        str(args.output_dir),
+        "--max_images",
+        str(args.max_images),
     ]
     if args.only_new:
         cmd.append("--only_new")
@@ -484,6 +512,7 @@ def _run_humanrig(args: argparse.Namespace) -> int:
 
 
 _ADAPTERS = {
+    "animated_drawings": _run_animated_drawings,
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
     "anime_seg": _run_anime_seg,
