@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from PIL import Image
+from pycocotools import mask as maskutils
 
 from ingest.anime_instance_seg_adapter import (
     ANIME_INSTANCE_SOURCE,
@@ -22,74 +23,27 @@ from ingest.anime_instance_seg_adapter import (
 
 
 # ---------------------------------------------------------------------------
-# RLE decoding
+# RLE encoding helpers (use pycocotools for valid COCO RLE)
 # ---------------------------------------------------------------------------
+
+
+def _encode_mask(mask: np.ndarray) -> dict:
+    """Encode a binary mask to COCO compressed RLE dict with string counts."""
+    mask_f = np.asfortranarray(mask.astype(np.uint8))
+    rle = maskutils.encode(mask_f)
+    return {"size": list(rle["size"]), "counts": rle["counts"].decode("utf-8")}
 
 
 def _rle_all_fg(h: int, w: int) -> dict:
     """Return a COCO RLE dict where all pixels are foreground."""
-    # bg_run=0, fg_run=h*w — encode using COCO delta encoding
-    # Verified empirically: '0' encodes bg=0, then encode fg total pixels
-    n = h * w
-    # Encode n as COCO delta from 0: delta=n, x=n<<1
-    x = n << 1
-    chars = []
-    while True:
-        c = x & 31
-        x >>= 5
-        if x > 0:
-            c |= 32
-        chars.append(chr(c + 48))
-        if x == 0:
-            break
-    return {"size": [h, w], "counts": "0" + "".join(chars)}
+    return _encode_mask(np.ones((h, w), dtype=np.uint8))
 
 
 def _rle_box(h: int, w: int, r0: int, r1: int, c0: int, c1: int) -> dict:
-    """Return a COCO RLE dict with a rectangular box set to foreground.
-
-    Uses column-major ordering (COCO convention).
-    """
+    """Return a COCO RLE dict with a rectangular box set to foreground."""
     mask = np.zeros((h, w), dtype=np.uint8)
     mask[r0:r1, c0:c1] = 1
-    # Build run-length list in column-major order
-    flat = mask.flatten(order="F")
-    runs: list[int] = []
-    cur = int(flat[0])
-    run = 1
-    for v in flat[1:]:
-        if int(v) == cur:
-            run += 1
-        else:
-            runs.append(run)
-            run = 1
-            cur = int(v)
-    runs.append(run)
-    if flat[0] == 1:
-        runs.insert(0, 0)
-
-    # COCO encodes delta-compressed run lengths
-    def _encode_delta(vals: list[int]) -> str:
-        chars = []
-        prev = 0
-        for v in vals:
-            delta = v - prev
-            prev = v
-            if delta < 0:
-                x = (~delta << 1) | 1
-            else:
-                x = delta << 1
-            while True:
-                c = x & 31
-                x >>= 5
-                if x > 0:
-                    c |= 32
-                chars.append(chr(c + 48))
-                if x == 0:
-                    break
-        return "".join(chars)
-
-    return {"size": [h, w], "counts": _encode_delta(runs)}
+    return _encode_mask(mask)
 
 
 class TestDecodeRle:
@@ -102,9 +56,7 @@ class TestDecodeRle:
         assert decoded.sum() == h * w
 
     def test_all_background(self):
-        # bg=16, no fg run — encode delta for bg=16 then stop
-        # bg=16: delta=16, x=32 -> c=0|32=32 -> chr(80)='P', x=1 -> c=1 -> chr(49)='1'
-        rle = {"size": [4, 4], "counts": "P1"}
+        rle = _encode_mask(np.zeros((4, 4), dtype=np.uint8))
         decoded = _decode_rle(rle)
         assert decoded.sum() == 0
 
