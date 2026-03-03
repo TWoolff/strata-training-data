@@ -819,12 +819,12 @@ These require downloading raw assets and running your own rendering pipeline.
 | Mixamo renders (DS-1) | ~10,000 | 5,250 rendered | ✅ In bucket (12,216 files, 619 MB) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
-| Live2D composites (DS-3) | ~1,600 | 0 | ❌ Not yet rendered — 279 models on HD, pipeline ready |
+| Live2D composites (DS-3) | ~844 | 844 rendered | ✅ 211/280 succeeded, 3,587 files in bucket |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~470,000+** | **~164,000+** | **~35%** |
+| **TOTAL** | **~470,000+** | **~164,844+** | **~35%** |
 
 ---
 
@@ -1004,7 +1004,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Build Live2D GitHub scraper                   | Done                | `run_live2d_scrape.py` for .moc3 repos                      | ✅ Done                                       |
 | Build .moc3 parser + extractor                | Done                | Parses binary mesh data, extracts fragments from atlas      | ✅ Done                                       |
 | Run Live2D GitHub scraper                     | Done                | 279 models on external HD, GitHub saturated                 | ✅ Done                                       |
-| Run Live2D renderer on 279 models             | 1–2 days (compute)  | Generates training images + uploads to bucket               | ❌ Not started                                |
+| Run Live2D renderer on 280 models             | Done                | 211/280 succeeded, 844 examples, 3,587 files (212 MiB) in bucket | ✅ Done                                  |
 | Upload CMU animation                          | Done                | 17,823 files (58 GB) in bucket                              | ✅ Done                                       |
 | Fix 22-class region IDs                       | Done                | Pipeline, config, tests all aligned with Strata skeleton.ts | ✅ Done                                       |
 | Download HumanRig (PP-9)                      | 1 hour              | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0    | ✅ Done                                       |
@@ -1018,7 +1018,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Extend StdGEN Blender script                  | 3–5 days (coding)   | Adds all Strata-specific outputs                            | Not started                                  |
 | Render 45° + Strata annotations for 10K VRoid | 1–2 weeks (compute) | Core multi-view training data                               | Not started                                  |
 | Render more Mixamo chars                      | 2–3 days (compute)  | Western-style training data                                 | 49/250 done                                  |
-| Live2D collection + mapping                   | 2–3 weeks           | 2D illustration style coverage                              | Not started                                  |
+| Live2D collection + mapping                   | Done                | 280 models scraped + rendered, 844 examples in bucket       | ✅ Done                                       |
 | CMU labeling + retargeting                    | 2–3 weeks           | Animation intelligence data                                 | ✅ Retargeted + uploaded                      |
 | Start model training                          | 1–2 weeks (coding)  | Segmentation model MVP                                      | ✅ Done                                       |
 
@@ -1046,11 +1046,11 @@ This is the single most important gap-filler for Strata's joint placement model.
 - Binary segmentation masks per character
 
 **Action items:**
-- [ ] Clone repo and download dataset
+- [x] Clone repo and download dataset
 - [ ] Build adapter mapping 15-joint format → Strata 19-joint skeleton
 - [ ] Use for joint refinement CNN fine-tuning (illustrated style domain)
 
-**Status:** Not started. **Download immediately.**
+**Status:** Downloaded + extracted (March 3, 2026). Adapter not yet built.
 
 ---
 
@@ -1214,12 +1214,12 @@ The timing-on-twos/threes annotation is the most structured publicly available p
 100 locomotion "personalities" (tired, happy, active, sneaking, injured, etc.) directly encode character-specific timing and movement style. This is how Strata's animation blueprints gain personality — not just "walk" but "happy walk", "tired walk". Motion phase labels enable spacing analysis. CC BY 4.0 makes it commercially usable. This is a **must-have** for animation intelligence.
 
 **Action items:**
-- [ ] Download from Zenodo
+- [x] Download from Zenodo
 - [ ] Retarget all 100 styles × 10 contents to Strata 19-bone skeleton
 - [ ] Label with style + content taxonomy for blueprint library
 - [ ] Add to animation/ data pipeline
 
-**Status:** Not started. **Download immediately.**
+**Status:** Downloaded + extracted (March 3, 2026). Retargeting not yet started.
 
 ---
 
@@ -1417,8 +1417,8 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
-| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | Not started |
-| 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | Not started |
+| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Downloaded — adapter pending |
+| 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Downloaded — retargeting pending |
 | CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
