@@ -35,6 +35,8 @@
 | **.moc3 parser + atlas extractor** | Implemented | `pipeline/moc3_parser.py` + atlas fragment extraction in `live2d_renderer.py` (issue #146) |
 | **Label Studio integration** | Ready | import/export pipeline + config XML |
 | **CMU action labels** | Tracked | `animation/labels/cmu_action_labels.csv` (80 clips labeled) |
+| **HumanRig** | Ingested + uploaded | 137,209 files (5.6 GB) in bucket — 11,434 chars × 3 angles rendered, joints + weights |
+| **UniRig** | Ingested + uploaded | 66,030 files (42.6 GB) in bucket |
 | **Test suite** | 39 test files | Covering all pipeline modules, adapters, and utilities |
 | **Documentation** | Complete | data-sources, preprocessed-datasets, labeling-guide, annotation-guide, taxonomy-comparison |
 
@@ -50,10 +52,12 @@
 | `animerun_linearea/` | 4,236 | 119 MB |
 | `animerun_segment/` | 11,276 | 651 MB |
 | `fbanimehq/` | 304,889 | 11.5 GB |
+| `humanrig/` | 137,209 | 5.6 GB |
 | `ingest/vroid_lite/` | 9,302 | 788 MB |
 | `live2d/` | 4,764 | 327 MB |
 | `segmentation/` | 12,216 | 619 MB |
-| **Total** | **~462,385** | **~87.5 GB** |
+| `unirig/` | 66,030 | 42.6 GB |
+| **Total** | **~665,624** | **~136.3 GB** |
 
 ### What's Downloaded Locally (data/preprocessed/)
 
@@ -65,12 +69,12 @@
 | fbanimehq | 17 GB | Yes | All shards ingested, leftovers cleaned |
 | cmu_degraded | 58 GB | Deleted | Uploaded to bucket, local copy deleted (`--delete-local`) |
 | vroid_lite | 7.3 GB | Deleted | Ingested + uploaded, local copy deleted |
-| humanrig | 163 GB (extracted) | Yes | ✅ Downloaded + extracted — 11,434 samples in `data/54T/.../humanrig_opensource_final/` |
+| humanrig | 163 GB (extracted) | Yes | ✅ Ingested + uploaded — 137,209 files (5.6 GB) in `humanrig/` bucket prefix |
 | nova_human | — | Structure only |
 | linkto_anime | — | Structure only |
 | stdgen | — | Structure only |
 | charactergen | — | Structure only |
-| unirig | — | Structure only |
+| unirig | 66 GB | Yes | ✅ Ingested + uploaded — 66,030 files (42.6 GB) in `unirig/` bucket prefix |
 | anime_instance_seg | — | Structure only |
 
 ---
@@ -419,12 +423,13 @@ Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `ver
 **Action items:**
 - [x] Download: `humanrig.zip` (36 GB) downloaded to `data/preprocessed/humanrig/` on external HD
 - [x] Extract: all 11,434 samples extracted (163 GB total)
-- [ ] Build `humanrig_skeleton_mapper.py` adapter (maps to Strata 22-bone hierarchy)
-- [ ] Ingest 2D `front.png` + `bone_2d.json` as joint refinement training data (no rendering needed)
-- [ ] Ingest `rigged.glb` + skinning weights for weight prediction training
-- [ ] Optionally render additional poses/angles from 3D meshes for segmentation training
+- [x] Build `humanrig_skeleton_mapper.py` adapter (`ingest/humanrig_adapter.py` + `ingest/humanrig_blender_renderer.py`)
+- [x] Ingest 2D `front.png` + `bone_2d.json` as joint refinement training data
+- [x] Ingest `rigged.glb` + skinning weights for weight prediction training
+- [x] Render additional poses/angles (3/4, side, back) from 3D meshes — 34,302 images rendered
+- [x] Upload to bucket — 137,209 files (5.6 GB) in `humanrig/` prefix
 
-**Status:** ✅ DOWNLOADED + EXTRACTED. 11,434 samples on external HD at `data/preprocessed/humanrig/`. Ready to build adapter.
+**Status:** ✅ COMPLETE. Rendered + ingested + uploaded. 11,434 samples → 34,302 images across front/3-quarter/side/back angles.
 
 ---
 
@@ -448,20 +453,28 @@ Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `ver
 - Humanoid subset (filter needed) could give 20K+ high-quality humanoid rigs
 
 **What's missing:**
-- License not stated — verify before training use
-- Mixed categories — need to filter to humanoid subset
+- ~~License not stated~~ — **Apache-2.0** (confirmed from HuggingFace dataset card README)
+- Mixed categories — humanoid filter implemented (bilateral symmetry + joint count heuristic)
 - No 2D renders or segmentation annotations included
-- Skeleton topology varies per asset (not uniform Mixamo — harder to map than HumanRig)
-- Size unknown — likely very large (230K meshes with skinning data)
+- Skeleton topology varies per asset (non-uniform — output is bone positions + parent indices, not Strata skeleton)
+- 84.4 GB total (8 × 10 GB train + 4.4 GB test), ~230K samples
 
 **Action items:**
-- [ ] Check HuggingFace dataset card for license: https://huggingface.co/datasets/yfdeng/Anymate
-- [ ] If license OK: run `bash Anymate/get_datasets.sh` to download
-- [ ] Filter to humanoid subset (estimate ~20–40K of 230K)
-- [ ] Map diverse skeleton topologies → Strata 19-bone standard
-- [ ] Build `anymate_skeleton_mapper.py` adapter
+- [x] Check HuggingFace dataset card for license — **Apache-2.0** ✅
+- [x] Download all 9 shards (Anymate_test.pt + Anymate_train_0-7.pt) — 84.4 GB on external HD
+- [x] Build `anymate_adapter.py` with humanoid filter + weights + skeleton output
+- [x] Register `--adapter anymate` in `run_ingest.py`
+- [ ] Run full ingest: `python run_ingest.py --adapter anymate --input_dir data/preprocessed/anymate --output_dir output/anymate`
+- [ ] Upload to bucket after ingest
 
-**Status:** READY (pending license verification). Direct HuggingFace download via get_datasets.sh script.
+**Status:** ✅ DOWNLOADED + ADAPTER BUILT. Ready to run ingest.
+
+**Humanoid filter results (test shard sample):** 45% pass rate on first 100 items. Estimated ~100K humanoid samples across all shards.
+
+**Data format per converted example:**
+- `skeleton.json` — bone positions (head/tail 3D), parent indices
+- `weights.json` — per-vertex skinning weights (up to 4 bones per vertex)
+- `metadata.json` — asset name, joint count, filter status, Apache-2.0 license
 
 ---
 
@@ -806,8 +819,8 @@ These require downloading raw assets and running your own rendering pipeline.
 |--------|--------|--------|--------|
 | NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
-| HumanRig (PP-9) | 11,434 meshes + 2D images | 0 ingested | ✅ Downloaded + extracted (163 GB on external HD) — adapter needed |
-| Anymate (PP-10) | 230K assets (humanoid subset ~20-40K) | 0 | READY (pending license check) — HuggingFace via get_datasets.sh |
+| HumanRig (PP-9) | 11,434 meshes + 2D images | 34,302 rendered | ✅ Ingested + uploaded (137,209 files, 5.6 GB in bucket) |
+| Anymate (PP-10) | 230K assets (~100K humanoid est.) | 0 ingested | ✅ Downloaded (84.4 GB) + adapter built — ready to run ingest |
 | MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
 | AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | READY — clone + rake build or Docker |
 | Body Part Seg Anime Ou 2024 (PP-13) | Unknown | 0 | Not started — email authors |
@@ -819,7 +832,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | AnimeRun segment | ~2,800 | 2,819 ingested | ✅ In bucket (11,276 files) |
 | AnimeRun correspondence | ~2,800 | 2,789 ingested | ✅ In bucket (19,493 files) |
 | LinkTo-Anime (PP-7) | ~29,270 | 0 | SKIPPED — CC-BY-NC license forbidden |
-| UniRig Rig-XL (PP-5) | 14,000 meshes | 16,641 meshes | ✅ Downloaded + extracted (66 GB in `data/preprocessed/unirig/rigxl/`) |
+| UniRig Rig-XL (PP-5) | 14,000 meshes | 16,641 meshes | ✅ Ingested + uploaded (66,030 files, 42.6 GB in `unirig/` bucket prefix) |
 | CMU animation pairs | 17,823 | 17,823 uploaded | ✅ In bucket (58 GB) |
 | Mixamo renders (DS-1) | ~10,000 | 5,250 rendered | ✅ In bucket (12,216 files, 619 MB) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
@@ -918,7 +931,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_skeleton_mapper.py` | — | 📋 Planned |
 | `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
-| `anymate_skeleton_mapper.py` | — | 📋 Planned (PP-10) |
+| `anymate_adapter.py` | `--adapter anymate` | ✅ Implemented (Apache-2.0, humanoid filter, weights + skeleton output) |
 | `anime_drawings_adapter.py` | — | 📋 Planned (PP-12) |
 | `see_through_adapter.py` | — | 📋 Planned (PP-14, pending release) |
 
@@ -1448,4 +1461,153 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 - **Awesome-AI4Animation:** https://github.com/yunlong10/Awesome-AI4Animation — ICCVW 2025 survey; most recent comprehensive AI4animation resource
 - **Survey paper:** "Generative AI for Cel-Animation" arXiv:2501.06250 — accepted ICCV 2025 AISTORY Workshop
 - **Daniel Holden on Animation Quality:** https://www.daniel-holden.com/page/animation-quality — best public discussion of what makes motion timing high vs. low quality at a signal level
+
+---
+
+## DR. CHENGZE LI (李成泽) — Lab Research Relevant to Strata
+
+Dr. Li is in contact regarding the See-Through dataset. This section covers her full publication output and what each paper offers beyond See-Through.
+
+**Lab:** Saint Francis University (Hong Kong), previously CUHK (Tien-Tsin Wong group)
+**Research focus:** "Understanding and processing of 2D non-photorealistic contents with deep learning — animation, comics, and games (ACG)"
+**DBLP:** https://dblp.org/pid/150/8490.html
+**SFU page:** https://www.sfu.edu.hk/en/schools-and-offices/schools-and-departments/school-of-computing-and-information-sciences/staff-directory/dr-li-chengze/index.html
+
+---
+
+### LI-1: See-Through: Single-image Layer Decomposition for Anime Characters ⭐ HIGHEST PRIORITY
+
+**arXiv:** https://arxiv.org/abs/2602.03749 (2025/2026)
+**Authors:** Jian Lin, Chengze Li, et al.
+**Status:** In contact with Dr. Li — dataset release expected late March 2026
+
+**What it does:**
+- Decomposes a single anime illustration into **19 semantic body-part layers** (hair front/back, face, eyes, ears, clothing, arms, hands, legs, feet, accessories, background)
+- Outputs **per-pixel pseudo-depth** for each layer = draw order ground truth (`draw_order.png`)
+- Handles the "sandwich" occlusion problem (hair weaving around face) via K-means on predicted depth
+- Trained on **9,102 annotated Live2D models** bootstrapped via GradCAM → ArtMesh masks → multi-decoder SAM → occluded fragment propagation
+- Authors will release: annotation codebase, verification GUI, and pretrained 2D segmentation model
+
+**Why this is the single highest-value dataset for Strata:**
+- 19-region taxonomy overlaps strongly with Strata's 22 regions
+- Per-pixel draw order from real Live2D models = exactly Strata's `draw_order.png`
+- 2D illustration style (not 3D renders) — fills the most critical domain gap
+- The Live2D bootstrapping engine is a blueprint for generating additional Strata ground-truth data at scale
+
+**Ask Dr. Li for:**
+- [ ] Early access to annotation codebase when available
+- [ ] The exact 19-region taxonomy labels (to verify overlap with Strata's 22 regions)
+- [ ] The 9,102 Live2D model list / sources (to see if Strata can use the same models)
+- [ ] Whether the pretrained segmentation model weights will be publicly released
+- [ ] The pseudo-depth / draw order value format (scalar per pixel or per-layer?)
+
+---
+
+### LI-2: Instance-guided Cartoon Editing with a Large-scale Dataset ⭐ HIGH PRIORITY
+
+**arXiv:** https://arxiv.org/abs/2312.01943 | *The Visual Computer* 41(9): 6715–6727, 2025
+**GitHub:** https://github.com/CartoonSegmentation/CartoonSegmentation
+**License:** Public (GitHub) — check repo for terms
+
+**What it does:**
+- 100,000+ paired high-resolution anime/cartoon images with **character-level instance segmentation masks** (whole-character silhouette, not body parts)
+- Trained segmentation model (Grounded-SAM / YOLO-based) for isolating characters from backgrounds
+- Applications: depth effect, text-guided editing, puppet animation
+
+**Why this matters for Strata:**
+- 100K+ anime character crops with clean silhouette masks = preprocessing pipeline for Strata
+- Silhouette masks can feed Strata's body-part segmentation model as character-isolation preprocessing
+- The model weights on GitHub can be used out-of-box to auto-crop characters from backgrounds
+
+**Action items:**
+- [ ] Download dataset and model weights from GitHub
+- [ ] Use as preprocessing step: isolate characters before feeding to Strata's segmentation model
+- [ ] Evaluate instance masks as weak supervision signal for Strata's segmentation head
+
+**Status:** Not started. Dataset publicly available.
+
+---
+
+### LI-3: Body Part Segmentation of Anime Characters ⭐ HIGH PRIORITY
+
+**Journal:** *Computer Animation and Virtual Worlds* 35(3–4), 2024
+**DOI:** https://onlinelibrary.wiley.com/doi/10.1002/cav.2295
+**Authors:** Zhenhua Ou, Xueting Liu, **Chengze Li**, Zhiyu Wen, Ping Li, Zheng Gao, Huisi Wu
+
+**What it does:**
+- Body-part segmentation for anime characters specifically, without requiring large annotated datasets
+- Uses **pose-guided graph-cut**: pose estimation initializes region priors, then graph-cut refines boundaries
+- Applications demonstrated: conditional generation, style manipulation, **pose transfer**, video-to-anime
+- The body-part taxonomy is not public from search results (paper is paywalled) but applications imply head/torso/arms/legs level at minimum
+
+**Why this matters for Strata:**
+- Directly targets the same task as Strata's segmentation model, on the same domain
+- The pose-guided approach aligns architecturally with Strata's joint prediction → segmentation pipeline
+- No large annotated dataset needed = could be used as a pseudo-labeler to generate training labels for new characters
+
+**Action items:**
+- [ ] Ask Dr. Li for a copy of the paper and whether the dataset/code is available
+- [ ] Understand the body-part taxonomy they use — compare to Strata's 22 regions
+- [ ] If code is released, test as a segmentation baseline or pseudo-label generator
+
+**Status:** Paper paywalled. Ask Dr. Li.
+
+---
+
+### LI-4: Advancing Manga Analysis (Manga109 + CVPR 2025 Segmentation)
+
+**Venue:** CVPR 2025
+**Authors:** Minshan Xie, Jian Lin, Hanyuan Liu, **Chengze Li**, Tien-Tsin Wong
+**CVPR page:** https://openaccess.thecvf.com/content/CVPR2025/html/Xie_Advancing_Manga_Analysis_Comprehensive_Segmentation_Annotations_for_the_Manga109_Dataset_CVPR_2025_paper.html
+**HuggingFace:** https://huggingface.co/datasets/MS92/MangaSegmentation
+
+**What it does:**
+- Extends Manga109 (21,142 pages from 109 manga volumes) with pixel-level annotations: frame, text/dialog, onomatopoeia, **character body**, character face, balloon
+- The `character body` masks are whole-character silhouettes — not body-part level
+
+**Why this matters (limited):**
+- Character body masks on manga provide silhouette crops of monochrome lineart characters
+- Useful for evaluating Strata's segmentation model on manga/lineart style
+- Same lab as See-Through — co-first-author Jian Lin worked on both; may share annotation infrastructure
+
+**Action items:**
+- [ ] Download from HuggingFace (Manga109-s, 87 volumes available for commercial orgs)
+- [ ] Use character body masks to evaluate Strata segmentation on manga/sketch-style inputs
+
+**Status:** Publicly available on HuggingFace. Low action priority vs. LI-1/LI-2/LI-3.
+
+---
+
+### LI-5: Separating Shading and Reflectance From Cartoon Illustrations
+
+**Journal:** *IEEE TVCG* 30(7): 3664–3679, 2024
+**Authors:** Ziheng Ma, **Chengze Li**, Xueting Liu, Huisi Wu, Zhenkun Wen
+
+**What it does:**
+- Decomposes cartoon illustrations into intrinsic shading and reflectance components
+- Enables downstream tasks including segmentation, depth estimation, and relighting that are normally confused by cel shading artefacts
+
+**Why this matters for Strata (peripheral):**
+- Strata's segmentation model is trained on flat-shaded 3D renders. Real user inputs are often cel-shaded with strong shadows. This decomposition could be used as a preprocessing step to normalize shading before segmentation — improving robustness to stylized lighting.
+- The shading separation output could also improve draw order estimation (shadowed = occluded side).
+
+**Action items:**
+- [ ] Ask Dr. Li if code/weights are available
+- [ ] Test as preprocessing for Strata's segmentation model on cel-shaded inputs
+
+**Status:** Not started. Worth asking about during contact.
+
+---
+
+### Questions to Ask Dr. Li (Contact Checklist)
+
+Since you are in contact with her regarding See-Through, these are the highest-value questions to ask:
+
+1. **See-Through dataset release timeline:** Exact date and what will be included (annotation engine, labels, model weights, raw 9,102 model list)
+2. **See-Through taxonomy:** Share the exact 19-region label schema — compare to Strata's 22 regions to confirm alignment
+3. **See-Through model weights:** Will the pretrained segmentation model + pseudo-depth head be publicly released?
+4. **Body Part Segmentation (LI-3):** Is the dataset or code available? What is the body-part taxonomy?
+5. **CartoonSegmentation (LI-2):** Confirm license for commercial use of the 100K dataset
+6. **Shading decomposition (LI-5):** Is code available? Interested in using as segmentation preprocessing
+7. **Collaboration opportunity:** Would her lab be interested in using Strata as a downstream application / user study platform for their segmentation work?
 
