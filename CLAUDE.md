@@ -4,82 +4,15 @@ Blender-based pipeline that generates labeled training data for Strata's AI mode
 
 ## What This Project Does
 
-**Segmentation pipeline** — Takes rigged 3D characters (.fbx) and produces:
-- **Color images** rendered in multiple art styles (flat, cel, pixel art, painterly, sketch, unlit)
-- **Segmentation masks** (8-bit grayscale PNG, pixel value = region ID 0–21)
-- **Draw order maps** (per-pixel depth, grayscale PNG)
-- **Joint position JSON** (bone heads projected to 2D screen coords)
-- **Weight map JSON** (per-vertex bone weights)
+Generates labeled training data (color images, segmentation masks, draw order maps, joint positions, weight maps) from rigged 3D characters across 6 art styles. Also includes: Spine 2D parser (`pipeline/spine_parser.py`), BVH mocap pipeline (`animation/`), Label Studio annotation (`annotation/`), and external dataset adapters (`ingest/`). Target: 300+ characters, 36K+ images. See `docs/preprocessed-datasets.md` for planned external data sources.
 
-One character × 20 poses × 6 styles = 120 training examples. Target: 300+ characters → 36,000+ images.
+## Project Layout
 
-**Spine 2D pipeline** — Parses Spine JSON animation projects, composites characters from atlas textures, maps Spine bones to Strata regions via regex patterns. Pure Python (no Blender dependency). See `pipeline/spine_parser.py`.
+Key dirs: `pipeline/` (Blender rendering + segmentation), `ingest/` (external dataset adapters), `annotation/` (Label Studio), `animation/` (BVH/mocap), `tests/`, `docs/`. Entry points: `run_pipeline.py`, `run_validation.py`. Config: `pipeline/config.py`.
 
-**Planned data sources** (see PRD v1.1):
-- **Live2D models** — 2D illustrated characters with pre-decomposed layers, providing style diversity + draw order ground truth
-- **VRoid/VRM models** — Anime-style 3D characters for multi-angle rendering (front, 3/4, side, back)
-- **PSD files** — Opportunistic collection of layered Photoshop files with natural segmentation
-- **Pre-processed datasets** — NOVA-Human, StdGEN, AnimeRun, UniRig, LinkTo-Anime, FBAnimeHQ and others. ~355K images available for download and conversion via `ingest/` adapters.
+**Tracked:** `pipeline/`, `ingest/`, `annotation/`, `animation/`, `tests/`, `docs/`, `data/*/labels/`. **Ignored:** `data/` (large binaries), `output/` (generated).
 
-**Animation intelligence** — Scripts and curated metadata for animation training data:
-- BVH mocap parsing, retargeting to Strata 19-bone skeleton, action labeling, timing extraction
-- Synthetic degradation for in-betweening model training pairs
-- Hand-annotated labels, breakdowns, and timing norms (tracked in Git)
-
-**Manual annotation** — Label Studio integration for human review of segmentation masks (see `annotation/`).
-
-## Project Structure
-
-```
-strata-training-data/
-├── run_pipeline.py                    # CLI entry point for Blender pipeline
-├── run_validation.py                  # CLI entry point for dataset validation
-├── ruff.toml                          # Linting configuration
-├── pipeline/                          # Blender/Python segmentation pipeline (18 modules)
-│   ├── generate_dataset.py            #   Main entry point, orchestrates pipeline
-│   ├── config.py                      #   Region colors, bone mappings, defaults
-│   ├── bone_mapper.py                 #   Map bones → Strata's 22 regions
-│   ├── renderer.py                    #   Render color + segmentation + multi-angle passes
-│   ├── draw_order_extractor.py        #   Compute per-pixel depth from render
-│   ├── live2d_mapper.py               #   Fragment name → Strata label mapping
-│   ├── spine_parser.py               #   Parse Spine 2D JSON projects (no Blender)
-│   ├── accessory_detector.py         #   Detect and hide accessories for clean training data
-│   ├── manifest.py                   #   Generate dataset statistics + quality report
-│   ├── measurement_ground_truth.py   #   Extract body measurements from 3D meshes
-│   ├── splitter.py                   #   Train/val/test split by character
-│   └── ...                            #   importer, exporter, validator, style_augmentor, etc.
-├── annotation/                        # Label Studio manual annotation pipeline
-│   ├── import_images.py               #   Import rendered images into Label Studio
-│   ├── export_annotations.py          #   Export reviewed annotations back to dataset
-│   └── label_studio_config.xml        #   Label Studio project configuration
-├── animation/                         # BVH parsing, retargeting, degradation scripts
-│   ├── scripts/                       #   bvh_parser, bvh_to_strata, degrade_animation, etc.
-│   ├── labels/                        #   ✅ Tracked — cmu_action_labels.csv
-│   ├── breakdowns/                    #   ✅ Tracked — transcribed animation analyses
-│   └── timing-norms/                  #   ✅ Tracked — extracted from Williams/Thomas books
-├── tests/                             # Test suite
-├── data/                              # ⛔ .gitignore — large files, re-downloadable
-│   ├── fbx/                           #   Mixamo/Sketchfab FBX characters
-│   ├── poses/                         #   Animation FBX clips
-│   ├── mocap/                         #   CMU/SFU BVH files
-│   ├── sprites/                       #   Sprite sheet source files
-│   ├── live2d/                        #   Live2D .moc3 + textures; labels/ tracked
-│   ├── vroid/                         #   VRM source files; labels/ tracked
-│   └── psd/                           #   Layered Photoshop files (opportunistic)
-├── output/                            # ⛔ .gitignore — generated renders + masks
-└── docs/                              # data-sources, labeling-guide, taxonomy-comparison, etc.
-```
-
-**Tracked:** `pipeline/`, `annotation/`, `animation/`, `tests/`, `docs/`, `data/*/labels/`, `data/*/README.md`
-**Ignored:** `data/` contents (large binaries, re-downloadable), `output/` (generated, reproducible)
-
-**Planned directories** (from PRD v1.1):
-- `ingest/` — Adapter scripts for converting pre-processed external datasets into Strata training format
-- `mesh/` — 3D mesh pipeline scripts (proportion clustering, texture projection)
-- `scripts/` (top-level) — Utility scripts for download verification, statistics, cross-source splits
-- `data/preprocessed/` — Downloaded pre-processed datasets from external research teams
-
-**Label file convention:** Per-source label mappings live in `data/{source}/labels/` (e.g., `data/live2d/labels/live2d_mappings.csv`, `data/vroid/labels/vroid_mappings.csv`).
+Label mappings live in `data/{source}/labels/` (e.g., `data/live2d/labels/live2d_mappings.csv`).
 
 ## Running the Pipeline
 
@@ -160,27 +93,9 @@ Masks are per-pose, NOT per-style — the same mask applies to all style variant
 
 Split by **character**, not by image (prevents data leakage). 80% train / 10% val / 10% test.
 
-## Dependencies
-
-- Blender 4.0+ (with bundled Python)
-- OpenCV, Pillow (post-render style augmentation)
-- NumPy (weight extraction)
-
 ## Asset Sources
 
-- **Mixamo** (primary): ~100 free rigged humanoids + animation clips. Standard skeleton naming.
-- **Sketchfab CC0/CC-BY**: ~100–200 curated characters. More variety, quality varies.
-- **Quaternius/Kenney**: ~50 CC0 low-poly game assets.
-- **Blender community**: ~30–50 various CC rigs.
-- **CMU Graphics Lab**: 2,548 mocap clips (BVH) — for animation intelligence.
-- **SFU Motion Capture**: BVH mocap data.
-- **Spine 2D community**: Sprite characters with Spine JSON animation data from OpenGameArt, itch.io.
-- **Live2D community** (planned): ~300–500 models from Booth.pm, DeviantArt, GitHub. Pre-decomposed ArtMesh fragments provide near-free segmentation ground truth for 2D illustrated characters.
-- **VRoid Hub** (planned): 2,000–5,000 VRM models. Anime-style 3D characters renderable from any angle. Standardized humanoid skeleton maps to Strata labels via bone weights.
-- **PSD files** (opportunistic): ~50–100 layered Photoshop files from OpenGameArt, itch.io. Layer structure provides natural segmentation annotations.
-- **Pre-processed datasets** (planned): NOVA-Human (~204K images), StdGEN (10.8K annotated characters), AnimeRun (~8K contour pairs), UniRig (14K rigged meshes), LinkTo-Anime (~29K frames), FBAnimeHQ (~113K images). Downloaded and converted via `ingest/` adapters. See `docs/preprocessed-datasets.md`.
-
-Only use CC0, CC-BY, or CC-BY-SA licenses. Never CC-NC. Full source list in `docs/data-sources.md`. Log every asset's license in output metadata.
+Only use CC0, CC-BY, or CC-BY-SA licenses. Never CC-NC. Log every asset's license in output metadata. Full source list in `docs/data-sources.md`, external datasets in `docs/preprocessed-datasets.md`.
 
 ## Validation Checks
 
@@ -204,4 +119,3 @@ Automated (run after every batch):
 
 - **Hetzner bucket** — upload only training-ready output (validated `output/` data: images, masks, joints, metadata). No raw source assets.
 - **External hard drive** — store all raw/source data locally: FBX characters, BVH mocap, VRM files, sprite sheets, Live2D models, pre-processed external datasets. Download and process from here; do not upload raw data to the cloud bucket.
-
