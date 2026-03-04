@@ -140,7 +140,7 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
 
-### Bucket Contents (as of March 2026)
+### Bucket Contents (as of March 4 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~160+ GiB total.
 
