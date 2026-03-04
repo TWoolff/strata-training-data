@@ -438,8 +438,12 @@ def convert_example(
     original_size = img.size
 
     # Convert
-    resized_image = _resize_to_strata(img, resolution)
     fg_mask_arr = label_to_fg_mask(label)
+    if fg_mask_arr.max() == 0:
+        logger.debug("Skipping %s — annotation has no foreground pixels", npz_path.name)
+        return False
+
+    resized_image = _resize_to_strata(img, resolution)
     resized_mask = _resize_mask(fg_mask_arr, resolution)
 
     metadata = _build_metadata(

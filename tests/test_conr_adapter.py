@@ -333,6 +333,24 @@ class TestConvertExample:
         result = convert_example(npz_path, img_dir, output_dir)
         assert result is None
 
+    def test_skips_all_background_annotation(self, tmp_path: Path) -> None:
+        """Annotations with no foreground (all value 0) should be skipped."""
+        dataset_dir = tmp_path / "conr"
+        ann_dir = dataset_dir / "annotation"
+        img_dir = dataset_dir / "images"
+        ann_dir.mkdir(parents=True)
+        img_dir.mkdir(parents=True)
+
+        h = f"{'a' * 32}"
+        # All-zero label → no foreground
+        label = np.zeros((100, 100), dtype=np.uint8)
+        np.savez_compressed(ann_dir / f"{h}.jpg.npz", label=label)
+        _create_test_image(img_dir / f"{h}.jpg")
+
+        npz_path = ann_dir / f"{h}.jpg.npz"
+        result = convert_example(npz_path, img_dir, tmp_path / "output")
+        assert result is False
+
     def test_only_new_skips_existing(self, tmp_path: Path) -> None:
         dataset = _setup_conr_dir(tmp_path, num_examples=1)
         ann_dir = dataset / "annotation"
