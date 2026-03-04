@@ -70,6 +70,7 @@ def parse_args() -> argparse.Namespace:
             "unirig",
             "humanrig",
             "anime_drawings",
+            "conr",
         ],
         help="Which dataset adapter to use.",
     )
@@ -511,6 +512,30 @@ def _run_anime_drawings(args: argparse.Namespace) -> int:
     return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
+def _run_conr(args: argparse.Namespace) -> int:
+    """Run the CoNR adapter."""
+    from ingest.conr_adapter import convert_directory
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+    )
+
+    print("\nCoNR ingestion complete:")
+    print(f"  Images processed: {result.images_processed}")
+    print(f"  Images missing:   {result.images_missing}")
+    print(f"  Images skipped:   {result.images_skipped}")
+    print(f"  Errors:           {len(result.errors)}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -525,6 +550,7 @@ _ADAPTERS = {
     "unirig": _run_unirig,
     "humanrig": _run_humanrig,
     "anime_drawings": _run_anime_drawings,
+    "conr": _run_conr,
 }
 
 
