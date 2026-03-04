@@ -212,8 +212,10 @@ Feng, X., Zou, K., Cen, C., Huang, T., Guo, H., Huang, Z., Zhao, Y., Zhang, M., 
 
 **Strata adapter:** `ingest/fbanimehq_adapter.py` — discovers images recursively across the shard/bucket hierarchy, resizes longest edge to 512 preserving aspect ratio, centers on transparent 512×512 canvas, and generates metadata. Supports `--max_images` and `--random_sample` for phased runs. Run via `python run_ingest.py --adapter fbanimehq`.
 
+**Enrichment:** RTMPose 2D pose estimation complete (~101K examples enriched with 19 Strata joints).
+
 **Known limitations:**
-- No segmentation masks, joints, or any annotations — images only
+- No segmentation masks — images + joints only
 - All images are female characters (bias concern for training)
 - Danbooru-sourced — mixed art quality, some NSFW content may need filtering
 - Resolution is 512×1024 (portrait, non-square) — adapter pads to 512×512
@@ -236,7 +238,11 @@ Feng, X., Zou, K., Cen, C., Huang, T., Guo, H., Huang, Z., Zhao, Y., Zhang, M., 
 
 **Content:** Anime character images with binary foreground/background masks. Pre-trained models available (ISNet, U2Net, MODNet, InSPyReNet architectures). Background images restored using Real-ESRGAN.
 
-**Strata adapter:** Not started. Binary masks are fg/bg only — same granularity as NOVA-Human masks, not Strata 19-region segmentation. Could be useful for training a foreground extraction pre-processing step.
+**Strata adapter:** `ingest/anime_seg_adapter.py` — converts foreground RGBA PNGs to Strata format. Extracts alpha channel as binary fg/bg mask (threshold 128). Resizes to 512×512 centered on transparent canvas. Supports both v1 (original) and v2 (curated) variants. Run via `python run_ingest.py --adapter anime_seg`.
+
+**Ingest status:** Complete. 15,081 examples ingested (10,081 v1 + 5,000 v2). Uploaded to Hetzner bucket.
+
+**Enrichment:** RTMPose 2D pose estimation (19 Strata joints) — in progress via `run_enrich.py --only_missing`. Uses YOLOX-m + RTMPose-m ONNX models. Joints added as `joints.json` per example; `metadata.json` updated with `has_joints: true`.
 
 **Known limitations:**
 - Binary masks only (foreground vs. background) — no body part segmentation
@@ -263,12 +269,15 @@ Lin, J., Li, C., Liu, X., & Ge, Z. (2023). arXiv:2312.01943. Published in The Vi
 
 **Content:** Instance-level segmentation masks for characters in cartoon/anime images. Supports multiple characters per image with occlusion-aware instance separation. Enables cartoon editing applications (Ken Burns effect, style editing, puppet animation).
 
-**Strata adapter:** Not started. Instance masks identify whole characters, not body parts — different task than Strata's 19-region semantic segmentation. Could be useful as a pre-processing step to isolate individual characters from multi-character scenes.
+**Strata adapter:** `ingest/anime_instance_seg_adapter.py` — converts instance segmentation masks to Strata format. Each character instance gets its own example directory with image, mask, and metadata. Run via `python run_ingest.py --adapter anime_instance_seg`.
+
+**Ingest status:** Complete. 98,428 examples ingested (90,944 train + 7,484 val). Uploaded to Hetzner bucket.
+
+**Enrichment:** RTMPose 2D pose estimation (19 Strata joints) — in progress via `run_enrich.py --only_missing`. Uses YOLOX-m + RTMPose-m ONNX models. Joints added as `joints.json` per example; `metadata.json` updated with `has_joints: true`.
 
 **Known limitations:**
 - Instance segmentation (whole character), not semantic part segmentation
 - Focused on cartoon editing, not body part decomposition
-- Would need significant adapter work to extract Strata-compatible annotations
 - Dataset quality varies (collected from diverse cartoon sources)
 
 **Licensing risk:** Medium. No explicit license. Research dataset — assume research use only unless clarified.
@@ -329,11 +338,16 @@ Most pre-processed datasets are released for **research use only**. This is the 
 | StdGEN | `ingest/stdgen_semantic_mapper.py` | Planned |
 | StdGEN (extended) | `ingest/stdgen_pipeline_ext.py` | Planned |
 | UniRig | `ingest/unirig_skeleton_mapper.py` | Planned |
-| AnimeRun | `ingest/animerun_contour_adapter.py` | Planned |
+| AnimeRun | `ingest/animerun_contour_adapter.py` | Implemented |
 | LinkTo-Anime | `ingest/linkto_adapter.py` | SKIPPED (CC-BY-NC) |
-| FBAnimeHQ | `ingest/fbanimehq_adapter.py` | Implemented |
-| anime-segmentation | — | Not started |
-| AnimeInstanceSeg | — | Not started |
+| FBAnimeHQ | `ingest/fbanimehq_adapter.py` | Ingested (~101K examples) + joints enriched |
+| anime-segmentation | `ingest/anime_seg_adapter.py` | Ingested (15,081 examples) — joints enrichment in progress |
+| AnimeInstanceSeg | `ingest/anime_instance_seg_adapter.py` | Ingested (98,428 examples) — joints enrichment in progress |
 | CharacterGen | — | Not started |
+| CoNR | `ingest/conr_adapter.py` | Ingested (2,423 examples) |
+| HumanRig | `ingest/humanrig_adapter.py` | Implemented |
+| UniRig | `ingest/unirig_adapter.py` | Implemented |
+| Anime Drawings | `ingest/anime_drawings_adapter.py` | Implemented |
+| VRoid Lite | `ingest/vroid_lite_adapter.py` | Implemented |
 
 All downloads handled by `ingest/download_datasets.sh`.
