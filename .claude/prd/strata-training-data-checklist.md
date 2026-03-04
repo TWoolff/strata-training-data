@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 3, 2026 (v14 — clarified anime_segmentation v1 vs anime_seg_v2 relationship; both confirmed ingested)
+**Last updated:** March 4, 2026 (v15 — animation + 100STYLE uploaded; anime_instance_seg uploading; animated_drawings adapter removed; local disk cleanup)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -14,14 +14,15 @@
 |----------|--------|---------|
 | **Blender 3D pipeline** | Working | 105 Mixamo chars downloaded; re-rendering with 22-class IDs + mixamorig5: bone fix |
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
-| **Ingest framework** | Complete | `run_ingest.py` with 9 registered adapters, CLI with `--enrich` pose estimation |
+| **Ingest framework** | Complete | `run_ingest.py` with 12 registered adapters, CLI with `--enrich` pose estimation |
 | **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.4 GiB) in bucket — all shards 00-11 processed |
 | **anime-segmentation v1+v2** | Ingested + uploaded | 50,406 files (2.5 GiB) in bucket — v1 (`skytnt/anime-segmentation`): 11,802 fg images in `data/fg/`…`data/fg 6/`; v2 (curated variant, different author): 13,000 fg images from `fg-01/02/03.zip`. Both use RGBA PNG format (alpha = fg/bg mask). Combined under `anime_seg/` prefix. |
 | **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (663 MiB) in bucket — 2,819 frames |
 | **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MiB) in bucket — 1,059 frames |
 | **Blender segmentation** | Uploaded | 12,216 files (599 MiB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
-| **CMU animation** | Uploaded | 17,823 files (58.1 GiB) in bucket — 2,548 clips × 7 degradations |
-| **100STYLE** | Ingested + uploaded | 810 files (8.7 GiB) in bucket — 100 styles × 8-10 contents, 4.06M frames retargeted to Strata 19-bone skeleton |
+| **CMU animation** | Uploaded | 18,628 files (66.7 GiB) in bucket — 2,548 clips × 7 degradations + 100STYLE retargeted |
+| **100STYLE** | Ingested + uploaded | 810 files (8.7 GiB) in bucket under `animation/` — 100 styles × 8-10 contents, 4.06M frames retargeted to Strata 19-bone skeleton |
+| **anime_instance_seg** | Ingested, uploading | 98,428 examples (35 GB local), ~31,849 train uploaded so far, val upload pending |
 | **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
 | **mixamorig5: bone fix** | Complete | 12 PARTIAL characters now fully mappable — `MIXAMO_BONE_MAP` + `COMMON_PREFIXES` updated |
 | **Live2D models** | Rendered + uploaded | 280 .moc3 models rendered — 211 succeeded, 844 examples, 3,587 files (212 MiB) in bucket |
@@ -42,12 +43,12 @@
 
 ### What's in the Hetzner Bucket
 
-> **Verified March 3, 2026** via `aws s3 ls --recursive --summarize` against `fsn1.your-objectstorage.com`. Live2D added March 3, 2026.
+> **Verified March 4, 2026** via `aws s3 ls --recursive --summarize` against `fsn1.your-objectstorage.com`.
 
 | Prefix | Files | Size (actual) |
 |--------|------:|--------------:|
-| `animation/` | 17,823 | 58.1 GiB |
-| `animation/100style/` | 810 | 8.7 GiB |
+| `animation/` (incl. 100style) | 18,628 | 66.7 GiB |
+| `anime_instance_seg/` | 95,407 | 10.9 GiB |
 | `anime_seg/` | 50,406 | 2.5 GiB |
 | `animerun/` | 11,276 | 663 MiB |
 | `animerun_correspondence/` | 19,493 | 930 MiB |
@@ -60,7 +61,9 @@
 | `live2d/` | 3,587 | 212 MiB |
 | `segmentation/` | 12,216 | 599 MiB |
 | `unirig/` | 66,030 | 42.6 GiB |
-| **Total** | **665,257** | **~145.4 GiB** |
+| **Total** | **~760,659** | **~155.2 GiB** |
+
+> **Note:** `anime_instance_seg/` upload in progress — currently ~31,849 of 90,944 train examples + 0 of 7,484 val. Full upload will add ~200K files (~24 GiB).
 
 ### What's on External HD TAMWoolff
 
@@ -84,6 +87,8 @@
 | `charactergen/` | — | ❌ not started | README only. Not downloaded yet. |
 | `humanrig/` | 234 GB (zip + extracted) | ✅ in bucket | `humanrig.zip` + `data/` extracted (234 GB total) ✅. Bucket: `humanrig/` (137,209 files, 5.6 GiB) |
 | `unirig/` | 4.5 GB + 123 GB extracted | ✅ in bucket | `processed.7z` + `processed/rigxl/` (123 GB). Fully extracted ✅. Bucket: `unirig/` (66,030 files, 42.6 GiB) |
+| `100style/` | 53 GB | ✅ in bucket | BVH + processed data. Bucket: `animation/` (810 files, 8.7 GiB retargeted) |
+| `mixamo_line240/` | 97 GB | Reference only | CC-BY-NC-SA. Vertex correspondence studied, no adapter needed |
 
 **Other HD directories (`data/`):**
 
@@ -122,6 +127,11 @@
 - [x] Build AnimeRun LineArea adapter — implemented + 32 tests passing
 - [x] Run overnight batch 3 — FBAnimeHQ shards 08-11 succeeded
 - [x] Ingest anime_seg_v2 (13,000 images from fg-01/02/03)
+- [x] 100STYLE retargeted + uploaded — 810 sequences (4.06M frames) in `animation/` bucket prefix (8.7 GiB)
+- [x] Animation output uploaded — 18,628 files (66.7 GiB) total in `animation/` prefix (CMU + 100STYLE)
+- [x] anime_instance_seg ingested — 98,428 examples (90,944 train + 7,484 val), 35 GB local output; upload in progress
+- [x] Removed animated_drawings adapter — dataset not needed; deleted `ingest/animated_drawings_adapter.py`, tests, download script, scratchpad
+- [x] Cleaned local disk — deleted `AnimeInstanceSegmentationDataset/` zip files (28 GB) from repo root, deleted `output/animation/` after upload (8.7 GB)
 
 ### Storage Corrections Needed
 
@@ -522,11 +532,10 @@ Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `ver
 - [x] Build adapter to map joints → Strata's 19-bone subset (15 of 22 joints mapped)
 - ~~Clone repo, download, ingest~~ — permanently skipped
 
-**Status:** ❌ PERMANENTLY SKIPPED. Adapter built (`ingest/anime_drawings_adapter.py`) but dataset
-not worth pursuing: no license specified (author: Pramook Khungurn, pong@pixiv.co.jp), scraped
-artwork has separate copyright, only 2K images with partial joint coverage (15/19), no segmentation
-masks. RTMPose enrichment on existing datasets (113K FBAnimeHQ, etc.) provides far more
-illustrated-style joint data with less legal risk.
+**Status:** ❌ PERMANENTLY SKIPPED. Dataset not worth pursuing: no license specified (author: Pramook
+Khungurn, pong@pixiv.co.jp), scraped artwork has separate copyright, only 2K images with partial
+joint coverage (15/19), no segmentation masks. RTMPose enrichment on existing datasets (113K
+FBAnimeHQ, etc.) provides far more illustrated-style joint data with less legal risk.
 
 ---
 
@@ -801,6 +810,96 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ---
 
+## TRAINING DATA BY MODEL (What We Actually Have)
+
+> **Verified March 4, 2026.** Per-example file contents checked against bucket.
+
+### Segmentation Model (DeepLabV3+, 22 regions)
+
+| Dataset | Examples | Has 22-Region Masks | Has Joints | Style | Notes |
+|---------|--------:|:-------------------:|:----------:|-------|-------|
+| Mixamo renders | ~5,250 | ✅ | ✅ | 3D rendered | 105 chars × 50 poses, flat style, front angle |
+| Live2D composites | 844 | ✅ | ✅ | 2D illustrated | 211 models, fragment-based masks |
+| anime-segmentation v1+v2 | ~24,800 | ❌ fg/bg only | ❌ needs enrichment | 2D illustrated | Binary foreground mask (alpha channel) |
+| anime_instance_seg | 98,428 | ❌ instance only | ❌ needs enrichment | 2D illustrated | Binary per-character mask, not body parts |
+| FBAnimeHQ | ~101,630 | ❌ | ✅ RTMPose | 2D illustrated | Full-body anime, joints from pose estimation |
+| HumanRig | 34,302 | ❌ | ✅ ground truth | 3D rendered | 11,434 chars × 3 angles, Mixamo skeleton joints |
+| **With 22-region masks** | **~6,094** | | | | **Critical gap — need more illustrated-style masks** |
+
+**Gap:** Only ~6K examples have body-part segmentation masks. 450K+ anime images lack them. **See-Through (PP-14, late March 2026)** adds 9,102 Live2D models with 19-region masks + draw order — the single biggest unlock.
+
+**Action: Run RTMPose enrichment (`--enrich`) on anime_seg + anime_instance_seg to add joint annotations to ~123K illustrated images currently missing them.**
+
+### Joint Prediction CNN (19 bones)
+
+| Dataset | Examples with Joints | Joint Source | Style |
+|---------|--------------------:|-------------|-------|
+| FBAnimeHQ | ~101,630 | RTMPose (estimated) | 2D illustrated anime |
+| HumanRig | 34,302 | Ground truth (Mixamo skeleton) | 3D rendered |
+| Mixamo renders | ~5,250 | Ground truth (bone projection) | 3D rendered |
+| Live2D composites | 844 | Ground truth (fragment centroids) | 2D illustrated |
+| **Total with joints** | **~142,026** | | |
+| anime-segmentation v1+v2 | ~24,800 | ❌ needs enrichment | 2D illustrated |
+| anime_instance_seg | 98,428 | ❌ needs enrichment | 2D illustrated |
+| **Total after enrichment** | **~265,254** | | |
+
+**Coverage: Good.** 102K+ illustrated-style + 40K 3D-rendered already have joints. Running enrichment on anime_seg + anime_instance_seg would nearly double the joint training data.
+
+### Weight Prediction MLP
+
+| Dataset | Examples | Has Weights | Notes |
+|---------|--------:|:-----------:|-------|
+| HumanRig | 11,434 meshes | ✅ | Mixamo skeleton, skinning weights + 3D joints |
+| UniRig Rig-XL | 16,641 meshes | ✅ | Mixed humanoid/non-humanoid, needs filtering |
+| Mixamo renders | 105 chars | ✅ | Vertex weights extracted during render |
+| **Total** | **~28,180** | | |
+
+**Coverage: Good.** HumanRig alone provides 11K+ humanoid meshes with uniform Mixamo topology.
+
+### Draw Order Prediction
+
+| Dataset | Examples | Has Draw Order | Notes |
+|---------|--------:|:--------------:|-------|
+| Mixamo renders | ~5,250 | ✅ per-pixel Z-depth | 3D rendered only |
+| Live2D composites | 844 | ✅ fragment stacking | 2D illustrated |
+| **Total** | **~6,094** | | |
+
+**Gap: Major.** Almost no illustrated-style draw order data. **See-Through** provides fragment-level pseudo-depth for 9,102 models. **Layered Temporal PSD (NEW-14)** has 20K PSD files with natural layer stacking order.
+
+### Animation Intelligence
+
+| Dataset | Files | Type | Notes |
+|---------|------:|------|-------|
+| CMU mocap retargeted | 17,823 | JSON blueprints | 2,548 clips × 7 degradations |
+| 100STYLE | 810 | JSON blueprints | 100 locomotion styles × ~8 contents, 4.06M frames |
+| AnimeRun flow | 16,704 | Optical flow pairs | 2,789 frame pairs |
+| AnimeRun segment | 11,276 | Instance segmentation | 2,819 frames |
+| AnimeRun correspondence | 19,493 | Temporal matching | 2,789 pairs |
+| AnimeRun contour | 11,276 | Color/lineart pairs | 2,819 frames |
+| AnimeRun linearea | 4,236 | Line area maps | 1,059 frames |
+
+**Coverage: Good.** CMU + 100STYLE provide broad motion coverage. AnimeRun fills 2D animation understanding.
+
+### Supplementary (no direct model target)
+
+| Dataset | Examples | What It Provides |
+|---------|--------:|-----------------|
+| VRoid Lite | 4,651 | Anime character images (no masks, no joints) |
+
+---
+
+## CRITICAL GAPS + NEXT ACTIONS
+
+| Gap | Severity | Fix | Effort |
+|-----|----------|-----|--------|
+| **22-region masks on illustrated images** | 🔴 Critical | See-Through (PP-14): 9,102 models with 19-region masks | Late March 2026 — monitor |
+| **Draw order on illustrations** | 🔴 Critical | See-Through (PP-14) + Layered Temporal PSD (NEW-14) | Late March 2026 / contact authors |
+| **Joints on anime_seg + anime_instance_seg** | 🟡 Medium | Run `--enrich` (RTMPose) on ~123K images | Can do now — compute only |
+| **More illustrated seg masks** | 🟡 Medium | CoNR (NEW-3, 700K CC-BY) + ChildlikeSHAPES (PP-15) | Not started / pending |
+| **Multi-angle Mixamo renders** | 🟡 Medium | Re-render 105 chars with 3/4, side, back + more styles | Pipeline ready |
+
+---
+
 ## TOTAL VOLUME SUMMARY (Revised with Actuals)
 
 | Source | Target | Actual | Status |
@@ -808,29 +907,27 @@ These require downloading raw assets and running your own rendering pipeline.
 | NOVA-Human (PP-1) | ~204,000 images | 0 | BLOCKED — Alipan only, seeking China-based help |
 | StdGEN semantic maps (PP-2) | 10,811 chars | 0 | BLOCKED — VRoid Hub models all 404'd |
 | HumanRig (PP-9) | 11,434 meshes + 2D images | 34,302 rendered | ✅ Ingested + uploaded (137,209 files, 5.6 GB in bucket) |
-| Anymate (PP-10) | 230K assets (~100K humanoid est.) | — | ❌ SKIPPED — 3D weights only, unusable without 2D render pipeline |
-| MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
-| AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | ❌ SKIPPED — no license, tiny, partial joints, RTMPose better |
+| Anymate (PP-10) | 230K assets (~100K humanoid est.) | — | ❌ SKIPPED |
+| MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access |
+| AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | ❌ SKIPPED |
 | Body Part Seg Anime Ou 2024 (PP-13) | Unknown | 0 | Not started — email authors |
 | See-through Live2D (PP-14) | 9,102 annotated chars | 0 | PENDING — expected late March 2026 |
 | ChildlikeSHAPES (PP-15) | 16,075 drawings | 0 | PENDING — awaiting paper acceptance |
-| AnimeRun contour pairs (PP-6) | ~8,000 | 2,819 ingested | ✅ In bucket |
-| AnimeRun linearea (PP-6) | ~1,000 | 1,059 ingested | ✅ In bucket |
-| AnimeRun flow | ~2,800 | 2,789 ingested | ✅ In bucket (16,704 files) |
-| AnimeRun segment | ~2,800 | 2,819 ingested | ✅ In bucket (11,276 files) |
-| AnimeRun correspondence | ~2,800 | 2,789 ingested | ✅ In bucket (19,493 files) |
-| LinkTo-Anime (PP-7) | ~29,270 | 0 | SKIPPED — CC-BY-NC license forbidden |
-| UniRig Rig-XL (PP-5) | 14,000 meshes | 16,641 meshes | ✅ Ingested + uploaded (66,030 files, 42.6 GB in `unirig/` bucket prefix) |
-| CMU animation pairs | 17,823 | 17,823 uploaded | ✅ In bucket (58 GB) |
+| AnimeRun (all types) (PP-6) | ~12,400 | 12,275 ingested | ✅ In bucket (5 prefixes) |
+| LinkTo-Anime (PP-7) | ~29,270 | 0 | ❌ SKIPPED — CC-BY-NC license forbidden |
+| UniRig Rig-XL (PP-5) | 14,000 meshes | 16,641 meshes | ✅ Ingested + uploaded (66,030 files, 42.6 GB) |
+| CMU animation pairs | 17,823 | 18,628 uploaded | ✅ In bucket (66.7 GB, incl. 100STYLE) |
+| 100STYLE | 810 sequences | 810 uploaded | ✅ In bucket under animation/ (8.7 GB) |
 | Mixamo renders (DS-1) | ~10,000 | 5,250 rendered | ✅ In bucket (12,216 files, 619 MB) |
 | VRoid Lite (DS-2) | 4,651 | 4,651 ingested | ✅ In bucket (9,302 files) |
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
-| Live2D composites (DS-3) | ~844 | 844 rendered | ✅ 211/280 succeeded, 3,587 files in bucket |
+| Live2D composites (DS-3) | ~844 | 844 rendered | ✅ In bucket (3,587 files) |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
 | anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
+| anime_instance_seg (PP-8) | 98,428 | 98,428 ingested | ✅ Uploading (~35% in bucket) |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
-| **TOTAL** | **~470,000+** | **~164,844+** | **~35%** |
+| **TOTAL** | **~470,000+** | **~318,454+** | **~68%** |
 
 ---
 
@@ -902,7 +999,7 @@ These require downloading raw assets and running your own rendering pipeline.
 **Data acquisition:** run_live2d_scrape (GitHub .moc3 repo search + sparse checkout download)
 **Configuration:** config, accessory_detector
 
-### Ingest Adapters (9 registered + supporting modules)
+### Ingest Adapters (12 registered + supporting modules)
 
 | Adapter | CLI name | Status |
 |---------|----------|--------|
@@ -915,13 +1012,10 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
-| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, 35 GB in bucket) |
-| `linkto_adapter.py` | — | ❌ SKIPPED — CC-BY-NC-4.0 license forbidden |
-| `stdgen_semantic_mapper.py` | — | 📋 Planned |
+| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, uploading) |
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
-| `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
-| `anymate_adapter.py` | `--adapter anymate` | ❌ SKIPPED — 3D weights unusable without 2D render pipeline |
-| `anime_drawings_adapter.py` | `--adapter anime_drawings` | ✅ Built, ❌ dataset skipped (PP-12) |
+| `humanrig_adapter.py` + `humanrig_blender_renderer.py` | `--adapter humanrig` | ✅ Working (137,209 files ingested + uploaded) |
+| `linkto_adapter.py` | — | ❌ SKIPPED — CC-BY-NC-4.0 license forbidden |
 | `see_through_adapter.py` | — | 📋 Planned (PP-14, pending release) |
 
 ### Training Infrastructure (issues #122-133)
@@ -942,7 +1036,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 - Bucket: `s3://strata-training-data` (Falkenstein datacenter, endpoint: `fsn1.your-objectstorage.com`)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: **665,624 files / ~136.8 GiB** across 13 prefixes (verified March 3, 2026)
+- Total uploaded: **~760,659 files / ~155.2 GiB** across 14 prefixes (verified March 4, 2026; anime_instance_seg upload in progress)
 - Access: AWS CLI compatible, credentials in `.env` (`BUCKET_ACCESS_KEY` / `BUCKET_SECRET`)
 
 ---
@@ -970,7 +1064,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | **GRAND TOTAL** | **~275–305 GB** | |
 
 **Hetzner bucket capacity:** 1 TB (plenty of headroom)
-**Local disk:** 460 GB total, ~113 GB free — extract→ingest→upload→delete workflow freed ~55 GB
+**Local disk:** 460 GB total, ~48 GB free — `output/anime_instance_seg/` (35 GB) is largest local consumer; delete after upload completes
 
 ---
 
@@ -1417,7 +1511,6 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
-| Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Adapter built — ready for ingestion |
 | 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Ingested + uploaded (810 files, 8.7 GiB) |
 | CoNR Dataset | ⭐⭐ | Research only | 3.7K annotations | Segmentation, style diversity | ✅ Adapter built — awaiting image download |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
