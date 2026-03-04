@@ -69,6 +69,7 @@ def parse_args() -> argparse.Namespace:
             "vroid_lite",
             "unirig",
             "humanrig",
+            "anime_drawings",
         ],
         help="Which dataset adapter to use.",
     )
@@ -487,6 +488,29 @@ def _run_humanrig(args: argparse.Namespace) -> int:
     return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
 
 
+def _run_anime_drawings(args: argparse.Namespace) -> int:
+    """Run the AnimeDrawingsDataset adapter."""
+    from ingest.anime_drawings_adapter import convert_directory
+
+    result = convert_directory(
+        args.input_dir,
+        args.output_dir,
+        resolution=args.resolution,
+        only_new=args.only_new,
+        max_images=args.max_images,
+        random_sample=args.random_sample,
+        seed=args.seed,
+    )
+
+    print("\nAnimeDrawingsDataset ingestion complete:")
+    print(f"  Images processed: {result.images_processed}")
+    print(f"  Images skipped:   {result.images_skipped}")
+    print(f"  Errors:           {len(result.errors)}")
+    print(f"  Output directory:  {args.output_dir}")
+
+    return 0 if result.images_processed > 0 or result.images_skipped > 0 else 1
+
+
 _ADAPTERS = {
     "fbanimehq": _run_fbanimehq,
     "nova_human": _run_nova_human,
@@ -500,6 +524,7 @@ _ADAPTERS = {
     "vroid_lite": _run_vroid_lite,
     "unirig": _run_unirig,
     "humanrig": _run_humanrig,
+    "anime_drawings": _run_anime_drawings,
 }
 
 
