@@ -3,7 +3,9 @@ model:
   num_bones: 20                   # 20 bones matching BONE_ORDER
 
 data:
-  dataset_dirs: ["../output/segmentation"]
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/segmentation"
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   max_vertices: 2048              # Zero-pad to this vertex count

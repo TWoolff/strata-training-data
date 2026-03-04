@@ -4,7 +4,12 @@ model:
   pretrained_backbone: true
 
 data:
-  dataset_dirs: ["../output/segmentation"]
+  dataset_dirs:
+    - "./data_cloud/segmentation"
+    - "./data_cloud/live2d"
+    - "./data_cloud/humanrig"
+    - "./data_cloud/anime_seg"
+    - "./data_cloud/anime_instance_seg"
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

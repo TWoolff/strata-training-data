@@ -64,7 +64,7 @@ def compute_loss(
     pred_confidence = outputs["confidence"]  # [B, 20]
 
     # Offset loss: SmoothL1 for visible joints only
-    vis_mask = gt_visible.unsqueeze(1).expand_as(pred_offsets)  # [B, 2, 20]
+    vis_mask = gt_visible.bool().unsqueeze(1).expand_as(pred_offsets)  # [B, 2, 20]
     if vis_mask.any():
         offset_loss = F.smooth_l1_loss(
             pred_offsets[vis_mask], gt_offsets[vis_mask], reduction="mean"

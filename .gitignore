@@ -56,3 +56,12 @@ live2d_upload_log.txt
 AnimeInstanceSegmentationDataset/
 
 tools/live2d_renderer/node_modules
+
+# Training artifacts (cloud data, checkpoints, logs)
+data_cloud/
+checkpoints/
+logs/
+models/onnx/
+validation_report.json
+validate_renders.log
+*.log
