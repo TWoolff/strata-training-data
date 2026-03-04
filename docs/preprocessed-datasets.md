@@ -12,7 +12,7 @@ See also: `docs/data-sources.md` for primary pipeline sources (Mixamo, Sketchfab
 | [StdGEN / Anime3D++](#stdgen--anime3d) | ~10.8K chars | Varies | Apache-2.0 (code); research (data) | Planned: `stdgen_semantic_mapper.py` |
 | [UniRig / Rig-XL](#unirig--rig-xl) | 14K meshes | ~20 GB | MIT | Planned: `unirig_skeleton_mapper.py` |
 | [AnimeRun](#animerun) | ~8K pairs | ~5 GB | Not specified | Planned: `animerun_contour_adapter.py` |
-| [LinkTo-Anime](#linkto-anime) | ~29K frames | ~10 GB | Research | Planned: `linkto_adapter.py` |
+| [LinkTo-Anime](#linkto-anime) | ~29K frames | ~10 GB | CC-BY-NC-4.0 (EXCLUDED) | SKIPPED |
 | [FBAnimeHQ](#fbanimehq) | ~113K | ~25 GB | Unclear (Danbooru-sourced) | `fbanimehq_adapter.py` |
 | [anime-segmentation](#anime-segmentation) | Varies | ~18 GB | Apache-2.0 | Not started |
 | [AnimeInstanceSeg](#anime-instance-segmentation) | ~100K+ | Varies | Not specified | Not started |
@@ -168,30 +168,31 @@ animerun/
 
 ---
 
-## LinkTo-Anime
+## LinkTo-Anime — PERMANENTLY SKIPPED
 
 **Paper:** "LinkTo-Anime: A 2D Animation Optical Flow Dataset from 3D Model Rendering"
 Feng, X., Zou, K., Cen, C., Huang, T., Guo, H., Huang, Z., Zhao, Y., Zhang, M., Zheng, Z., Wang, D., Zou, Y., & Li, D. (2025). arXiv:2506.02733.
 
-**Download:** See arXiv paper project page for download links. Fully manual — no git repo with automated download.
+**Download:** https://huggingface.co/datasets/LecterF/LinkTo-Anime (gated — requires HuggingFace login + agreement)
 
-**License:** Research use. Check paper for specific terms.
+**License:** CC-BY-NC-4.0 (Creative Commons Attribution-NonCommercial 4.0). **EXCLUDED from Strata commercial training per licensing policy.**
 
 **Size:** ~10 GB. 395 video sequences: 24,230 training frames, 720 validation frames, 4,320 test frames (~29K total).
 
 **Format:** Video frames with paired annotations. Includes forward/backward optical flow, occlusion masks, and Mixamo skeleton data.
 
-**Content:** Cel anime character motion generated from 3D model rendering. Characters animated using Mixamo skeletons and rendered from multiple viewpoints in two cel animation styles. Rich annotations: optical flow, occlusion masks, skeleton joint positions.
+**Content:** Cel anime character motion generated from 3D model rendering. 80 VRoid characters animated using Mixamo skeletons and rendered from multiple viewpoints in two cel animation styles. Rich annotations: optical flow, occlusion masks, skeleton joint positions.
 
-**Strata adapter:** Planned (`linkto_adapter.py`). Skeleton data uses Mixamo naming — should map cleanly to Strata's 19-region skeleton.
+**Strata adapter:** Implemented (`linkto_adapter.py`) but not registered. Will not be used due to license restrictions.
 
 **Known limitations:**
-- Manual download required (no automated script)
+- CC-BY-NC-4.0 license — non-commercial only, permanently excluded
+- Gated access on HuggingFace (requires login + contact info sharing)
 - Focused on motion/flow estimation, not static character segmentation
 - Skeleton annotations use Mixamo convention (good for Strata compatibility)
 - Relatively small compared to NOVA-Human/FBAnimeHQ
 
-**Licensing risk:** Medium. Research dataset — check paper terms for commercial training use.
+**Licensing risk:** EXCLUDED. CC-BY-NC-4.0 confirmed (March 2026). Non-commercial license is explicitly forbidden per Strata policy.
 
 ---
 
@@ -314,8 +315,9 @@ Most pre-processed datasets are released for **research use only**. This is the 
 | Risk Level | Datasets |
 |------------|----------|
 | Low | UniRig (MIT) |
-| Medium | StdGEN, CharacterGen (Apache code, per-model data), NOVA-Human, AnimeRun, LinkTo-Anime, anime-segmentation, AnimeInstanceSeg |
+| Medium | StdGEN, CharacterGen (Apache code, per-model data), NOVA-Human, AnimeRun, anime-segmentation, AnimeInstanceSeg |
 | High | FBAnimeHQ (Danbooru-sourced, no license) |
+| Excluded | LinkTo-Anime (CC-BY-NC-4.0 — non-commercial, permanently skipped) |
 
 ---
 
@@ -328,7 +330,7 @@ Most pre-processed datasets are released for **research use only**. This is the 
 | StdGEN (extended) | `ingest/stdgen_pipeline_ext.py` | Planned |
 | UniRig | `ingest/unirig_skeleton_mapper.py` | Planned |
 | AnimeRun | `ingest/animerun_contour_adapter.py` | Planned |
-| LinkTo-Anime | `ingest/linkto_adapter.py` | Planned |
+| LinkTo-Anime | `ingest/linkto_adapter.py` | SKIPPED (CC-BY-NC) |
 | FBAnimeHQ | `ingest/fbanimehq_adapter.py` | Implemented |
 | anime-segmentation | — | Not started |
 | AnimeInstanceSeg | — | Not started |

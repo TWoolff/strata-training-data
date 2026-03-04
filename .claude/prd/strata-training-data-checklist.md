@@ -338,11 +338,12 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ---
 
-### PP-7: LinkTo-Anime VRoid+Mixamo Animation Dataset
+### PP-7: LinkTo-Anime VRoid+Mixamo Animation Dataset — PERMANENTLY SKIPPED
 
 **What:** 80 VRoid models rigged with Mixamo skeletons, animated, rendered from multiple camera angles
-**Source:** arXiv 2506.02733 (check for GitHub/download link)
-**License:** Check paper
+**Source:** arXiv 2506.02733
+**License:** CC-BY-NC-4.0 (confirmed March 2026) — **EXCLUDED from commercial training**
+**Download:** https://huggingface.co/datasets/LecterF/LinkTo-Anime (gated, requires HuggingFace login)
 
 **What's included:**
 - 29,270 frames from 395 video clips
@@ -360,12 +361,12 @@ These are already rendered, annotated, or both. Downloading and converting them 
 - Line-art + color pairs (more contour training data)
 
 **Action items:**
-- [ ] Check if dataset is publicly released (paper is June 2025)
-- [ ] If available, download full dataset
-- [ ] Extract skeleton + optical flow data for animation intelligence training
-- [ ] Use line-art pairs for contour detection supplementary data
+- [x] Check if dataset is publicly released (paper is June 2025) — YES, on HuggingFace (gated)
+- [x] ~~If available, download full dataset~~ — SKIPPED, CC-BY-NC license forbidden
+- [x] ~~Extract skeleton + optical flow data~~ — SKIPPED
+- [x] ~~Use line-art pairs for contour detection~~ — SKIPPED
 
-**Status:** Adapter implemented (`linkto_adapter.py`). Directory structure created but not downloaded.
+**Status:** PERMANENTLY SKIPPED. License confirmed as CC-BY-NC-4.0 (non-commercial), which is excluded per Strata licensing policy. Adapter exists (`linkto_adapter.py`) but will not be registered or used.
 
 ---
 
@@ -843,7 +844,7 @@ These require downloading raw assets and running your own rendering pipeline.
 - [ ] **Clone CharacterGen repo** (PP-4) — get alternative rendering scripts
 - [x] **Download UniRig Rig-XL dataset** (PP-5) — rigged mesh ground truth
 - [x] **Download AnimeRun dataset** (PP-6) — contour line pairs ✅
-- [ ] **Check LinkTo-Anime availability** (PP-7) — if released, download
+- [x] **Check LinkTo-Anime availability** (PP-7) — released on HuggingFace, CC-BY-NC-4.0 → SKIPPED
 - [x] Download Mixamo FBX characters (61/250 downloaded) — need more
 - [x] Download CMU BVH dataset (full 2,548 clips) ✅
 - [x] Download anime-segmentation (v1 + v2) ✅
@@ -915,7 +916,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
 | `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, 35 GB in bucket) |
-| `linkto_adapter.py` | — | ✅ Implemented (not registered) |
+| `linkto_adapter.py` | — | ❌ SKIPPED — CC-BY-NC-4.0 license forbidden |
 | `stdgen_semantic_mapper.py` | — | 📋 Planned |
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
 | `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
@@ -981,7 +982,7 @@ These require downloading raw assets and running your own rendering pipeline.
 - [ ] StdGEN Anime3D++: Check release terms (likely research use, CC-BY-NC for paper)
 - [ ] UniRig Rig-XL: Check release terms (Objaverse-XL derived, likely permissive)
 - [ ] AnimeRun: CC-BY-NC 4.0 — non-commercial only, check if Strata's use qualifies
-- [ ] LinkTo-Anime: Check paper's license terms
+- [x] LinkTo-Anime: CC-BY-NC-4.0 confirmed — non-commercial, permanently excluded
 - [ ] FBAnimeHQ: Derived from Danbooru — check terms
 - [ ] Live2D models: Document per-model license in manifest CSV
 - [ ] Live2D SDK: If using Cubism SDK for rendering, check license terms
