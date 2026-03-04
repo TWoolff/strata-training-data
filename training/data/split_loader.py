@@ -132,19 +132,24 @@ def load_or_generate_splits(
 def _discover_characters(dataset_dirs: list[Path]) -> set[str]:
     """Scan dataset directories for character IDs.
 
-    Looks for images in ``images/`` subdirectories and extracts character
-    IDs from filenames.  Also checks for ``sources/`` metadata as a
-    fallback.
+    Looks for images in ``images/`` subdirectories (flat layout) and
+    per-example subdirectories containing ``image.png`` (per-example
+    layout).  Also checks ``sources/`` and ``masks/`` as fallbacks.
     """
     char_ids: set[str] = set()
 
     for dataset_dir in dataset_dirs:
-        # Primary: scan images/ directory
+        # Primary: scan images/ directory (flat layout)
         images_dir = dataset_dir / "images"
         if images_dir.is_dir():
             for img_path in images_dir.glob("*.png"):
                 example_id = img_path.stem
                 char_ids.add(character_id_from_example(example_id))
+
+        # Per-example layout: {example_id}/image.png
+        for child in dataset_dir.iterdir():
+            if child.is_dir() and (child / "image.png").exists():
+                char_ids.add(character_id_from_example(child.name))
 
         # Fallback: scan sources/ metadata
         sources_dir = dataset_dir / "sources"

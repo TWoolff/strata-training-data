@@ -8,6 +8,7 @@ torchvision>=0.16.0
 # ONNX export & validation
 onnx>=1.15.0
 onnxruntime>=1.17.0
+onnxscript>=0.1.0
 
 # Monitoring
 tensorboard>=2.15.0
