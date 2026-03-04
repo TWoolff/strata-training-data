@@ -216,6 +216,13 @@ class TestAnnotationLoading:
         mask = label_to_fg_mask(label)
         assert mask.min() == 255
 
+    def test_fg_mask_255_is_background(self) -> None:
+        """Value 255 in CoNR labels is unlabeled — should be background."""
+        label = np.array([[0, 255, 1], [9, 255, 0]], dtype=np.uint8)
+        mask = label_to_fg_mask(label)
+        expected = np.array([[0, 0, 255], [255, 0, 0]], dtype=np.uint8)
+        np.testing.assert_array_equal(mask, expected)
+
 
 # ---------------------------------------------------------------------------
 # _resize_to_strata / _resize_mask

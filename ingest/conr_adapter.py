@@ -214,16 +214,17 @@ def load_annotation(npz_path: Path) -> np.ndarray | None:
 def label_to_fg_mask(label: np.ndarray) -> np.ndarray:
     """Convert CoNR label array to a binary foreground mask.
 
-    Any pixel with label > 0 is foreground (255), otherwise
-    background (0).
+    Pixels with label values 1–9 are foreground (255).  Value 0 is
+    background and value 255 (present in ~55% of annotations) marks
+    unlabeled/uncertain pixels — both are treated as background.
 
     Args:
-        label: 2D array with integer values 0–9.
+        label: 2D array with integer values 0–9 and possibly 255.
 
     Returns:
         2D uint8 array with values 0 or 255.
     """
-    return (label > 0).astype(np.uint8) * 255
+    return ((label >= 1) & (label <= 9)).astype(np.uint8) * 255
 
 
 # ---------------------------------------------------------------------------
