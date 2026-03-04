@@ -1,0 +1,28 @@
+model:
+  num_features: 31
+  num_bones: 20
+
+data:
+  dataset_dirs: ["./data_cloud/segmentation", "./data_cloud/live2d"]
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  max_vertices: 2048
+
+training:
+  batch_size: 64                       # Vertex MLP is tiny — can go very high
+  num_workers: 8
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 4.0e-3                # Scale with batch (4x batch → 4x LR from 1e-3)
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  weight_loss_weight: 1.0
+  confidence_weight: 0.5
+
+checkpointing:
+  save_dir: "./checkpoints/weights"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/mae"

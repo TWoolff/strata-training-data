@@ -1,0 +1,40 @@
+model:
+  backbone: "mobilenet_v3_large"
+  num_joints: 20
+  pretrained_backbone: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/segmentation"
+    - "./data_cloud/live2d"
+    - "./data_cloud/humanrig"
+    - "./data_cloud/fbanimehq"
+    - "./data_cloud/anime_seg"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  geo_noise_std: 0.03
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.2, contrast: 0.2, saturation: 0.2, hue: 0.05}
+
+training:
+  batch_size: 64                       # A100 — joint model is lighter
+  num_workers: 8
+  epochs: 50
+  optimizer: "adam"
+  learning_rate: 4.0e-3                # Scale with batch (8x batch → 8x LR from 1e-3)
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  offset_weight: 1.0
+  presence_weight: 1.0
+  confidence_weight: 0.5
+
+checkpointing:
+  save_dir: "./checkpoints/joints"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/mean_offset_error"
