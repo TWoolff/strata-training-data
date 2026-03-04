@@ -28,25 +28,25 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 STRATA_BONES: list[str] = [
-    "hips",           # 5
-    "spine",          # 4
-    "chest",          # 3
-    "neck",           # 2
-    "head",           # 1
-    "shoulder_l",     # 18
-    "upper_arm_l",    # 6
-    "forearm_l",    # 7
-    "hand_l",         # 8
-    "shoulder_r",     # 19
-    "upper_arm_r",    # 9
-    "forearm_r",    # 10
-    "hand_r",         # 11
-    "upper_leg_l",    # 12
-    "lower_leg_l",    # 13
-    "foot_l",         # 14
-    "upper_leg_r",    # 15
-    "lower_leg_r",    # 16
-    "foot_r",         # 17
+    "hips",  # 5
+    "spine",  # 4
+    "chest",  # 3
+    "neck",  # 2
+    "head",  # 1
+    "shoulder_l",  # 18
+    "upper_arm_l",  # 6
+    "forearm_l",  # 7
+    "hand_l",  # 8
+    "shoulder_r",  # 19
+    "upper_arm_r",  # 9
+    "forearm_r",  # 10
+    "hand_r",  # 11
+    "upper_leg_l",  # 12
+    "lower_leg_l",  # 13
+    "foot_l",  # 14
+    "upper_leg_r",  # 15
+    "lower_leg_r",  # 16
+    "foot_r",  # 17
 ]
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ STRATA_BONES: list[str] = [
 
 CMU_TO_STRATA: dict[str, str] = {
     "Hips": "hips",
-    "Spine": "spine",         # fallback if no Spine1
+    "Spine": "spine",  # fallback if no Spine1
     "Spine1": "spine",
     "Spine2": "chest",
     "Neck": "neck",
@@ -79,12 +79,48 @@ CMU_TO_STRATA: dict[str, str] = {
     "RightFoot": "foot_r",
 }
 
+# ---------------------------------------------------------------------------
+# 100STYLE bone name → Strata bone name mapping
+# ---------------------------------------------------------------------------
+# 100STYLE uses: Hips → Chest → Chest2 → Chest3 → Chest4 → Neck/Head + arms/legs.
+# 4-spine collapse: Chest→spine, Chest2+Chest3→ignored (mid-chain), Chest4→chest.
+
+STYLE100_TO_STRATA: dict[str, str] = {
+    "Hips": "hips",
+    "Chest": "spine",
+    # Chest2, Chest3 — mid-chain, collapsed (handled by _resolve_spine_mapping)
+    "Chest4": "chest",
+    "Neck": "neck",
+    "Head": "head",
+    "LeftCollar": "shoulder_l",
+    "LeftShoulder": "upper_arm_l",
+    "LeftElbow": "forearm_l",
+    "LeftWrist": "hand_l",
+    "RightCollar": "shoulder_r",
+    "RightShoulder": "upper_arm_r",
+    "RightElbow": "forearm_r",
+    "RightWrist": "hand_r",
+    "LeftHip": "upper_leg_l",
+    "LeftKnee": "lower_leg_l",
+    "LeftAnkle": "foot_l",
+    "RightHip": "upper_leg_r",
+    "RightKnee": "lower_leg_r",
+    "RightAnkle": "foot_r",
+}
+
 # Bones that should never produce "unmapped" warnings (End Sites, fingers, toes,
 # hip connectors).  Checked with endswith() so "LThumb" matches "Thumb".
 _SILENTLY_IGNORED_SUFFIXES: tuple[str, ...] = (
     "_End",
-    "Thumb", "Index", "Index1", "Middle", "Ring", "Pinky",
-    "ToeBase", "Toe_End", "Toe",
+    "Thumb",
+    "Index",
+    "Index1",
+    "Middle",
+    "Ring",
+    "Pinky",
+    "ToeBase",
+    "Toe_End",
+    "Toe",
     "FingerBase",
     "HipJoint",
 )
@@ -93,6 +129,7 @@ _SILENTLY_IGNORED_SUFFIXES: tuple[str, ...] = (
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RetargetedFrame:
@@ -133,16 +170,31 @@ class RetargetedAnimation:
 # Multi-spine collapse logic
 # ---------------------------------------------------------------------------
 
+
+def _is_100style_skeleton(skeleton: BVHSkeleton) -> bool:
+    """Detect whether this BVH uses the 100STYLE skeleton layout.
+
+    100STYLE skeletons have Chest/Chest2/Chest3/Chest4 (no Spine/Spine1/Spine2)
+    and use LeftHip/RightHip instead of LeftUpLeg/RightUpLeg.
+    """
+    joint_names = set(skeleton.joints.keys())
+    return "Chest4" in joint_names and "LeftHip" in joint_names
+
+
 def _resolve_spine_mapping(skeleton: BVHSkeleton) -> dict[str, str]:
     """Determine the correct spine bone mapping for this skeleton.
 
-    CMU skeletons have varying spine chains.  The two common layouts:
+    Handles three skeleton families:
 
-    Layout A (cgspeed BVH conversion):
+    100STYLE layout:
+        Hips → Chest → Chest2 → Chest3 → Chest4 → Neck
+        Maps: Chest→spine, Chest4→chest, Chest2+Chest3→ignored (mid-chain)
+
+    CMU Layout A (cgspeed BVH conversion):
         Hips → LowerBack → Spine → Spine1 → Neck
         Maps: LowerBack→spine, Spine1→chest, Spine→ignored
 
-    Layout B (generic/Mixamo-like):
+    CMU Layout B (generic/Mixamo-like):
         Hips → Spine → Spine1 → Spine2 → Neck
         Maps: Spine1→spine, Spine2→chest, Spine→ignored
 
@@ -159,6 +211,14 @@ def _resolve_spine_mapping(skeleton: BVHSkeleton) -> dict[str, str]:
     joint_names = set(skeleton.joints.keys())
     mapping: dict[str, str] = {}
 
+    # 100STYLE: 4-segment spine (Chest → Chest2 → Chest3 → Chest4)
+    if "Chest4" in joint_names and "Chest" in joint_names:
+        mapping["Chest"] = "spine"
+        mapping["Chest4"] = "chest"
+        # Chest2, Chest3 are mid-chain — will be silently ignored
+        logger.debug("100STYLE spine: Chest→spine, Chest4→chest, Chest2+Chest3 ignored")
+        return mapping
+
     has_lower_back = "LowerBack" in joint_names
     has_spine = "Spine" in joint_names
     has_spine1 = "Spine1" in joint_names
@@ -169,9 +229,7 @@ def _resolve_spine_mapping(skeleton: BVHSkeleton) -> dict[str, str]:
         mapping["LowerBack"] = "spine"
         mapping["Spine1"] = "chest"
         # Spine is mid-chain, ignored (subsumed by LowerBack + Spine1)
-        logger.debug(
-            "CMU spine layout A: LowerBack→spine, Spine1→chest, Spine ignored"
-        )
+        logger.debug("CMU spine layout A: LowerBack→spine, Spine1→chest, Spine ignored")
     elif has_lower_back and has_spine:
         # LowerBack + Spine but no Spine1
         mapping["LowerBack"] = "spine"
@@ -181,9 +239,7 @@ def _resolve_spine_mapping(skeleton: BVHSkeleton) -> dict[str, str]:
         # Layout B: Spine → Spine1 → Spine2 → Neck
         mapping["Spine1"] = "spine"
         mapping["Spine2"] = "chest"
-        logger.debug(
-            "Multi-spine collapse: Spine ignored, Spine1→spine, Spine2→chest"
-        )
+        logger.debug("Multi-spine collapse: Spine ignored, Spine1→spine, Spine2→chest")
     elif has_spine1:
         mapping["Spine1"] = "spine"
     elif has_spine:
@@ -213,19 +269,30 @@ def _detect_rotation_order(skeleton: BVHSkeleton) -> str:
 # Core retargeting
 # ---------------------------------------------------------------------------
 
+
 def _build_bone_map(skeleton: BVHSkeleton) -> tuple[dict[str, str], list[str]]:
-    """Build the CMU→Strata bone mapping for a specific skeleton.
+    """Build the source→Strata bone mapping for a specific skeleton.
+
+    Auto-detects 100STYLE vs CMU skeleton layouts and uses the appropriate
+    mapping table.
 
     Args:
         skeleton: Parsed BVH skeleton.
 
     Returns:
-        (mapped, unmapped) where mapped is {cmu_name: strata_name} and
-        unmapped is a list of CMU bone names with no Strata equivalent.
+        (mapped, unmapped) where mapped is {source_name: strata_name} and
+        unmapped is a list of source bone names with no Strata equivalent.
     """
+    is_100style = _is_100style_skeleton(skeleton)
     spine_overrides = _resolve_spine_mapping(skeleton)
+    base_table = STYLE100_TO_STRATA if is_100style else CMU_TO_STRATA
     mapped: dict[str, str] = {}
     unmapped: list[str] = []
+
+    # Mid-chain spine bones to silently skip (100STYLE: Chest2, Chest3)
+    mid_chain_spine: set[str] = set()
+    if is_100style:
+        mid_chain_spine = {"Chest2", "Chest3"}
 
     for joint_name in skeleton.joint_order:
         joint = skeleton.joints[joint_name]
@@ -234,6 +301,11 @@ def _build_bone_map(skeleton: BVHSkeleton) -> tuple[dict[str, str], list[str]]:
         if any(joint_name.endswith(suffix) for suffix in _SILENTLY_IGNORED_SUFFIXES):
             continue
         if not joint.channels:
+            continue
+
+        # Skip mid-chain spine bones (100STYLE Chest2/Chest3)
+        if joint_name in mid_chain_spine:
+            logger.debug("Mid-chain spine bone %s ignored", joint_name)
             continue
 
         # Check spine override first (handles multi-spine collapse)
@@ -250,8 +322,8 @@ def _build_bone_map(skeleton: BVHSkeleton) -> tuple[dict[str, str], list[str]]:
             logger.debug("Spine ignored due to multi-spine collapse")
             continue
 
-        # Standard lookup
-        strata_name = CMU_TO_STRATA.get(joint_name)
+        # Standard lookup from the appropriate table
+        strata_name = base_table.get(joint_name)
         if strata_name and strata_name not in ("spine", "chest"):
             # Non-spine mapping from the standard table
             mapped[joint_name] = strata_name
@@ -441,11 +513,12 @@ def check_strata_compatibility(
             continue
         if any(joint_name.endswith(suffix) for suffix in _SILENTLY_IGNORED_SUFFIXES):
             continue
-        # Skip mid-chain Spine when collapsed by LowerBack or Spine1/Spine2
-        if (
-            joint_name == "Spine"
-            and ("Spine1" in bvh.skeleton.joints or "LowerBack" in bvh.skeleton.joints)
+        # Skip mid-chain spine bones (CMU Spine, 100STYLE Chest2/Chest3)
+        if joint_name == "Spine" and (
+            "Spine1" in bvh.skeleton.joints or "LowerBack" in bvh.skeleton.joints
         ):
+            continue
+        if joint_name in ("Chest2", "Chest3") and _is_100style_skeleton(bvh.skeleton):
             continue
         non_strata.append(joint_name)
         seen.add(joint_name)
@@ -470,8 +543,7 @@ def check_strata_compatibility(
     if compatible:
         if non_strata:
             reason = (
-                f"Compatible: {len(bone_map)} bones mapped, "
-                f"{len(non_strata)} extra bones inactive"
+                f"Compatible: {len(bone_map)} bones mapped, {len(non_strata)} extra bones inactive"
             )
         else:
             reason = f"Compatible: all {len(bone_map)} bones mapped"

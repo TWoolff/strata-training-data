@@ -10,6 +10,7 @@ import pytest
 from animation.scripts.bvh_parser import parse_bvh
 from animation.scripts.bvh_to_strata import (
     STRATA_BONES,
+    _is_100style_skeleton,
     check_strata_compatibility,
     retarget,
 )
@@ -221,6 +222,7 @@ SFU_RETARGET_BVH = textwrap.dedent("""\
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _write_bvh(tmp_path: Path, content: str, name: str = "test.bvh") -> Path:
     bvh_path = tmp_path / name
@@ -633,3 +635,222 @@ class TestStrataCompatibility:
         bvh = parse_bvh(_write_bvh(tmp_path, ACTIVE_CUSTOM_BONE_BVH))
         result = check_strata_compatibility(bvh)
         assert "Incompatible" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# 100STYLE skeleton tests
+# ---------------------------------------------------------------------------
+
+# Minimal 100STYLE BVH with Chest/Chest2/Chest3/Chest4 spine chain
+STYLE100_BVH = textwrap.dedent("""\
+    HIERARCHY
+    ROOT Hips
+    {
+        OFFSET 0.0 0.0 0.0
+        CHANNELS 6 Xposition Yposition Zposition Yrotation Xrotation Zrotation
+        JOINT Chest
+        {
+            OFFSET 0.0 13.0 0.0
+            CHANNELS 3 Yrotation Xrotation Zrotation
+            JOINT Chest2
+            {
+                OFFSET 0.0 10.0 0.0
+                CHANNELS 3 Yrotation Xrotation Zrotation
+                JOINT Chest3
+                {
+                    OFFSET 0.0 9.3 0.0
+                    CHANNELS 3 Yrotation Xrotation Zrotation
+                    JOINT Chest4
+                    {
+                        OFFSET 0.0 9.3 0.0
+                        CHANNELS 3 Yrotation Xrotation Zrotation
+                        JOINT Neck
+                        {
+                            OFFSET 0.0 13.3 0.0
+                            CHANNELS 3 Yrotation Xrotation Zrotation
+                            JOINT Head
+                            {
+                                OFFSET 0.0 9.0 0.0
+                                CHANNELS 3 Yrotation Xrotation Zrotation
+                                End Site
+                                {
+                                    OFFSET 0.0 17.0 0.0
+                                }
+                            }
+                        }
+                        JOINT RightCollar
+                        {
+                            OFFSET -3.2 7.5 0.0
+                            CHANNELS 3 Yrotation Xrotation Zrotation
+                            JOINT RightShoulder
+                            {
+                                OFFSET -15.8 0.0 0.0
+                                CHANNELS 3 Yrotation Xrotation Zrotation
+                                JOINT RightElbow
+                                {
+                                    OFFSET -31.2 0.0 0.0
+                                    CHANNELS 3 Yrotation Xrotation Zrotation
+                                    JOINT RightWrist
+                                    {
+                                        OFFSET -25.5 0.0 0.0
+                                        CHANNELS 3 Yrotation Xrotation Zrotation
+                                        End Site
+                                        {
+                                            OFFSET -19.0 0.0 0.0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        JOINT LeftCollar
+                        {
+                            OFFSET 3.2 7.5 0.0
+                            CHANNELS 3 Yrotation Xrotation Zrotation
+                            JOINT LeftShoulder
+                            {
+                                OFFSET 15.8 0.0 0.0
+                                CHANNELS 3 Yrotation Xrotation Zrotation
+                                JOINT LeftElbow
+                                {
+                                    OFFSET 31.2 0.0 0.0
+                                    CHANNELS 3 Yrotation Xrotation Zrotation
+                                    JOINT LeftWrist
+                                    {
+                                        OFFSET 25.5 0.0 0.0
+                                        CHANNELS 3 Yrotation Xrotation Zrotation
+                                        End Site
+                                        {
+                                            OFFSET 19.0 0.0 0.0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        JOINT RightHip
+        {
+            OFFSET -10.7 0.1 0.0
+            CHANNELS 3 Yrotation Xrotation Zrotation
+            JOINT RightKnee
+            {
+                OFFSET 0.0 -43.7 0.0
+                CHANNELS 3 Yrotation Xrotation Zrotation
+                JOINT RightAnkle
+                {
+                    OFFSET 0.0 -43.2 0.0
+                    CHANNELS 3 Yrotation Xrotation Zrotation
+                    JOINT RightToe
+                    {
+                        OFFSET 0.0 -9.7 19.2
+                        CHANNELS 3 Yrotation Xrotation Zrotation
+                        End Site
+                        {
+                            OFFSET 0.0 -1.3 4.9
+                        }
+                    }
+                }
+            }
+        }
+        JOINT LeftHip
+        {
+            OFFSET 10.7 0.1 0.0
+            CHANNELS 3 Yrotation Xrotation Zrotation
+            JOINT LeftKnee
+            {
+                OFFSET 0.0 -43.7 0.0
+                CHANNELS 3 Yrotation Xrotation Zrotation
+                JOINT LeftAnkle
+                {
+                    OFFSET 0.0 -43.2 0.0
+                    CHANNELS 3 Yrotation Xrotation Zrotation
+                    JOINT LeftToe
+                    {
+                        OFFSET 0.0 -9.7 19.2
+                        CHANNELS 3 Yrotation Xrotation Zrotation
+                        End Site
+                        {
+                            OFFSET 0.0 -1.3 4.9
+                        }
+                    }
+                }
+            }
+        }
+    }
+    MOTION
+    Frames: 2
+    Frame Time: 0.016667
+    0.0 96.0 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 17.0 18.0 19.0 20.0 21.0 22.0 23.0 24.0 25.0 26.0 27.0 28.0 29.0 30.0 31.0 32.0 33.0 34.0 35.0 36.0 37.0 38.0 39.0 40.0 41.0 42.0 43.0 44.0 45.0 46.0 47.0 48.0 49.0 50.0 51.0 52.0 53.0 54.0 55.0 56.0 57.0 58.0 59.0 60.0 61.0 62.0 63.0 64.0 65.0 66.0 67.0 68.0 69.0
+    0.5 96.5 0.5 1.5 2.5 3.5 4.5 5.5 6.5 7.5 8.5 9.5 10.5 11.5 12.5 13.5 14.5 15.5 16.5 17.5 18.5 19.5 20.5 21.5 22.5 23.5 24.5 25.5 26.5 27.5 28.5 29.5 30.5 31.5 32.5 33.5 34.5 35.5 36.5 37.5 38.5 39.5 40.5 41.5 42.5 43.5 44.5 45.5 46.5 47.5 48.5 49.5 50.5 51.5 52.5 53.5 54.5 55.5 56.5 57.5 58.5 59.5 60.5 61.5 62.5 63.5 64.5 65.5 66.5 67.5 68.5 69.5
+""")
+
+
+class Test100StyleSkeleton:
+    """Tests for 100STYLE skeleton detection and retargeting."""
+
+    def test_detected_as_100style(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        assert _is_100style_skeleton(bvh.skeleton) is True
+
+    def test_cmu_not_detected_as_100style(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, CMU_WALK_BVH))
+        assert _is_100style_skeleton(bvh.skeleton) is False
+
+    def test_all_19_bones_present(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        for bone in STRATA_BONES:
+            assert bone in result.frames[0].rotations, f"Missing bone: {bone}"
+
+    def test_no_unmapped_bones(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        assert result.unmapped_bones == []
+
+    def test_chest_maps_to_spine(self, tmp_path: Path) -> None:
+        """100STYLE Chest (lowest spine) should map to Strata 'spine'."""
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        # Chest is 1st joint after root (channels at offset 6), YXZ order
+        # Values: [4.0, 5.0, 6.0] → Y=4.0, X=5.0, Z=6.0 → (X=5.0, Y=4.0, Z=6.0)
+        assert result.frames[0].rotations["spine"] == (5.0, 4.0, 6.0)
+
+    def test_chest4_maps_to_chest(self, tmp_path: Path) -> None:
+        """100STYLE Chest4 (highest spine before neck) should map to Strata 'chest'."""
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        # Chest4 is 4th joint (offset 6+3+3+3=15), YXZ order
+        # Values: [13.0, 14.0, 15.0] → (X=14.0, Y=13.0, Z=15.0)
+        assert result.frames[0].rotations["chest"] == (14.0, 13.0, 15.0)
+
+    def test_chest2_chest3_silently_ignored(self, tmp_path: Path) -> None:
+        """Mid-chain Chest2/Chest3 should not appear in source_bones or unmapped."""
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        assert "Chest2" not in result.source_bones
+        assert "Chest3" not in result.source_bones
+        assert "Chest2" not in result.unmapped_bones
+        assert "Chest3" not in result.unmapped_bones
+
+    def test_rotation_order_yxz(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        assert result.rotation_order == "YXZ"
+
+    def test_frame_rate_60fps(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        assert result.frame_rate == pytest.approx(60.0, abs=0.1)
+
+    def test_19_mapped_bones(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = retarget(bvh)
+        assert len(result.source_bones) == 19
+
+    def test_compatible(self, tmp_path: Path) -> None:
+        bvh = parse_bvh(_write_bvh(tmp_path, STYLE100_BVH))
+        result = check_strata_compatibility(bvh)
+        assert result.compatible is True
+        assert result.active_unmapped == []

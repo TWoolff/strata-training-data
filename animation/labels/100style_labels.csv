@@ -1,0 +1,811 @@
+filename,style_name,content_code,content_type,description,stochastic,symmetric,frame_count,frame_rate,strata_compatible
+Aeroplane/Aeroplane_BR.json,Aeroplane,BR,backward_run,Both arms raised as wings – tilting from side to side,no,yes,5275,60.0,yes
+Aeroplane/Aeroplane_BW.json,Aeroplane,BW,backward_walk,Both arms raised as wings – tilting from side to side,no,yes,8797,60.0,yes
+Aeroplane/Aeroplane_FR.json,Aeroplane,FR,forward_run,Both arms raised as wings – tilting from side to side,no,yes,4129,60.0,yes
+Aeroplane/Aeroplane_FW.json,Aeroplane,FW,forward_walk,Both arms raised as wings – tilting from side to side,no,yes,7060,60.0,yes
+Aeroplane/Aeroplane_ID.json,Aeroplane,ID,idle,Both arms raised as wings – tilting from side to side,no,yes,870,60.0,yes
+Aeroplane/Aeroplane_SR.json,Aeroplane,SR,sideways_run,Both arms raised as wings – tilting from side to side,no,yes,2518,60.0,yes
+Aeroplane/Aeroplane_SW.json,Aeroplane,SW,sideways_walk,Both arms raised as wings – tilting from side to side,no,yes,5424,60.0,yes
+Aeroplane/Aeroplane_TR1.json,Aeroplane,TR1,turn_1,Both arms raised as wings – tilting from side to side,no,yes,5742,60.0,yes
+Akimbo/Akimbo_BR.json,Akimbo,BR,backward_run,Hands on hips,no,yes,4391,60.0,yes
+Akimbo/Akimbo_BW.json,Akimbo,BW,backward_walk,Hands on hips,no,yes,7511,60.0,yes
+Akimbo/Akimbo_FR.json,Akimbo,FR,forward_run,Hands on hips,no,yes,3720,60.0,yes
+Akimbo/Akimbo_FW.json,Akimbo,FW,forward_walk,Hands on hips,no,yes,6820,60.0,yes
+Akimbo/Akimbo_ID.json,Akimbo,ID,idle,Hands on hips,no,yes,717,60.0,yes
+Akimbo/Akimbo_SR.json,Akimbo,SR,sideways_run,Hands on hips,no,yes,2347,60.0,yes
+Akimbo/Akimbo_SW.json,Akimbo,SW,sideways_walk,Hands on hips,no,yes,5854,60.0,yes
+Akimbo/Akimbo_TR1.json,Akimbo,TR1,turn_1,Hands on hips,no,yes,4559,60.0,yes
+Angry/Angry_BR.json,Angry,BR,backward_run,Swing lower arms aggressively - fists closed,no,yes,2662,60.0,yes
+Angry/Angry_BW.json,Angry,BW,backward_walk,Swing lower arms aggressively - fists closed,no,yes,4003,60.0,yes
+Angry/Angry_FR.json,Angry,FR,forward_run,Swing lower arms aggressively - fists closed,no,yes,2570,60.0,yes
+Angry/Angry_FW.json,Angry,FW,forward_walk,Swing lower arms aggressively - fists closed,no,yes,3838,60.0,yes
+Angry/Angry_ID.json,Angry,ID,idle,Swing lower arms aggressively - fists closed,no,yes,787,60.0,yes
+Angry/Angry_SR.json,Angry,SR,sideways_run,Swing lower arms aggressively - fists closed,no,yes,1789,60.0,yes
+Angry/Angry_SW.json,Angry,SW,sideways_walk,Swing lower arms aggressively - fists closed,no,yes,3480,60.0,yes
+Angry/Angry_TR1.json,Angry,TR1,turn_1,Swing lower arms aggressively - fists closed,no,yes,6707,60.0,yes
+ArmsAboveHead/ArmsAboveHead_BR.json,ArmsAboveHead,BR,backward_run,Arms raised straight above head,no,yes,3764,60.0,yes
+ArmsAboveHead/ArmsAboveHead_BW.json,ArmsAboveHead,BW,backward_walk,Arms raised straight above head,no,yes,6347,60.0,yes
+ArmsAboveHead/ArmsAboveHead_FR.json,ArmsAboveHead,FR,forward_run,Arms raised straight above head,no,yes,3222,60.0,yes
+ArmsAboveHead/ArmsAboveHead_FW.json,ArmsAboveHead,FW,forward_walk,Arms raised straight above head,no,yes,5920,60.0,yes
+ArmsAboveHead/ArmsAboveHead_ID.json,ArmsAboveHead,ID,idle,Arms raised straight above head,no,yes,1038,60.0,yes
+ArmsAboveHead/ArmsAboveHead_SR.json,ArmsAboveHead,SR,sideways_run,Arms raised straight above head,no,yes,2319,60.0,yes
+ArmsAboveHead/ArmsAboveHead_SW.json,ArmsAboveHead,SW,sideways_walk,Arms raised straight above head,no,yes,4667,60.0,yes
+ArmsAboveHead/ArmsAboveHead_TR1.json,ArmsAboveHead,TR1,turn_1,Arms raised straight above head,no,yes,5457,60.0,yes
+ArmsBehindBack/ArmsBehindBack_BR.json,ArmsBehindBack,BR,backward_run,Prince Phillip Walk – hands clasped behind back,no,yes,4043,60.0,yes
+ArmsBehindBack/ArmsBehindBack_BW.json,ArmsBehindBack,BW,backward_walk,Prince Phillip Walk – hands clasped behind back,no,yes,6970,60.0,yes
+ArmsBehindBack/ArmsBehindBack_FR.json,ArmsBehindBack,FR,forward_run,Prince Phillip Walk – hands clasped behind back,no,yes,3884,60.0,yes
+ArmsBehindBack/ArmsBehindBack_FW.json,ArmsBehindBack,FW,forward_walk,Prince Phillip Walk – hands clasped behind back,no,yes,6479,60.0,yes
+ArmsBehindBack/ArmsBehindBack_ID.json,ArmsBehindBack,ID,idle,Prince Phillip Walk – hands clasped behind back,no,yes,1054,60.0,yes
+ArmsBehindBack/ArmsBehindBack_SR.json,ArmsBehindBack,SR,sideways_run,Prince Phillip Walk – hands clasped behind back,no,yes,2532,60.0,yes
+ArmsBehindBack/ArmsBehindBack_SW.json,ArmsBehindBack,SW,sideways_walk,Prince Phillip Walk – hands clasped behind back,no,yes,4581,60.0,yes
+ArmsBehindBack/ArmsBehindBack_TR1.json,ArmsBehindBack,TR1,turn_1,Prince Phillip Walk – hands clasped behind back,no,yes,5030,60.0,yes
+ArmsBySide/ArmsBySide_BR.json,ArmsBySide,BR,backward_run,Keep arms fixed by side and do not move them,no,yes,3793,60.0,yes
+ArmsBySide/ArmsBySide_BW.json,ArmsBySide,BW,backward_walk,Keep arms fixed by side and do not move them,no,yes,6657,60.0,yes
+ArmsBySide/ArmsBySide_FR.json,ArmsBySide,FR,forward_run,Keep arms fixed by side and do not move them,no,yes,3515,60.0,yes
+ArmsBySide/ArmsBySide_FW.json,ArmsBySide,FW,forward_walk,Keep arms fixed by side and do not move them,no,yes,6770,60.0,yes
+ArmsBySide/ArmsBySide_ID.json,ArmsBySide,ID,idle,Keep arms fixed by side and do not move them,no,yes,758,60.0,yes
+ArmsBySide/ArmsBySide_SR.json,ArmsBySide,SR,sideways_run,Keep arms fixed by side and do not move them,no,yes,2443,60.0,yes
+ArmsBySide/ArmsBySide_SW.json,ArmsBySide,SW,sideways_walk,Keep arms fixed by side and do not move them,no,yes,4733,60.0,yes
+ArmsBySide/ArmsBySide_TR1.json,ArmsBySide,TR1,turn_1,Keep arms fixed by side and do not move them,no,yes,5936,60.0,yes
+ArmsFolded/ArmsFolded_BR.json,ArmsFolded,BR,backward_run,Right arm folded over left,no,no,3813,60.0,yes
+ArmsFolded/ArmsFolded_BW.json,ArmsFolded,BW,backward_walk,Right arm folded over left,no,no,7032,60.0,yes
+ArmsFolded/ArmsFolded_FR.json,ArmsFolded,FR,forward_run,Right arm folded over left,no,no,3941,60.0,yes
+ArmsFolded/ArmsFolded_FW.json,ArmsFolded,FW,forward_walk,Right arm folded over left,no,no,6892,60.0,yes
+ArmsFolded/ArmsFolded_ID.json,ArmsFolded,ID,idle,Right arm folded over left,no,no,1038,60.0,yes
+ArmsFolded/ArmsFolded_SR.json,ArmsFolded,SR,sideways_run,Right arm folded over left,no,no,2390,60.0,yes
+ArmsFolded/ArmsFolded_SW.json,ArmsFolded,SW,sideways_walk,Right arm folded over left,no,no,5164,60.0,yes
+ArmsFolded/ArmsFolded_TR1.json,ArmsFolded,TR1,turn_1,Right arm folded over left,no,no,5209,60.0,yes
+Balance/Balance_BR.json,Balance,BR,backward_run,Arms out to side for balance - tilting side to side,no,no,6044,60.0,yes
+Balance/Balance_BW.json,Balance,BW,backward_walk,Arms out to side for balance - tilting side to side,no,no,8701,60.0,yes
+Balance/Balance_FR.json,Balance,FR,forward_run,Arms out to side for balance - tilting side to side,no,no,4862,60.0,yes
+Balance/Balance_FW.json,Balance,FW,forward_walk,Arms out to side for balance - tilting side to side,no,no,12708,60.0,yes
+Balance/Balance_ID.json,Balance,ID,idle,Arms out to side for balance - tilting side to side,no,no,843,60.0,yes
+Balance/Balance_SR.json,Balance,SR,sideways_run,Arms out to side for balance - tilting side to side,no,no,2402,60.0,yes
+Balance/Balance_SW.json,Balance,SW,sideways_walk,Arms out to side for balance - tilting side to side,no,no,6148,60.0,yes
+Balance/Balance_TR1.json,Balance,TR1,turn_1,Arms out to side for balance - tilting side to side,no,no,8507,60.0,yes
+BeatChest/BeatChest_BR.json,BeatChest,BR,backward_run,Beat chest while moving normally,no,yes,3776,60.0,yes
+BeatChest/BeatChest_BW.json,BeatChest,BW,backward_walk,Beat chest while moving normally,no,yes,6740,60.0,yes
+BeatChest/BeatChest_FR.json,BeatChest,FR,forward_run,Beat chest while moving normally,no,yes,3346,60.0,yes
+BeatChest/BeatChest_FW.json,BeatChest,FW,forward_walk,Beat chest while moving normally,no,yes,7742,60.0,yes
+BeatChest/BeatChest_ID.json,BeatChest,ID,idle,Beat chest while moving normally,no,yes,909,60.0,yes
+BeatChest/BeatChest_SR.json,BeatChest,SR,sideways_run,Beat chest while moving normally,no,yes,2016,60.0,yes
+BeatChest/BeatChest_SW.json,BeatChest,SW,sideways_walk,Beat chest while moving normally,no,yes,5250,60.0,yes
+BeatChest/BeatChest_TR1.json,BeatChest,TR1,turn_1,Beat chest while moving normally,no,yes,5987,60.0,yes
+BentForward/BentForward_BR.json,BentForward,BR,backward_run,Tilt torso forwards,no,yes,3854,60.0,yes
+BentForward/BentForward_BW.json,BentForward,BW,backward_walk,Tilt torso forwards,no,yes,6087,60.0,yes
+BentForward/BentForward_FR.json,BentForward,FR,forward_run,Tilt torso forwards,no,yes,3768,60.0,yes
+BentForward/BentForward_FW.json,BentForward,FW,forward_walk,Tilt torso forwards,no,yes,6379,60.0,yes
+BentForward/BentForward_ID.json,BentForward,ID,idle,Tilt torso forwards,no,yes,737,60.0,yes
+BentForward/BentForward_SR.json,BentForward,SR,sideways_run,Tilt torso forwards,no,yes,2386,60.0,yes
+BentForward/BentForward_SW.json,BentForward,SW,sideways_walk,Tilt torso forwards,no,yes,4666,60.0,yes
+BentForward/BentForward_TR1.json,BentForward,TR1,turn_1,Tilt torso forwards,no,yes,7022,60.0,yes
+BentKnees/BentKnees_BR.json,BentKnees,BR,backward_run,Bend knees as much as possible ,no,yes,4702,60.0,yes
+BentKnees/BentKnees_BW.json,BentKnees,BW,backward_walk,Bend knees as much as possible ,no,yes,7303,60.0,yes
+BentKnees/BentKnees_FR.json,BentKnees,FR,forward_run,Bend knees as much as possible ,no,yes,4247,60.0,yes
+BentKnees/BentKnees_FW.json,BentKnees,FW,forward_walk,Bend knees as much as possible ,no,yes,7551,60.0,yes
+BentKnees/BentKnees_ID.json,BentKnees,ID,idle,Bend knees as much as possible ,no,yes,910,60.0,yes
+BentKnees/BentKnees_SR.json,BentKnees,SR,sideways_run,Bend knees as much as possible ,no,yes,2116,60.0,yes
+BentKnees/BentKnees_SW.json,BentKnees,SW,sideways_walk,Bend knees as much as possible ,no,yes,5048,60.0,yes
+BentKnees/BentKnees_TR1.json,BentKnees,TR1,turn_1,Bend knees as much as possible ,no,yes,7181,60.0,yes
+BigSteps/BigSteps_BR.json,BigSteps,BR,backward_run,As large steps as possible,no,yes,3434,60.0,yes
+BigSteps/BigSteps_BW.json,BigSteps,BW,backward_walk,As large steps as possible,no,yes,5183,60.0,yes
+BigSteps/BigSteps_FR.json,BigSteps,FR,forward_run,As large steps as possible,no,yes,2813,60.0,yes
+BigSteps/BigSteps_FW.json,BigSteps,FW,forward_walk,As large steps as possible,no,yes,5292,60.0,yes
+BigSteps/BigSteps_ID.json,BigSteps,ID,idle,As large steps as possible,no,yes,847,60.0,yes
+BigSteps/BigSteps_SR.json,BigSteps,SR,sideways_run,As large steps as possible,no,yes,2017,60.0,yes
+BigSteps/BigSteps_SW.json,BigSteps,SW,sideways_walk,As large steps as possible,no,yes,4706,60.0,yes
+BigSteps/BigSteps_TR1.json,BigSteps,TR1,turn_1,As large steps as possible,no,yes,7870,60.0,yes
+BouncyLeft/BouncyLeft_BR.json,BouncyLeft,BR,backward_run,Step normally with right foot but spring off left foot,no,no,4113,60.0,yes
+BouncyLeft/BouncyLeft_BW.json,BouncyLeft,BW,backward_walk,Step normally with right foot but spring off left foot,no,no,5354,60.0,yes
+BouncyLeft/BouncyLeft_FR.json,BouncyLeft,FR,forward_run,Step normally with right foot but spring off left foot,no,no,3663,60.0,yes
+BouncyLeft/BouncyLeft_FW.json,BouncyLeft,FW,forward_walk,Step normally with right foot but spring off left foot,no,no,5385,60.0,yes
+BouncyLeft/BouncyLeft_ID.json,BouncyLeft,ID,idle,Step normally with right foot but spring off left foot,no,no,700,60.0,yes
+BouncyLeft/BouncyLeft_SR.json,BouncyLeft,SR,sideways_run,Step normally with right foot but spring off left foot,no,no,2431,60.0,yes
+BouncyLeft/BouncyLeft_SW.json,BouncyLeft,SW,sideways_walk,Step normally with right foot but spring off left foot,no,no,4530,60.0,yes
+BouncyLeft/BouncyLeft_TR1.json,BouncyLeft,TR1,turn_1,Step normally with right foot but spring off left foot,no,no,2883,60.0,yes
+BouncyLeft/BouncyLeft_TR2.json,BouncyLeft,TR2,turn_2,Step normally with right foot but spring off left foot,no,no,6288,60.0,yes
+BouncyRight/BouncyRight_BR.json,BouncyRight,BR,backward_run,Step normally with left foot but spring off right foot,no,no,3795,60.0,yes
+BouncyRight/BouncyRight_BW.json,BouncyRight,BW,backward_walk,Step normally with left foot but spring off right foot,no,no,5699,60.0,yes
+BouncyRight/BouncyRight_FR.json,BouncyRight,FR,forward_run,Step normally with left foot but spring off right foot,no,no,3916,60.0,yes
+BouncyRight/BouncyRight_FW.json,BouncyRight,FW,forward_walk,Step normally with left foot but spring off right foot,no,no,6096,60.0,yes
+BouncyRight/BouncyRight_ID.json,BouncyRight,ID,idle,Step normally with left foot but spring off right foot,no,no,558,60.0,yes
+BouncyRight/BouncyRight_SR.json,BouncyRight,SR,sideways_run,Step normally with left foot but spring off right foot,no,no,2651,60.0,yes
+BouncyRight/BouncyRight_SW.json,BouncyRight,SW,sideways_walk,Step normally with left foot but spring off right foot,no,no,4358,60.0,yes
+BouncyRight/BouncyRight_TR1.json,BouncyRight,TR1,turn_1,Step normally with left foot but spring off right foot,no,no,2884,60.0,yes
+BouncyRight/BouncyRight_TR2.json,BouncyRight,TR2,turn_2,Step normally with left foot but spring off right foot,no,no,5822,60.0,yes
+Cat/Cat_BR.json,Cat,BR,backward_run,Use hands as paws - step opposite hand and foot,no,yes,4581,60.0,yes
+Cat/Cat_BW.json,Cat,BW,backward_walk,Use hands as paws - step opposite hand and foot,no,yes,8475,60.0,yes
+Cat/Cat_FR.json,Cat,FR,forward_run,Use hands as paws - step opposite hand and foot,no,yes,4116,60.0,yes
+Cat/Cat_FW.json,Cat,FW,forward_walk,Use hands as paws - step opposite hand and foot,no,yes,6836,60.0,yes
+Cat/Cat_ID.json,Cat,ID,idle,Use hands as paws - step opposite hand and foot,no,yes,1076,60.0,yes
+Cat/Cat_SR.json,Cat,SR,sideways_run,Use hands as paws - step opposite hand and foot,no,yes,1988,60.0,yes
+Cat/Cat_SW.json,Cat,SW,sideways_walk,Use hands as paws - step opposite hand and foot,no,yes,5735,60.0,yes
+Cat/Cat_TR1.json,Cat,TR1,turn_1,Use hands as paws - step opposite hand and foot,no,yes,12857,60.0,yes
+Chicken/Chicken_BR.json,Chicken,BR,backward_run,Bob head - arms as wings,no,yes,3635,60.0,yes
+Chicken/Chicken_BW.json,Chicken,BW,backward_walk,Bob head - arms as wings,no,yes,6180,60.0,yes
+Chicken/Chicken_FR.json,Chicken,FR,forward_run,Bob head - arms as wings,no,yes,4619,60.0,yes
+Chicken/Chicken_FW.json,Chicken,FW,forward_walk,Bob head - arms as wings,no,yes,7606,60.0,yes
+Chicken/Chicken_ID.json,Chicken,ID,idle,Bob head - arms as wings,no,yes,526,60.0,yes
+Chicken/Chicken_SR.json,Chicken,SR,sideways_run,Bob head - arms as wings,no,yes,2337,60.0,yes
+Chicken/Chicken_SW.json,Chicken,SW,sideways_walk,Bob head - arms as wings,no,yes,4834,60.0,yes
+Chicken/Chicken_TR1.json,Chicken,TR1,turn_1,Bob head - arms as wings,no,yes,7434,60.0,yes
+CrossOver/CrossOver_BR.json,CrossOver,BR,backward_run,Step each foot in front of other leg,no,yes,5399,60.0,yes
+CrossOver/CrossOver_BW.json,CrossOver,BW,backward_walk,Step each foot in front of other leg,no,yes,9436,60.0,yes
+CrossOver/CrossOver_FR.json,CrossOver,FR,forward_run,Step each foot in front of other leg,no,yes,4468,60.0,yes
+CrossOver/CrossOver_FW.json,CrossOver,FW,forward_walk,Step each foot in front of other leg,no,yes,9370,60.0,yes
+CrossOver/CrossOver_ID.json,CrossOver,ID,idle,Step each foot in front of other leg,no,yes,785,60.0,yes
+CrossOver/CrossOver_SR.json,CrossOver,SR,sideways_run,Step each foot in front of other leg,no,yes,2624,60.0,yes
+CrossOver/CrossOver_SW.json,CrossOver,SW,sideways_walk,Step each foot in front of other leg,no,yes,6067,60.0,yes
+CrossOver/CrossOver_TR1.json,CrossOver,TR1,turn_1,Step each foot in front of other leg,no,yes,11296,60.0,yes
+Crouched/Crouched_BR.json,Crouched,BR,backward_run,Sqaut slightly and bend back,no,yes,4426,60.0,yes
+Crouched/Crouched_BW.json,Crouched,BW,backward_walk,Sqaut slightly and bend back,no,yes,7085,60.0,yes
+Crouched/Crouched_FR.json,Crouched,FR,forward_run,Sqaut slightly and bend back,no,yes,4022,60.0,yes
+Crouched/Crouched_FW.json,Crouched,FW,forward_walk,Sqaut slightly and bend back,no,yes,6332,60.0,yes
+Crouched/Crouched_ID.json,Crouched,ID,idle,Sqaut slightly and bend back,no,yes,682,60.0,yes
+Crouched/Crouched_SR.json,Crouched,SR,sideways_run,Sqaut slightly and bend back,no,yes,2065,60.0,yes
+Crouched/Crouched_SW.json,Crouched,SW,sideways_walk,Sqaut slightly and bend back,no,yes,4650,60.0,yes
+Crouched/Crouched_TR1.json,Crouched,TR1,turn_1,Sqaut slightly and bend back,no,yes,6699,60.0,yes
+CrowdAvoidance/CrowdAvoidance_BR.json,CrowdAvoidance,BR,backward_run,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,5250,60.0,yes
+CrowdAvoidance/CrowdAvoidance_BW.json,CrowdAvoidance,BW,backward_walk,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,9305,60.0,yes
+CrowdAvoidance/CrowdAvoidance_FR.json,CrowdAvoidance,FR,forward_run,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,3536,60.0,yes
+CrowdAvoidance/CrowdAvoidance_FW.json,CrowdAvoidance,FW,forward_walk,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,7195,60.0,yes
+CrowdAvoidance/CrowdAvoidance_ID.json,CrowdAvoidance,ID,idle,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,747,60.0,yes
+CrowdAvoidance/CrowdAvoidance_SR.json,CrowdAvoidance,SR,sideways_run,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,2394,60.0,yes
+CrowdAvoidance/CrowdAvoidance_SW.json,CrowdAvoidance,SW,sideways_walk,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,6533,60.0,yes
+CrowdAvoidance/CrowdAvoidance_TR1.json,CrowdAvoidance,TR1,turn_1,Occasionally turning shoulders or turn sideways to avoid others,yes,yes,10576,60.0,yes
+Depressed/Depressed_BR.json,Depressed,BR,backward_run,Head bowed arms swinging,no,yes,4696,60.0,yes
+Depressed/Depressed_BW.json,Depressed,BW,backward_walk,Head bowed arms swinging,no,yes,8686,60.0,yes
+Depressed/Depressed_FR.json,Depressed,FR,forward_run,Head bowed arms swinging,no,yes,4753,60.0,yes
+Depressed/Depressed_FW.json,Depressed,FW,forward_walk,Head bowed arms swinging,no,yes,8744,60.0,yes
+Depressed/Depressed_ID.json,Depressed,ID,idle,Head bowed arms swinging,no,yes,821,60.0,yes
+Depressed/Depressed_SR.json,Depressed,SR,sideways_run,Head bowed arms swinging,no,yes,2507,60.0,yes
+Depressed/Depressed_SW.json,Depressed,SW,sideways_walk,Head bowed arms swinging,no,yes,7031,60.0,yes
+Depressed/Depressed_TR1.json,Depressed,TR1,turn_1,Head bowed arms swinging,no,yes,8844,60.0,yes
+Dinosaur/Dinosaur_BR.json,Dinosaur,BR,backward_run,Like a t-rex arms close to body dinosaur posture,no,yes,4894,60.0,yes
+Dinosaur/Dinosaur_BW.json,Dinosaur,BW,backward_walk,Like a t-rex arms close to body dinosaur posture,no,yes,7116,60.0,yes
+Dinosaur/Dinosaur_FR.json,Dinosaur,FR,forward_run,Like a t-rex arms close to body dinosaur posture,no,yes,4435,60.0,yes
+Dinosaur/Dinosaur_FW.json,Dinosaur,FW,forward_walk,Like a t-rex arms close to body dinosaur posture,no,yes,8579,60.0,yes
+Dinosaur/Dinosaur_ID.json,Dinosaur,ID,idle,Like a t-rex arms close to body dinosaur posture,no,yes,780,60.0,yes
+Dinosaur/Dinosaur_SR.json,Dinosaur,SR,sideways_run,Like a t-rex arms close to body dinosaur posture,no,yes,3421,60.0,yes
+Dinosaur/Dinosaur_SW.json,Dinosaur,SW,sideways_walk,Like a t-rex arms close to body dinosaur posture,no,yes,6374,60.0,yes
+Dinosaur/Dinosaur_TR1.json,Dinosaur,TR1,turn_1,Like a t-rex arms close to body dinosaur posture,no,yes,8560,60.0,yes
+DragLeftLeg/DragLeftLeg_BR.json,DragLeftLeg,BR,backward_run,Drag left foot along the floor,no,no,5283,60.0,yes
+DragLeftLeg/DragLeftLeg_BW.json,DragLeftLeg,BW,backward_walk,Drag left foot along the floor,no,no,7235,60.0,yes
+DragLeftLeg/DragLeftLeg_FR.json,DragLeftLeg,FR,forward_run,Drag left foot along the floor,no,no,5456,60.0,yes
+DragLeftLeg/DragLeftLeg_FW.json,DragLeftLeg,FW,forward_walk,Drag left foot along the floor,no,no,9684,60.0,yes
+DragLeftLeg/DragLeftLeg_ID.json,DragLeftLeg,ID,idle,Drag left foot along the floor,no,no,942,60.0,yes
+DragLeftLeg/DragLeftLeg_SR.json,DragLeftLeg,SR,sideways_run,Drag left foot along the floor,no,no,2635,60.0,yes
+DragLeftLeg/DragLeftLeg_SW.json,DragLeftLeg,SW,sideways_walk,Drag left foot along the floor,no,no,5289,60.0,yes
+DragLeftLeg/DragLeftLeg_TR1.json,DragLeftLeg,TR1,turn_1,Drag left foot along the floor,no,no,10576,60.0,yes
+DragRightLeg/DragRightLeg_BR.json,DragRightLeg,BR,backward_run,Drag right foot along the floor,no,no,4943,60.0,yes
+DragRightLeg/DragRightLeg_BW.json,DragRightLeg,BW,backward_walk,Drag right foot along the floor,no,no,8291,60.0,yes
+DragRightLeg/DragRightLeg_FR.json,DragRightLeg,FR,forward_run,Drag right foot along the floor,no,no,4775,60.0,yes
+DragRightLeg/DragRightLeg_FW.json,DragRightLeg,FW,forward_walk,Drag right foot along the floor,no,no,10678,60.0,yes
+DragRightLeg/DragRightLeg_ID.json,DragRightLeg,ID,idle,Drag right foot along the floor,no,no,648,60.0,yes
+DragRightLeg/DragRightLeg_SR.json,DragRightLeg,SR,sideways_run,Drag right foot along the floor,no,no,2657,60.0,yes
+DragRightLeg/DragRightLeg_SW.json,DragRightLeg,SW,sideways_walk,Drag right foot along the floor,no,no,6290,60.0,yes
+DragRightLeg/DragRightLeg_TR1.json,DragRightLeg,TR1,turn_1,Drag right foot along the floor,no,no,8797,60.0,yes
+Drunk/Drunk_BR.json,Drunk,BR,backward_run,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,4407,60.0,yes
+Drunk/Drunk_BW.json,Drunk,BW,backward_walk,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,6241,60.0,yes
+Drunk/Drunk_FR.json,Drunk,FR,forward_run,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,3599,60.0,yes
+Drunk/Drunk_FW.json,Drunk,FW,forward_walk,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,6910,60.0,yes
+Drunk/Drunk_ID.json,Drunk,ID,idle,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,730,60.0,yes
+Drunk/Drunk_SR.json,Drunk,SR,sideways_run,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,2474,60.0,yes
+Drunk/Drunk_SW.json,Drunk,SW,sideways_walk,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,4437,60.0,yes
+Drunk/Drunk_TR1.json,Drunk,TR1,turn_1,Stumbling around at random. Various foot step sizes and arm motions,yes,yes,12015,60.0,yes
+DuckFoot/DuckFoot_BR.json,DuckFoot,BR,backward_run,Toes pointing inwards,no,yes,6294,60.0,yes
+DuckFoot/DuckFoot_BW.json,DuckFoot,BW,backward_walk,Toes pointing inwards,no,yes,13200,60.0,yes
+DuckFoot/DuckFoot_FR.json,DuckFoot,FR,forward_run,Toes pointing inwards,no,yes,4695,60.0,yes
+DuckFoot/DuckFoot_FW.json,DuckFoot,FW,forward_walk,Toes pointing inwards,no,yes,10573,60.0,yes
+DuckFoot/DuckFoot_ID.json,DuckFoot,ID,idle,Toes pointing inwards,no,yes,939,60.0,yes
+DuckFoot/DuckFoot_SR.json,DuckFoot,SR,sideways_run,Toes pointing inwards,no,yes,2818,60.0,yes
+DuckFoot/DuckFoot_SW.json,DuckFoot,SW,sideways_walk,Toes pointing inwards,no,yes,6842,60.0,yes
+DuckFoot/DuckFoot_TR1.json,DuckFoot,TR1,turn_1,Toes pointing inwards,no,yes,8295,60.0,yes
+Elated/Elated_BR.json,Elated,BR,backward_run,Swing arms with spring,no,yes,3550,60.0,yes
+Elated/Elated_BW.json,Elated,BW,backward_walk,Swing arms with spring,no,yes,4148,60.0,yes
+Elated/Elated_FR.json,Elated,FR,forward_run,Swing arms with spring,no,yes,3664,60.0,yes
+Elated/Elated_FW.json,Elated,FW,forward_walk,Swing arms with spring,no,yes,4474,60.0,yes
+Elated/Elated_ID.json,Elated,ID,idle,Swing arms with spring,no,yes,478,60.0,yes
+Elated/Elated_SR.json,Elated,SR,sideways_run,Swing arms with spring,no,yes,1766,60.0,yes
+Elated/Elated_SW.json,Elated,SW,sideways_walk,Swing arms with spring,no,yes,3464,60.0,yes
+Elated/Elated_TR1.json,Elated,TR1,turn_1,Swing arms with spring,no,yes,8659,60.0,yes
+FairySteps/FairySteps_BR.json,FairySteps,BR,backward_run,One foot in front of the other so the heel touches the toe,no,yes,7093,60.0,yes
+FairySteps/FairySteps_BW.json,FairySteps,BW,backward_walk,One foot in front of the other so the heel touches the toe,no,yes,10593,60.0,yes
+FairySteps/FairySteps_FR.json,FairySteps,FR,forward_run,One foot in front of the other so the heel touches the toe,no,yes,6481,60.0,yes
+FairySteps/FairySteps_FW.json,FairySteps,FW,forward_walk,One foot in front of the other so the heel touches the toe,no,yes,12547,60.0,yes
+FairySteps/FairySteps_ID.json,FairySteps,ID,idle,One foot in front of the other so the heel touches the toe,no,yes,522,60.0,yes
+FairySteps/FairySteps_SR.json,FairySteps,SR,sideways_run,One foot in front of the other so the heel touches the toe,no,yes,5850,60.0,yes
+FairySteps/FairySteps_SW.json,FairySteps,SW,sideways_walk,One foot in front of the other so the heel touches the toe,no,yes,9715,60.0,yes
+FairySteps/FairySteps_TR1.json,FairySteps,TR1,turn_1,One foot in front of the other so the heel touches the toe,no,yes,8284,60.0,yes
+Flapping/Flapping_BR.json,Flapping,BR,backward_run,Flap arms as wings on tiptoes,no,yes,3481,60.0,yes
+Flapping/Flapping_BW.json,Flapping,BW,backward_walk,Flap arms as wings on tiptoes,no,yes,4905,60.0,yes
+Flapping/Flapping_FR.json,Flapping,FR,forward_run,Flap arms as wings on tiptoes,no,yes,3449,60.0,yes
+Flapping/Flapping_FW.json,Flapping,FW,forward_walk,Flap arms as wings on tiptoes,no,yes,5200,60.0,yes
+Flapping/Flapping_ID.json,Flapping,ID,idle,Flap arms as wings on tiptoes,no,yes,644,60.0,yes
+Flapping/Flapping_SR.json,Flapping,SR,sideways_run,Flap arms as wings on tiptoes,no,yes,2115,60.0,yes
+Flapping/Flapping_SW.json,Flapping,SW,sideways_walk,Flap arms as wings on tiptoes,no,yes,4205,60.0,yes
+Flapping/Flapping_TR1.json,Flapping,TR1,turn_1,Flap arms as wings on tiptoes,no,yes,5955,60.0,yes
+FlickLegs/FlickLegs_BR.json,FlickLegs,BR,backward_run,Knees together and flick legs to sides as moving,no,yes,4787,60.0,yes
+FlickLegs/FlickLegs_BW.json,FlickLegs,BW,backward_walk,Knees together and flick legs to sides as moving,no,yes,10747,60.0,yes
+FlickLegs/FlickLegs_FR.json,FlickLegs,FR,forward_run,Knees together and flick legs to sides as moving,no,yes,4526,60.0,yes
+FlickLegs/FlickLegs_FW.json,FlickLegs,FW,forward_walk,Knees together and flick legs to sides as moving,no,yes,12214,60.0,yes
+FlickLegs/FlickLegs_ID.json,FlickLegs,ID,idle,Knees together and flick legs to sides as moving,no,yes,798,60.0,yes
+FlickLegs/FlickLegs_SR.json,FlickLegs,SR,sideways_run,Knees together and flick legs to sides as moving,no,yes,2354,60.0,yes
+FlickLegs/FlickLegs_SW.json,FlickLegs,SW,sideways_walk,Knees together and flick legs to sides as moving,no,yes,8789,60.0,yes
+FlickLegs/FlickLegs_TR1.json,FlickLegs,TR1,turn_1,Knees together and flick legs to sides as moving,no,yes,10586,60.0,yes
+Followed/Followed_BR.json,Followed,BR,backward_run,Check behind occasionally,yes,yes,3375,60.0,yes
+Followed/Followed_BW.json,Followed,BW,backward_walk,Check behind occasionally,yes,yes,5346,60.0,yes
+Followed/Followed_FR.json,Followed,FR,forward_run,Check behind occasionally,yes,yes,3229,60.0,yes
+Followed/Followed_FW.json,Followed,FW,forward_walk,Check behind occasionally,yes,yes,4818,60.0,yes
+Followed/Followed_ID.json,Followed,ID,idle,Check behind occasionally,yes,yes,802,60.0,yes
+Followed/Followed_SR.json,Followed,SR,sideways_run,Check behind occasionally,yes,yes,2330,60.0,yes
+Followed/Followed_SW.json,Followed,SW,sideways_walk,Check behind occasionally,yes,yes,4440,60.0,yes
+Followed/Followed_TR1.json,Followed,TR1,turn_1,Check behind occasionally,yes,yes,8789,60.0,yes
+GracefulArms/GracefulArms_BR.json,GracefulArms,BR,backward_run,One arm across chest the other extended walk tall,no,yes,3628,60.0,yes
+GracefulArms/GracefulArms_BW.json,GracefulArms,BW,backward_walk,One arm across chest the other extended walk tall,no,yes,5733,60.0,yes
+GracefulArms/GracefulArms_FR.json,GracefulArms,FR,forward_run,One arm across chest the other extended walk tall,no,yes,3499,60.0,yes
+GracefulArms/GracefulArms_FW.json,GracefulArms,FW,forward_walk,One arm across chest the other extended walk tall,no,yes,5873,60.0,yes
+GracefulArms/GracefulArms_ID.json,GracefulArms,ID,idle,One arm across chest the other extended walk tall,no,yes,646,60.0,yes
+GracefulArms/GracefulArms_SR.json,GracefulArms,SR,sideways_run,One arm across chest the other extended walk tall,no,yes,1951,60.0,yes
+GracefulArms/GracefulArms_SW.json,GracefulArms,SW,sideways_walk,One arm across chest the other extended walk tall,no,yes,4844,60.0,yes
+GracefulArms/GracefulArms_TR1.json,GracefulArms,TR1,turn_1,One arm across chest the other extended walk tall,no,yes,9386,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_BR.json,HandsBetweenLegs,BR,backward_run,Bent back – legs wide - hands swing between legs.,no,yes,3620,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_BW.json,HandsBetweenLegs,BW,backward_walk,Bent back – legs wide - hands swing between legs.,no,yes,6529,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_FR.json,HandsBetweenLegs,FR,forward_run,Bent back – legs wide - hands swing between legs.,no,yes,3524,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_FW.json,HandsBetweenLegs,FW,forward_walk,Bent back – legs wide - hands swing between legs.,no,yes,6451,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_ID.json,HandsBetweenLegs,ID,idle,Bent back – legs wide - hands swing between legs.,no,yes,666,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_SR.json,HandsBetweenLegs,SR,sideways_run,Bent back – legs wide - hands swing between legs.,no,yes,2035,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_SW.json,HandsBetweenLegs,SW,sideways_walk,Bent back – legs wide - hands swing between legs.,no,yes,4900,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_TR1.json,HandsBetweenLegs,TR1,turn_1,Bent back – legs wide - hands swing between legs.,no,yes,5676,60.0,yes
+HandsBetweenLegs/HandsBetweenLegs_TR2.json,HandsBetweenLegs,TR2,turn_2,Bent back – legs wide - hands swing between legs.,no,yes,630,60.0,yes
+HandsInPockets/HandsInPockets_BR.json,HandsInPockets,BR,backward_run,Place hands in pockets and walk and run,no,yes,3880,60.0,yes
+HandsInPockets/HandsInPockets_BW.json,HandsInPockets,BW,backward_walk,Place hands in pockets and walk and run,no,yes,6782,60.0,yes
+HandsInPockets/HandsInPockets_FR.json,HandsInPockets,FR,forward_run,Place hands in pockets and walk and run,no,yes,3502,60.0,yes
+HandsInPockets/HandsInPockets_FW.json,HandsInPockets,FW,forward_walk,Place hands in pockets and walk and run,no,yes,6515,60.0,yes
+HandsInPockets/HandsInPockets_ID.json,HandsInPockets,ID,idle,Place hands in pockets and walk and run,no,yes,1144,60.0,yes
+HandsInPockets/HandsInPockets_SR.json,HandsInPockets,SR,sideways_run,Place hands in pockets and walk and run,no,yes,2482,60.0,yes
+HandsInPockets/HandsInPockets_SW.json,HandsInPockets,SW,sideways_walk,Place hands in pockets and walk and run,no,yes,4949,60.0,yes
+HandsInPockets/HandsInPockets_TR1.json,HandsInPockets,TR1,turn_1,Place hands in pockets and walk and run,no,yes,6098,60.0,yes
+Heavyset/Heavyset_BR.json,Heavyset,BR,backward_run,Walking as a muscle man tensed biceps,no,yes,3965,60.0,yes
+Heavyset/Heavyset_BW.json,Heavyset,BW,backward_walk,Walking as a muscle man tensed biceps,no,yes,6641,60.0,yes
+Heavyset/Heavyset_FR.json,Heavyset,FR,forward_run,Walking as a muscle man tensed biceps,no,yes,3902,60.0,yes
+Heavyset/Heavyset_FW.json,Heavyset,FW,forward_walk,Walking as a muscle man tensed biceps,no,yes,6520,60.0,yes
+Heavyset/Heavyset_ID.json,Heavyset,ID,idle,Walking as a muscle man tensed biceps,no,yes,976,60.0,yes
+Heavyset/Heavyset_SR.json,Heavyset,SR,sideways_run,Walking as a muscle man tensed biceps,no,yes,1789,60.0,yes
+Heavyset/Heavyset_SW.json,Heavyset,SW,sideways_walk,Walking as a muscle man tensed biceps,no,yes,5012,60.0,yes
+Heavyset/Heavyset_TR1.json,Heavyset,TR1,turn_1,Walking as a muscle man tensed biceps,no,yes,7811,60.0,yes
+HighKnees/HighKnees_BR.json,HighKnees,BR,backward_run,Lift knees high but only knees – not marching,no,yes,4562,60.0,yes
+HighKnees/HighKnees_BW.json,HighKnees,BW,backward_walk,Lift knees high but only knees – not marching,no,yes,9681,60.0,yes
+HighKnees/HighKnees_FR.json,HighKnees,FR,forward_run,Lift knees high but only knees – not marching,no,yes,4587,60.0,yes
+HighKnees/HighKnees_FW.json,HighKnees,FW,forward_walk,Lift knees high but only knees – not marching,no,yes,9449,60.0,yes
+HighKnees/HighKnees_ID.json,HighKnees,ID,idle,Lift knees high but only knees – not marching,no,yes,605,60.0,yes
+HighKnees/HighKnees_SR.json,HighKnees,SR,sideways_run,Lift knees high but only knees – not marching,no,yes,3476,60.0,yes
+HighKnees/HighKnees_SW.json,HighKnees,SW,sideways_walk,Lift knees high but only knees – not marching,no,yes,8462,60.0,yes
+HighKnees/HighKnees_TR1.json,HighKnees,TR1,turn_1,Lift knees high but only knees – not marching,no,yes,6932,60.0,yes
+InTheDark/InTheDark_BR.json,InTheDark,BR,backward_run,Feeling around as if in darkness,yes,yes,4714,60.0,yes
+InTheDark/InTheDark_BW.json,InTheDark,BW,backward_walk,Feeling around as if in darkness,yes,yes,11757,60.0,yes
+InTheDark/InTheDark_FR.json,InTheDark,FR,forward_run,Feeling around as if in darkness,yes,yes,4265,60.0,yes
+InTheDark/InTheDark_FW.json,InTheDark,FW,forward_walk,Feeling around as if in darkness,yes,yes,10245,60.0,yes
+InTheDark/InTheDark_ID.json,InTheDark,ID,idle,Feeling around as if in darkness,yes,yes,998,60.0,yes
+InTheDark/InTheDark_SR.json,InTheDark,SR,sideways_run,Feeling around as if in darkness,yes,yes,2365,60.0,yes
+InTheDark/InTheDark_SW.json,InTheDark,SW,sideways_walk,Feeling around as if in darkness,yes,yes,7253,60.0,yes
+InTheDark/InTheDark_TR1.json,InTheDark,TR1,turn_1,Feeling around as if in darkness,yes,yes,9576,60.0,yes
+KarateChop/KarateChop_BR.json,KarateChop,BR,backward_run,Open hands swing hand with each step to do a karate chop,no,yes,3894,60.0,yes
+KarateChop/KarateChop_BW.json,KarateChop,BW,backward_walk,Open hands swing hand with each step to do a karate chop,no,yes,8244,60.0,yes
+KarateChop/KarateChop_FR.json,KarateChop,FR,forward_run,Open hands swing hand with each step to do a karate chop,no,yes,3687,60.0,yes
+KarateChop/KarateChop_FW.json,KarateChop,FW,forward_walk,Open hands swing hand with each step to do a karate chop,no,yes,8198,60.0,yes
+KarateChop/KarateChop_ID.json,KarateChop,ID,idle,Open hands swing hand with each step to do a karate chop,no,yes,641,60.0,yes
+KarateChop/KarateChop_SR.json,KarateChop,SR,sideways_run,Open hands swing hand with each step to do a karate chop,no,yes,2154,60.0,yes
+KarateChop/KarateChop_SW.json,KarateChop,SW,sideways_walk,Open hands swing hand with each step to do a karate chop,no,yes,5381,60.0,yes
+KarateChop/KarateChop_TR1.json,KarateChop,TR1,turn_1,Open hands swing hand with each step to do a karate chop,no,yes,12446,60.0,yes
+Kick/Kick_BR.json,Kick,BR,backward_run,Kick with every step,no,yes,4363,60.0,yes
+Kick/Kick_BW.json,Kick,BW,backward_walk,Kick with every step,no,yes,10997,60.0,yes
+Kick/Kick_FR.json,Kick,FR,forward_run,Kick with every step,no,yes,4379,60.0,yes
+Kick/Kick_FW.json,Kick,FW,forward_walk,Kick with every step,no,yes,8754,60.0,yes
+Kick/Kick_ID.json,Kick,ID,idle,Kick with every step,no,yes,962,60.0,yes
+Kick/Kick_SR.json,Kick,SR,sideways_run,Kick with every step,no,yes,2525,60.0,yes
+Kick/Kick_SW.json,Kick,SW,sideways_walk,Kick with every step,no,yes,7918,60.0,yes
+Kick/Kick_TR1.json,Kick,TR1,turn_1,Kick with every step,no,yes,9633,60.0,yes
+LawnMower/LawnMower_BR.json,LawnMower,BR,backward_run,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,4199,60.0,yes
+LawnMower/LawnMower_BW.json,LawnMower,BW,backward_walk,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,7092,60.0,yes
+LawnMower/LawnMower_FR.json,LawnMower,FR,forward_run,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,3870,60.0,yes
+LawnMower/LawnMower_FW.json,LawnMower,FW,forward_walk,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,6618,60.0,yes
+LawnMower/LawnMower_ID.json,LawnMower,ID,idle,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,849,60.0,yes
+LawnMower/LawnMower_SR.json,LawnMower,SR,sideways_run,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,2446,60.0,yes
+LawnMower/LawnMower_SW.json,LawnMower,SW,sideways_walk,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,5888,60.0,yes
+LawnMower/LawnMower_TR1.json,LawnMower,TR1,turn_1,Roll hands over one another like disco move and tilt torso forwards and then back,no,yes,8850,60.0,yes
+LeanBack/LeanBack_BR.json,LeanBack,BR,backward_run,Bent backwards,no,yes,4344,60.0,yes
+LeanBack/LeanBack_BW.json,LeanBack,BW,backward_walk,Bent backwards,no,yes,7823,60.0,yes
+LeanBack/LeanBack_FR.json,LeanBack,FR,forward_run,Bent backwards,no,yes,4188,60.0,yes
+LeanBack/LeanBack_FW.json,LeanBack,FW,forward_walk,Bent backwards,no,yes,7844,60.0,yes
+LeanBack/LeanBack_ID.json,LeanBack,ID,idle,Bent backwards,no,yes,636,60.0,yes
+LeanBack/LeanBack_SR.json,LeanBack,SR,sideways_run,Bent backwards,no,yes,2251,60.0,yes
+LeanBack/LeanBack_SW.json,LeanBack,SW,sideways_walk,Bent backwards,no,yes,4882,60.0,yes
+LeanBack/LeanBack_TR1.json,LeanBack,TR1,turn_1,Bent backwards,no,yes,6327,60.0,yes
+LeanLeft/LeanLeft_BR.json,LeanLeft,BR,backward_run,Normal motion upperbody tilted right,no,no,5563,60.0,yes
+LeanLeft/LeanLeft_BW.json,LeanLeft,BW,backward_walk,Normal motion upperbody tilted right,no,no,8304,60.0,yes
+LeanLeft/LeanLeft_FR.json,LeanLeft,FR,forward_run,Normal motion upperbody tilted right,no,no,4261,60.0,yes
+LeanLeft/LeanLeft_FW.json,LeanLeft,FW,forward_walk,Normal motion upperbody tilted right,no,no,7306,60.0,yes
+LeanLeft/LeanLeft_ID.json,LeanLeft,ID,idle,Normal motion upperbody tilted right,no,no,1050,60.0,yes
+LeanLeft/LeanLeft_SR.json,LeanLeft,SR,sideways_run,Normal motion upperbody tilted right,no,no,2933,60.0,yes
+LeanLeft/LeanLeft_SW.json,LeanLeft,SW,sideways_walk,Normal motion upperbody tilted right,no,no,5544,60.0,yes
+LeanLeft/LeanLeft_TR1.json,LeanLeft,TR1,turn_1,Normal motion upperbody tilted right,no,no,7497,60.0,yes
+LeanRight/LeanRight_BR.json,LeanRight,BR,backward_run,Normal motion upperbody tilted left,no,no,5920,60.0,yes
+LeanRight/LeanRight_BW.json,LeanRight,BW,backward_walk,Normal motion upperbody tilted left,no,no,8578,60.0,yes
+LeanRight/LeanRight_FR.json,LeanRight,FR,forward_run,Normal motion upperbody tilted left,no,no,5353,60.0,yes
+LeanRight/LeanRight_FW.json,LeanRight,FW,forward_walk,Normal motion upperbody tilted left,no,no,8512,60.0,yes
+LeanRight/LeanRight_ID.json,LeanRight,ID,idle,Normal motion upperbody tilted left,no,no,1024,60.0,yes
+LeanRight/LeanRight_SR.json,LeanRight,SR,sideways_run,Normal motion upperbody tilted left,no,no,3006,60.0,yes
+LeanRight/LeanRight_SW.json,LeanRight,SW,sideways_walk,Normal motion upperbody tilted left,no,no,5804,60.0,yes
+LeanRight/LeanRight_TR1.json,LeanRight,TR1,turn_1,Normal motion upperbody tilted left,no,no,6064,60.0,yes
+LeftHop/LeftHop_BR.json,LeftHop,BR,backward_run,Hop on left foot,no,no,2032,60.0,yes
+LeftHop/LeftHop_BW.json,LeftHop,BW,backward_walk,Hop on left foot,no,no,2712,60.0,yes
+LeftHop/LeftHop_FR.json,LeftHop,FR,forward_run,Hop on left foot,no,no,2950,60.0,yes
+LeftHop/LeftHop_FW.json,LeftHop,FW,forward_walk,Hop on left foot,no,no,4316,60.0,yes
+LeftHop/LeftHop_ID.json,LeftHop,ID,idle,Hop on left foot,no,no,783,60.0,yes
+LeftHop/LeftHop_SR.json,LeftHop,SR,sideways_run,Hop on left foot,no,no,1148,60.0,yes
+LeftHop/LeftHop_SW.json,LeftHop,SW,sideways_walk,Hop on left foot,no,no,1773,60.0,yes
+LeftHop/LeftHop_TR1.json,LeftHop,TR1,turn_1,Hop on left foot,no,no,2500,60.0,yes
+LeftHop/LeftHop_TR2.json,LeftHop,TR2,turn_2,Hop on left foot,no,no,1766,60.0,yes
+LegsApart/LegsApart_BR.json,LegsApart,BR,backward_run,Legs relatively straight wide apart,no,yes,4240,60.0,yes
+LegsApart/LegsApart_BW.json,LegsApart,BW,backward_walk,Legs relatively straight wide apart,no,yes,8674,60.0,yes
+LegsApart/LegsApart_FR.json,LegsApart,FR,forward_run,Legs relatively straight wide apart,no,yes,4355,60.0,yes
+LegsApart/LegsApart_FW.json,LegsApart,FW,forward_walk,Legs relatively straight wide apart,no,yes,9463,60.0,yes
+LegsApart/LegsApart_ID.json,LegsApart,ID,idle,Legs relatively straight wide apart,no,yes,1004,60.0,yes
+LegsApart/LegsApart_SR.json,LegsApart,SR,sideways_run,Legs relatively straight wide apart,no,yes,2296,60.0,yes
+LegsApart/LegsApart_SW.json,LegsApart,SW,sideways_walk,Legs relatively straight wide apart,no,yes,5168,60.0,yes
+LegsApart/LegsApart_TR1.json,LegsApart,TR1,turn_1,Legs relatively straight wide apart,no,yes,8186,60.0,yes
+LimpLeft/LimpLeft_BR.json,LimpLeft,BR,backward_run,Keep left leg straight and limp,no,no,5958,60.0,yes
+LimpLeft/LimpLeft_BW.json,LimpLeft,BW,backward_walk,Keep left leg straight and limp,no,no,8998,60.0,yes
+LimpLeft/LimpLeft_FR.json,LimpLeft,FR,forward_run,Keep left leg straight and limp,no,no,4368,60.0,yes
+LimpLeft/LimpLeft_FW.json,LimpLeft,FW,forward_walk,Keep left leg straight and limp,no,no,8502,60.0,yes
+LimpLeft/LimpLeft_ID.json,LimpLeft,ID,idle,Keep left leg straight and limp,no,no,705,60.0,yes
+LimpLeft/LimpLeft_SR.json,LimpLeft,SR,sideways_run,Keep left leg straight and limp,no,no,3637,60.0,yes
+LimpLeft/LimpLeft_SW.json,LimpLeft,SW,sideways_walk,Keep left leg straight and limp,no,no,5900,60.0,yes
+LimpLeft/LimpLeft_TR1.json,LimpLeft,TR1,turn_1,Keep left leg straight and limp,no,no,11017,60.0,yes
+LimpRight/LimpRight_BR.json,LimpRight,BR,backward_run,Keep right leg straight and limp,no,no,5460,60.0,yes
+LimpRight/LimpRight_BW.json,LimpRight,BW,backward_walk,Keep right leg straight and limp,no,no,8599,60.0,yes
+LimpRight/LimpRight_FR.json,LimpRight,FR,forward_run,Keep right leg straight and limp,no,no,4561,60.0,yes
+LimpRight/LimpRight_FW.json,LimpRight,FW,forward_walk,Keep right leg straight and limp,no,no,8460,60.0,yes
+LimpRight/LimpRight_ID.json,LimpRight,ID,idle,Keep right leg straight and limp,no,no,778,60.0,yes
+LimpRight/LimpRight_SR.json,LimpRight,SR,sideways_run,Keep right leg straight and limp,no,no,3134,60.0,yes
+LimpRight/LimpRight_SW.json,LimpRight,SW,sideways_walk,Keep right leg straight and limp,no,no,4789,60.0,yes
+LimpRight/LimpRight_TR1.json,LimpRight,TR1,turn_1,Keep right leg straight and limp,no,no,7703,60.0,yes
+LookUp/LookUp_BR.json,LookUp,BR,backward_run,Tilt head to look at ceiling,no,yes,3780,60.0,yes
+LookUp/LookUp_BW.json,LookUp,BW,backward_walk,Tilt head to look at ceiling,no,yes,10085,60.0,yes
+LookUp/LookUp_FR.json,LookUp,FR,forward_run,Tilt head to look at ceiling,no,yes,3762,60.0,yes
+LookUp/LookUp_FW.json,LookUp,FW,forward_walk,Tilt head to look at ceiling,no,yes,7580,60.0,yes
+LookUp/LookUp_ID.json,LookUp,ID,idle,Tilt head to look at ceiling,no,yes,1011,60.0,yes
+LookUp/LookUp_SR.json,LookUp,SR,sideways_run,Tilt head to look at ceiling,no,yes,2393,60.0,yes
+LookUp/LookUp_SW.json,LookUp,SW,sideways_walk,Tilt head to look at ceiling,no,yes,5240,60.0,yes
+LookUp/LookUp_TR1.json,LookUp,TR1,turn_1,Tilt head to look at ceiling,no,yes,7881,60.0,yes
+Lunge/Lunge_BR.json,Lunge,BR,backward_run,Wide step bend knee every step in lunge position,no,no,4174,60.0,yes
+Lunge/Lunge_BW.json,Lunge,BW,backward_walk,Wide step bend knee every step in lunge position,no,no,6655,60.0,yes
+Lunge/Lunge_FR.json,Lunge,FR,forward_run,Wide step bend knee every step in lunge position,no,no,3842,60.0,yes
+Lunge/Lunge_FW.json,Lunge,FW,forward_walk,Wide step bend knee every step in lunge position,no,no,7493,60.0,yes
+Lunge/Lunge_ID.json,Lunge,ID,idle,Wide step bend knee every step in lunge position,no,no,571,60.0,yes
+Lunge/Lunge_SR.json,Lunge,SR,sideways_run,Wide step bend knee every step in lunge position,no,no,2253,60.0,yes
+Lunge/Lunge_SW.json,Lunge,SW,sideways_walk,Wide step bend knee every step in lunge position,no,no,5197,60.0,yes
+Lunge/Lunge_TR1.json,Lunge,TR1,turn_1,Wide step bend knee every step in lunge position,no,no,10582,60.0,yes
+March/March_BR.json,March,BR,backward_run,High knees swing arms at elbows,no,yes,3685,60.0,yes
+March/March_BW.json,March,BW,backward_walk,High knees swing arms at elbows,no,yes,7026,60.0,yes
+March/March_FR.json,March,FR,forward_run,High knees swing arms at elbows,no,yes,4229,60.0,yes
+March/March_FW.json,March,FW,forward_walk,High knees swing arms at elbows,no,yes,6264,60.0,yes
+March/March_ID.json,March,ID,idle,High knees swing arms at elbows,no,yes,605,60.0,yes
+March/March_SR.json,March,SR,sideways_run,High knees swing arms at elbows,no,yes,2229,60.0,yes
+March/March_SW.json,March,SW,sideways_walk,High knees swing arms at elbows,no,yes,4770,60.0,yes
+March/March_TR1.json,March,TR1,turn_1,High knees swing arms at elbows,no,yes,8147,60.0,yes
+Monk/Monk_BR.json,Monk,BR,backward_run,Interlock hands in front of pelvis head slightly bowed,no,no,4552,60.0,yes
+Monk/Monk_BW.json,Monk,BW,backward_walk,Interlock hands in front of pelvis head slightly bowed,no,no,8435,60.0,yes
+Monk/Monk_FR.json,Monk,FR,forward_run,Interlock hands in front of pelvis head slightly bowed,no,no,4747,60.0,yes
+Monk/Monk_FW.json,Monk,FW,forward_walk,Interlock hands in front of pelvis head slightly bowed,no,no,8623,60.0,yes
+Monk/Monk_ID.json,Monk,ID,idle,Interlock hands in front of pelvis head slightly bowed,no,no,906,60.0,yes
+Monk/Monk_SR.json,Monk,SR,sideways_run,Interlock hands in front of pelvis head slightly bowed,no,no,2513,60.0,yes
+Monk/Monk_SW.json,Monk,SW,sideways_walk,Interlock hands in front of pelvis head slightly bowed,no,no,6179,60.0,yes
+Monk/Monk_TR1.json,Monk,TR1,turn_1,Interlock hands in front of pelvis head slightly bowed,no,no,7528,60.0,yes
+Morris/Morris_BR.json,Morris,BR,backward_run,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,3894,60.0,yes
+Morris/Morris_BW.json,Morris,BW,backward_walk,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,4673,60.0,yes
+Morris/Morris_FR.json,Morris,FR,forward_run,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,3793,60.0,yes
+Morris/Morris_FW.json,Morris,FW,forward_walk,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,4987,60.0,yes
+Morris/Morris_ID.json,Morris,ID,idle,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,786,60.0,yes
+Morris/Morris_SR.json,Morris,SR,sideways_run,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,2490,60.0,yes
+Morris/Morris_SW.json,Morris,SW,sideways_walk,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,4516,60.0,yes
+Morris/Morris_TR1.json,Morris,TR1,turn_1,Swing hands side to side as if waving hankies. Bouncy/skipping footsteps,no,yes,10033,60.0,yes
+Neutral/Neutral_BR.json,Neutral,BR,backward_run,Normal walking,no,yes,5143,60.0,yes
+Neutral/Neutral_BW.json,Neutral,BW,backward_walk,Normal walking,no,yes,7855,60.0,yes
+Neutral/Neutral_FR.json,Neutral,FR,forward_run,Normal walking,no,yes,3870,60.0,yes
+Neutral/Neutral_FW.json,Neutral,FW,forward_walk,Normal walking,no,yes,7118,60.0,yes
+Neutral/Neutral_ID.json,Neutral,ID,idle,Normal walking,no,yes,900,60.0,yes
+Neutral/Neutral_SR.json,Neutral,SR,sideways_run,Normal walking,no,yes,2726,60.0,yes
+Neutral/Neutral_SW.json,Neutral,SW,sideways_walk,Normal walking,no,yes,5376,60.0,yes
+Neutral/Neutral_TR1.json,Neutral,TR1,turn_1,Normal walking,no,yes,6471,60.0,yes
+Old/Old_BR.json,Old,BR,backward_run,Hunchbacked move very slowly,no,no,9134,60.0,yes
+Old/Old_BW.json,Old,BW,backward_walk,Hunchbacked move very slowly,no,no,13399,60.0,yes
+Old/Old_FR.json,Old,FR,forward_run,Hunchbacked move very slowly,no,no,7582,60.0,yes
+Old/Old_FW.json,Old,FW,forward_walk,Hunchbacked move very slowly,no,no,14949,60.0,yes
+Old/Old_ID.json,Old,ID,idle,Hunchbacked move very slowly,no,no,1447,60.0,yes
+Old/Old_SR.json,Old,SR,sideways_run,Hunchbacked move very slowly,no,no,3836,60.0,yes
+Old/Old_SW.json,Old,SW,sideways_walk,Hunchbacked move very slowly,no,no,10246,60.0,yes
+Old/Old_TR1.json,Old,TR1,turn_1,Hunchbacked move very slowly,no,no,8001,60.0,yes
+OnHeels/OnHeels_BR.json,OnHeels,BR,backward_run,Walk on heels with toes raised,no,yes,4777,60.0,yes
+OnHeels/OnHeels_BW.json,OnHeels,BW,backward_walk,Walk on heels with toes raised,no,yes,6822,60.0,yes
+OnHeels/OnHeels_FR.json,OnHeels,FR,forward_run,Walk on heels with toes raised,no,yes,4288,60.0,yes
+OnHeels/OnHeels_FW.json,OnHeels,FW,forward_walk,Walk on heels with toes raised,no,yes,7636,60.0,yes
+OnHeels/OnHeels_ID.json,OnHeels,ID,idle,Walk on heels with toes raised,no,yes,893,60.0,yes
+OnHeels/OnHeels_SR.json,OnHeels,SR,sideways_run,Walk on heels with toes raised,no,yes,2452,60.0,yes
+OnHeels/OnHeels_SW.json,OnHeels,SW,sideways_walk,Walk on heels with toes raised,no,yes,4164,60.0,yes
+OnHeels/OnHeels_TR1.json,OnHeels,TR1,turn_1,Walk on heels with toes raised,no,yes,4873,60.0,yes
+OnPhoneLeft/OnPhoneLeft_BR.json,OnPhoneLeft,BR,backward_run,Holding phone in left,no,no,3692,60.0,yes
+OnPhoneLeft/OnPhoneLeft_BW.json,OnPhoneLeft,BW,backward_walk,Holding phone in left,no,no,7229,60.0,yes
+OnPhoneLeft/OnPhoneLeft_FR.json,OnPhoneLeft,FR,forward_run,Holding phone in left,no,no,3383,60.0,yes
+OnPhoneLeft/OnPhoneLeft_FW.json,OnPhoneLeft,FW,forward_walk,Holding phone in left,no,no,6544,60.0,yes
+OnPhoneLeft/OnPhoneLeft_ID.json,OnPhoneLeft,ID,idle,Holding phone in left,no,no,951,60.0,yes
+OnPhoneLeft/OnPhoneLeft_SR.json,OnPhoneLeft,SR,sideways_run,Holding phone in left,no,no,2220,60.0,yes
+OnPhoneLeft/OnPhoneLeft_SW.json,OnPhoneLeft,SW,sideways_walk,Holding phone in left,no,no,5333,60.0,yes
+OnPhoneLeft/OnPhoneLeft_TR1.json,OnPhoneLeft,TR1,turn_1,Holding phone in left,no,no,5576,60.0,yes
+OnPhoneRight/OnPhoneRight_BR.json,OnPhoneRight,BR,backward_run,Holding phone in right,no,no,3977,60.0,yes
+OnPhoneRight/OnPhoneRight_BW.json,OnPhoneRight,BW,backward_walk,Holding phone in right,no,no,7090,60.0,yes
+OnPhoneRight/OnPhoneRight_FR.json,OnPhoneRight,FR,forward_run,Holding phone in right,no,no,3562,60.0,yes
+OnPhoneRight/OnPhoneRight_FW.json,OnPhoneRight,FW,forward_walk,Holding phone in right,no,no,7188,60.0,yes
+OnPhoneRight/OnPhoneRight_ID.json,OnPhoneRight,ID,idle,Holding phone in right,no,no,1016,60.0,yes
+OnPhoneRight/OnPhoneRight_SR.json,OnPhoneRight,SR,sideways_run,Holding phone in right,no,no,2424,60.0,yes
+OnPhoneRight/OnPhoneRight_SW.json,OnPhoneRight,SW,sideways_walk,Holding phone in right,no,no,6073,60.0,yes
+OnPhoneRight/OnPhoneRight_TR1.json,OnPhoneRight,TR1,turn_1,Holding phone in right,no,no,6481,60.0,yes
+OnToesBentForward/OnToesBentForward_BR.json,OnToesBentForward,BR,backward_run,As bent forward style but on tip toes,no,yes,3912,60.0,yes
+OnToesBentForward/OnToesBentForward_BW.json,OnToesBentForward,BW,backward_walk,As bent forward style but on tip toes,no,yes,7476,60.0,yes
+OnToesBentForward/OnToesBentForward_FR.json,OnToesBentForward,FR,forward_run,As bent forward style but on tip toes,no,yes,3939,60.0,yes
+OnToesBentForward/OnToesBentForward_FW.json,OnToesBentForward,FW,forward_walk,As bent forward style but on tip toes,no,yes,6814,60.0,yes
+OnToesBentForward/OnToesBentForward_ID.json,OnToesBentForward,ID,idle,As bent forward style but on tip toes,no,yes,593,60.0,yes
+OnToesBentForward/OnToesBentForward_SR.json,OnToesBentForward,SR,sideways_run,As bent forward style but on tip toes,no,yes,2199,60.0,yes
+OnToesBentForward/OnToesBentForward_SW.json,OnToesBentForward,SW,sideways_walk,As bent forward style but on tip toes,no,yes,4309,60.0,yes
+OnToesBentForward/OnToesBentForward_TR1.json,OnToesBentForward,TR1,turn_1,As bent forward style but on tip toes,no,yes,6098,60.0,yes
+OnToesCrouched/OnToesCrouched_BR.json,OnToesCrouched,BR,backward_run,As crouched style but on tip toes,no,yes,4585,60.0,yes
+OnToesCrouched/OnToesCrouched_BW.json,OnToesCrouched,BW,backward_walk,As crouched style but on tip toes,no,yes,7330,60.0,yes
+OnToesCrouched/OnToesCrouched_FR.json,OnToesCrouched,FR,forward_run,As crouched style but on tip toes,no,yes,4276,60.0,yes
+OnToesCrouched/OnToesCrouched_FW.json,OnToesCrouched,FW,forward_walk,As crouched style but on tip toes,no,yes,8582,60.0,yes
+OnToesCrouched/OnToesCrouched_ID.json,OnToesCrouched,ID,idle,As crouched style but on tip toes,no,yes,403,60.0,yes
+OnToesCrouched/OnToesCrouched_SR.json,OnToesCrouched,SR,sideways_run,As crouched style but on tip toes,no,yes,2347,60.0,yes
+OnToesCrouched/OnToesCrouched_SW.json,OnToesCrouched,SW,sideways_walk,As crouched style but on tip toes,no,yes,4050,60.0,yes
+OnToesCrouched/OnToesCrouched_TR1.json,OnToesCrouched,TR1,turn_1,As crouched style but on tip toes,no,yes,7023,60.0,yes
+PendulumHands/PendulumHands_BR.json,PendulumHands,BR,backward_run,Squat slightly make right angle with elbows and swing hands freely,no,yes,4112,60.0,yes
+PendulumHands/PendulumHands_BW.json,PendulumHands,BW,backward_walk,Squat slightly make right angle with elbows and swing hands freely,no,yes,6836,60.0,yes
+PendulumHands/PendulumHands_FR.json,PendulumHands,FR,forward_run,Squat slightly make right angle with elbows and swing hands freely,no,yes,4887,60.0,yes
+PendulumHands/PendulumHands_FW.json,PendulumHands,FW,forward_walk,Squat slightly make right angle with elbows and swing hands freely,no,yes,6894,60.0,yes
+PendulumHands/PendulumHands_ID.json,PendulumHands,ID,idle,Squat slightly make right angle with elbows and swing hands freely,no,yes,797,60.0,yes
+PendulumHands/PendulumHands_SR.json,PendulumHands,SR,sideways_run,Squat slightly make right angle with elbows and swing hands freely,no,yes,1925,60.0,yes
+PendulumHands/PendulumHands_SW.json,PendulumHands,SW,sideways_walk,Squat slightly make right angle with elbows and swing hands freely,no,yes,4084,60.0,yes
+PendulumHands/PendulumHands_TR1.json,PendulumHands,TR1,turn_1,Squat slightly make right angle with elbows and swing hands freely,no,yes,8186,60.0,yes
+Penguin/Penguin_BR.json,Penguin,BR,backward_run,Waddle with feet close together,no,yes,5150,60.0,yes
+Penguin/Penguin_BW.json,Penguin,BW,backward_walk,Waddle with feet close together,no,yes,17985,60.0,yes
+Penguin/Penguin_FR.json,Penguin,FR,forward_run,Waddle with feet close together,no,yes,8149,60.0,yes
+Penguin/Penguin_FW.json,Penguin,FW,forward_walk,Waddle with feet close together,no,yes,16407,60.0,yes
+Penguin/Penguin_ID.json,Penguin,ID,idle,Waddle with feet close together,no,yes,680,60.0,yes
+Penguin/Penguin_SR.json,Penguin,SR,sideways_run,Waddle with feet close together,no,yes,3305,60.0,yes
+Penguin/Penguin_SW.json,Penguin,SW,sideways_walk,Waddle with feet close together,no,yes,7582,60.0,yes
+Penguin/Penguin_TR1.json,Penguin,TR1,turn_1,Waddle with feet close together,no,yes,8718,60.0,yes
+PigeonToed/PigeonToed_BR.json,PigeonToed,BR,backward_run,Toes turned inwards,no,yes,5348,60.0,yes
+PigeonToed/PigeonToed_BW.json,PigeonToed,BW,backward_walk,Toes turned inwards,no,yes,11411,60.0,yes
+PigeonToed/PigeonToed_FR.json,PigeonToed,FR,forward_run,Toes turned inwards,no,yes,5859,60.0,yes
+PigeonToed/PigeonToed_FW.json,PigeonToed,FW,forward_walk,Toes turned inwards,no,yes,15455,60.0,yes
+PigeonToed/PigeonToed_ID.json,PigeonToed,ID,idle,Toes turned inwards,no,yes,1496,60.0,yes
+PigeonToed/PigeonToed_SR.json,PigeonToed,SR,sideways_run,Toes turned inwards,no,yes,2971,60.0,yes
+PigeonToed/PigeonToed_SW.json,PigeonToed,SW,sideways_walk,Toes turned inwards,no,yes,6481,60.0,yes
+PigeonToed/PigeonToed_TR1.json,PigeonToed,TR1,turn_1,Toes turned inwards,no,yes,7492,60.0,yes
+Proud/Proud_BR.json,Proud,BR,backward_run,Straight back arms move as if marching to a lesser degree,no,yes,3865,60.0,yes
+Proud/Proud_BW.json,Proud,BW,backward_walk,Straight back arms move as if marching to a lesser degree,no,yes,6508,60.0,yes
+Proud/Proud_FR.json,Proud,FR,forward_run,Straight back arms move as if marching to a lesser degree,no,yes,3942,60.0,yes
+Proud/Proud_FW.json,Proud,FW,forward_walk,Straight back arms move as if marching to a lesser degree,no,yes,5684,60.0,yes
+Proud/Proud_ID.json,Proud,ID,idle,Straight back arms move as if marching to a lesser degree,no,yes,442,60.0,yes
+Proud/Proud_SR.json,Proud,SR,sideways_run,Straight back arms move as if marching to a lesser degree,no,yes,1943,60.0,yes
+Proud/Proud_SW.json,Proud,SW,sideways_walk,Straight back arms move as if marching to a lesser degree,no,yes,5019,60.0,yes
+Proud/Proud_TR1.json,Proud,TR1,turn_1,Straight back arms move as if marching to a lesser degree,no,yes,7381,60.0,yes
+Punch/Punch_BR.json,Punch,BR,backward_run,Punch with every step,no,no,3246,60.0,yes
+Punch/Punch_BW.json,Punch,BW,backward_walk,Punch with every step,no,no,6545,60.0,yes
+Punch/Punch_FR.json,Punch,FR,forward_run,Punch with every step,no,no,3139,60.0,yes
+Punch/Punch_FW.json,Punch,FW,forward_walk,Punch with every step,no,no,7429,60.0,yes
+Punch/Punch_ID.json,Punch,ID,idle,Punch with every step,no,no,753,60.0,yes
+Punch/Punch_SR.json,Punch,SR,sideways_run,Punch with every step,no,no,2407,60.0,yes
+Punch/Punch_SW.json,Punch,SW,sideways_walk,Punch with every step,no,no,4522,60.0,yes
+Punch/Punch_TR1.json,Punch,TR1,turn_1,Punch with every step,no,no,7297,60.0,yes
+Quail/Quail_BR.json,Quail,BR,backward_run,Arms straight by sides slightly back very small quick steps,no,yes,5125,60.0,yes
+Quail/Quail_BW.json,Quail,BW,backward_walk,Arms straight by sides slightly back very small quick steps,no,yes,8469,60.0,yes
+Quail/Quail_FR.json,Quail,FR,forward_run,Arms straight by sides slightly back very small quick steps,no,yes,4899,60.0,yes
+Quail/Quail_FW.json,Quail,FW,forward_walk,Arms straight by sides slightly back very small quick steps,no,yes,7683,60.0,yes
+Quail/Quail_ID.json,Quail,ID,idle,Arms straight by sides slightly back very small quick steps,no,yes,711,60.0,yes
+Quail/Quail_SR.json,Quail,SR,sideways_run,Arms straight by sides slightly back very small quick steps,no,yes,2930,60.0,yes
+Quail/Quail_SW.json,Quail,SW,sideways_walk,Arms straight by sides slightly back very small quick steps,no,yes,5338,60.0,yes
+Quail/Quail_TR1.json,Quail,TR1,turn_1,Arms straight by sides slightly back very small quick steps,no,yes,8543,60.0,yes
+RaisedLeftArm/RaisedLeftArm_BR.json,RaisedLeftArm,BR,backward_run,Raise left arm perpendicular to body,no,no,3160,60.0,yes
+RaisedLeftArm/RaisedLeftArm_BW.json,RaisedLeftArm,BW,backward_walk,Raise left arm perpendicular to body,no,no,6032,60.0,yes
+RaisedLeftArm/RaisedLeftArm_FR.json,RaisedLeftArm,FR,forward_run,Raise left arm perpendicular to body,no,no,3135,60.0,yes
+RaisedLeftArm/RaisedLeftArm_FW.json,RaisedLeftArm,FW,forward_walk,Raise left arm perpendicular to body,no,no,5569,60.0,yes
+RaisedLeftArm/RaisedLeftArm_ID.json,RaisedLeftArm,ID,idle,Raise left arm perpendicular to body,no,no,949,60.0,yes
+RaisedLeftArm/RaisedLeftArm_SR.json,RaisedLeftArm,SR,sideways_run,Raise left arm perpendicular to body,no,no,2013,60.0,yes
+RaisedLeftArm/RaisedLeftArm_SW.json,RaisedLeftArm,SW,sideways_walk,Raise left arm perpendicular to body,no,no,4641,60.0,yes
+RaisedLeftArm/RaisedLeftArm_TR1.json,RaisedLeftArm,TR1,turn_1,Raise left arm perpendicular to body,no,no,5016,60.0,yes
+RaisedRightArm/RaisedRightArm_BR.json,RaisedRightArm,BR,backward_run,Raise right arm perpendicular to body,no,no,3343,60.0,yes
+RaisedRightArm/RaisedRightArm_BW.json,RaisedRightArm,BW,backward_walk,Raise right arm perpendicular to body,no,no,6126,60.0,yes
+RaisedRightArm/RaisedRightArm_FR.json,RaisedRightArm,FR,forward_run,Raise right arm perpendicular to body,no,no,3852,60.0,yes
+RaisedRightArm/RaisedRightArm_FW.json,RaisedRightArm,FW,forward_walk,Raise right arm perpendicular to body,no,no,5922,60.0,yes
+RaisedRightArm/RaisedRightArm_ID.json,RaisedRightArm,ID,idle,Raise right arm perpendicular to body,no,no,1000,60.0,yes
+RaisedRightArm/RaisedRightArm_SR.json,RaisedRightArm,SR,sideways_run,Raise right arm perpendicular to body,no,no,2529,60.0,yes
+RaisedRightArm/RaisedRightArm_SW.json,RaisedRightArm,SW,sideways_walk,Raise right arm perpendicular to body,no,no,4450,60.0,yes
+RaisedRightArm/RaisedRightArm_TR1.json,RaisedRightArm,TR1,turn_1,Raise right arm perpendicular to body,no,no,5668,60.0,yes
+RightHop/RightHop_BR.json,RightHop,BR,backward_run,Hop on right foot,no,no,2157,60.0,yes
+RightHop/RightHop_BW.json,RightHop,BW,backward_walk,Hop on right foot,no,no,3076,60.0,yes
+RightHop/RightHop_FR.json,RightHop,FR,forward_run,Hop on right foot,no,no,2528,60.0,yes
+RightHop/RightHop_FW.json,RightHop,FW,forward_walk,Hop on right foot,no,no,3651,60.0,yes
+RightHop/RightHop_ID.json,RightHop,ID,idle,Hop on right foot,no,no,876,60.0,yes
+RightHop/RightHop_SR.json,RightHop,SR,sideways_run,Hop on right foot,no,no,1475,60.0,yes
+RightHop/RightHop_SW.json,RightHop,SW,sideways_walk,Hop on right foot,no,no,1691,60.0,yes
+RightHop/RightHop_TR1.json,RightHop,TR1,turn_1,Hop on right foot,no,no,2717,60.0,yes
+RightHop/RightHop_TR2.json,RightHop,TR2,turn_2,Hop on right foot,no,no,1745,60.0,yes
+Roadrunner/Roadrunner_BR.json,Roadrunner,BR,backward_run,Arms behind as wings pick up knees - bent a little,no,yes,3249,60.0,yes
+Roadrunner/Roadrunner_BW.json,Roadrunner,BW,backward_walk,Arms behind as wings pick up knees - bent a little,no,yes,4526,60.0,yes
+Roadrunner/Roadrunner_FR.json,Roadrunner,FR,forward_run,Arms behind as wings pick up knees - bent a little,no,yes,3177,60.0,yes
+Roadrunner/Roadrunner_FW.json,Roadrunner,FW,forward_walk,Arms behind as wings pick up knees - bent a little,no,yes,4671,60.0,yes
+Roadrunner/Roadrunner_ID.json,Roadrunner,ID,idle,Arms behind as wings pick up knees - bent a little,no,yes,545,60.0,yes
+Roadrunner/Roadrunner_SR.json,Roadrunner,SR,sideways_run,Arms behind as wings pick up knees - bent a little,no,yes,1809,60.0,yes
+Roadrunner/Roadrunner_SW.json,Roadrunner,SW,sideways_walk,Arms behind as wings pick up knees - bent a little,no,yes,3473,60.0,yes
+Roadrunner/Roadrunner_TR1.json,Roadrunner,TR1,turn_1,Arms behind as wings pick up knees - bent a little,no,yes,7556,60.0,yes
+Robot/Robot_BR.json,Robot,BR,backward_run,Stiff movements arms bending at elbows,no,yes,4591,60.0,yes
+Robot/Robot_BW.json,Robot,BW,backward_walk,Stiff movements arms bending at elbows,no,yes,10536,60.0,yes
+Robot/Robot_FR.json,Robot,FR,forward_run,Stiff movements arms bending at elbows,no,yes,5316,60.0,yes
+Robot/Robot_FW.json,Robot,FW,forward_walk,Stiff movements arms bending at elbows,no,yes,15367,60.0,yes
+Robot/Robot_ID.json,Robot,ID,idle,Stiff movements arms bending at elbows,no,yes,875,60.0,yes
+Robot/Robot_SR.json,Robot,SR,sideways_run,Stiff movements arms bending at elbows,no,yes,2992,60.0,yes
+Robot/Robot_SW.json,Robot,SW,sideways_walk,Stiff movements arms bending at elbows,no,yes,6014,60.0,yes
+Robot/Robot_TR1.json,Robot,TR1,turn_1,Stiff movements arms bending at elbows,no,yes,7635,60.0,yes
+Rocket/Rocket_BR.json,Rocket,BR,backward_run,Bent to flat back with hands behind as thrusters,no,yes,3632,60.0,yes
+Rocket/Rocket_BW.json,Rocket,BW,backward_walk,Bent to flat back with hands behind as thrusters,no,yes,7492,60.0,yes
+Rocket/Rocket_FR.json,Rocket,FR,forward_run,Bent to flat back with hands behind as thrusters,no,yes,3233,60.0,yes
+Rocket/Rocket_FW.json,Rocket,FW,forward_walk,Bent to flat back with hands behind as thrusters,no,yes,6044,60.0,yes
+Rocket/Rocket_ID.json,Rocket,ID,idle,Bent to flat back with hands behind as thrusters,no,yes,715,60.0,yes
+Rocket/Rocket_SR.json,Rocket,SR,sideways_run,Bent to flat back with hands behind as thrusters,no,yes,2541,60.0,yes
+Rocket/Rocket_SW.json,Rocket,SW,sideways_walk,Bent to flat back with hands behind as thrusters,no,yes,4575,60.0,yes
+Rocket/Rocket_TR1.json,Rocket,TR1,turn_1,Bent to flat back with hands behind as thrusters,no,yes,6040,60.0,yes
+Rushed/Rushed_BR.json,Rushed,BR,backward_run,Rushing about swinging arms for extra momentum,no,yes,2513,60.0,yes
+Rushed/Rushed_BW.json,Rushed,BW,backward_walk,Rushing about swinging arms for extra momentum,no,yes,3025,60.0,yes
+Rushed/Rushed_FR.json,Rushed,FR,forward_run,Rushing about swinging arms for extra momentum,no,yes,2325,60.0,yes
+Rushed/Rushed_FW.json,Rushed,FW,forward_walk,Rushing about swinging arms for extra momentum,no,yes,2922,60.0,yes
+Rushed/Rushed_ID.json,Rushed,ID,idle,Rushing about swinging arms for extra momentum,no,yes,496,60.0,yes
+Rushed/Rushed_SR.json,Rushed,SR,sideways_run,Rushing about swinging arms for extra momentum,no,yes,1344,60.0,yes
+Rushed/Rushed_SW.json,Rushed,SW,sideways_walk,Rushing about swinging arms for extra momentum,no,yes,2114,60.0,yes
+Rushed/Rushed_TR1.json,Rushed,TR1,turn_1,Rushing about swinging arms for extra momentum,no,yes,6499,60.0,yes
+ShieldedLeft/ShieldedLeft_BR.json,ShieldedLeft,BR,backward_run,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,3830,60.0,yes
+ShieldedLeft/ShieldedLeft_BW.json,ShieldedLeft,BW,backward_walk,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,5971,60.0,yes
+ShieldedLeft/ShieldedLeft_FR.json,ShieldedLeft,FR,forward_run,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,4140,60.0,yes
+ShieldedLeft/ShieldedLeft_FW.json,ShieldedLeft,FW,forward_walk,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,5388,60.0,yes
+ShieldedLeft/ShieldedLeft_ID.json,ShieldedLeft,ID,idle,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,597,60.0,yes
+ShieldedLeft/ShieldedLeft_SR.json,ShieldedLeft,SR,sideways_run,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,1877,60.0,yes
+ShieldedLeft/ShieldedLeft_SW.json,ShieldedLeft,SW,sideways_walk,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,4234,60.0,yes
+ShieldedLeft/ShieldedLeft_TR1.json,ShieldedLeft,TR1,turn_1,Squat down with left arm raised in block as if holding a shield above head. Right harm as if holding a sword,no,no,6302,60.0,yes
+ShieldedRight/ShieldedRight_BR.json,ShieldedRight,BR,backward_run,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,4209,60.0,yes
+ShieldedRight/ShieldedRight_BW.json,ShieldedRight,BW,backward_walk,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,6035,60.0,yes
+ShieldedRight/ShieldedRight_FR.json,ShieldedRight,FR,forward_run,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,4205,60.0,yes
+ShieldedRight/ShieldedRight_FW.json,ShieldedRight,FW,forward_walk,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,5467,60.0,yes
+ShieldedRight/ShieldedRight_ID.json,ShieldedRight,ID,idle,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,560,60.0,yes
+ShieldedRight/ShieldedRight_SR.json,ShieldedRight,SR,sideways_run,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,1798,60.0,yes
+ShieldedRight/ShieldedRight_SW.json,ShieldedRight,SW,sideways_walk,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,4013,60.0,yes
+ShieldedRight/ShieldedRight_TR1.json,ShieldedRight,TR1,turn_1,Squat down with right arm raised in block as if holding a shield above head. Left arm as if holding a sword,no,no,6734,60.0,yes
+Skip/Skip_BR.json,Skip,BR,backward_run,Skipping like a child,no,yes,3562,60.0,yes
+Skip/Skip_BW.json,Skip,BW,backward_walk,Skipping like a child,no,yes,4886,60.0,yes
+Skip/Skip_FR.json,Skip,FR,forward_run,Skipping like a child,no,yes,4175,60.0,yes
+Skip/Skip_FW.json,Skip,FW,forward_walk,Skipping like a child,no,yes,5259,60.0,yes
+Skip/Skip_ID.json,Skip,ID,idle,Skipping like a child,no,yes,654,60.0,yes
+Skip/Skip_SR.json,Skip,SR,sideways_run,Skipping like a child,no,yes,2147,60.0,yes
+Skip/Skip_SW.json,Skip,SW,sideways_walk,Skipping like a child,no,yes,4059,60.0,yes
+Skip/Skip_TR1.json,Skip,TR1,turn_1,Skipping like a child,no,yes,7376,60.0,yes
+SlideFeet/SlideFeet_BR.json,SlideFeet,BR,backward_run,Barely lift feet off the floor/kick into floor,no,yes,4792,60.0,yes
+SlideFeet/SlideFeet_BW.json,SlideFeet,BW,backward_walk,Barely lift feet off the floor/kick into floor,no,yes,7513,60.0,yes
+SlideFeet/SlideFeet_FR.json,SlideFeet,FR,forward_run,Barely lift feet off the floor/kick into floor,no,yes,4841,60.0,yes
+SlideFeet/SlideFeet_FW.json,SlideFeet,FW,forward_walk,Barely lift feet off the floor/kick into floor,no,yes,10898,60.0,yes
+SlideFeet/SlideFeet_ID.json,SlideFeet,ID,idle,Barely lift feet off the floor/kick into floor,no,yes,847,60.0,yes
+SlideFeet/SlideFeet_SR.json,SlideFeet,SR,sideways_run,Barely lift feet off the floor/kick into floor,no,yes,2573,60.0,yes
+SlideFeet/SlideFeet_SW.json,SlideFeet,SW,sideways_walk,Barely lift feet off the floor/kick into floor,no,yes,5889,60.0,yes
+SlideFeet/SlideFeet_TR1.json,SlideFeet,TR1,turn_1,Barely lift feet off the floor/kick into floor,no,yes,6863,60.0,yes
+SpinAntiClock/SpinAntiClock_BR.json,SpinAntiClock,BR,backward_run,Rotate anticlockwise as you move,no,no,2560,60.0,yes
+SpinAntiClock/SpinAntiClock_BW.json,SpinAntiClock,BW,backward_walk,Rotate anticlockwise as you move,no,no,4666,60.0,yes
+SpinAntiClock/SpinAntiClock_FR.json,SpinAntiClock,FR,forward_run,Rotate anticlockwise as you move,no,no,2925,60.0,yes
+SpinAntiClock/SpinAntiClock_FW.json,SpinAntiClock,FW,forward_walk,Rotate anticlockwise as you move,no,no,5312,60.0,yes
+SpinAntiClock/SpinAntiClock_ID.json,SpinAntiClock,ID,idle,Rotate anticlockwise as you move,no,no,855,60.0,yes
+SpinAntiClock/SpinAntiClock_SR.json,SpinAntiClock,SR,sideways_run,Rotate anticlockwise as you move,no,no,2597,60.0,yes
+SpinAntiClock/SpinAntiClock_SW.json,SpinAntiClock,SW,sideways_walk,Rotate anticlockwise as you move,no,no,3260,60.0,yes
+SpinAntiClock/SpinAntiClock_TR1.json,SpinAntiClock,TR1,turn_1,Rotate anticlockwise as you move,no,no,3535,60.0,yes
+SpinAntiClock/SpinAntiClock_TR2.json,SpinAntiClock,TR2,turn_2,Rotate anticlockwise as you move,no,no,2058,60.0,yes
+SpinAntiClock/SpinAntiClock_TR3.json,SpinAntiClock,TR3,turn_3,Rotate anticlockwise as you move,no,no,3611,60.0,yes
+SpinClock/SpinClock_BR.json,SpinClock,BR,backward_run,Rotate in clockwise circles as you move,no,no,2767,60.0,yes
+SpinClock/SpinClock_BW.json,SpinClock,BW,backward_walk,Rotate in clockwise circles as you move,no,no,5337,60.0,yes
+SpinClock/SpinClock_FR.json,SpinClock,FR,forward_run,Rotate in clockwise circles as you move,no,no,2484,60.0,yes
+SpinClock/SpinClock_FW.json,SpinClock,FW,forward_walk,Rotate in clockwise circles as you move,no,no,5644,60.0,yes
+SpinClock/SpinClock_ID.json,SpinClock,ID,idle,Rotate in clockwise circles as you move,no,no,820,60.0,yes
+SpinClock/SpinClock_SR.json,SpinClock,SR,sideways_run,Rotate in clockwise circles as you move,no,no,2404,60.0,yes
+SpinClock/SpinClock_SW.json,SpinClock,SW,sideways_walk,Rotate in clockwise circles as you move,no,no,2638,60.0,yes
+SpinClock/SpinClock_TR1.json,SpinClock,TR1,turn_1,Rotate in clockwise circles as you move,no,no,3447,60.0,yes
+SpinClock/SpinClock_TR2.json,SpinClock,TR2,turn_2,Rotate in clockwise circles as you move,no,no,2255,60.0,yes
+SpinClock/SpinClock_TR3.json,SpinClock,TR3,turn_3,Rotate in clockwise circles as you move,no,no,3047,60.0,yes
+Star/Star_BR.json,Star,BR,backward_run,Wide arms and legs. Arms slightly below horizontal,no,yes,4096,60.0,yes
+Star/Star_BW.json,Star,BW,backward_walk,Wide arms and legs. Arms slightly below horizontal,no,yes,7179,60.0,yes
+Star/Star_FR.json,Star,FR,forward_run,Wide arms and legs. Arms slightly below horizontal,no,yes,4150,60.0,yes
+Star/Star_FW.json,Star,FW,forward_walk,Wide arms and legs. Arms slightly below horizontal,no,yes,7017,60.0,yes
+Star/Star_ID.json,Star,ID,idle,Wide arms and legs. Arms slightly below horizontal,no,yes,832,60.0,yes
+Star/Star_SR.json,Star,SR,sideways_run,Wide arms and legs. Arms slightly below horizontal,no,yes,2152,60.0,yes
+Star/Star_SW.json,Star,SW,sideways_walk,Wide arms and legs. Arms slightly below horizontal,no,yes,4801,60.0,yes
+Star/Star_TR1.json,Star,TR1,turn_1,Wide arms and legs. Arms slightly below horizontal,no,yes,7887,60.0,yes
+StartStop/StartStop_BR.json,StartStop,BR,backward_run,Pause briefly after after step,no,yes,7985,60.0,yes
+StartStop/StartStop_BW.json,StartStop,BW,backward_walk,Pause briefly after after step,no,yes,15515,60.0,yes
+StartStop/StartStop_FR.json,StartStop,FR,forward_run,Pause briefly after after step,no,yes,6706,60.0,yes
+StartStop/StartStop_FW.json,StartStop,FW,forward_walk,Pause briefly after after step,no,yes,17201,60.0,yes
+StartStop/StartStop_ID.json,StartStop,ID,idle,Pause briefly after after step,no,yes,616,60.0,yes
+StartStop/StartStop_SR.json,StartStop,SR,sideways_run,Pause briefly after after step,no,yes,9734,60.0,yes
+StartStop/StartStop_SW.json,StartStop,SW,sideways_walk,Pause briefly after after step,no,yes,9219,60.0,yes
+StartStop/StartStop_TR1.json,StartStop,TR1,turn_1,Pause briefly after after step,no,yes,14369,60.0,yes
+Stiff/Stiff_BR.json,Stiff,BR,backward_run,Stiff limbs arms straight,no,yes,4719,60.0,yes
+Stiff/Stiff_BW.json,Stiff,BW,backward_walk,Stiff limbs arms straight,no,yes,10117,60.0,yes
+Stiff/Stiff_FR.json,Stiff,FR,forward_run,Stiff limbs arms straight,no,yes,4635,60.0,yes
+Stiff/Stiff_FW.json,Stiff,FW,forward_walk,Stiff limbs arms straight,no,yes,8688,60.0,yes
+Stiff/Stiff_ID.json,Stiff,ID,idle,Stiff limbs arms straight,no,yes,1005,60.0,yes
+Stiff/Stiff_SR.json,Stiff,SR,sideways_run,Stiff limbs arms straight,no,yes,2771,60.0,yes
+Stiff/Stiff_SW.json,Stiff,SW,sideways_walk,Stiff limbs arms straight,no,yes,6585,60.0,yes
+Stiff/Stiff_TR1.json,Stiff,TR1,turn_1,Stiff limbs arms straight,no,yes,8078,60.0,yes
+Strutting/Strutting_BR.json,Strutting,BR,backward_run,With swagger leant slightly back arms swinging freely,no,yes,4018,60.0,yes
+Strutting/Strutting_BW.json,Strutting,BW,backward_walk,With swagger leant slightly back arms swinging freely,no,yes,7499,60.0,yes
+Strutting/Strutting_FR.json,Strutting,FR,forward_run,With swagger leant slightly back arms swinging freely,no,yes,4672,60.0,yes
+Strutting/Strutting_FW.json,Strutting,FW,forward_walk,With swagger leant slightly back arms swinging freely,no,yes,7945,60.0,yes
+Strutting/Strutting_ID.json,Strutting,ID,idle,With swagger leant slightly back arms swinging freely,no,yes,636,60.0,yes
+Strutting/Strutting_SR.json,Strutting,SR,sideways_run,With swagger leant slightly back arms swinging freely,no,yes,2232,60.0,yes
+Strutting/Strutting_SW.json,Strutting,SW,sideways_walk,With swagger leant slightly back arms swinging freely,no,yes,6625,60.0,yes
+Strutting/Strutting_TR1.json,Strutting,TR1,turn_1,With swagger leant slightly back arms swinging freely,no,yes,10319,60.0,yes
+Superman/Superman_BR.json,Superman,BR,backward_run,Right arm raised like superman flying,no,no,3202,60.0,yes
+Superman/Superman_BW.json,Superman,BW,backward_walk,Right arm raised like superman flying,no,no,6306,60.0,yes
+Superman/Superman_FR.json,Superman,FR,forward_run,Right arm raised like superman flying,no,no,2880,60.0,yes
+Superman/Superman_FW.json,Superman,FW,forward_walk,Right arm raised like superman flying,no,no,5227,60.0,yes
+Superman/Superman_ID.json,Superman,ID,idle,Right arm raised like superman flying,no,no,719,60.0,yes
+Superman/Superman_SR.json,Superman,SR,sideways_run,Right arm raised like superman flying,no,no,1918,60.0,yes
+Superman/Superman_SW.json,Superman,SW,sideways_walk,Right arm raised like superman flying,no,no,4503,60.0,yes
+Superman/Superman_TR1.json,Superman,TR1,turn_1,Right arm raised like superman flying,no,no,7680,60.0,yes
+Swat/Swat_BR.json,Swat,BR,backward_run,As if holding a rifle and raiding a building,no,no,3346,60.0,yes
+Swat/Swat_BW.json,Swat,BW,backward_walk,As if holding a rifle and raiding a building,no,no,5128,60.0,yes
+Swat/Swat_FR.json,Swat,FR,forward_run,As if holding a rifle and raiding a building,no,no,3717,60.0,yes
+Swat/Swat_FW.json,Swat,FW,forward_walk,As if holding a rifle and raiding a building,no,no,4921,60.0,yes
+Swat/Swat_ID.json,Swat,ID,idle,As if holding a rifle and raiding a building,no,no,759,60.0,yes
+Swat/Swat_SR.json,Swat,SR,sideways_run,As if holding a rifle and raiding a building,no,no,2022,60.0,yes
+Swat/Swat_SW.json,Swat,SW,sideways_walk,As if holding a rifle and raiding a building,no,no,3351,60.0,yes
+Swat/Swat_TR1.json,Swat,TR1,turn_1,As if holding a rifle and raiding a building,no,no,6207,60.0,yes
+Sweep/Sweep_BR.json,Sweep,BR,backward_run,Sweeping with a broom while moving,no,no,4804,60.0,yes
+Sweep/Sweep_BW.json,Sweep,BW,backward_walk,Sweeping with a broom while moving,no,no,8889,60.0,yes
+Sweep/Sweep_FR.json,Sweep,FR,forward_run,Sweeping with a broom while moving,no,no,4159,60.0,yes
+Sweep/Sweep_FW.json,Sweep,FW,forward_walk,Sweeping with a broom while moving,no,no,8402,60.0,yes
+Sweep/Sweep_ID.json,Sweep,ID,idle,Sweeping with a broom while moving,no,no,732,60.0,yes
+Sweep/Sweep_SR.json,Sweep,SR,sideways_run,Sweeping with a broom while moving,no,no,2537,60.0,yes
+Sweep/Sweep_SW.json,Sweep,SW,sideways_walk,Sweeping with a broom while moving,no,no,5962,60.0,yes
+Sweep/Sweep_TR1.json,Sweep,TR1,turn_1,Sweeping with a broom while moving,no,no,8445,60.0,yes
+Swimming/Swimming_BR.json,Swimming,BR,backward_run,Breastroke walking,no,yes,4268,60.0,yes
+Swimming/Swimming_BW.json,Swimming,BW,backward_walk,Breastroke walking,no,yes,6819,60.0,yes
+Swimming/Swimming_FR.json,Swimming,FR,forward_run,Breastroke walking,no,yes,3655,60.0,yes
+Swimming/Swimming_FW.json,Swimming,FW,forward_walk,Breastroke walking,no,yes,7347,60.0,yes
+Swimming/Swimming_ID.json,Swimming,ID,idle,Breastroke walking,no,yes,761,60.0,yes
+Swimming/Swimming_SR.json,Swimming,SR,sideways_run,Breastroke walking,no,yes,2318,60.0,yes
+Swimming/Swimming_SW.json,Swimming,SW,sideways_walk,Breastroke walking,no,yes,4138,60.0,yes
+Swimming/Swimming_TR1.json,Swimming,TR1,turn_1,Breastroke walking,no,yes,5297,60.0,yes
+SwingArmsRound/SwingArmsRound_BR.json,SwingArmsRound,BR,backward_run,Swing arms round body (right in front left at back then switch),no,yes,4909,60.0,yes
+SwingArmsRound/SwingArmsRound_BW.json,SwingArmsRound,BW,backward_walk,Swing arms round body (right in front left at back then switch),no,yes,9960,60.0,yes
+SwingArmsRound/SwingArmsRound_FR.json,SwingArmsRound,FR,forward_run,Swing arms round body (right in front left at back then switch),no,yes,4684,60.0,yes
+SwingArmsRound/SwingArmsRound_FW.json,SwingArmsRound,FW,forward_walk,Swing arms round body (right in front left at back then switch),no,yes,8459,60.0,yes
+SwingArmsRound/SwingArmsRound_ID.json,SwingArmsRound,ID,idle,Swing arms round body (right in front left at back then switch),no,yes,910,60.0,yes
+SwingArmsRound/SwingArmsRound_SR.json,SwingArmsRound,SR,sideways_run,Swing arms round body (right in front left at back then switch),no,yes,2452,60.0,yes
+SwingArmsRound/SwingArmsRound_SW.json,SwingArmsRound,SW,sideways_walk,Swing arms round body (right in front left at back then switch),no,yes,7095,60.0,yes
+SwingArmsRound/SwingArmsRound_TR1.json,SwingArmsRound,TR1,turn_1,Swing arms round body (right in front left at back then switch),no,yes,6913,60.0,yes
+SwingShoulders/SwingShoulders_BR.json,SwingShoulders,BR,backward_run,Rotate torso and shoulders left to right and back,no,yes,4738,60.0,yes
+SwingShoulders/SwingShoulders_BW.json,SwingShoulders,BW,backward_walk,Rotate torso and shoulders left to right and back,no,yes,10062,60.0,yes
+SwingShoulders/SwingShoulders_FR.json,SwingShoulders,FR,forward_run,Rotate torso and shoulders left to right and back,no,yes,3800,60.0,yes
+SwingShoulders/SwingShoulders_FW.json,SwingShoulders,FW,forward_walk,Rotate torso and shoulders left to right and back,no,yes,7267,60.0,yes
+SwingShoulders/SwingShoulders_ID.json,SwingShoulders,ID,idle,Rotate torso and shoulders left to right and back,no,yes,1380,60.0,yes
+SwingShoulders/SwingShoulders_SR.json,SwingShoulders,SR,sideways_run,Rotate torso and shoulders left to right and back,no,yes,2718,60.0,yes
+SwingShoulders/SwingShoulders_SW.json,SwingShoulders,SW,sideways_walk,Rotate torso and shoulders left to right and back,no,yes,6940,60.0,yes
+SwingShoulders/SwingShoulders_TR1.json,SwingShoulders,TR1,turn_1,Rotate torso and shoulders left to right and back,no,yes,8921,60.0,yes
+Teapot/Teapot_BR.json,Teapot,BR,backward_run,One arm on hip other arm raised,no,no,3046,60.0,yes
+Teapot/Teapot_BW.json,Teapot,BW,backward_walk,One arm on hip other arm raised,no,no,5978,60.0,yes
+Teapot/Teapot_FR.json,Teapot,FR,forward_run,One arm on hip other arm raised,no,no,3175,60.0,yes
+Teapot/Teapot_FW.json,Teapot,FW,forward_walk,One arm on hip other arm raised,no,no,5729,60.0,yes
+Teapot/Teapot_ID.json,Teapot,ID,idle,One arm on hip other arm raised,no,no,763,60.0,yes
+Teapot/Teapot_SR.json,Teapot,SR,sideways_run,One arm on hip other arm raised,no,no,1937,60.0,yes
+Teapot/Teapot_SW.json,Teapot,SW,sideways_walk,One arm on hip other arm raised,no,no,4169,60.0,yes
+Teapot/Teapot_TR1.json,Teapot,TR1,turn_1,One arm on hip other arm raised,no,no,7145,60.0,yes
+Tiptoe/Tiptoe_BR.json,Tiptoe,BR,backward_run,Walk on toes with heels raised,no,yes,4116,60.0,yes
+Tiptoe/Tiptoe_BW.json,Tiptoe,BW,backward_walk,Walk on toes with heels raised,no,yes,6574,60.0,yes
+Tiptoe/Tiptoe_FR.json,Tiptoe,FR,forward_run,Walk on toes with heels raised,no,yes,4797,60.0,yes
+Tiptoe/Tiptoe_FW.json,Tiptoe,FW,forward_walk,Walk on toes with heels raised,no,yes,7226,60.0,yes
+Tiptoe/Tiptoe_ID.json,Tiptoe,ID,idle,Walk on toes with heels raised,no,yes,1185,60.0,yes
+Tiptoe/Tiptoe_SR.json,Tiptoe,SR,sideways_run,Walk on toes with heels raised,no,yes,2489,60.0,yes
+Tiptoe/Tiptoe_SW.json,Tiptoe,SW,sideways_walk,Walk on toes with heels raised,no,yes,4774,60.0,yes
+Tiptoe/Tiptoe_TR1.json,Tiptoe,TR1,turn_1,Walk on toes with heels raised,no,yes,4891,60.0,yes
+TogetherStep/TogetherStep_BR.json,TogetherStep,BR,backward_run,Step left foot - then together – then right foot.,no,yes,7466,60.0,yes
+TogetherStep/TogetherStep_BW.json,TogetherStep,BW,backward_walk,Step left foot - then together – then right foot.,no,yes,12568,60.0,yes
+TogetherStep/TogetherStep_FR.json,TogetherStep,FR,forward_run,Step left foot - then together – then right foot.,no,yes,6803,60.0,yes
+TogetherStep/TogetherStep_FW.json,TogetherStep,FW,forward_walk,Step left foot - then together – then right foot.,no,yes,11216,60.0,yes
+TogetherStep/TogetherStep_ID.json,TogetherStep,ID,idle,Step left foot - then together – then right foot.,no,yes,869,60.0,yes
+TogetherStep/TogetherStep_SR.json,TogetherStep,SR,sideways_run,Step left foot - then together – then right foot.,no,yes,4286,60.0,yes
+TogetherStep/TogetherStep_SW.json,TogetherStep,SW,sideways_walk,Step left foot - then together – then right foot.,no,yes,6884,60.0,yes
+TogetherStep/TogetherStep_TR1.json,TogetherStep,TR1,turn_1,Step left foot - then together – then right foot.,no,yes,13452,60.0,yes
+TwoFootJump/TwoFootJump_BR.json,TwoFootJump,BR,backward_run,Feet together and jump,no,yes,2940,60.0,yes
+TwoFootJump/TwoFootJump_BW.json,TwoFootJump,BW,backward_walk,Feet together and jump,no,yes,5519,60.0,yes
+TwoFootJump/TwoFootJump_FR.json,TwoFootJump,FR,forward_run,Feet together and jump,no,yes,3315,60.0,yes
+TwoFootJump/TwoFootJump_FW.json,TwoFootJump,FW,forward_walk,Feet together and jump,no,yes,6258,60.0,yes
+TwoFootJump/TwoFootJump_ID.json,TwoFootJump,ID,idle,Feet together and jump,no,yes,380,60.0,yes
+TwoFootJump/TwoFootJump_SR.json,TwoFootJump,SR,sideways_run,Feet together and jump,no,yes,1597,60.0,yes
+TwoFootJump/TwoFootJump_SW.json,TwoFootJump,SW,sideways_walk,Feet together and jump,no,yes,2937,60.0,yes
+TwoFootJump/TwoFootJump_TR1.json,TwoFootJump,TR1,turn_1,Feet together and jump,no,yes,5530,60.0,yes
+WalkingStickLeft/WalkingStickLeft_BR.json,WalkingStickLeft,BR,backward_run,Walk with a stick – used broom handle,no,no,4482,60.0,yes
+WalkingStickLeft/WalkingStickLeft_BW.json,WalkingStickLeft,BW,backward_walk,Walk with a stick – used broom handle,no,no,8262,60.0,yes
+WalkingStickLeft/WalkingStickLeft_FR.json,WalkingStickLeft,FR,forward_run,Walk with a stick – used broom handle,no,no,4196,60.0,yes
+WalkingStickLeft/WalkingStickLeft_FW.json,WalkingStickLeft,FW,forward_walk,Walk with a stick – used broom handle,no,no,7599,60.0,yes
+WalkingStickLeft/WalkingStickLeft_ID.json,WalkingStickLeft,ID,idle,Walk with a stick – used broom handle,no,no,976,60.0,yes
+WalkingStickLeft/WalkingStickLeft_SR.json,WalkingStickLeft,SR,sideways_run,Walk with a stick – used broom handle,no,no,2478,60.0,yes
+WalkingStickLeft/WalkingStickLeft_SW.json,WalkingStickLeft,SW,sideways_walk,Walk with a stick – used broom handle,no,no,6242,60.0,yes
+WalkingStickLeft/WalkingStickLeft_TR1.json,WalkingStickLeft,TR1,turn_1,Walk with a stick – used broom handle,no,no,9384,60.0,yes
+WalkingStickRight/WalkingStickRight_BR.json,WalkingStickRight,BR,backward_run,Walk with a stick – used broom handle,no,no,4695,60.0,yes
+WalkingStickRight/WalkingStickRight_BW.json,WalkingStickRight,BW,backward_walk,Walk with a stick – used broom handle,no,no,7357,60.0,yes
+WalkingStickRight/WalkingStickRight_FR.json,WalkingStickRight,FR,forward_run,Walk with a stick – used broom handle,no,no,4431,60.0,yes
+WalkingStickRight/WalkingStickRight_FW.json,WalkingStickRight,FW,forward_walk,Walk with a stick – used broom handle,no,no,7666,60.0,yes
+WalkingStickRight/WalkingStickRight_ID.json,WalkingStickRight,ID,idle,Walk with a stick – used broom handle,no,no,876,60.0,yes
+WalkingStickRight/WalkingStickRight_SR.json,WalkingStickRight,SR,sideways_run,Walk with a stick – used broom handle,no,no,2313,60.0,yes
+WalkingStickRight/WalkingStickRight_SW.json,WalkingStickRight,SW,sideways_walk,Walk with a stick – used broom handle,no,no,6499,60.0,yes
+WalkingStickRight/WalkingStickRight_TR1.json,WalkingStickRight,TR1,turn_1,Walk with a stick – used broom handle,no,no,10275,60.0,yes
+Waving/Waving_BR.json,Waving,BR,backward_run,Waving at somebody else at random,yes,yes,4206,60.0,yes
+Waving/Waving_BW.json,Waving,BW,backward_walk,Waving at somebody else at random,yes,yes,7213,60.0,yes
+Waving/Waving_FR.json,Waving,FR,forward_run,Waving at somebody else at random,yes,yes,3672,60.0,yes
+Waving/Waving_FW.json,Waving,FW,forward_walk,Waving at somebody else at random,yes,yes,7720,60.0,yes
+Waving/Waving_ID.json,Waving,ID,idle,Waving at somebody else at random,yes,yes,772,60.0,yes
+Waving/Waving_SR.json,Waving,SR,sideways_run,Waving at somebody else at random,yes,yes,2413,60.0,yes
+Waving/Waving_SW.json,Waving,SW,sideways_walk,Waving at somebody else at random,yes,yes,6733,60.0,yes
+Waving/Waving_TR1.json,Waving,TR1,turn_1,Waving at somebody else at random,yes,yes,7027,60.0,yes
+WhirlArms/WhirlArms_BR.json,WhirlArms,BR,backward_run,Windmill arms,no,yes,4497,60.0,yes
+WhirlArms/WhirlArms_BW.json,WhirlArms,BW,backward_walk,Windmill arms,no,yes,6147,60.0,yes
+WhirlArms/WhirlArms_FR.json,WhirlArms,FR,forward_run,Windmill arms,no,yes,3635,60.0,yes
+WhirlArms/WhirlArms_FW.json,WhirlArms,FW,forward_walk,Windmill arms,no,yes,7376,60.0,yes
+WhirlArms/WhirlArms_ID.json,WhirlArms,ID,idle,Windmill arms,no,yes,775,60.0,yes
+WhirlArms/WhirlArms_SR.json,WhirlArms,SR,sideways_run,Windmill arms,no,yes,2359,60.0,yes
+WhirlArms/WhirlArms_SW.json,WhirlArms,SW,sideways_walk,Windmill arms,no,yes,5392,60.0,yes
+WhirlArms/WhirlArms_TR1.json,WhirlArms,TR1,turn_1,Windmill arms,no,yes,5385,60.0,yes
+WhirlArms/WhirlArms_TR2.json,WhirlArms,TR2,turn_2,Windmill arms,no,yes,3548,60.0,yes
+WideLegs/WideLegs_BR.json,WideLegs,BR,backward_run,Legs apart motions,no,yes,4240,60.0,yes
+WideLegs/WideLegs_BW.json,WideLegs,BW,backward_walk,Legs apart motions,no,yes,8352,60.0,yes
+WideLegs/WideLegs_FR.json,WideLegs,FR,forward_run,Legs apart motions,no,yes,5142,60.0,yes
+WideLegs/WideLegs_FW.json,WideLegs,FW,forward_walk,Legs apart motions,no,yes,10686,60.0,yes
+WideLegs/WideLegs_ID.json,WideLegs,ID,idle,Legs apart motions,no,yes,680,60.0,yes
+WideLegs/WideLegs_SR.json,WideLegs,SR,sideways_run,Legs apart motions,no,yes,1931,60.0,yes
+WideLegs/WideLegs_SW.json,WideLegs,SW,sideways_walk,Legs apart motions,no,yes,4544,60.0,yes
+WideLegs/WideLegs_TR1.json,WideLegs,TR1,turn_1,Legs apart motions,no,yes,7616,60.0,yes
+WiggleHips/WiggleHips_BR.json,WiggleHips,BR,backward_run,Hands raised infront of body wiggle hips side to side,no,yes,5762,60.0,yes
+WiggleHips/WiggleHips_BW.json,WiggleHips,BW,backward_walk,Hands raised infront of body wiggle hips side to side,no,yes,14923,60.0,yes
+WiggleHips/WiggleHips_FR.json,WiggleHips,FR,forward_run,Hands raised infront of body wiggle hips side to side,no,yes,4362,60.0,yes
+WiggleHips/WiggleHips_FW.json,WiggleHips,FW,forward_walk,Hands raised infront of body wiggle hips side to side,no,yes,11565,60.0,yes
+WiggleHips/WiggleHips_ID.json,WiggleHips,ID,idle,Hands raised infront of body wiggle hips side to side,no,yes,1307,60.0,yes
+WiggleHips/WiggleHips_SR.json,WiggleHips,SR,sideways_run,Hands raised infront of body wiggle hips side to side,no,yes,2617,60.0,yes
+WiggleHips/WiggleHips_SW.json,WiggleHips,SW,sideways_walk,Hands raised infront of body wiggle hips side to side,no,yes,10698,60.0,yes
+WiggleHips/WiggleHips_TR1.json,WiggleHips,TR1,turn_1,Hands raised infront of body wiggle hips side to side,no,yes,11997,60.0,yes
+WildArms/WildArms_BR.json,WildArms,BR,backward_run,Swing arms much more than normal almost punching into the air,no,yes,3751,60.0,yes
+WildArms/WildArms_BW.json,WildArms,BW,backward_walk,Swing arms much more than normal almost punching into the air,no,yes,6867,60.0,yes
+WildArms/WildArms_FR.json,WildArms,FR,forward_run,Swing arms much more than normal almost punching into the air,no,yes,3861,60.0,yes
+WildArms/WildArms_FW.json,WildArms,FW,forward_walk,Swing arms much more than normal almost punching into the air,no,yes,6912,60.0,yes
+WildArms/WildArms_ID.json,WildArms,ID,idle,Swing arms much more than normal almost punching into the air,no,yes,1056,60.0,yes
+WildArms/WildArms_SR.json,WildArms,SR,sideways_run,Swing arms much more than normal almost punching into the air,no,yes,2227,60.0,yes
+WildArms/WildArms_SW.json,WildArms,SW,sideways_walk,Swing arms much more than normal almost punching into the air,no,yes,6666,60.0,yes
+WildArms/WildArms_TR1.json,WildArms,TR1,turn_1,Swing arms much more than normal almost punching into the air,no,yes,7069,60.0,yes
+WildLegs/WildLegs_BR.json,WildLegs,BR,backward_run,Kick legs into the air with each step,no,yes,4469,60.0,yes
+WildLegs/WildLegs_BW.json,WildLegs,BW,backward_walk,Kick legs into the air with each step,no,yes,10251,60.0,yes
+WildLegs/WildLegs_FR.json,WildLegs,FR,forward_run,Kick legs into the air with each step,no,yes,5050,60.0,yes
+WildLegs/WildLegs_FW.json,WildLegs,FW,forward_walk,Kick legs into the air with each step,no,yes,10413,60.0,yes
+WildLegs/WildLegs_ID.json,WildLegs,ID,idle,Kick legs into the air with each step,no,yes,745,60.0,yes
+WildLegs/WildLegs_SR.json,WildLegs,SR,sideways_run,Kick legs into the air with each step,no,yes,2943,60.0,yes
+WildLegs/WildLegs_SW.json,WildLegs,SW,sideways_walk,Kick legs into the air with each step,no,yes,9346,60.0,yes
+WildLegs/WildLegs_TR1.json,WildLegs,TR1,turn_1,Kick legs into the air with each step,no,yes,8482,60.0,yes
+Zombie/Zombie_BR.json,Zombie,BR,backward_run,Arms infront like zombie,no,yes,4163,60.0,yes
+Zombie/Zombie_BW.json,Zombie,BW,backward_walk,Arms infront like zombie,no,yes,7522,60.0,yes
+Zombie/Zombie_FR.json,Zombie,FR,forward_run,Arms infront like zombie,no,yes,4260,60.0,yes
+Zombie/Zombie_FW.json,Zombie,FW,forward_walk,Arms infront like zombie,no,yes,9638,60.0,yes
+Zombie/Zombie_ID.json,Zombie,ID,idle,Arms infront like zombie,no,yes,1048,60.0,yes
+Zombie/Zombie_SR.json,Zombie,SR,sideways_run,Arms infront like zombie,no,yes,2554,60.0,yes
+Zombie/Zombie_SW.json,Zombie,SW,sideways_walk,Arms infront like zombie,no,yes,5637,60.0,yes
+Zombie/Zombie_TR1.json,Zombie,TR1,turn_1,Arms infront like zombie,no,yes,7082,60.0,yes
