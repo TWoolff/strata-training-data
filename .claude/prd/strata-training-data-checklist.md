@@ -1040,21 +1040,24 @@ Deep research pass covering: animation principles as ML data, inbetweening/timin
 
 
 
-#### NEW-2: Bizarre Pose Dataset ⭐ HIGH PRIORITY
+#### NEW-2: Bizarre Pose Dataset ❌ PERMANENTLY SKIPPED
 
 **What:** COCO-format keypoint annotations for illustrated anime/manga characters; 2× prior anime pose datasets with more diverse poses
 **Source:** https://github.com/ShuhongChen/bizarre-pose-estimator
-**License:** Public (Google Drive) — check terms
+**License:** AGPL-3.0 (code); images sourced from Danbooru (copyrighted fan art)
 **Size:** ~4K+ images
 
 **Why this matters:**
 The only COCO-format keypoint dataset specifically for anime/illustrated characters. Directly trains Strata's joint placement model on the illustrated domain. Also includes a 1,062-class Danbooru tagging rulebook useful for style-based filtering.
 
 **Action items:**
-- [ ] Clone repo and download from linked Google Drive
-- [ ] Build adapter for COCO keypoint → Strata 19-joint format
+- ~~Clone repo and download from linked Google Drive~~ — permanently skipped
+- ~~Build adapter for COCO keypoint → Strata 19-joint format~~ — permanently skipped
 
-**Status:** Not started.
+**Status:** ❌ PERMANENTLY SKIPPED. Images sourced from Danbooru (copyrighted fan art, no
+commercial training rights). Only 4K images with joints only (no segmentation). NSFW filtering
+acknowledged as imperfect by authors. RTMPose enrichment on existing clean-licensed datasets
+(113K FBAnimeHQ, 30K anime-segmentation) provides far more illustrated-style joint data.
 
 ---
 
@@ -1415,7 +1418,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
-| Bizarre Pose Dataset | ⭐⭐ | Public | ~4K images | Joint CNN (illustrated) | Not started |
+| Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
 | InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | Not started |
 | Sakuga-42M (annotations) | ⭐⭐ | CC BY-NC-SA | 42M keyframes | Timing classification | Not started |
 | Anita Dataset | ⭐ | CC BY-NC-SA | 16K frames | Style augmentation | Not started |
