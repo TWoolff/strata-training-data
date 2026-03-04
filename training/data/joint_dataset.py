@@ -187,6 +187,17 @@ def parse_joints_json(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Parse a joints.json file into 20-slot position and visibility arrays.
 
+    Supports two formats:
+
+    1. **RTMPose / pipeline dict format**::
+
+           {"joints": {"head": {"position": [x, y], "visible": true}, ...},
+            "image_size": [w, h]}
+
+    2. **HumanRig list format**::
+
+           [{"name": "head", "x": 256.5, "y": 128.3, "visible": true}, ...]
+
     Args:
         joints_path: Path to the joints JSON file.
         resolution: Image resolution for normalizing positions.
@@ -196,30 +207,38 @@ def parse_joints_json(
         normalized to ``[0, 1]`` and visible is ``[20]`` float32 (1.0/0.0).
     """
     data = json.loads(joints_path.read_text(encoding="utf-8"))
-    joints_dict = data.get("joints", {})
-
-    # Use image_size from the JSON if available, else fall back to resolution
-    image_size = data.get("image_size", [resolution, resolution])
-    img_w, img_h = image_size[0], image_size[1]
 
     positions = np.zeros((NUM_JOINTS, 2), dtype=np.float32)
     visible = np.zeros(NUM_JOINTS, dtype=np.float32)
 
-    for pipeline_name, joint_info in joints_dict.items():
-        # Map pipeline name to Rust bone name
-        bone_name = PIPELINE_TO_BONE.get(pipeline_name, pipeline_name)
-        if bone_name not in BONE_TO_INDEX:
-            continue
+    if isinstance(data, list):
+        # HumanRig list format: [{"name": ..., "x": ..., "y": ..., "visible": ...}]
+        img_w, img_h = resolution, resolution
+        for joint_info in data:
+            name = joint_info.get("name", "")
+            bone_name = PIPELINE_TO_BONE.get(name, name)
+            if bone_name not in BONE_TO_INDEX:
+                continue
+            idx = BONE_TO_INDEX[bone_name]
+            positions[idx, 0] = joint_info.get("x", 0) / img_w
+            positions[idx, 1] = joint_info.get("y", 0) / img_h
+            visible[idx] = 1.0 if joint_info.get("visible", True) else 0.0
+    else:
+        # RTMPose / pipeline dict format
+        joints_dict = data.get("joints", {})
+        image_size = data.get("image_size", [resolution, resolution])
+        img_w, img_h = image_size[0], image_size[1]
 
-        idx = BONE_TO_INDEX[bone_name]
-
-        pos = joint_info.get("position", [0, 0])
-        is_visible = joint_info.get("visible", True)
-
-        # Normalize to [0, 1]
-        positions[idx, 0] = pos[0] / img_w
-        positions[idx, 1] = pos[1] / img_h
-        visible[idx] = 1.0 if is_visible else 0.0
+        for pipeline_name, joint_info in joints_dict.items():
+            bone_name = PIPELINE_TO_BONE.get(pipeline_name, pipeline_name)
+            if bone_name not in BONE_TO_INDEX:
+                continue
+            idx = BONE_TO_INDEX[bone_name]
+            pos = joint_info.get("position", [0, 0])
+            is_visible = joint_info.get("visible", True)
+            positions[idx, 0] = pos[0] / img_w
+            positions[idx, 1] = pos[1] / img_h
+            visible[idx] = 1.0 if is_visible else 0.0
 
     # Slot 19 (hair_back) is always absent
     visible[BONE_TO_INDEX["hair_back"]] = 0.0

@@ -120,7 +120,7 @@ class EarlyStopping:
         """
         value = metrics.get(self.metric_name)
         if value is None:
-            logger.warning("Metric %r not found in metrics dict — skipping early stopping check")
+            logger.warning("Metric %r not found in metrics dict — skipping early stopping check", self.metric_name)
             return False
 
         improved = (
