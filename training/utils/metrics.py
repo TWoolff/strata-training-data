@@ -61,8 +61,8 @@ class SegmentationMetrics:
         pred_flat = pred.ravel()
         target_flat = target.ravel()
 
-        # Filter out ignore_index pixels.
-        mask = target_flat != self.ignore_index
+        # Filter out ignore_index pixels and out-of-range labels.
+        mask = (target_flat != self.ignore_index) & (target_flat < self.num_classes) & (pred_flat < self.num_classes)
         pred_flat = pred_flat[mask]
         target_flat = target_flat[mask]
 

@@ -1,0 +1,36 @@
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true
+
+data:
+  dataset_dirs: ["./output/smoke_test"]
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: false
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1, hue: 0.02}
+  random_rotation: 0
+  random_scale: [1.0, 1.0]
+
+training:
+  batch_size: 2
+  num_workers: 0
+  epochs: 3
+  optimizer: "adam"
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 1
+
+loss:
+  segmentation_weight: 1.0
+  draw_order_weight: 0.5
+  confidence_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/smoke_test"
+  early_stopping_patience: 100
+  early_stopping_metric: "val/miou"
