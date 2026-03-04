@@ -519,14 +519,14 @@ Each sample dir: `front.png`, `bone_2d.json`, `bone_3d.json`, `rigged.glb`, `ver
 - No license specified
 
 **Action items:**
-- [ ] Clone repo: `git clone https://github.com/dragonmeteor/AnimeDrawingsDataset`
-- [ ] Install Ruby + bundler, run `bundle install && rake build` to download images
-- [ ] Or use Docker: `docker run dragonmeteor/animedrawingsdataset`
-- [ ] Check license (contact author if unclear)
-- [ ] Build adapter to map 9 joints → Strata's 19-bone subset (9-joint subset usable)
-- [ ] Ingest as supplementary joint training data
+- [x] Build adapter to map joints → Strata's 19-bone subset (15 of 22 joints mapped)
+- ~~Clone repo, download, ingest~~ — permanently skipped
 
-**Status:** READY. Small dataset (~2K images) but directly addresses illustrated-style joint domain gap. Download via Ruby/rake build or Docker.
+**Status:** ❌ PERMANENTLY SKIPPED. Adapter built (`ingest/anime_drawings_adapter.py`) but dataset
+not worth pursuing: no license specified (author: Pramook Khungurn, pong@pixiv.co.jp), scraped
+artwork has separate copyright, only 2K images with partial joint coverage (15/19), no segmentation
+masks. RTMPose enrichment on existing datasets (113K FBAnimeHQ, etc.) provides far more
+illustrated-style joint data with less legal risk.
 
 ---
 
@@ -810,7 +810,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | HumanRig (PP-9) | 11,434 meshes + 2D images | 34,302 rendered | ✅ Ingested + uploaded (137,209 files, 5.6 GB in bucket) |
 | Anymate (PP-10) | 230K assets (~100K humanoid est.) | — | ❌ SKIPPED — 3D weights only, unusable without 2D render pipeline |
 | MagicAnime keypoints (PP-11) | 50K clips | 0 | BLOCKED — restricted access, institutional affiliation required |
-| AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | READY — clone + rake build or Docker |
+| AnimeDrawingsDataset (PP-12) | 2,000 images | 0 | ❌ SKIPPED — no license, tiny, partial joints, RTMPose better |
 | Body Part Seg Anime Ou 2024 (PP-13) | Unknown | 0 | Not started — email authors |
 | See-through Live2D (PP-14) | 9,102 annotated chars | 0 | PENDING — expected late March 2026 |
 | ChildlikeSHAPES (PP-15) | 16,075 drawings | 0 | PENDING — awaiting paper acceptance |
@@ -921,7 +921,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
 | `humanrig_skeleton_mapper.py` | — | 📋 Planned (PP-9) |
 | `anymate_adapter.py` | `--adapter anymate` | ❌ SKIPPED — 3D weights unusable without 2D render pipeline |
-| `anime_drawings_adapter.py` | — | 📋 Planned (PP-12) |
+| `anime_drawings_adapter.py` | `--adapter anime_drawings` | ✅ Built, ❌ dataset skipped (PP-12) |
 | `see_through_adapter.py` | — | 📋 Planned (PP-14, pending release) |
 
 ### Training Infrastructure (issues #122-133)
@@ -1016,7 +1016,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Download HumanRig (PP-9)                      | 1 hour              | 11.4K humanoid meshes + 2D images + joints, CC-BY-NC-4.0    | ✅ Done                                       |
 | Anymate (PP-10)                               | —                   | 230K rigged meshes, 3D weights only                         | ❌ SKIPPED — unusable without render pipeline |
 | Contact MagicAnime authors (PP-11)            | 30 min              | 50K cartoon clips with 133-keypoint annotations             | BLOCKED — institutional access only          |
-| Download AnimeDrawingsDataset (PP-12)         | 30 min              | 2K anime/manga joint annotations (illustrated style)        | READY — clone + rake build                   |
+| Download AnimeDrawingsDataset (PP-12)         | —                   | 2K anime/manga joint annotations (illustrated style)        | ❌ SKIPPED — no license, RTMPose better      |
 | Email Ou 2024 authors for dataset (PP-13)     | 30 min              | Anime body part seg ground truth (2D style)                 | Not started                                  |
 | Monitor See-through release (PP-14)           | —                   | 9.1K Live2D chars with draw order + 19-class seg            | Late March 2026                              |
 | Monitor ChildlikeSHAPES release (PP-15)       | —                   | 16K hand-drawn figures with 25-class seg masks              | Pending paper accept                         |
