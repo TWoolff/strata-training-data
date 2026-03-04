@@ -21,6 +21,7 @@
 | **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MiB) in bucket — 1,059 frames |
 | **Blender segmentation** | Uploaded | 12,216 files (599 MiB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
 | **CMU animation** | Uploaded | 17,823 files (58.1 GiB) in bucket — 2,548 clips × 7 degradations |
+| **100STYLE** | Ingested + uploaded | 810 files (8.7 GiB) in bucket — 100 styles × 8-10 contents, 4.06M frames retargeted to Strata 19-bone skeleton |
 | **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
 | **mixamorig5: bone fix** | Complete | 12 PARTIAL characters now fully mappable — `MIXAMO_BONE_MAP` + `COMMON_PREFIXES` updated |
 | **Live2D models** | Rendered + uploaded | 280 .moc3 models rendered — 211 succeeded, 844 examples, 3,587 files (212 MiB) in bucket |
@@ -46,6 +47,7 @@
 | Prefix | Files | Size (actual) |
 |--------|------:|--------------:|
 | `animation/` | 17,823 | 58.1 GiB |
+| `animation/100style/` | 810 | 8.7 GiB |
 | `anime_seg/` | 50,406 | 2.5 GiB |
 | `animerun/` | 11,276 | 663 MiB |
 | `animerun_correspondence/` | 19,493 | 930 MiB |
@@ -58,7 +60,7 @@
 | `live2d/` | 3,587 | 212 MiB |
 | `segmentation/` | 12,216 | 599 MiB |
 | `unirig/` | 66,030 | 42.6 GiB |
-| **Total** | **664,447** | **~136.7 GiB** |
+| **Total** | **665,257** | **~145.4 GiB** |
 
 ### What's on External HD TAMWoolff
 
@@ -270,7 +272,7 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ---
 
-### PP-5: UniRig Rig-XL Dataset
+### PP-5: UniRig Rig-XL Dataset ✅ FULLY INGESTED + UPLOADED
 
 **What:** 14,000+ rigged 3D models with skeleton + skinning weights
 **Source:** https://github.com/VAST-AI-Research/UniRig
@@ -417,7 +419,7 @@ These are already rendered, annotated, or both. Downloading and converting them 
 
 ---
 
-### PP-9: HumanRig Dataset ⭐ HIGH PRIORITY — READY TO DOWNLOAD
+### PP-9: HumanRig Dataset ⭐ HIGH PRIORITY — ✅ FULLY INGESTED + UPLOADED
 
 **What:** 11,434 T-posed humanoid meshes with uniform Mixamo skeleton topology, skinning weights, and joint positions
 **Source:** https://github.com/c8241998/HumanRig | Dataset: https://huggingface.co/datasets/jellyczd/HumanRig
@@ -697,7 +699,7 @@ These require downloading raw assets and running your own rendering pipeline.
 
 ---
 
-### DS-4: CMU Motion Capture (BVH)
+### DS-4: CMU Motion Capture (BVH) ✅ FULLY INGESTED + UPLOADED
 
 **What:** Human motion capture data in BVH format
 **Source:** cgspeed.com (BVH conversions) or mocap.cs.cmu.edu
@@ -1035,27 +1037,7 @@ Deep research pass covering: animation principles as ML data, inbetweening/timin
 
 ### ILLUSTRATED CHARACTER POSE + SEGMENTATION
 
-#### NEW-1: Meta Animated Drawings + Amateur Drawings Dataset ⭐ HIGHEST PRIORITY
 
-**What:** 178,000+ hand-drawn human figure drawings with bounding boxes, segmentation masks, and 15-joint keypoint annotations
-**Source:** https://github.com/facebookresearch/AnimatedDrawings
-**License:** **MIT** — commercially usable, no restrictions
-**Size:** 178K images, diverse styles (children's drawings, stick figures, anime, realistic)
-
-**Why this matters for Strata:**
-This is the single most important gap-filler for Strata's joint placement model. All current training data uses anime-illustration or 3D-render style characters with standard proportions. Real Strata users will draw characters that look like this dataset — hand-drawn, non-standard proportions, abstract. The MIT license makes it freely usable for commercial training.
-- 15-joint annotations → maps to Strata's 19-joint skeleton (spine/forearm slots need synthetic addition)
-- Huge proportion variety: stick figures through realistic through chibi
-- Binary segmentation masks per character
-
-**Action items:**
-- [x] Clone repo and download dataset
-- [x] Build adapter mapping 15-joint format → Strata 19-joint skeleton
-- [ ] Use for joint refinement CNN fine-tuning (illustrated style domain)
-
-**Status:** ✅ Adapter built (`ingest/animated_drawings_adapter.py`). 178,166 images, 17 COCO keypoints → 19 Strata joints (6 synthetic interpolated). COCO polygon segmentation → binary fg/bg mask. Registered as `--adapter animated_drawings` in `run_ingest.py`. 25 tests passing.
-
----
 
 #### NEW-2: Bizarre Pose Dataset ⭐ HIGH PRIORITY
 
@@ -1225,11 +1207,11 @@ The timing-on-twos/threes annotation is the most structured publicly available p
 
 **Action items:**
 - [x] Download from Zenodo
-- [ ] Retarget all 100 styles × 10 contents to Strata 19-bone skeleton
-- [ ] Label with style + content taxonomy for blueprint library
-- [ ] Add to animation/ data pipeline
+- [x] Retarget all 100 styles × 10 contents to Strata 19-bone skeleton
+- [x] Label with style + content taxonomy for blueprint library
+- [x] Add to animation/ data pipeline
 
-**Status:** Downloaded + extracted (March 3, 2026). Retargeting not yet started.
+**Status:** Complete (March 4, 2026). 810 sequences retargeted (4.06M frames, 60fps, YXZ rotation order). Blueprint JSONs + `100style_labels.csv` generated. Uploaded to bucket under `animation/100style/` (8.7 GiB).
 
 ---
 
@@ -1428,7 +1410,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
 | Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Adapter built — ready for ingestion |
-| 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Downloaded — retargeting pending |
+| 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Ingested + uploaded (810 files, 8.7 GiB) |
 | CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
