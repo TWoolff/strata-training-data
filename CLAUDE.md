@@ -119,3 +119,23 @@ Automated (run after every batch):
 
 - **Hetzner bucket** — upload only training-ready output (validated `output/` data: images, masks, joints, metadata). No raw source assets.
 - **External hard drive** — store all raw/source data locally: FBX characters, BVH mocap, VRM files, sprite sheets, Live2D models, pre-processed external datasets. Download and process from here; do not upload raw data to the cloud bucket.
+- **Local SSD** — avoid storing large output datasets locally. Process on the external HD when possible and upload from there.
+
+### Bucket Upload/Download — Use rclone
+
+**Always use `rclone copy` for bucket operations.** Do NOT use `aws s3 sync` — it is extremely slow with many small files.
+
+```bash
+# Upload (copy only adds files, never deletes remote)
+rclone copy ./output/dataset/ hetzner:strata-training-data/dataset/ \
+  --transfers 32 --checkers 64 --fast-list --size-only -P
+
+# Download
+rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
+  --transfers 32 --checkers 64 --fast-list --size-only -P
+```
+
+- Config: `~/.config/rclone/rclone.conf`, remote name: `hetzner`
+- `-P` shows real-time progress with transfer speed
+- `--size-only` skips slow checksum comparison (safe for our use case)
+- **Never use `rclone sync`** — it deletes remote files not present locally

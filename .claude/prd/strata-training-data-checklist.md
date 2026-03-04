@@ -1,7 +1,7 @@
 # Strata Training Data — Complete Gathering Checklist
 
 **Date:** February 27, 2026 (v2 — updated with pre-processed dataset research)
-**Last updated:** March 4, 2026 (v15 — animation + 100STYLE uploaded; anime_instance_seg uploading; animated_drawings adapter removed; local disk cleanup)
+**Last updated:** March 4, 2026 (v16 — anime_seg enriched with RTMPose joints (14,579/14,586); InstaOrder val ingested + uploaded (3,956 examples); anime_instance_seg partially uploaded; rclone configured for bucket ops)
 **Sources:** strata-training-data-research-prd.md (v1.1), strata-3d-mesh-research-prd.md, web research on available datasets
 
 ---
@@ -16,13 +16,14 @@
 | **Hetzner Object Storage** | Set up | S3-compatible bucket at `s3://strata-training-data` (Falkenstein, €4.99/mo) |
 | **Ingest framework** | Complete | `run_ingest.py` with 12 registered adapters, CLI with `--enrich` pose estimation |
 | **FBAnimeHQ** | Ingested + uploaded | 304,889 files (11.4 GiB) in bucket — all shards 00-11 processed |
-| **anime-segmentation v1+v2** | Ingested + uploaded | 50,406 files (2.5 GiB) in bucket — v1 (`skytnt/anime-segmentation`): 11,802 fg images in `data/fg/`…`data/fg 6/`; v2 (curated variant, different author): 13,000 fg images from `fg-01/02/03.zip`. Both use RGBA PNG format (alpha = fg/bg mask). Combined under `anime_seg/` prefix. |
+| **anime-segmentation v1+v2** | Enriched + uploaded | ~65K files in bucket — v1+v2 combined (14,586 examples). RTMPose enrichment added joints.json to 14,579 examples (99.95%). |
 | **AnimeRun contour pairs** | Ingested + uploaded | 11,276 files (663 MiB) in bucket — 2,819 frames |
 | **AnimeRun LineArea** | Ingested + uploaded | 4,236 files (119 MiB) in bucket — 1,059 frames |
 | **Blender segmentation** | Uploaded | 12,216 files (599 MiB) in bucket — 105 chars × 50 poses, 22-class IDs, mixamorig5: fix |
 | **CMU animation** | Uploaded | 18,628 files (66.7 GiB) in bucket — 2,548 clips × 7 degradations + 100STYLE retargeted |
 | **100STYLE** | Ingested + uploaded | 810 files (8.7 GiB) in bucket under `animation/` — 100 styles × 8-10 contents, 4.06M frames retargeted to Strata 19-bone skeleton |
-| **anime_instance_seg** | Ingested, uploading | 98,428 examples (35 GB local), ~31,849 train uploaded so far, val upload pending |
+| **anime_instance_seg** | Partially uploaded | 98,428 examples ingested. ~45K train + val uploaded to bucket. Local copy deleted to free SSD. Needs re-download from bucket for RTMPose enrichment. |
+| **InstaOrder** | Ingested + uploaded | 3,956 val examples (1.5 GiB) in bucket — per-pixel draw order maps from COCO pairwise depth orderings. First dataset with `has_draw_order: True`. |
 | **22-class region ID fix** | Complete | All pipeline code, config, tests updated to match Strata's skeleton.ts (1,389 tests pass) |
 | **mixamorig5: bone fix** | Complete | 12 PARTIAL characters now fully mappable — `MIXAMO_BONE_MAP` + `COMMON_PREFIXES` updated |
 | **Live2D models** | Rendered + uploaded | 280 .moc3 models rendered — 211 succeeded, 844 examples, 3,587 files (212 MiB) in bucket |
@@ -48,8 +49,8 @@
 | Prefix | Files | Size (actual) |
 |--------|------:|--------------:|
 | `animation/` (incl. 100style) | 18,628 | 66.7 GiB |
-| `anime_instance_seg/` | 95,407 | 10.9 GiB |
-| `anime_seg/` | 50,406 | 2.5 GiB |
+| `anime_instance_seg/` | ~135K | ~15 GiB |
+| `anime_seg/` | ~65K | ~3.5 GiB |
 | `animerun/` | 11,276 | 663 MiB |
 | `animerun_correspondence/` | 19,493 | 930 MiB |
 | `animerun_flow/` | 16,704 | 11.6 GiB |
@@ -61,9 +62,10 @@
 | `live2d/` | 3,587 | 212 MiB |
 | `segmentation/` | 12,216 | 599 MiB |
 | `unirig/` | 66,030 | 42.6 GiB |
-| **Total** | **~760,659** | **~155.2 GiB** |
+| `instaorder/` | ~11,868 | ~1.5 GiB |
+| **Total** | **~790K+** | **~160+ GiB** |
 
-> **Note:** `anime_instance_seg/` upload in progress — currently ~31,849 of 90,944 train examples + 0 of 7,484 val. Full upload will add ~200K files (~24 GiB).
+> **Note:** `anime_instance_seg/` partially uploaded (~45K of 98K examples). `anime_seg/` fully uploaded with RTMPose joints. `instaorder/` val split fully uploaded.
 
 ### What's on External HD TAMWoolff
 
@@ -820,15 +822,15 @@ These require downloading raw assets and running your own rendering pipeline.
 |---------|--------:|:-------------------:|:----------:|-------|-------|
 | Mixamo renders | ~5,250 | ✅ | ✅ | 3D rendered | 105 chars × 50 poses, flat style, front angle |
 | Live2D composites | 844 | ✅ | ✅ | 2D illustrated | 211 models, fragment-based masks |
-| anime-segmentation v1+v2 | ~24,800 | ❌ fg/bg only | ❌ needs enrichment | 2D illustrated | Binary foreground mask (alpha channel) |
-| anime_instance_seg | 98,428 | ❌ instance only | ❌ needs enrichment | 2D illustrated | Binary per-character mask, not body parts |
+| anime-segmentation v1+v2 | ~14,586 | ❌ fg/bg only | ✅ RTMPose (14,579) | 2D illustrated | Binary foreground mask (alpha channel) |
+| anime_instance_seg | 98,428 | ❌ instance only | 🟡 partial (10,072) | 2D illustrated | Binary per-character mask, not body parts |
 | FBAnimeHQ | ~101,630 | ❌ | ✅ RTMPose | 2D illustrated | Full-body anime, joints from pose estimation |
 | HumanRig | 34,302 | ❌ | ✅ ground truth | 3D rendered | 11,434 chars × 3 angles, Mixamo skeleton joints |
 | **With 22-region masks** | **~6,094** | | | | **Critical gap — need more illustrated-style masks** |
 
 **Gap:** Only ~6K examples have body-part segmentation masks. 450K+ anime images lack them. **See-Through (PP-14, late March 2026)** adds 9,102 Live2D models with 19-region masks + draw order — the single biggest unlock.
 
-**Action: Run RTMPose enrichment (`--enrich`) on anime_seg + anime_instance_seg to add joint annotations to ~123K illustrated images currently missing them.**
+**Action: anime_seg enrichment DONE (14,579 joints). anime_instance_seg partially enriched (10,072/98,428) — needs re-download from bucket + enrichment to finish remaining ~88K.**
 
 ### Joint Prediction CNN (19 bones)
 
@@ -839,11 +841,14 @@ These require downloading raw assets and running your own rendering pipeline.
 | Mixamo renders | ~5,250 | Ground truth (bone projection) | 3D rendered |
 | Live2D composites | 844 | Ground truth (fragment centroids) | 2D illustrated |
 | **Total with joints** | **~142,026** | | |
-| anime-segmentation v1+v2 | ~24,800 | ❌ needs enrichment | 2D illustrated |
-| anime_instance_seg | 98,428 | ❌ needs enrichment | 2D illustrated |
-| **Total after enrichment** | **~265,254** | | |
+| anime-segmentation v1+v2 | 14,579 | ✅ RTMPose | 2D illustrated |
+| anime_instance_seg | 10,072 | 🟡 partial RTMPose | 2D illustrated |
+| InstaOrder (val) | 3,956 | ❌ (draw order only) | Natural photos |
+| **Total with joints** | **~170,633** | | |
+| anime_instance_seg remaining | 88,356 | ❌ needs enrichment | 2D illustrated |
+| **Total after enrichment** | **~258,989** | | |
 
-**Coverage: Good.** 102K+ illustrated-style + 40K 3D-rendered already have joints. Running enrichment on anime_seg + anime_instance_seg would nearly double the joint training data.
+**Coverage: Good.** anime_seg enrichment complete (14,579 joints). anime_instance_seg partially enriched (10,072/98,428) — needs re-download from bucket + enrichment to finish remaining 88K.
 
 ### Weight Prediction MLP
 
@@ -923,8 +928,9 @@ These require downloading raw assets and running your own rendering pipeline.
 | VRoid supplementary renders | ~50,000 | 0 | BLOCKED — VRoid Hub models gone |
 | Live2D composites (DS-3) | ~844 | 844 rendered | ✅ In bucket (3,587 files) |
 | FBAnimeHQ (PP-8) | 112,806 | ~101,630 ingested | ✅ All shards in bucket |
-| anime-segmentation (PP-8) | ~25,000 | ~24,800 | ✅ v1 + v2 in bucket |
-| anime_instance_seg (PP-8) | 98,428 | 98,428 ingested | ✅ Uploading (~35% in bucket) |
+| anime-segmentation (PP-8) | ~14,586 | 14,586 ingested + 14,579 enriched | ✅ In bucket with RTMPose joints |
+| anime_instance_seg (PP-8) | 98,428 | 98,428 ingested | 🟡 ~45K uploaded, 10K enriched |
+| InstaOrder val (NEW-15) | 3,956 | 3,956 ingested | ✅ In bucket (draw order maps) |
 | PSD extractions (DS-5) | ~50–100 | 0 | Extractor ready |
 | Generated contour pairs | ~50,000 | 0 | Pipeline ready |
 | **TOTAL** | **~470,000+** | **~318,454+** | **~68%** |
@@ -1012,7 +1018,9 @@ These require downloading raw assets and running your own rendering pipeline.
 | `animerun_correspondence_adapter.py` | `--adapter animerun_correspondence` | ✅ Working (#137 complete) |
 | `animerun_linearea_adapter.py` | `--adapter animerun_linearea` | ✅ Working (32 tests) |
 | `vroid_lite_adapter.py` | `--adapter vroid_lite` | ✅ Working (4,651 images ingested) |
-| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, uploading) |
+| `anime_instance_seg_adapter.py` | `--adapter anime_instance_seg` | ✅ Working (98,428 ingested, partially uploaded) |
+| `instaorder_adapter.py` | `--adapter instaorder` | ✅ Working (3,956 val examples ingested + uploaded) |
+| `conr_adapter.py` | `--adapter conr` | ✅ Working (2,423 examples ingested + uploaded) |
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | `--adapter unirig` | ✅ Working (66,030 files ingested + uploaded) |
 | `humanrig_adapter.py` + `humanrig_blender_renderer.py` | `--adapter humanrig` | ✅ Working (137,209 files ingested + uploaded) |
 | `linkto_adapter.py` | — | ❌ SKIPPED — CC-BY-NC-4.0 license forbidden |
@@ -1036,8 +1044,8 @@ These require downloading raw assets and running your own rendering pipeline.
 
 - Bucket: `s3://strata-training-data` (Falkenstein datacenter, endpoint: `fsn1.your-objectstorage.com`)
 - Cost: €4.99/month (1 TB storage + 1 TB egress)
-- Total uploaded: **~760,659 files / ~155.2 GiB** across 14 prefixes (verified March 4, 2026; anime_instance_seg upload in progress)
-- Access: AWS CLI compatible, credentials in `.env` (`BUCKET_ACCESS_KEY` / `BUCKET_SECRET`)
+- Total uploaded: **~790K+ files / ~160+ GiB** across 16 prefixes (verified March 4, 2026)
+- Access: Use **rclone** (remote name: `hetzner`), NOT `aws s3 sync`. Config at `~/.config/rclone/rclone.conf`. Credentials also in `.env` (`BUCKET_ACCESS_KEY` / `BUCKET_SECRET`)
 
 ---
 
@@ -1064,7 +1072,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | **GRAND TOTAL** | **~275–305 GB** | |
 
 **Hetzner bucket capacity:** 1 TB (plenty of headroom)
-**Local disk:** 460 GB total, ~48 GB free — `output/anime_instance_seg/` (35 GB) is largest local consumer; delete after upload completes
+**Local disk:** 460 GB total, ~74 GB free — `output/anime_instance_seg/` and `output/anime_seg/` deleted after upload. Prefer processing on external HD to avoid filling SSD.
 
 ---
 
@@ -1414,14 +1422,16 @@ PSD layer stack order = natural, free draw order annotation. Each layer in a PSD
 Per-pair depth ordering (who is in front of whom) is the semantic equivalent of Strata's draw_order.png at the instance level. While images are natural photos (not illustrations), the depth ordering relationships generalize. Provides the largest labeled dataset for the "which region is in front" task.
 
 **Action items:**
-- [ ] Download from GitHub (COCO images separate download; InstaOrder adds ordering annotations)
+- [x] Download from GitHub (COCO val images + InstaOrder annotations on external HD)
 - [x] Build `ingest/instaorder_adapter.py` — converts pairwise depth orderings → per-pixel draw order maps via topological sort
 - [x] Add tests (`tests/test_instaorder_adapter.py`, 23 tests)
 - [x] Register in `run_ingest.py`
+- [x] Ingest val split — 3,956 examples processed (115 cyclic/insufficient skipped, 0 errors)
+- [x] Upload to bucket under `instaorder/` prefix (3,956 examples, ~1.5 GiB)
 - [ ] Use as additional training signal for draw order prediction head
-- [ ] Upload to bucket under `instaorder/` prefix
+- [ ] Ingest train split (97K images, 18 GB COCO download, Flickr mixed-license)
 
-**Status:** Adapter complete (March 2026). Awaiting annotation download + COCO images.
+**Status:** Val split complete + uploaded (March 2026). Train split deferred (mixed Flickr licenses, large download).
 
 ---
 
@@ -1529,7 +1539,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
 | Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
-| InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | Adapter built — awaiting data download |
+| InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | ✅ Val ingested + uploaded (3,956 examples) |
 | Sakuga-42M (annotations) | ⭐⭐ | CC BY-NC-SA | 42M keyframes | Timing classification | Not started |
 | Anita Dataset | ⭐ | CC BY-NC-SA | 16K frames | Style augmentation | Not started |
 | AIST++ | ⭐ | Research | 10.1M frames | Animation blueprints | Not started |
