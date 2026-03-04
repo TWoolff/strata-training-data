@@ -1415,9 +1415,13 @@ Per-pair depth ordering (who is in front of whom) is the semantic equivalent of 
 
 **Action items:**
 - [ ] Download from GitHub (COCO images separate download; InstaOrder adds ordering annotations)
+- [x] Build `ingest/instaorder_adapter.py` — converts pairwise depth orderings → per-pixel draw order maps via topological sort
+- [x] Add tests (`tests/test_instaorder_adapter.py`, 23 tests)
+- [x] Register in `run_ingest.py`
 - [ ] Use as additional training signal for draw order prediction head
+- [ ] Upload to bucket under `instaorder/` prefix
 
-**Status:** Not started.
+**Status:** Adapter complete (March 2026). Awaiting annotation download + COCO images.
 
 ---
 
@@ -1525,7 +1529,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
 | Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
-| InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | Not started |
+| InstaOrder | ⭐⭐ | CC BY-SA | 101K images | Draw order prediction | Adapter built — awaiting data download |
 | Sakuga-42M (annotations) | ⭐⭐ | CC BY-NC-SA | 42M keyframes | Timing classification | Not started |
 | Anita Dataset | ⭐ | CC BY-NC-SA | 16K frames | Style augmentation | Not started |
 | AIST++ | ⭐ | Research | 10.1M frames | Animation blueprints | Not started |
