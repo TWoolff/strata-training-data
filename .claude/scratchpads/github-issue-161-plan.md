@@ -62,7 +62,7 @@ Since the 9-class segmentation is unlabeled surface IDs (not body parts), we'll 
 - `run_ingest.py` — Registered `conr` adapter with `_run_conr` dispatch function
 
 ### Key design decisions
-1. **Binary foreground mask only**: The 9-class CoNR labels are unlabeled surface correspondence IDs (not body parts), so we only extract fg/bg binary mask (label > 0 = fg). This matches anime_seg_adapter's approach.
+1. **Binary foreground mask only**: The 9-class CoNR labels are unlabeled surface correspondence IDs (not body parts), so we only extract fg/bg binary mask (values 1-9 = fg). Value 255 (present in ~55% of files) marks unlabeled/uncertain pixels and is treated as background.
 2. **Local images required**: No Danbooru CDN download support in v1. User must pre-download images into `images/` directory alongside `annotation/`. This avoids rate limiting and keeps the adapter pure/offline.
 3. **Flexible directory discovery**: Supports both `input_dir/annotation/` + `input_dir/images/` layout and pointing directly at annotation dir with sibling `images/`.
 4. **Three-state return from `convert_example`**: Returns `True` (saved), `False` (skipped/error), or `None` (image not found) — enables `images_missing` counter in `AdapterResult`.
@@ -72,8 +72,17 @@ Since the 9-class segmentation is unlabeled surface IDs (not body parts), we'll 
 - Added `pickle.UnpicklingError` to exception handling in `load_annotation()` — numpy throws this on corrupt `.npz` files
 - Simplified `annotation_hash()` to use `Path(npz_path.stem).stem` instead of manual string slicing
 
-### Remaining work (from issue checklist)
-- [ ] Download the actual dataset from Google Drive
-- [ ] Assess real file structure (may differ from documented layout)
+### Dataset assessment (from real download)
+- Downloaded all 10 files to `/Volumes/TAMWoolff/data/preprocessed/conr/CoNR_Dataset/` (~8.5 GB)
+- Annotation archive contains 3,669 `.npz` files (not 700K — that's total including synthesized 3D renders)
+- Real `.npz` format: key `label`, uint8, values 0 (bg), 1-9 (body regions), 255 (unlabeled)
+- Fixed `label_to_fg_mask` to treat value 255 as background (was incorrectly using `label > 0`)
+- Danbooru CDN images must be downloaded separately; some are 404 (deleted from Danbooru)
+- Verified end-to-end: adapter produces correct 512x512 RGBA image + grayscale fg mask + metadata
+- License note: README says "research use only" (not CC-BY 4.0 as issue stated)
+
+### Remaining work
+- [ ] Download Danbooru images for all 3,669 annotations (write download script)
+- [ ] Run full ingest on downloaded images
 - [ ] Upload converted output to bucket under `conr/` prefix
 - [ ] Update checklist in `.claude/prd/strata-training-data-checklist.md`

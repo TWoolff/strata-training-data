@@ -1072,10 +1072,14 @@ acknowledged as imperfect by authors. RTMPose enrichment on existing clean-licen
 Large-scale permissive-license anime illustration pairs across poses. The character sheet structure (front/side/back of same character) directly supports Strata's multi-angle rendering needs. 700K scale provides substantial training variety.
 
 **Action items:**
-- [ ] Download from Google Drive / Baidu links in GitHub repo
-- [ ] Build adapter for Strata segmentation training format
+- [x] Download from Google Drive (~8.5 GB: annotations, 3D models, motion data)
+- [x] Build `ingest/conr_adapter.py` adapter with binary fg mask extraction
+- [x] Assess real file structure: 3,669 annotation `.npz` files (hand-drawn Danbooru subset); labels use values 0 (bg), 1-9 (body regions), 255 (unlabeled)
+- [ ] Download Danbooru source images for 3,669 annotations (separate step, some may be 404)
+- [ ] Run full ingest and upload to bucket under `conr/` prefix
 
-**Status:** Not started.
+**Status:** Adapter built and tested. Raw dataset downloaded to external HD. Awaiting Danbooru image download.
+**Note:** README states "research use only" — license may not be CC-BY 4.0 as originally noted.
 
 ---
 
@@ -1415,7 +1419,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 |---------|----------|---------|------|---------------|--------|
 | Meta Animated Drawings | ⭐⭐⭐ | MIT | 178K images | Joint CNN, Segmentation | ✅ Adapter built — ready for ingestion |
 | 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Ingested + uploaded (810 files, 8.7 GiB) |
-| CoNR Dataset | ⭐⭐ | CC BY 4.0 | 700K images | Segmentation, style diversity | Not started |
+| CoNR Dataset | ⭐⭐ | Research only | 3.7K annotations | Segmentation, style diversity | ✅ Adapter built — awaiting image download |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
 | Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
