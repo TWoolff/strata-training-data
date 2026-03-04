@@ -895,7 +895,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | **22-region masks on illustrated images** | 🔴 Critical | See-Through (PP-14): 9,102 models with 19-region masks | Late March 2026 — monitor |
 | **Draw order on illustrations** | 🔴 Critical | See-Through (PP-14) + Layered Temporal PSD (NEW-14) | Late March 2026 / contact authors |
 | **Joints on anime_seg + anime_instance_seg** | 🟡 Medium | Run `--enrich` (RTMPose) on ~123K images | Can do now — compute only |
-| **More illustrated seg masks** | 🟡 Medium | CoNR (NEW-3, 700K CC-BY) + ChildlikeSHAPES (PP-15) | Not started / pending |
+| **More illustrated seg masks** | 🟡 Medium | CoNR (NEW-3, 2,423 examples uploaded) + ChildlikeSHAPES (PP-15) | CoNR ✅ / ChildlikeSHAPES pending |
 | **Multi-angle Mixamo renders** | 🟡 Medium | Re-render 105 chars with 3/4, side, back + more styles | Pipeline ready |
 
 ---
@@ -1120,7 +1120,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Render more Mixamo chars                      | 2–3 days (compute)  | Western-style training data                                 | 49/250 done                                  |
 | Live2D collection + mapping                   | Done                | 280 models scraped + rendered, 844 examples in bucket       | ✅ Done                                       |
 | CMU labeling + retargeting                    | 2–3 weeks           | Animation intelligence data                                 | ✅ Retargeted + uploaded                      |
-| Download + ingest CoNR                        | Done                | 2,423 anime fg/bg mask examples on HD, awaiting upload      | ✅ Done                                       |
+| Download + ingest CoNR                        | Done                | 2,423 anime fg/bg mask examples uploaded to bucket           | ✅ Done                                       |
 | Start model training                          | 1–2 weeks (coding)  | Segmentation model MVP                                      | ✅ Done                                       |
 
 ---
@@ -1174,7 +1174,7 @@ Anime character images with binary foreground masks — adds style diversity to 
 - [x] Assessed real file structure: 3,669 `.npz` annotation files (hand-drawn Danbooru subset only)
 - [x] Downloaded 2,611 Danbooru source images via CDN (1,058 are 404/deleted)
 - [x] Ran full ingest: 2,423 converted, 188 skipped (all-background annotations), 1,058 missing images
-- [ ] Upload to bucket under `conr/` prefix (~18 GB, 2,423 examples)
+- [x] Upload to bucket under `conr/` prefix (2,423 examples, 7,269 files)
 
 **Key findings:**
 - Dataset has only 3,669 Danbooru annotations, not 700K — the larger number includes synthesized 3D model renders
@@ -1182,7 +1182,7 @@ Anime character images with binary foreground masks — adds style diversity to 
 - 188 annotations have all-zero labels (annotator failures) — adapter skips these
 - ~29% of Danbooru images are 404 (deleted from CDN)
 
-**Status:** ✅ Ingest complete. 2,423 examples on external HD at `/Volumes/TAMWoolff/data/preprocessed/conr/output/`. Awaiting bucket upload.
+**Status:** ✅ Complete. 2,423 examples on external HD and uploaded to bucket under `conr/` prefix (7,269 files). macOS `._` resource fork artifacts cleaned from bucket.
 
 ---
 
@@ -1525,7 +1525,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
 | 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Ingested + uploaded (810 files, 8.7 GiB) |
-| CoNR Dataset | ⭐⭐ | Research only | 2,423 examples | Segmentation (fg/bg mask) | ✅ Done — awaiting bucket upload |
+| CoNR Dataset | ⭐⭐ | Research only | 2,423 examples | Segmentation (fg/bg mask) | ✅ Done — uploaded to bucket |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
 | Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
