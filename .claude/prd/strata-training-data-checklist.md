@@ -1120,6 +1120,7 @@ These require downloading raw assets and running your own rendering pipeline.
 | Render more Mixamo chars                      | 2–3 days (compute)  | Western-style training data                                 | 49/250 done                                  |
 | Live2D collection + mapping                   | Done                | 280 models scraped + rendered, 844 examples in bucket       | ✅ Done                                       |
 | CMU labeling + retargeting                    | 2–3 weeks           | Animation intelligence data                                 | ✅ Retargeted + uploaded                      |
+| Download + ingest CoNR                        | Done                | 2,423 anime fg/bg mask examples on HD, awaiting upload      | ✅ Done                                       |
 | Start model training                          | 1–2 weeks (coding)  | Segmentation model MVP                                      | ✅ Done                                       |
 
 ---
@@ -1155,25 +1156,33 @@ acknowledged as imperfect by authors. RTMPose enrichment on existing clean-licen
 
 ---
 
-#### NEW-3: CoNR Dataset (Collaborative Neural Rendering) ⭐ HIGH PRIORITY
+#### NEW-3: CoNR Dataset (Collaborative Neural Rendering) ✅ DONE
 
-**What:** 700,000+ hand-drawn and synthesized anime character images organized as character sheets (multi-view: front/side/back of same character)
+**What:** 3,669 hand-drawn Danbooru anime character annotations with 9-class body surface labels
 **Source:** https://github.com/megvii-research/IJCAI2023-CoNR
-**License:** **CC-BY 4.0** — commercially usable
-**Size:** 700K images
+**License:** "Research use only" per README (NOT CC-BY 4.0 as originally noted)
+**Size:** 3,669 annotations; 2,423 usable examples after ingest
 
 **Why this matters:**
-Large-scale permissive-license anime illustration pairs across poses. The character sheet structure (front/side/back of same character) directly supports Strata's multi-angle rendering needs. 700K scale provides substantial training variety.
+Anime character images with binary foreground masks — adds style diversity to segmentation training. The 9-class surface labels are unlabeled correspondence IDs (not body parts), so only fg/bg masks are extracted.
 
-**Action items:**
-- [x] Download from Google Drive (~8.5 GB: annotations, 3D models, motion data)
-- [x] Build `ingest/conr_adapter.py` adapter with binary fg mask extraction
-- [x] Assess real file structure: 3,669 annotation `.npz` files (hand-drawn Danbooru subset); labels use values 0 (bg), 1-9 (body regions), 255 (unlabeled)
-- [ ] Download Danbooru source images for 3,669 annotations (separate step, some may be 404)
-- [ ] Run full ingest and upload to bucket under `conr/` prefix
+**What was done:**
+- [x] Downloaded full dataset from Google Drive (~8.5 GB: annotations, 3D models, motion data) to external HD
+- [x] Built `ingest/conr_adapter.py` — binary fg mask extraction (values 1-9 = fg, 0 and 255 = bg)
+- [x] Built `tests/test_conr_adapter.py` — 34 tests
+- [x] Registered in `run_ingest.py`
+- [x] Assessed real file structure: 3,669 `.npz` annotation files (hand-drawn Danbooru subset only)
+- [x] Downloaded 2,611 Danbooru source images via CDN (1,058 are 404/deleted)
+- [x] Ran full ingest: 2,423 converted, 188 skipped (all-background annotations), 1,058 missing images
+- [ ] Upload to bucket under `conr/` prefix (~18 GB, 2,423 examples)
 
-**Status:** Adapter built and tested. Raw dataset downloaded to external HD. Awaiting Danbooru image download.
-**Note:** README states "research use only" — license may not be CC-BY 4.0 as originally noted.
+**Key findings:**
+- Dataset has only 3,669 Danbooru annotations, not 700K — the larger number includes synthesized 3D model renders
+- Labels use values 0 (bg), 1-9 (body regions), 255 (unlabeled/uncertain in ~55% of files)
+- 188 annotations have all-zero labels (annotator failures) — adapter skips these
+- ~29% of Danbooru images are 404 (deleted from CDN)
+
+**Status:** ✅ Ingest complete. 2,423 examples on external HD at `/Volumes/TAMWoolff/data/preprocessed/conr/output/`. Awaiting bucket upload.
 
 ---
 
@@ -1512,7 +1521,7 @@ No public dataset directly labels animation with all 12 Disney principles (squas
 | Dataset | Priority | License | Size | Strata Models | Status |
 |---------|----------|---------|------|---------------|--------|
 | 100STYLE | ⭐⭐⭐ | CC BY 4.0 | 4.7M frames | Animation blueprints | ✅ Ingested + uploaded (810 files, 8.7 GiB) |
-| CoNR Dataset | ⭐⭐ | Research only | 3.7K annotations | Segmentation, style diversity | ✅ Adapter built — awaiting image download |
+| CoNR Dataset | ⭐⭐ | Research only | 2,423 examples | Segmentation (fg/bg mask) | ✅ Done — awaiting bucket upload |
 | Layered Temporal (PSD) | ⭐⭐ | Check | 20K PSD files | Draw order, segmentation | Not started |
 | ATD-12K | ⭐⭐ | Research | 12K triplets | Inbetween/timing reference | Not started |
 | Bizarre Pose Dataset | — | AGPL/Danbooru | ~4K images | Joint CNN (illustrated) | ❌ SKIPPED — Danbooru copyright, RTMPose better |
