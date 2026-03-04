@@ -139,3 +139,26 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `-P` shows real-time progress with transfer speed
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
+
+### Bucket Contents (as of March 2026)
+
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~160+ GiB total.
+
+| Prefix | Files | Size | Source |
+|--------|------:|-----:|--------|
+| `animation/` | 18,628 | 66.7 GiB | 100STYLE retargeted mocap (100 styles × 8-10 contents) |
+| `anime_instance_seg/` | ~135K | ~15 GiB | CartoonSegmentation instance masks (partially uploaded ~45K) |
+| `anime_seg/` | ~65K | ~3.5 GiB | SkyTNT anime-segmentation v1+v2, RTMPose joints enriched |
+| `animerun/` | 11,276 | 663 MiB | AnimeRun v2.2 segmentation frames |
+| `animerun_correspondence/` | 19,493 | 930 MiB | AnimeRun cross-frame correspondence |
+| `animerun_flow/` | 16,704 | 11.6 GiB | AnimeRun optical flow pairs |
+| `animerun_linearea/` | 4,236 | 119 MiB | AnimeRun line area maps |
+| `animerun_segment/` | 11,276 | 628 MiB | AnimeRun segment labels |
+| `conr/` | ~7,269 | ~580 MiB | CoNR multi-view anime character sheets |
+| `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
+| `humanrig/` | 137,209 | 5.6 GiB | HumanRig rendered chars + joints + weights |
+| `ingest/vroid_lite/` | 9,302 | 771 MiB | VRoid Lite CC0 characters |
+| `instaorder/` | ~11,868 | ~1.5 GiB | InstaOrder draw order maps (val split) |
+| `live2d/` | 3,587 | 212 MiB | Live2D .moc3 rendered models |
+| `segmentation/` | 12,216 | 599 MiB | Mixamo pipeline segmentation output |
+| `unirig/` | 66,030 | 42.6 GiB | UniRig rigged meshes |
