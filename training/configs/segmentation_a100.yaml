@@ -23,7 +23,7 @@ augmentation:
 training:
   batch_size: 32                       # A100 80GB can handle 32+ easily
   num_workers: 8                       # More workers for faster data loading
-  epochs: 200
+  epochs: 100                       # Early stopping will likely trigger by ~50-60
   optimizer: "adam"
   learning_rate: 4.0e-4                # Scale LR with batch size (4x batch → 4x LR)
   weight_decay: 1.0e-5

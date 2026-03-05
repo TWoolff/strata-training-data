@@ -72,7 +72,7 @@ rclone lsd hetzner:strata-training-data/ 2>/dev/null && echo "  Bucket connectio
 # ---------------------------------------------------------------------------
 echo ""
 echo "[4/5] Downloading training data from Hetzner bucket..."
-echo "  Estimated total: ~25 GB"
+echo "  Estimated total: ~43 GB (excluding unirig)"
 echo ""
 
 DATA_DIR="./data_cloud"
@@ -118,7 +118,7 @@ rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLO
 
 # InstaOrder — per-example: image + draw_order map + metadata
 echo ""
-echo "  [g] instaorder/ (~1.5 GB, 3,956 val examples)..."
+echo "  [g] instaorder/ (~7 GB, ~96K train+val examples)..."
 rclone copy hetzner:strata-training-data/instaorder/ "$DATA_DIR/instaorder/" $RCLONE_FLAGS
 
 # --- Weight prediction datasets ---
