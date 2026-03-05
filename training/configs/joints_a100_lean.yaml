@@ -1,6 +1,6 @@
-# Lean A100 config — core datasets only for fast fine-tuning baseline
-# ~28K examples with Strata joint schema
-# Est. time: ~1h on A100 (with early stopping)
+# Lean A100 config — core datasets for fast fine-tuning baseline
+# ~129K examples with Strata joint schema (includes fbanimehq full-body anime)
+# Est. time: ~2-3h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_joints: 20
@@ -8,9 +8,10 @@ model:
 
 data:
   dataset_dirs:
-    - "./data_cloud/segmentation"        # Mixamo: pipeline dict joints
-    - "./data_cloud/humanrig"            # HumanRig: list-format joints
-    - "./data_cloud/anime_seg"           # anime_seg: RTMPose-enriched joints (14,578)
+    - "./data_cloud/segmentation"        # Mixamo: 1,598 pipeline dict joints
+    - "./data_cloud/humanrig"            # HumanRig: 11,434 list-format joints
+    - "./data_cloud/anime_seg"           # anime_seg: 14,578 RTMPose-enriched joints
+    - "./data_cloud/fbanimehq"           # FBAnimeHQ: 101K full-body anime with joints
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

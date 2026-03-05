@@ -81,7 +81,7 @@ mkdir -p "$DATA_DIR"
 # --- Core datasets (always downloaded) ---
 echo "[4/5] Downloading training data from Hetzner bucket..."
 if [ "$MODE" = "lean" ]; then
-    echo "  LEAN mode: core data only (~10 GB)"
+    echo "  LEAN mode: core data only (~21 GB)"
 else
     echo "  FULL mode: all data (~43 GB)"
 fi
@@ -102,15 +102,15 @@ echo ""
 echo "  [d] anime_seg/ (~3.5 GB, 14,579 examples with joints)..."
 rclone copy hetzner:strata-training-data/anime_seg/ "$DATA_DIR/anime_seg/" $RCLONE_FLAGS
 
+echo ""
+echo "  [e] fbanimehq/ (~11.4 GB, ~101K full-body anime with joints)..."
+rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
+
 # --- Additional datasets (full mode only) ---
 if [ "$MODE" != "lean" ]; then
     echo ""
-    echo "  [e] anime_instance_seg/ (~15 GB, ~45K examples)..."
+    echo "  [f] anime_instance_seg/ (~15 GB, ~45K examples)..."
     rclone copy hetzner:strata-training-data/anime_instance_seg/ "$DATA_DIR/anime_instance_seg/" $RCLONE_FLAGS
-
-    echo ""
-    echo "  [f] fbanimehq/ (~11.4 GB, ~101K face/body crops)..."
-    rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
 
     echo ""
     echo "  [g] instaorder/ (~7 GB, ~96K train+val examples)..."
