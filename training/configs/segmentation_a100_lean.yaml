@@ -1,0 +1,42 @@
+# Lean A100 config — core datasets only for fast fine-tuning baseline
+# ~14K examples with exact 22-class Strata schema
+# Est. time: ~2h on A100 (with early stopping)
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true              # Fine-tune from ImageNet weights
+
+data:
+  dataset_dirs:
+    - "./data_cloud/segmentation"        # Mixamo: 1,598 examples, 22-class + draw_order + joints
+    - "./data_cloud/live2d"              # Live2D: 844 examples, 22-class + draw_order
+    - "./data_cloud/humanrig"            # HumanRig: 11,434 examples, 22-class + joints + weights
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.2, contrast: 0.2, saturation: 0.2, hue: 0.05}
+  random_rotation: 10
+  random_scale: [0.9, 1.1]
+
+training:
+  batch_size: 32
+  num_workers: 8
+  epochs: 60                             # Fine-tuning converges faster
+  optimizer: "adam"
+  learning_rate: 1.0e-4                  # Lower LR for fine-tuning
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  segmentation_weight: 1.0
+  draw_order_weight: 0.5
+  confidence_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/miou"

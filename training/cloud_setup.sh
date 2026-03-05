@@ -10,12 +10,15 @@
 #
 # Usage:
 #   chmod +x training/cloud_setup.sh
-#   ./training/cloud_setup.sh
+#   ./training/cloud_setup.sh              # Download all data (~43 GB)
+#   ./training/cloud_setup.sh lean         # Core data only (~10 GB, for lean training)
 # =============================================================================
 set -euo pipefail
 
+MODE="${1:-full}"
+
 echo "============================================"
-echo "  Strata Training — Cloud Setup"
+echo "  Strata Training — Cloud Setup ($MODE)"
 echo "============================================"
 
 # ---------------------------------------------------------------------------
@@ -71,63 +74,52 @@ rclone lsd hetzner:strata-training-data/ 2>/dev/null && echo "  Bucket connectio
 # 4. Download training data from bucket
 # ---------------------------------------------------------------------------
 echo ""
-echo "[4/5] Downloading training data from Hetzner bucket..."
-echo "  Estimated total: ~43 GB (excluding unirig)"
-echo ""
-
 DATA_DIR="./data_cloud"
 RCLONE_FLAGS="--transfers 32 --checkers 64 --fast-list --size-only -P"
 mkdir -p "$DATA_DIR"
 
-# --- Segmentation training data (image + 22-class mask + draw_order + joints) ---
+# --- Core datasets (always downloaded) ---
+echo "[4/5] Downloading training data from Hetzner bucket..."
+if [ "$MODE" = "lean" ]; then
+    echo "  LEAN mode: core data only (~10 GB)"
+else
+    echo "  FULL mode: all data (~43 GB)"
+fi
+echo ""
 
-# Mixamo 3D pipeline — flat layout: images/, masks/, joints/, draw_order/
-echo "  [a] segmentation/ (Mixamo pipeline — ~600 MB, ~1,600 clean renders)..."
+echo "  [a] segmentation/ (Mixamo — ~600 MB, 1,598 renders)..."
 rclone copy hetzner:strata-training-data/segmentation/ "$DATA_DIR/segmentation/" $RCLONE_FLAGS
 
-# Live2D — flat layout, full labels
 echo ""
 echo "  [b] live2d/ (~212 MB, 844 examples)..."
 rclone copy hetzner:strata-training-data/live2d/ "$DATA_DIR/live2d/" $RCLONE_FLAGS
 
-# --- Per-example datasets (image + binary/multi-class seg + joints) ---
-
-# HumanRig — per-example: image + segmentation + joints + weights (3 angles)
 echo ""
-echo "  [c] humanrig/ (~5.6 GB, 11,434 characters)..."
+echo "  [c] humanrig/ (~5.6 GB, 11,434 examples)..."
 rclone copy hetzner:strata-training-data/humanrig/ "$DATA_DIR/humanrig/" $RCLONE_FLAGS
 
-# anime_seg — per-example: image + binary fg mask + RTMPose joints
 echo ""
 echo "  [d] anime_seg/ (~3.5 GB, 14,579 examples with joints)..."
 rclone copy hetzner:strata-training-data/anime_seg/ "$DATA_DIR/anime_seg/" $RCLONE_FLAGS
 
-# anime_instance_seg — per-example: image + instance mask + metadata
-echo ""
-echo "  [e] anime_instance_seg/ (~15 GB, ~45K uploaded so far)..."
-rclone copy hetzner:strata-training-data/anime_instance_seg/ "$DATA_DIR/anime_instance_seg/" $RCLONE_FLAGS
+# --- Additional datasets (full mode only) ---
+if [ "$MODE" != "lean" ]; then
+    echo ""
+    echo "  [e] anime_instance_seg/ (~15 GB, ~45K examples)..."
+    rclone copy hetzner:strata-training-data/anime_instance_seg/ "$DATA_DIR/anime_instance_seg/" $RCLONE_FLAGS
 
-# --- Joint-only datasets (image + joints.json, no seg masks) ---
+    echo ""
+    echo "  [f] fbanimehq/ (~11.4 GB, ~101K face/body crops)..."
+    rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
 
-# FBAnimeHQ — per-example: image + joints
-echo ""
-echo "  [f] fbanimehq/ (~11.4 GB, ~101K face/body crops)..."
-rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
+    echo ""
+    echo "  [g] instaorder/ (~7 GB, ~96K train+val examples)..."
+    rclone copy hetzner:strata-training-data/instaorder/ "$DATA_DIR/instaorder/" $RCLONE_FLAGS
 
-# --- Draw order datasets ---
-
-# InstaOrder — per-example: image + draw_order map + metadata
-echo ""
-echo "  [g] instaorder/ (~7 GB, ~96K train+val examples)..."
-rclone copy hetzner:strata-training-data/instaorder/ "$DATA_DIR/instaorder/" $RCLONE_FLAGS
-
-# --- Weight prediction datasets ---
-
-# UniRig — rigged meshes with skeleton + skinning weights
-echo ""
-echo "  [h] unirig/ (~42.6 GB, 66K files)..."
-echo "       Skipping by default — very large. Uncomment to download."
-# rclone copy hetzner:strata-training-data/unirig/ "$DATA_DIR/unirig/" $RCLONE_FLAGS
+    # echo ""
+    # echo "  [h] unirig/ (~42.6 GB, 66K files)..."
+    # rclone copy hetzner:strata-training-data/unirig/ "$DATA_DIR/unirig/" $RCLONE_FLAGS
+fi
 
 echo ""
 echo "  Download complete."
@@ -144,7 +136,7 @@ for ds in segmentation live2d humanrig anime_seg anime_instance_seg fbanimehq in
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)
         echo "  $ds: $count files ($size)"
     else
-        echo "  $ds: NOT DOWNLOADED"
+        echo "  $ds: (not downloaded)"
     fi
 done
 
@@ -152,11 +144,16 @@ echo ""
 echo "============================================"
 echo "  Setup complete!"
 echo ""
-echo "  To train all models:"
-echo "    ./training/train_all.sh"
+if [ "$MODE" = "lean" ]; then
+    echo "  To train (lean, ~3-4h):"
+    echo "    ./training/train_all.sh lean"
+else
+    echo "  To train (full, ~8-12h):"
+    echo "    ./training/train_all.sh"
+fi
 echo ""
-echo "  To train a single model:"
-echo "    python -m training.train_segmentation --config training/configs/segmentation_a100.yaml"
-echo "    python -m training.train_joints --config training/configs/joints_a100.yaml"
-echo "    python -m training.train_weights --config training/configs/weights_a100.yaml"
+echo "  Single model:"
+echo "    python -m training.train_segmentation --config training/configs/segmentation_a100_lean.yaml"
+echo "    python -m training.train_joints --config training/configs/joints_a100_lean.yaml"
+echo "    python -m training.train_weights --config training/configs/weights_a100_lean.yaml"
 echo "============================================"

@@ -6,11 +6,9 @@
 #
 # Usage:
 #   chmod +x training/train_all.sh
-#   ./training/train_all.sh          # Use A100 configs
-#   ./training/train_all.sh local    # Use default configs (for 4070 Ti / local)
-#
-# Estimated time on A100: ~3-5 hours total
-# Estimated time on 4070 Ti: ~22-36 hours total
+#   ./training/train_all.sh          # Full A100 configs (~8-12h)
+#   ./training/train_all.sh lean     # Lean A100 configs, core data only (~3-4h)
+#   ./training/train_all.sh local    # Default configs (for 4070 Ti / local)
 # =============================================================================
 set -euo pipefail
 
@@ -26,11 +24,16 @@ if [ "$MODE" = "local" ]; then
     JOINT_CONFIG="training/configs/joints.yaml"
     WEIGHT_CONFIG="training/configs/weights.yaml"
     echo "Using LOCAL configs (default batch sizes)"
+elif [ "$MODE" = "lean" ]; then
+    SEG_CONFIG="training/configs/segmentation_a100_lean.yaml"
+    JOINT_CONFIG="training/configs/joints_a100_lean.yaml"
+    WEIGHT_CONFIG="training/configs/weights_a100_lean.yaml"
+    echo "Using LEAN A100 configs (core data only, ~3-4h)"
 else
     SEG_CONFIG="training/configs/segmentation_a100.yaml"
     JOINT_CONFIG="training/configs/joints_a100.yaml"
     WEIGHT_CONFIG="training/configs/weights_a100.yaml"
-    echo "Using A100 configs (large batch sizes)"
+    echo "Using FULL A100 configs (all data, ~8-12h)"
 fi
 
 echo ""
