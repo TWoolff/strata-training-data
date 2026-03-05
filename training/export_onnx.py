@@ -38,6 +38,7 @@ import torch.nn as nn
 if TYPE_CHECKING:
     import numpy as np
 
+from training.models.diffusion_weight_model import DiffusionWeightPredictionModel
 from training.models.joint_model import JointModel
 from training.models.segmentation_model import SegmentationModel
 from training.models.weight_model import WeightModel
@@ -116,6 +117,23 @@ class WeightPredictionWrapper(nn.Module):
         return out["weights"], out["confidence"]
 
 
+class DiffusionWeightPredictionWrapper(nn.Module):
+    """Wraps DiffusionWeightPredictionModel for ONNX export (dual-input, dict → tuple).
+
+    ONNX contract uses named inputs ``"features"`` and ``"diffusion_features"``.
+    """
+
+    def __init__(self, model: DiffusionWeightPredictionModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(
+        self, features: torch.Tensor, diffusion_features: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        out = self.model(features, diffusion_features)
+        return out["weights"], out["confidence"]
+
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -169,6 +187,22 @@ MODEL_CONFIGS: dict[str, dict] = {
         "default_filename": "weight_prediction_vertex.onnx",
         "input_shape": (1, 31, 2048, 1),
     },
+    "diffusion_weights": {
+        "model_class": DiffusionWeightPredictionModel,
+        "wrapper_class": DiffusionWeightPredictionWrapper,
+        "model_kwargs": {"num_features": 31, "num_bones": 20, "encoder_channels": 960},
+        "input_names": ["features", "diffusion_features"],
+        "output_names": ["weights", "confidence"],
+        "dynamic_axes": {
+            "features": {0: "batch", 2: "vertices"},
+            "diffusion_features": {0: "batch", 2: "vertices"},
+            "weights": {0: "batch", 2: "vertices"},
+            "confidence": {0: "batch", 2: "vertices"},
+        },
+        "default_filename": "diffusion_weight_prediction.onnx",
+        "input_shapes": [(1, 31, 2048, 1), (1, 960, 2048, 1)],
+        "dual_input": True,
+    },
 }
 
 
@@ -211,19 +245,26 @@ def export_model(
     wrapper = config["wrapper_class"](model)
     wrapper.eval()
 
-    # Dummy input — use custom shape if specified (e.g. per-vertex models)
-    input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
-    dummy_input = torch.randn(*input_shape)
-
-    # Export
+    # Dummy input(s)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Exporting %s to %s ...", model_name, output_path)
 
+    if config.get("dual_input"):
+        # Dual-input model (e.g. diffusion weights)
+        input_shapes = config["input_shapes"]
+        dummy_inputs = tuple(torch.randn(*s) for s in input_shapes)
+        input_names = config["input_names"]
+    else:
+        input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
+        dummy_inputs = torch.randn(*input_shape)
+        input_names = ["input"]
+
+    # Export
     torch.onnx.export(
         wrapper,
-        dummy_input,
+        dummy_inputs,
         str(output_path),
-        input_names=["input"],
+        input_names=input_names,
         output_names=config["output_names"],
         dynamic_axes=config["dynamic_axes"],
         opset_version=17,
@@ -267,12 +308,20 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
 
     session = ort.InferenceSession(str(onnx_path))
 
-    # Verify input
+    # Verify inputs
     inputs = session.get_inputs()
-    if len(inputs) != 1 or inputs[0].name != "input":
-        raise ValueError(
-            f"Expected single input named 'input', got: {[(i.name, i.shape) for i in inputs]}"
-        )
+    if config.get("dual_input"):
+        expected_input_names = config["input_names"]
+        actual_input_names = [i.name for i in inputs]
+        if actual_input_names != expected_input_names:
+            raise ValueError(
+                f"Input name mismatch. Expected {expected_input_names}, got {actual_input_names}"
+            )
+    else:
+        if len(inputs) != 1 or inputs[0].name != "input":
+            raise ValueError(
+                f"Expected single input named 'input', got: {[(i.name, i.shape) for i in inputs]}"
+            )
 
     # Verify output names
     outputs = session.get_outputs()
@@ -282,10 +331,17 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
             f"Output name mismatch for {model_name}. Expected {expected_names}, got {actual_names}"
         )
 
-    # Run dummy inference — use custom input shape if specified
-    input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
-    dummy = np.random.randn(*input_shape).astype(np.float32)
-    results = session.run(None, {"input": dummy})
+    # Run dummy inference
+    if config.get("dual_input"):
+        input_shapes = config["input_shapes"]
+        feed = {
+            name: np.random.randn(*shape).astype(np.float32)
+            for name, shape in zip(config["input_names"], input_shapes, strict=True)
+        }
+    else:
+        input_shape = config.get("input_shape", (1, 3, RESOLUTION, RESOLUTION))
+        feed = {"input": np.random.randn(*input_shape).astype(np.float32)}
+    results = session.run(None, feed)
 
     # Shape validation per model
     if model_name == "segmentation":
@@ -296,6 +352,8 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
         _validate_weight_outputs(results, expected_names)
     elif model_name == "weights_vertex":
         _validate_weight_vertex_outputs(results, expected_names)
+    elif model_name == "diffusion_weights":
+        _validate_diffusion_weight_outputs(results, expected_names)
 
     logger.info("Validation passed for %s", model_name)
 
@@ -356,6 +414,17 @@ def _validate_weight_vertex_outputs(results: list[np.ndarray], names: list[str])
     # (softmax applied at inference by Rust runtime)
 
 
+def _validate_diffusion_weight_outputs(results: list[np.ndarray], names: list[str]) -> None:
+    weights, confidence = results
+    max_vertices = 2048
+    if weights.shape != (1, 20, max_vertices, 1):
+        raise ValueError(f"weights shape: expected (1,20,{max_vertices},1), got {weights.shape}")
+    if confidence.shape != (1, 1, max_vertices, 1):
+        raise ValueError(
+            f"confidence shape: expected (1,1,{max_vertices},1), got {confidence.shape}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -368,7 +437,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["segmentation", "joints", "weights", "weights_vertex"],
+        choices=["segmentation", "joints", "weights", "weights_vertex", "diffusion_weights"],
         help="Model to export.",
     )
     parser.add_argument(
@@ -428,6 +497,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "joints": Path("checkpoints/joints/best.pt"),
         "weights": Path("checkpoints/weights/best.pt"),
         "weights_vertex": Path("checkpoints/weights/best.pt"),
+        "diffusion_weights": Path("checkpoints/diffusion_weights/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():
