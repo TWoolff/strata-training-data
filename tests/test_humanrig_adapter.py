@@ -518,10 +518,10 @@ class TestConvertDirectory:
         dataset_dir = _setup_dataset(tmp_path / "input", n=3)
         out = tmp_path / "output"
 
-        # Default: 4 angles per sample.
+        # Default: 5 angles per sample (front, three_quarter, side, three_quarter_back, back).
         result = convert_directory(dataset_dir, out)
         assert isinstance(result, AdapterResult)
-        assert result.images_processed == 3 * 4
+        assert result.images_processed == 3 * 5
 
     def test_front_only(self, tmp_path: Path) -> None:
         dataset_dir = _setup_dataset(tmp_path / "input", n=3)
