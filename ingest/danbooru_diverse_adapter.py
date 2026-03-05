@@ -40,7 +40,10 @@ DANBOORU_DIVERSE_SOURCE = "danbooru_diverse"
 
 STRATA_RESOLUTION = 512
 
-_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
+# Danbooru file extensions we accept (skip video, archives, animated formats).
+_ALLOWED_FILE_EXTS = {"png", "jpg", "jpeg"}
 
 # Annotations that this dataset does NOT provide.
 _MISSING_ANNOTATIONS = [
@@ -54,19 +57,35 @@ _MISSING_ANNOTATIONS = [
 DANBOORU_API_BASE = "https://danbooru.donmai.us"
 
 # Minimum Danbooru score to filter low-quality posts.
-MIN_SCORE = 10
+MIN_SCORE = 30
+
+# Minimum image dimension (shortest side) in pixels.
+MIN_IMAGE_DIM = 512
+
+# Maximum aspect ratio (width/height or height/width) — reject extreme crops.
+MAX_ASPECT_RATIO = 2.0
 
 # Rate limit: seconds between API requests.
 API_DELAY_SECONDS = 1.0
 
+# Tags that indicate unusable content (post-fetch rejection).
+REJECT_TAGS = {
+    "multiple_boys", "multiple_girls", "6+boys", "6+girls",
+    "comic", "4koma", "manga", "doujinshi",
+    "chibi", "furry", "mecha",
+    "monochrome", "greyscale", "sketch", "lineart",
+    "meme", "photo_(medium)", "cosplay",
+    "duplicate", "bad_anatomy",
+}
+
 # Tag presets for underrepresented categories.
-# Danbooru free API limits queries to 2 tags. Score/rating filtering is
-# applied post-fetch via MIN_SCORE and the rating parameter.
+# Danbooru free API limits queries to 2 tags. Score/rating/solo filtering is
+# applied post-fetch.
 TAG_PRESETS: dict[str, str] = {
     "male_full_body": "1boy full_body",
-    "dark_skin": "dark_skin full_body",
-    "muscular": "muscular full_body",
-    "western_fantasy": "armor full_body",
+    "dark_skin_male": "dark-skinned_male full_body",
+    "muscular_male": "muscular_male full_body",
+    "western_fantasy": "male_focus armor",
     "male_casual": "1boy standing",
 }
 
@@ -188,12 +207,35 @@ def download_preset(
             if downloaded >= max_images:
                 break
 
-            # Post-fetch filtering: score, rating, file availability.
+            # Post-fetch filtering: score, rating, file type, tags, dimensions.
             score = post.get("score", 0)
             rating = post.get("rating", "")
+            file_ext = post.get("file_ext", "")
+            tag_string = post.get("tag_string", "")
+            img_w = post.get("image_width", 0)
+            img_h = post.get("image_height", 0)
+
             if score < MIN_SCORE:
                 continue
             if rating not in ("g", "s"):  # general or sensitive only
+                continue
+            if file_ext not in _ALLOWED_FILE_EXTS:
+                continue
+
+            # Require solo character.
+            post_tags = set(tag_string.split())
+            if "solo" not in post_tags:
+                continue
+
+            # Reject posts with disqualifying tags.
+            if post_tags & REJECT_TAGS:
+                continue
+
+            # Minimum resolution and aspect ratio.
+            if min(img_w, img_h) < MIN_IMAGE_DIM:
+                continue
+            aspect = max(img_w, img_h) / max(min(img_w, img_h), 1)
+            if aspect > MAX_ASPECT_RATIO:
                 continue
 
             file_url = post.get("file_url") or post.get("large_file_url")
@@ -201,7 +243,7 @@ def download_preset(
                 continue
 
             post_id = post.get("id", "unknown")
-            ext = Path(file_url).suffix or ".jpg"
+            ext = f".{file_ext}" if file_ext else ".jpg"
             out_path = preset_dir / f"{post_id}{ext}"
 
             if out_path.exists():
