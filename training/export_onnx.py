@@ -416,9 +416,8 @@ def _validate_joint_outputs(results: list[np.ndarray], names: list[str]) -> None
         raise ValueError(f"confidence shape: expected (20,), got {confidence.shape}")
     if present.shape != (20,):
         raise ValueError(f"present shape: expected (20,), got {present.shape}")
-    # confidence should be in [0, 1] (sigmoid)
-    if confidence.min() < -0.01 or confidence.max() > 1.01:
-        raise ValueError(f"confidence out of [0,1] range: [{confidence.min()}, {confidence.max()}]")
+    # confidence and present are raw logits — Rust runtime applies sigmoid
+    # No range check needed here
 
 
 def _validate_weight_outputs(results: list[np.ndarray], names: list[str]) -> None:

@@ -141,9 +141,16 @@ def discover_examples(data_dir: Path) -> list[tuple[str, Path, Path]]:
         if weights_dir.is_dir() and images_dir.is_dir():
             for wp in sorted(weights_dir.glob("*.json")):
                 stem = wp.stem
+                # Try exact match first, then prefix match with style suffix
+                # (e.g., weight stem "Aj_pose_00" → image "Aj_pose_00_flat.png")
                 ip = images_dir / f"{stem}.png"
-                if ip.exists():
-                    examples.append((stem, ip, wp))
+                if not ip.exists():
+                    candidates = sorted(images_dir.glob(f"{stem}_*.png"))
+                    if candidates:
+                        ip = candidates[0]  # Use first style variant
+                    else:
+                        continue
+                examples.append((stem, ip, wp))
 
     return examples
 
