@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Strata Training — Train All Models + Export ONNX
-# Run this after cloud_setup.sh completes. Trains all 4 models sequentially,
+# Run this after cloud_setup.sh completes. Trains models 1-4 sequentially,
 # exports to ONNX, and packages results for download.
+#
+# Models trained:
+#   1. Segmentation (DeepLabV3+ multi-head: 22-class seg + draw order + confidence)
+#   2. Joint Refinement (MobileNetV3 + regression heads, 20 joints)
+#   3. Weight Prediction (per-vertex MLP, 20 bones)
+#   4. Diffusion Weight Prediction (dual-input MLP: vertex features + seg encoder)
 #
 # Usage:
 #   chmod +x training/train_all.sh
 #   ./training/train_all.sh          # Full A100 configs (~8-12h)
-#   ./training/train_all.sh lean     # Lean A100 configs, core data only (~3-4h)
+#   ./training/train_all.sh lean     # Lean A100 configs, core data only (~4-5h)
 #   ./training/train_all.sh local    # Default configs (for 4070 Ti / local)
 # =============================================================================
 set -euo pipefail
@@ -23,16 +29,19 @@ if [ "$MODE" = "local" ]; then
     SEG_CONFIG="training/configs/segmentation.yaml"
     JOINT_CONFIG="training/configs/joints.yaml"
     WEIGHT_CONFIG="training/configs/weights.yaml"
+    DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights.yaml"
     echo "Using LOCAL configs (default batch sizes)"
 elif [ "$MODE" = "lean" ]; then
     SEG_CONFIG="training/configs/segmentation_a100_lean.yaml"
     JOINT_CONFIG="training/configs/joints_a100_lean.yaml"
     WEIGHT_CONFIG="training/configs/weights_a100_lean.yaml"
-    echo "Using LEAN A100 configs (core data only, ~3-4h)"
+    DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights_a100_lean.yaml"
+    echo "Using LEAN A100 configs (core data only, ~4-5h)"
 else
     SEG_CONFIG="training/configs/segmentation_a100.yaml"
     JOINT_CONFIG="training/configs/joints_a100.yaml"
     WEIGHT_CONFIG="training/configs/weights_a100.yaml"
+    DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights_a100.yaml"
     echo "Using FULL A100 configs (all data, ~8-12h)"
 fi
 
@@ -47,7 +56,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 1: Segmentation (DeepLabV3+ multi-head)
 # ---------------------------------------------------------------------------
-echo "[1/4] Training SEGMENTATION model..."
+echo "[1/6] Training SEGMENTATION model..."
 echo "  Config: $SEG_CONFIG"
 echo "  Log: $LOG_DIR/segmentation.log"
 echo ""
@@ -63,7 +72,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 2: Joint Refinement
 # ---------------------------------------------------------------------------
-echo "[2/4] Training JOINT REFINEMENT model..."
+echo "[2/6] Training JOINT REFINEMENT model..."
 echo "  Config: $JOINT_CONFIG"
 echo "  Log: $LOG_DIR/joints.log"
 echo ""
@@ -79,7 +88,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 3: Weight Prediction (per-vertex MLP)
 # ---------------------------------------------------------------------------
-echo "[3/4] Training WEIGHT PREDICTION model (per-vertex MLP)..."
+echo "[3/6] Training WEIGHT PREDICTION model (per-vertex MLP)..."
 echo "  Config: $WEIGHT_CONFIG"
 echo "  Log: $LOG_DIR/weights.log"
 echo ""
@@ -93,9 +102,44 @@ echo "  Weight prediction training complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# Model 4: ONNX Export
+# Step 4: Precompute encoder features (requires trained segmentation model)
 # ---------------------------------------------------------------------------
-echo "[4/4] Exporting all models to ONNX..."
+echo "[4/6] Precomputing encoder features for diffusion weight training..."
+echo "  Checkpoint: checkpoints/segmentation/best.pt"
+echo "  Log: $LOG_DIR/precompute_encoder.log"
+echo ""
+
+python -m training.data.precompute_encoder_features \
+    --segmentation-checkpoint checkpoints/segmentation/best.pt \
+    --data-dirs ./data_cloud/humanrig ./data_cloud/segmentation \
+    --output-dir ./data_cloud/encoder_features \
+    --only-missing \
+    2>&1 | tee "$LOG_DIR/precompute_encoder.log"
+
+echo ""
+echo "  Encoder feature precomputation complete."
+echo ""
+
+# ---------------------------------------------------------------------------
+# Model 4: Diffusion Weight Prediction (dual-input MLP)
+# ---------------------------------------------------------------------------
+echo "[5/6] Training DIFFUSION WEIGHT PREDICTION model..."
+echo "  Config: $DIFF_WEIGHT_CONFIG"
+echo "  Log: $LOG_DIR/diffusion_weights.log"
+echo ""
+
+python -m training.train_diffusion_weights \
+    --config "$DIFF_WEIGHT_CONFIG" \
+    2>&1 | tee "$LOG_DIR/diffusion_weights.log"
+
+echo ""
+echo "  Diffusion weight prediction training complete."
+echo ""
+
+# ---------------------------------------------------------------------------
+# Step 6: ONNX Export
+# ---------------------------------------------------------------------------
+echo "[6/6] Exporting all models to ONNX..."
 echo "  Output: $ONNX_DIR/"
 echo ""
 
@@ -118,6 +162,13 @@ python -m training.export_onnx \
     --model weights_vertex \
     --checkpoint checkpoints/weights/best.pt \
     --output "$ONNX_DIR/weight_prediction_vertex.onnx" \
+    2>&1 | tee -a "$LOG_DIR/export.log"
+
+# Export diffusion weights (dual-input MLP)
+python -m training.export_onnx \
+    --model diffusion_weights \
+    --checkpoint checkpoints/diffusion_weights/best.pt \
+    --output "$ONNX_DIR/diffusion_weight_prediction.onnx" \
     2>&1 | tee -a "$LOG_DIR/export.log"
 
 echo ""

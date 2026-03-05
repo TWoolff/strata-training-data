@@ -1,6 +1,40 @@
 # Strata Synthetic Data Pipeline
 
-Blender-based pipeline that generates labeled training data for Strata's AI models (semantic segmentation, joint prediction, weight prediction, drawn pose estimation). Also houses animation intelligence scripts and curated metadata for animation training. Runs independently of the Strata codebase.
+Blender-based pipeline that generates labeled training data for Strata's 7 ONNX AI models. Also houses animation intelligence scripts and curated metadata for animation training. Runs independently of the Strata codebase.
+
+## Strata's 7 ONNX Models
+
+Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined in `src-tauri/src/ai/runtime.rs`:
+
+| # | Model | ONNX File | Architecture | Training Pipeline | Status |
+|---|-------|-----------|-------------|-------------------|--------|
+| 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 | `training/train_segmentation.py` | Has pipeline + data |
+| 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
+| 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP (31→128→256→128→20) | `training/train_weights.py` | Has pipeline + data |
+| 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | **Not yet built** | Needs pipeline |
+| 5 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | **Not yet built** | Needs pipeline + data |
+| 6 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
+| 7 | **Back View Generation** | `back_view_generation.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
+
+### Model Details
+
+**1. Segmentation** — Input: [1,3,512,512] image. Outputs: 22-class body region logits + draw order depth map (sigmoid) + confidence mask + encoder_features (passed to model 4). Fine-tunes from ImageNet MobileNetV3.
+
+**2. Joint Refinement** — Input: [1,3,512,512] image. Outputs: [1,2,20] joint offsets (dx-first layout) + [1,20] confidence + [1,20] presence. Fine-tunes from ImageNet MobileNetV3. Falls back to geometric predictions if unavailable.
+
+**3. Weight Prediction** — Input: [1,31,2048,1] vertex features (position, bone distances, heat diffusion, region label). Outputs: [1,20,2048,1] per-bone weights + [1,1,2048,1] confidence. MLP trained from scratch (no pretrained backbone).
+
+**4. Diffusion Weight Prediction** — Dual-input variant of model 3. Takes vertex features + bilinearly sampled encoder features from model 1's segmentation backbone. Improves weight prediction for unusual proportions (chibi, elongated limbs, loose clothing). **Training pipeline needed.**
+
+**5. Inpainting** — U-Net that fills occluded body regions in 2D paintings. Fallback: EdgeExtend (dilates visible edge pixels). **Training pipeline + paired data needed.**
+
+**6. Texture Inpainting** — Diffusion model that fills unobserved texture regions when generating 3D mesh. **Training pipeline + data needed.**
+
+**7. Back View Generation** — Multi-view conditioned diffusion model. Generates back view from front + 3/4 view. Fallback: PaletteFill (mirror + color adjustment). **Training pipeline + multi-view data needed.**
+
+### Training Coverage
+
+Models 1-3 have complete training pipelines with configs for local (4070 Ti), lean A100, and full A100 runs. Models 4-7 still need training pipelines built in this repo. All models are bundled in `../strata/src-tauri/models/` (~55MB total) and loaded lazily via the `ort` ONNX runtime crate.
 
 ## What This Project Does
 

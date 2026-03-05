@@ -1,0 +1,37 @@
+# Full A100 config — diffusion-enhanced weight prediction (Model 4)
+# Requires precomputed encoder features from segmentation model
+# ~13K examples (same as standard weight prediction)
+# Est. time: ~30min on A100
+model:
+  num_features: 31
+  num_bones: 20
+  encoder_channels: 960               # MobileNetV3-Large backbone output
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"          # HumanRig: 11,434 with skinning weights
+    - "./data_cloud/segmentation"      # Mixamo: 1,598 with weights
+  encoder_features_dirs:
+    - "./data_cloud/encoder_features"
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  max_vertices: 2048
+
+training:
+  batch_size: 256
+  num_workers: 8
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 4.0e-3                # Scaled for large batch
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  weight_loss_weight: 1.0
+  confidence_weight: 0.5
+
+checkpointing:
+  save_dir: "./checkpoints/diffusion_weights"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/mae"
