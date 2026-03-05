@@ -36,24 +36,39 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def compute_class_weights(dataset: SegmentationDataset, num_classes: int = 22) -> torch.Tensor:
+def compute_class_weights(
+    dataset: SegmentationDataset,
+    num_classes: int = 22,
+    max_samples: int = 2000,
+) -> torch.Tensor:
     """Compute median frequency balancing weights from training labels.
 
-    Scans all masks in the dataset, counts per-class pixel frequency, and
-    returns ``median_freq / class_freq`` for each class. Classes with zero
-    pixels get weight 0.
+    Samples up to ``max_samples`` masks (uniformly spaced) to estimate
+    per-class pixel frequency, then returns ``median_freq / class_freq``
+    for each class. Classes with zero pixels get weight 0.
 
     Args:
         dataset: Training dataset to scan.
         num_classes: Total number of classes.
+        max_samples: Maximum examples to scan (0 = all).
 
     Returns:
         Tensor of shape ``[num_classes]`` with class weights.
     """
+    n = len(dataset)
+    if max_samples > 0 and n > max_samples:
+        # Uniformly spaced indices for representative sampling
+        indices = np.linspace(0, n - 1, max_samples, dtype=int)
+        logger.info("Sampling %d/%d examples for class weight estimation", max_samples, n)
+    else:
+        indices = range(n)
+
     counts = np.zeros(num_classes, dtype=np.int64)
-    for i in range(len(dataset)):
+    for i in indices:
         mask = dataset[i]["segmentation"].numpy().ravel()
-        counts += np.bincount(mask, minlength=num_classes)[:num_classes]
+        valid = mask[mask >= 0]  # exclude ignore_index (-1) pixels
+        if len(valid) > 0:
+            counts += np.bincount(valid, minlength=num_classes)[:num_classes]
 
     total = counts.sum()
     if total == 0:
@@ -68,9 +83,10 @@ def compute_class_weights(dataset: SegmentationDataset, num_classes: int = 22) -
     median_freq = float(np.median(freq[nonzero]))
     weights = np.where(nonzero, median_freq / freq, 0.0)
     logger.info(
-        "Class weights computed (median_freq=%.4f, %d active classes)",
+        "Class weights computed (median_freq=%.4f, %d active classes, %d samples scanned)",
         median_freq,
         int(nonzero.sum()),
+        len(list(indices)),
     )
     return torch.tensor(weights, dtype=torch.float32)
 
@@ -215,6 +231,7 @@ def train_one_epoch(
 
         optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
         total_loss += float(loss)
@@ -384,7 +401,11 @@ def train(config: dict, resume_path: str | None = None) -> None:
     # ---- Optimizer ----
     lr = train_cfg.get("learning_rate", 1e-4)
     weight_decay = train_cfg.get("weight_decay", 1e-5)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    opt_name = train_cfg.get("optimizer", "adam").lower()
+    if opt_name == "adamw":
+        optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     # ---- Scheduler (cosine annealing after warmup) ----
     epochs = train_cfg.get("epochs", 200)

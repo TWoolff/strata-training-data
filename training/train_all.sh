@@ -39,7 +39,7 @@ elif [ "$MODE" = "lean" ]; then
     WEIGHT_CONFIG="training/configs/weights_a100_lean.yaml"
     DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights_a100_lean.yaml"
     INPAINT_CONFIG="training/configs/inpainting_a100_lean.yaml"
-    echo "Using LEAN A100 configs (core data only, ~4-5h)"
+    echo "Using LEAN A100 configs (core data only, ~6-8h)"
 else
     SEG_CONFIG="training/configs/segmentation_a100.yaml"
     JOINT_CONFIG="training/configs/joints_a100.yaml"

@@ -1,6 +1,6 @@
-# Lean A100 config — core datasets only for fast fine-tuning baseline
-# ~24K+ examples with exact 22-class Strata schema
-# Est. time: ~3h on A100 (with early stopping)
+# Lean A100 config — core datasets, longer training for production quality
+# ~28K+ examples (13K 22-class seg + 15K confidence-only)
+# Est. time: ~4-5h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_classes: 22
@@ -12,6 +12,8 @@ data:
     - "./data_cloud/live2d"              # Live2D: 844 examples, 22-class + draw_order
     - "./data_cloud/humanrig"            # HumanRig: 11,434 examples, 22-class + joints + weights
     - "./data_cloud/unirig"              # UniRig: ~10K humanoid subset, 22-class seg masks
+    - "./data_cloud/curated_diverse"     # Curated diverse: 748, binary fg → confidence + draw_order
+    - "./data_cloud/anime_seg"           # anime_seg: 14K, binary fg → confidence only
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
@@ -25,10 +27,10 @@ augmentation:
 training:
   batch_size: 32
   num_workers: 8
-  epochs: 60                             # Fine-tuning converges faster
-  optimizer: "adam"
+  epochs: 100                            # More room to converge with 10x more data
+  optimizer: "adamw"                      # Decoupled weight decay for fine-tuning
   learning_rate: 1.0e-4                  # Lower LR for fine-tuning
-  weight_decay: 1.0e-5
+  weight_decay: 1.0e-4                   # Stronger decay with AdamW (decoupled)
   scheduler: "cosine"
   warmup_epochs: 3
 
@@ -39,5 +41,5 @@ loss:
 
 checkpointing:
   save_dir: "./checkpoints/segmentation"
-  early_stopping_patience: 15
+  early_stopping_patience: 20
   early_stopping_metric: "val/miou"

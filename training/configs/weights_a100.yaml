@@ -15,7 +15,7 @@ training:
   num_workers: 8
   epochs: 100
   optimizer: "adam"
-  learning_rate: 4.0e-3                # Scale with batch (4x batch → 4x LR from 1e-3)
+  learning_rate: 1.0e-3                # Conservative LR for longer training
   weight_decay: 1.0e-5
   scheduler: "cosine"
   warmup_epochs: 5

@@ -8,9 +8,10 @@ data:
     - "./data_cloud/segmentation"      # Mixamo flat layout: 22-class masks + draw_order + joints
     - "./data_cloud/live2d"             # Live2D flat layout: 22-class masks + draw_order
     - "./data_cloud/humanrig"           # Per-example: 22-class masks + joints + weights
-    - "./data_cloud/anime_seg"          # Per-example: binary fg mask (used for confidence only)
+    - "./data_cloud/anime_seg"          # Per-example: binary fg → confidence only (mask≥22 → ignore)
     - "./data_cloud/anime_instance_seg" # Per-example: instance masks + metadata
     - "./data_cloud/unirig"             # UniRig: ~10K humanoid 22-class seg (diverse 3D meshes)
+    - "./data_cloud/curated_diverse"    # Curated diverse: 748 diverse 2D, binary fg + draw_order
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
@@ -24,10 +25,10 @@ augmentation:
 training:
   batch_size: 32                       # A100 80GB can handle 32+ easily
   num_workers: 8                       # More workers for faster data loading
-  epochs: 100                       # Early stopping will likely trigger by ~50-60
-  optimizer: "adam"
-  learning_rate: 4.0e-4                # Scale LR with batch size (4x batch → 4x LR)
-  weight_decay: 1.0e-5
+  epochs: 100                          # Early stopping will likely trigger by ~50-60
+  optimizer: "adamw"                   # Decoupled weight decay for fine-tuning
+  learning_rate: 1.0e-4                # Conservative for fine-tuning pretrained backbone
+  weight_decay: 1.0e-4                 # Stronger decay with AdamW (decoupled)
   scheduler: "cosine"
   warmup_epochs: 5
 

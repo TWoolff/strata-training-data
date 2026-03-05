@@ -125,10 +125,17 @@ def _detect_layout(dataset_dir: Path) -> str:
     """Return ``"flat"`` or ``"per_example"`` based on directory contents."""
     if (dataset_dir / "images").is_dir():
         return "flat"
-    # Check for per-example subdirectories containing image.png
+    # Check for per-example subdirectories containing image.png (flat or nested)
     for child in dataset_dir.iterdir():
-        if child.is_dir() and (child / "image.png").exists():
+        if not child.is_dir():
+            continue
+        if (child / "image.png").exists():
             return "per_example"
+        # Nested layout: {id}/{view}/image.png (e.g. UniRig 00000/front/)
+        for sub in child.iterdir():
+            if sub.is_dir() and (sub / "image.png").exists():
+                return "per_example"
+        break  # only check the first child
     return "flat"  # fallback (empty directory)
 
 
@@ -170,30 +177,49 @@ def _discover_flat(dataset_dir: Path) -> list[_Example]:
 
 
 def _discover_per_example(dataset_dir: Path) -> list[_Example]:
-    """Discover examples from per-example layout ({id}/image.png)."""
+    """Discover examples from per-example layout.
+
+    Supports both flat (``{id}/image.png``) and nested
+    (``{id}/{view}/image.png``) layouts (e.g. UniRig ``00000/front/``).
+    """
     examples: list[_Example] = []
     for child in sorted(dataset_dir.iterdir()):
         if not child.is_dir():
             continue
 
-        image_path = child / "image.png"
-        mask_path = child / "segmentation.png"
+        # Collect candidate dirs: the child itself, plus any subdirs (nested layout)
+        candidate_dirs = [child]
+        if not (child / "image.png").exists():
+            candidate_dirs = [
+                sub for sub in sorted(child.iterdir())
+                if sub.is_dir() and (sub / "image.png").exists()
+            ]
 
-        if not image_path.exists() or not mask_path.exists():
-            continue
+        for cand in candidate_dirs:
+            image_path = cand / "image.png"
+            mask_path = cand / "segmentation.png"
 
-        draw_order_path = child / "draw_order.png"
-        metadata_path = child / "metadata.json"
+            if not image_path.exists() or not mask_path.exists():
+                continue
 
-        examples.append(
-            _Example(
-                image_path=image_path,
-                mask_path=mask_path,
-                draw_order_path=draw_order_path if draw_order_path.exists() else None,
-                metadata_path=metadata_path if metadata_path.exists() else None,
-                example_id=child.name,
+            draw_order_path = cand / "draw_order.png"
+            metadata_path = cand / "metadata.json"
+
+            # For nested layout, use "parent_view" as example_id (e.g. "00000_front")
+            if cand != child:
+                example_id = f"{child.name}_{cand.name}"
+            else:
+                example_id = child.name
+
+            examples.append(
+                _Example(
+                    image_path=image_path,
+                    mask_path=mask_path,
+                    draw_order_path=draw_order_path if draw_order_path.exists() else None,
+                    metadata_path=metadata_path if metadata_path.exists() else None,
+                    example_id=example_id,
+                )
             )
-        )
 
     return examples
 
@@ -298,6 +324,12 @@ class SegmentationDataset:
         if mask.size != (res, res):
             mask = mask.resize((res, res), Image.NEAREST)
         mask_np = np.array(mask, dtype=np.int64)
+
+        # Clamp out-of-range class IDs to ignore_index (-1).
+        # Binary fg masks (0/255) and other non-22-class masks get their
+        # foreground pixels ignored by cross_entropy but still contribute
+        # to confidence training via the alpha channel.
+        mask_np[mask_np >= NUM_CLASSES] = -1
 
         # Load draw order (optional)
         has_draw_order = ex.draw_order_path is not None

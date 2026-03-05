@@ -10,7 +10,7 @@ data:
     - "./data_cloud/humanrig"
     - "./data_cloud/fbanimehq"
     - "./data_cloud/anime_seg"
-    - "./data_cloud/danbooru_diverse"   # Danbooru diverse: male, dark_skin, muscular, western chars
+    - "./data_cloud/curated_diverse"    # Curated diverse: 748 diverse 2D drawings with RTMPose joints
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
@@ -23,9 +23,9 @@ augmentation:
 training:
   batch_size: 64                       # A100 — joint model is lighter
   num_workers: 8
-  epochs: 50
+  epochs: 80
   optimizer: "adam"
-  learning_rate: 4.0e-3                # Scale with batch (8x batch → 8x LR from 1e-3)
+  learning_rate: 1.0e-3                # Conservative for fine-tuning pretrained backbone
   weight_decay: 1.0e-5
   scheduler: "cosine"
   warmup_epochs: 3

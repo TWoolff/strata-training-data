@@ -16,7 +16,7 @@ data:
 training:
   batch_size: 64
   num_workers: 8
-  epochs: 60                             # Fine-tuning converges faster
+  epochs: 100                            # More room to converge
   optimizer: "adam"
   learning_rate: 1.0e-3
   weight_decay: 1.0e-5

@@ -106,6 +106,10 @@ echo ""
 echo "  [e] fbanimehq/ (~11.4 GB, ~101K full-body anime with joints)..."
 rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
 
+echo ""
+echo "  [f] curated_diverse/ (~50 MB, 748 diverse 2D drawings with joints)..."
+rclone copy hetzner:strata-training-data/curated_diverse/ "$DATA_DIR/curated_diverse/" $RCLONE_FLAGS
+
 # --- Additional datasets (full mode only) ---
 if [ "$MODE" != "lean" ]; then
     echo ""
@@ -130,7 +134,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in segmentation live2d humanrig anime_seg anime_instance_seg fbanimehq instaorder; do
+for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)

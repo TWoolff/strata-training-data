@@ -1,6 +1,6 @@
-# Lean A100 config — core datasets for fast fine-tuning baseline
-# ~180K+ examples with Strata joint schema (includes diverse Danbooru + fbanimehq)
-# Est. time: ~3-4h on A100 (with early stopping)
+# Lean A100 config — core datasets for fine-tuning
+# ~130K+ examples with Strata joint schema (Mixamo + HumanRig + anime_seg + fbanimehq + curated_diverse)
+# Est. time: ~4-6h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_joints: 20
@@ -12,7 +12,7 @@ data:
     - "./data_cloud/humanrig"            # HumanRig: 11,434 list-format joints
     - "./data_cloud/anime_seg"           # anime_seg: 14,578 RTMPose-enriched joints
     - "./data_cloud/fbanimehq"           # FBAnimeHQ: 101K full-body anime with joints
-    - "./data_cloud/danbooru_diverse"    # Danbooru diverse: ~50K male/diverse body/skin with joints
+    - "./data_cloud/curated_diverse"     # Curated diverse: 748 diverse 2D drawings with RTMPose joints
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
@@ -25,9 +25,9 @@ augmentation:
 training:
   batch_size: 64
   num_workers: 8
-  epochs: 40                             # Fine-tuning converges faster
+  epochs: 80                              # More room to converge
   optimizer: "adam"
-  learning_rate: 1.0e-3                  # Lower LR for fine-tuning
+  learning_rate: 1.0e-3
   weight_decay: 1.0e-5
   scheduler: "cosine"
   warmup_epochs: 3
@@ -39,5 +39,5 @@ loss:
 
 checkpointing:
   save_dir: "./checkpoints/joints"
-  early_stopping_patience: 10
+  early_stopping_patience: 15
   early_stopping_metric: "val/mean_offset_error"

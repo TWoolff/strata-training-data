@@ -164,11 +164,12 @@ class TestJointModel:
         x = torch.randn(2, 3, 128, 128)
         with torch.no_grad():
             out = model(x)
-        assert out["offsets"].shape == (2, 40)
+        assert out["offsets"].shape == (2, 2, 20)
         assert out["confidence"].shape == (2, 20)
         assert out["present"].shape == (2, 20)
 
-    def test_confidence_sigmoid_range(self):
+    def test_confidence_is_raw_logits(self):
+        """Confidence outputs are raw logits — Rust runtime applies sigmoid."""
         from training.models.joint_model import JointModel
 
         model = JointModel(num_joints=20, pretrained_backbone=False)
@@ -176,8 +177,8 @@ class TestJointModel:
         x = torch.randn(1, 3, 64, 64)
         with torch.no_grad():
             out = model(x)
-        assert out["confidence"].min() >= 0.0
-        assert out["confidence"].max() <= 1.0
+        # Raw logits can be any value; just check shape
+        assert out["confidence"].shape == (1, 20)
 
 
 # ---------------------------------------------------------------------------
