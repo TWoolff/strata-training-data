@@ -1,6 +1,6 @@
 # Lean A100 config — core datasets only for fast fine-tuning baseline
-# ~14K examples with exact 22-class Strata schema
-# Est. time: ~2h on A100 (with early stopping)
+# ~24K+ examples with exact 22-class Strata schema
+# Est. time: ~3h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_classes: 22
@@ -11,6 +11,7 @@ data:
     - "./data_cloud/segmentation"        # Mixamo: 1,598 examples, 22-class + draw_order + joints
     - "./data_cloud/live2d"              # Live2D: 844 examples, 22-class + draw_order
     - "./data_cloud/humanrig"            # HumanRig: 11,434 examples, 22-class + joints + weights
+    - "./data_cloud/unirig"              # UniRig: ~10K humanoid subset, 22-class seg masks
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

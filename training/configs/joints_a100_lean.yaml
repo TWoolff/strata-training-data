@@ -1,6 +1,6 @@
 # Lean A100 config — core datasets for fast fine-tuning baseline
-# ~129K examples with Strata joint schema (includes fbanimehq full-body anime)
-# Est. time: ~2-3h on A100 (with early stopping)
+# ~180K+ examples with Strata joint schema (includes diverse Danbooru + fbanimehq)
+# Est. time: ~3-4h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_joints: 20
@@ -12,6 +12,7 @@ data:
     - "./data_cloud/humanrig"            # HumanRig: 11,434 list-format joints
     - "./data_cloud/anime_seg"           # anime_seg: 14,578 RTMPose-enriched joints
     - "./data_cloud/fbanimehq"           # FBAnimeHQ: 101K full-body anime with joints
+    - "./data_cloud/danbooru_diverse"    # Danbooru diverse: ~50K male/diverse body/skin with joints
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

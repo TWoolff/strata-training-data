@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 
 RENDER_RESOLUTION = 512
 CYCLES_SAMPLES = 64
-ORTHO_SCALE = 1.3   # world units across the rendered frame
-CAMERA_DIST = 2.0   # camera distance from origin
+ORTHO_SCALE = 1.3  # world units across the rendered frame
+CAMERA_DIST = 2.0  # camera distance from origin
 
 # Camera angles: label → azimuth in degrees.
 # azimuth=0: front (camera at -Y looking toward +Y)
@@ -58,6 +58,7 @@ ANGLE_AZIMUTHS: dict[str, int] = {
     "front": 0,
     "three_quarter": 45,
     "side": 90,
+    "three_quarter_back": 135,
     "back": 180,
 }
 
@@ -89,8 +90,8 @@ def _setup_lights() -> None:
 
     scene = bpy.context.scene
     for energy, rx, rz in [
-        (5.0, 45, 30),    # front-top-left
-        (5.0, 45, 210),   # front-top-right (opposite side)
+        (5.0, 45, 30),  # front-top-left
+        (5.0, 45, 210),  # front-top-right (opposite side)
     ]:
         light = bpy.data.lights.new("Sun", "SUN")
         light.energy = energy
@@ -183,12 +184,14 @@ def _set_camera_orbit(cam_obj: Any, azimuth_deg: float) -> None:
     right = forward.cross(world_up).normalized()
     up = right.cross(forward).normalized()
 
-    rot_mat = Matrix([
-        [right.x,    right.y,    right.z,    0.0],
-        [up.x,       up.y,       up.z,       0.0],
-        [-forward.x, -forward.y, -forward.z, 0.0],
-        [0.0,        0.0,        0.0,        1.0],
-    ]).transposed()
+    rot_mat = Matrix(
+        [
+            [right.x, right.y, right.z, 0.0],
+            [up.x, up.y, up.z, 0.0],
+            [-forward.x, -forward.y, -forward.z, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    ).transposed()
     cam_obj.rotation_euler = rot_mat.to_3x3().to_euler()
 
 
@@ -309,7 +312,8 @@ def render_directory(
         input_dir: ``humanrig_opensource_final/`` directory.
         output_dir: Root output directory (same as used by the Python adapter).
         angles: Angle labels to render. Defaults to
-            ``["three_quarter", "side", "back"]`` (non-front angles only).
+            ``["three_quarter", "side", "three_quarter_back", "back"]``
+            (non-front angles only).
         only_new: Skip samples whose output image already exists.
         max_samples: Maximum samples to process (0 = all).
 
@@ -317,7 +321,7 @@ def render_directory(
         Tuple of (rendered_count, skipped_count, error_count).
     """
     if angles is None:
-        angles = ["three_quarter", "side", "back"]
+        angles = ["three_quarter", "side", "three_quarter_back", "back"]
 
     rendered_total = 0
     skipped_total = 0
@@ -335,7 +339,9 @@ def render_directory(
     total = len(sample_dirs)
     logger.info(
         "Rendering %d samples × %d angles from %s",
-        total, len(angles), input_dir,
+        total,
+        len(angles),
+        input_dir,
     )
 
     for i, sample_dir in enumerate(sample_dirs):
@@ -371,7 +377,11 @@ def render_directory(
             pct = (i + 1) / total * 100
             logger.info(
                 "Progress: %d/%d samples (%.1f%%) — %d rendered, %d skipped",
-                i + 1, total, pct, rendered_total, skipped_total,
+                i + 1,
+                total,
+                pct,
+                rendered_total,
+                skipped_total,
             )
 
     return rendered_total, skipped_total, errors

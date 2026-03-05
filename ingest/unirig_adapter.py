@@ -15,7 +15,7 @@ This adapter:
 3. Filters non-humanoids (requires head, hips, symmetric limbs).
 4. Assigns Strata region materials by vertex weight majority vote
    (same approach as the main FBX pipeline).
-5. Renders front + back orthographic views of each character.
+5. Renders 5 orthographic views per character (front, 3/4, side, 3/4-back, back).
 6. Saves image.png, segmentation.png, metadata.json per view.
 
 Requires Blender 4.0+ (uses bpy). Run via:
@@ -60,12 +60,14 @@ def _eevee_engine() -> str:
     except TypeError:
         return "BLENDER_EEVEE"
 
+
 # Humanoid filter: minimum fraction of vertices assigned to a known region.
 # Non-humanoids (quadrupeds, objects) typically fail this threshold.
 MIN_HUMANOID_COVERAGE = 0.60
 
 # Camera angles to render (azimuth in degrees, 0=front, 180=back).
-RENDER_ANGLES = [0, 180]
+# Matches pipeline CAMERA_ANGLES: front, three-quarter, side, three-quarter-back, back.
+RENDER_ANGLES = [0, 45, 90, 135, 180]
 
 # Annotations not available from UniRig.
 _MISSING_ANNOTATIONS = ["joints", "draw_order"]
@@ -86,8 +88,7 @@ class ConversionStats:
 
     def summary(self) -> str:
         return (
-            f"{self.converted}/{self.total} converted, "
-            f"{self.skipped} skipped, {self.errors} errors"
+            f"{self.converted}/{self.total} converted, {self.skipped} skipped, {self.errors} errors"
         )
 
 
@@ -148,9 +149,7 @@ def _is_humanoid(fields: dict, bone_to_region: dict[int, int]) -> bool:
     dominant_bone = np.argmax(skin, axis=1)  # (N,)
 
     # Count vertices with a mapped region
-    mapped = sum(
-        1 for b in dominant_bone if bone_to_region.get(int(b)) is not None
-    )
+    mapped = sum(1 for b in dominant_bone if bone_to_region.get(int(b)) is not None)
     coverage = mapped / n_vertices
 
     if coverage < MIN_HUMANOID_COVERAGE:
@@ -263,6 +262,7 @@ def _assign_region_materials(
 
     # Add all region materials as slots (slot index == region_id)
     from pipeline.config import NUM_REGIONS
+
     mesh.materials.clear()
     for rid in range(NUM_REGIONS):
         mesh.materials.append(_get_or_create_mat(rid))
@@ -271,6 +271,7 @@ def _assign_region_materials(
     for polygon in mesh.polygons:
         # Count region votes from all vertices of this face
         from collections import Counter
+
         votes: Counter[int] = Counter()
         for vi in polygon.vertices:
             bone_idx = int(dominant_bone[vi])
@@ -400,7 +401,7 @@ def _render_segmentation(
             flat_rgb = rgb_only.reshape(-1, 3).astype(np.float32)  # (H*W, 3)
             # Euclidean distance to each region color
             diffs = flat_rgb[:, None, :] - colors_arr[None, :, :]  # (H*W, N, 3)
-            dists = np.sum(diffs ** 2, axis=2)  # (H*W, N)
+            dists = np.sum(diffs**2, axis=2)  # (H*W, N)
             nearest = np.argmin(dists, axis=1)  # (H*W,)
             seg_flat = region_ids[nearest]
             seg = seg_flat.reshape(resolution, resolution)
@@ -485,9 +486,16 @@ def _convert_one(
         return "skipped"
 
     # Render each camera angle
+    angle_names = {
+        0: "front",
+        45: "three_quarter",
+        90: "side",
+        135: "three_quarter_back",
+        180: "back",
+    }
     any_success = False
     for azimuth in RENDER_ANGLES:
-        angle_name = "front" if azimuth == 0 else "back"
+        angle_name = angle_names[azimuth]
         view_dir = example_base / angle_name
         if only_new and view_dir.is_dir():
             any_success = True
@@ -523,11 +531,7 @@ def _convert_one(
             _render_color(color_path, STRATA_RESOLUTION)
 
             # Write metadata
-            char_names = sorted({
-                jm.region_name
-                for jm in mapping.joint_mappings
-                if jm.region_name
-            })
+            char_names = sorted({jm.region_name for jm in mapping.joint_mappings if jm.region_name})
             meta: dict[str, Any] = {
                 "example_id": f"{character_id}_{angle_name}",
                 "source": UNIRIG_SOURCE,

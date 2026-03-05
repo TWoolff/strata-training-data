@@ -101,6 +101,7 @@ ANGLE_CONFIGS = [
     ("front", 0),
     ("three_quarter", 45),
     ("side", 90),
+    ("three_quarter_back", 135),
     ("back", 180),
 ]
 
@@ -159,8 +160,8 @@ _STRATA_ID_TO_NAME: dict[int, str] = {
 # Primary Mixamo joint for each Strata region (used when multiple joints
 # map to the same region — we prefer the more anatomically meaningful one).
 _REGION_PRIMARY_JOINT: dict[int, str] = {
-    3: "Spine2",   # chest: prefer Spine2 over Spine1
-    4: "Spine1",   # spine: prefer Spine1 over Spine
+    3: "Spine2",  # chest: prefer Spine2 over Spine1
+    4: "Spine1",  # spine: prefer Spine1 over Spine
     16: "LeftFoot",
     19: "RightFoot",
 }
@@ -537,9 +538,7 @@ def _build_metadata(
     Returns:
         Metadata dict ready for JSON serialisation.
     """
-    missing = list(
-        _MISSING_ANNOTATIONS_FRONT if has_image else _MISSING_ANNOTATIONS_JOINTS_ONLY
-    )
+    missing = list(_MISSING_ANNOTATIONS_FRONT if has_image else _MISSING_ANNOTATIONS_JOINTS_ONLY)
     return {
         "id": example_id,
         "source": HUMANRIG_SOURCE,
@@ -706,14 +705,14 @@ def convert_directory(
         max_images: Maximum samples to process (0 = unlimited).
         random_sample: Randomly sample from discovered entries.
         seed: Random seed for reproducible sampling.
-        angles: Camera angles to produce. Defaults to all four:
-            ``["front", "three_quarter", "side", "back"]``.
+        angles: Camera angles to produce. Defaults to all five:
+            ``["front", "three_quarter", "side", "three_quarter_back", "back"]``.
 
     Returns:
         :class:`AdapterResult` summarising the conversion.
     """
     if angles is None:
-        angles = ["front", "three_quarter", "side", "back"]
+        angles = ["front", "three_quarter", "side", "three_quarter_back", "back"]
 
     result = AdapterResult()
 

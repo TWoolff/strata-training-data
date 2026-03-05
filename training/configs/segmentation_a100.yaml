@@ -10,6 +10,7 @@ data:
     - "./data_cloud/humanrig"           # Per-example: 22-class masks + joints + weights
     - "./data_cloud/anime_seg"          # Per-example: binary fg mask (used for confidence only)
     - "./data_cloud/anime_instance_seg" # Per-example: instance masks + metadata
+    - "./data_cloud/unirig"             # UniRig: ~10K humanoid 22-class seg (diverse 3D meshes)
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
