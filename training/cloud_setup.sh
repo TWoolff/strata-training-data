@@ -47,7 +47,7 @@ echo "[2/5] Installing Python dependencies..."
 pip install -q -r training/requirements.txt
 
 # Verify CUDA is available
-python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available!'; print(f'CUDA OK: {torch.cuda.get_device_name(0)}, {torch.cuda.get_device_properties(0).total_mem / 1024**3:.0f} GB VRAM')"
+python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available!'; p=torch.cuda.get_device_properties(0); mem=getattr(p,'total_memory',getattr(p,'total_mem',0)); print(f'CUDA OK: {torch.cuda.get_device_name(0)}, {mem/1024**3:.0f} GB VRAM')"
 
 # ---------------------------------------------------------------------------
 # 3. Configure rclone for Hetzner bucket
