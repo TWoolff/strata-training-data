@@ -60,13 +60,14 @@ MIN_SCORE = 10
 API_DELAY_SECONDS = 1.0
 
 # Tag presets for underrepresented categories.
-# Each preset is a dict with a label and a Danbooru tag query string.
+# Danbooru free API limits queries to 2 tags. Score/rating filtering is
+# applied post-fetch via MIN_SCORE and the rating parameter.
 TAG_PRESETS: dict[str, str] = {
-    "male_full_body": "1boy full_body solo score:>10 rating:general",
-    "dark_skin": "dark_skin full_body solo score:>10 rating:general",
-    "muscular": "muscular full_body solo score:>10 rating:general",
-    "western_fantasy": "1boy armor full_body score:>10 rating:general",
-    "male_casual": "1boy full_body solo casual score:>10 rating:general",
+    "male_full_body": "1boy full_body",
+    "dark_skin": "dark_skin full_body",
+    "muscular": "muscular full_body",
+    "western_fantasy": "armor full_body",
+    "male_casual": "1boy standing",
 }
 
 # Maximum images per API page (Danbooru limit).
@@ -186,6 +187,14 @@ def download_preset(
         for post in posts:
             if downloaded >= max_images:
                 break
+
+            # Post-fetch filtering: score, rating, file availability.
+            score = post.get("score", 0)
+            rating = post.get("rating", "")
+            if score < MIN_SCORE:
+                continue
+            if rating not in ("g", "s"):  # general or sensitive only
+                continue
 
             file_url = post.get("file_url") or post.get("large_file_url")
             if not file_url:
