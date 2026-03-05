@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 from training.models.diffusion_weight_model import DiffusionWeightPredictionModel
+from training.models.inpainting_model import InpaintingModel
 from training.models.joint_model import JointModel
 from training.models.segmentation_model import SegmentationModel
 from training.models.weight_model import WeightModel
@@ -134,6 +135,23 @@ class DiffusionWeightPredictionWrapper(nn.Module):
         return out["weights"], out["confidence"]
 
 
+class InpaintingWrapper(nn.Module):
+    """Wraps InpaintingModel for ONNX export (dual-input, dict → tuple).
+
+    ONNX contract uses named inputs ``"image"`` and ``"mask"``.
+    """
+
+    def __init__(self, model: InpaintingModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(
+        self, image: torch.Tensor, mask: torch.Tensor
+    ) -> tuple[torch.Tensor]:
+        out = self.model(image, mask)
+        return (out["inpainted"],)
+
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -201,6 +219,21 @@ MODEL_CONFIGS: dict[str, dict] = {
         },
         "default_filename": "diffusion_weight_prediction.onnx",
         "input_shapes": [(1, 31, 2048, 1), (1, 960, 2048, 1)],
+        "dual_input": True,
+    },
+    "inpainting": {
+        "model_class": InpaintingModel,
+        "wrapper_class": InpaintingWrapper,
+        "model_kwargs": {"in_channels": 5, "out_channels": 4},
+        "input_names": ["image", "mask"],
+        "output_names": ["inpainted"],
+        "dynamic_axes": {
+            "image": {0: "batch"},
+            "mask": {0: "batch"},
+            "inpainted": {0: "batch"},
+        },
+        "default_filename": "inpainting.onnx",
+        "input_shapes": [(1, 4, RESOLUTION, RESOLUTION), (1, 1, RESOLUTION, RESOLUTION)],
         "dual_input": True,
     },
 }
@@ -354,6 +387,8 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
         _validate_weight_vertex_outputs(results, expected_names)
     elif model_name == "diffusion_weights":
         _validate_diffusion_weight_outputs(results, expected_names)
+    elif model_name == "inpainting":
+        _validate_inpainting_outputs(results, expected_names)
 
     logger.info("Validation passed for %s", model_name)
 
@@ -425,6 +460,19 @@ def _validate_diffusion_weight_outputs(results: list[np.ndarray], names: list[st
         )
 
 
+def _validate_inpainting_outputs(results: list[np.ndarray], names: list[str]) -> None:
+    (inpainted,) = results
+    if inpainted.shape != (1, 4, RESOLUTION, RESOLUTION):
+        raise ValueError(
+            f"inpainted shape: expected (1,4,{RESOLUTION},{RESOLUTION}), got {inpainted.shape}"
+        )
+    # Output should be in [0, 1] (sigmoid)
+    if inpainted.min() < -0.01 or inpainted.max() > 1.01:
+        raise ValueError(
+            f"inpainted out of [0,1] range: [{inpainted.min()}, {inpainted.max()}]"
+        )
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -437,7 +485,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["segmentation", "joints", "weights", "weights_vertex", "diffusion_weights"],
+        choices=["segmentation", "joints", "weights", "weights_vertex", "diffusion_weights", "inpainting"],
         help="Model to export.",
     )
     parser.add_argument(
@@ -498,6 +546,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "weights": Path("checkpoints/weights/best.pt"),
         "weights_vertex": Path("checkpoints/weights/best.pt"),
         "diffusion_weights": Path("checkpoints/diffusion_weights/best.pt"),
+        "inpainting": Path("checkpoints/inpainting/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():

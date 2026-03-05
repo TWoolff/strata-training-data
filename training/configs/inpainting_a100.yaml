@@ -1,0 +1,35 @@
+# Full A100 config — inpainting U-Net (Model 5)
+# All source data, full training run
+# Est. time: ~2-3h on A100
+model:
+  in_channels: 5      # RGBA + mask
+  out_channels: 4     # RGBA
+
+data:
+  dataset_dirs:
+    - "./data_cloud/inpainting_pairs"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: false
+
+training:
+  batch_size: 16
+  num_workers: 8
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 4.0e-4
+  weight_decay: 1.0e-5
+  warmup_epochs: 5
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/inpainting"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/l1"
