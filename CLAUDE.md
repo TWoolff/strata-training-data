@@ -198,11 +198,46 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~
 | `unirig/` | 66,030 | 42.6 GiB | UniRig rigged meshes |
 
 
+## Current Training Run (March 6 2026, A100 Lean)
+
+Running `training/configs/segmentation_a100_lean.yaml` on Lambda A100. Training all 3 models sequentially via `train_all.sh lean`.
+
+### Training Data (on A100 at `data_cloud/`)
+
+| Dataset | Examples | Annotations | Source |
+|---------|----------|-------------|--------|
+| `segmentation/` | 1,598 | 22-class seg + draw_order + joints | Mixamo pipeline (50 chars, 50 poses, flat style, front-only) |
+| `live2d/` | 844 | 22-class seg + draw_order | Live2D .moc3 renders |
+| `humanrig/` | 11,434 | 22-class seg + joints + weights | HumanRig rendered chars (vertex weight → region) |
+| `unirig/` | ~10K (missing) | 22-class seg | UniRig humanoid subset — **not on A100, skipped** |
+| `curated_diverse/` | 748 | fg/bg mask + draw_order (Depth Anything) | Hand-picked diverse characters |
+| `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) | SkyTNT anime-segmentation v1+v2 |
+| **Total loaded** | **25,494 train / 3,137 val** | | |
+
+### Segmentation Results (in progress)
+
+| Epoch | mIoU | Notes |
+|-------|------|-------|
+| 1 | 0.270 | Warm-up |
+| 10 | 0.481 | Fast improvement |
+| 25 | 0.508 | |
+| 40 | 0.524 | |
+| 50 | 0.532 | |
+| 60 | 0.539 | Still climbing, ~4 min/epoch |
+
+Previous best was 0.264 mIoU with only ~2,442 22-class examples. HumanRig enrichment (11,434 more 22-class masks) drove the 2× improvement.
+
+### What's Missing from Training
+
+- **UniRig** (~10K examples) — raw data deleted from external HD, needs re-download
+- **NOVA-Human** (10K chars, ~41K ortho views) — ingesting locally with RTMPose joints + Depth Anything draw order enrichment. Will upload to bucket after completion.
+- **Multi-angle Mixamo** — existing data is front-only, flat-only. Re-render with 5 angles × 6 styles when external HD (with 2K Mixamo FBX poses) is available.
+- **Quaternius** (Universal Base Characters) — 10 UE-skeleton chars, can re-download and render with proper poses later.
+
 ## Model 1: Segmentation
 What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), draw order depth map, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part.
 
-# Score: 0.264 mIoU (poor). 
-Only ~2,442 examples had 22-class masks (Mixamo + Live2D). With the HumanRig enrichment we did (adding 11,434 more 22-class masks), the next run should have ~5x more seg training data.
+Score: **0.539 mIoU** (epoch 60/100, March 6 2026 run — still training). Previous: 0.264.
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
