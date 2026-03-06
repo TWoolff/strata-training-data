@@ -9,6 +9,8 @@ data/live2d/**
 data/vroid/**
 data/psd/**
 data/preprocessed/**
+data/nova_human/**
+data/Universal Base Characters*/
 
 # Generated output (reproducible)
 output/

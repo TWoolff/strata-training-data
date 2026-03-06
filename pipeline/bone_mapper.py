@@ -192,10 +192,28 @@ def _try_substring(bone_name: str) -> RegionId | None:
 
     Checks each keyword tuple in SUBSTRING_KEYWORDS. All keywords in the
     tuple must appear as substrings of the lowercased bone name.
+
+    Single-character laterality markers (``l``, ``r``) are matched as whole
+    tokens (bounded by ``_``, ``.``, ``-``, start, or end of string) to
+    avoid false matches like ``"l"`` matching inside ``"ball"`` or ``"leaf"``.
     """
     name_lower = bone_name.lower()
+    # Pre-split into tokens for single-char laterality checks
+    tokens = set(re.split(r"[_.\-\s]+", name_lower))
+
     for keywords, region_id in SUBSTRING_KEYWORDS:
-        if all(kw in name_lower for kw in keywords):
+        matched = True
+        for kw in keywords:
+            if len(kw) == 1 and kw in ("l", "r"):
+                # Single-char laterality: must be a whole token
+                if kw not in tokens:
+                    matched = False
+                    break
+            else:
+                if kw not in name_lower:
+                    matched = False
+                    break
+        if matched:
             return region_id
     return None
 
