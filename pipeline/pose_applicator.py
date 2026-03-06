@@ -255,6 +255,14 @@ def _find_pose_bone(
     return None
 
 
+# Maximum rotation per axis (degrees) for non-root bones.
+_MAX_BONE_ROTATION_DEG = 90.0
+
+# Bones where the Y-axis rotation encodes world-space facing direction
+# (from the mocap capture), not body pose. Zero this out.
+_ROOT_BONES = {"hips", "root", "pelvis"}
+
+
 def _apply_json_motion_pose(
     armature: bpy.types.Object,
     motion_data: dict,
@@ -262,13 +270,18 @@ def _apply_json_motion_pose(
 ) -> int:
     """Apply a single frame from a Strata JSON motion file to an armature.
 
+    Handles retargeting issues:
+    - Skips hip translation (source skeleton proportions don't match target)
+    - Zeros out hips Y-rotation (world-space facing direction from mocap)
+    - Clamps all bone rotations to ±90° to avoid distortion
+
     Args:
         armature: Character armature to pose.
         motion_data: Parsed JSON motion data with 'frames' and 'rotation_order'.
         frame_index: Index into the frames array.
 
     Returns:
-        Number of bones successfully posed.
+        Number of bones successfully posed, or 0 if the pose was rejected.
     """
     frames = motion_data["frames"]
     if frame_index < 0 or frame_index >= len(frames):
@@ -277,6 +290,7 @@ def _apply_json_motion_pose(
 
     frame = frames[frame_index]
     rotation_order = motion_data.get("rotation_order", "YXZ")
+    max_rad = math.radians(_MAX_BONE_ROTATION_DEG)
 
     # Start from T-pose
     _apply_tpose(armature)
@@ -291,11 +305,23 @@ def _apply_json_motion_pose(
         if rotation is None:
             continue
 
-        # Convert degrees to radians
-        rot_rad = [math.radians(r) for r in rotation]
+        rot_deg = list(rotation)
+
+        # For root bones, zero out the Y rotation (world facing direction)
+        if strata_name in _ROOT_BONES:
+            # YXZ order: index 0=Y, 1=X, 2=Z
+            if rotation_order == "YXZ":
+                rot_deg[0] = 0.0
+            else:
+                rot_deg[1] = 0.0
+
+        # Convert degrees to radians with clamping
+        rot_rad = [
+            max(min(math.radians(r), max_rad), -max_rad) for r in rot_deg
+        ]
+
         pbone.rotation_mode = rotation_order
         pbone.rotation_euler = Euler(rot_rad, rotation_order)
-
         transferred += 1
 
     bpy.context.view_layer.update()
