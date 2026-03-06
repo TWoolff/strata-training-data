@@ -47,12 +47,10 @@ __pycache__/
 
 data/fbx_ch_only/
 
-# Render logs (not useful in repo)
-rerender_log.txt
-rerender_ch_log.txt
-rerender_ch_log2.txt
-live2d_render_log.txt
-live2d_upload_log.txt
+# Logs (all formats)
+*.log
+*_log.txt
+*_log2.txt
 
 # External dataset folder downloaded alongside repo (not part of pipeline)
 AnimeInstanceSegmentationDataset/
@@ -65,5 +63,3 @@ checkpoints/
 logs/
 models/onnx/
 validation_report.json
-validate_renders.log
-*.log
