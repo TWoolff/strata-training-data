@@ -196,3 +196,40 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~
 | `live2d/` | 3,587 | 212 MiB | Live2D .moc3 rendered models |
 | `segmentation/` | 12,216 | 599 MiB | Mixamo pipeline segmentation output |
 | `unirig/` | 66,030 | 42.6 GiB | UniRig rigged meshes |
+
+
+## Model 1: Segmentation
+What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), draw order depth map, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part.
+
+# Score: 0.264 mIoU (poor). 
+Only ~2,442 examples had 22-class masks (Mixamo + Live2D). With the HumanRig enrichment we did (adding 11,434 more 22-class masks), the next run should have ~5x more seg training data.
+
+## Model 2: Joint Refinement
+What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
+
+Score: 
+
+## Model 3: Weight Prediction
+What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP, not image-based.
+
+Score: 
+
+## Model 4: Diffusion Weight Prediction
+Takes the same per-vertex features as model 3 (position, bone distances, etc.) plus encoder features sampled from model 1's segmentation backbone. The idea is that the segmentation model "sees" the character's visual appearance, so sampling those features at each vertex location gives the weight predictor extra context about body proportions. This helps with unusual characters (chibi, elongated limbs, loose clothing) where pure geometry-based weight prediction struggles. Has a training pipeline — will run in the next training.
+
+Score:
+
+## Model 5: Inpainting
+U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills. Needs training pipeline + paired occlusion data generated from fbanimehq.
+
+Score:
+
+## Model 6: Texture Inpainting
+Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
+
+Score:
+
+## Model 7: Back View Generation
+Multi-view conditioned diffusion model that generates a back view of a character given the front view (and optionally a 3/4 view). Currently Strata falls back to "PaletteFill" (mirror + color adjustment). A trained model would generate an actual back view with proper hair, clothing details, etc. Needs training pipeline + multi-view paired data (no pipeline exists yet).
+
+Score:
