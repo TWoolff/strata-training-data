@@ -139,6 +139,10 @@ def _discover_characters(dataset_dirs: list[Path]) -> set[str]:
     char_ids: set[str] = set()
 
     for dataset_dir in dataset_dirs:
+        if not dataset_dir.is_dir():
+            logger.warning("Dataset directory not found, skipping: %s", dataset_dir)
+            continue
+
         # Primary: scan images/ directory (flat layout)
         images_dir = dataset_dir / "images"
         if images_dir.is_dir():
