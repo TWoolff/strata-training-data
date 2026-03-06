@@ -27,6 +27,7 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import re
@@ -197,6 +198,145 @@ def _compute_sample_frames(total_frames: int, num_keyframes: int) -> list[int]:
 # ---------------------------------------------------------------------------
 # Animation FBX loading
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Strata JSON motion loading (100STYLE / retargeted motions)
+# ---------------------------------------------------------------------------
+
+# Mapping from Strata 19-bone names to common armature bone name patterns.
+# Used to find the matching pose bone for each motion channel.
+_STRATA_BONE_ALIASES: dict[str, list[str]] = {
+    "hips": ["hips", "pelvis", "root"],
+    "spine": ["spine", "spine_01"],
+    "chest": ["chest", "spine_02", "spine_03", "spine2"],
+    "neck": ["neck", "neck_01"],
+    "head": ["head"],
+    "shoulder_l": ["shoulder_l", "clavicle_l", "leftshoulder"],
+    "upper_arm_l": ["upper_arm_l", "upperarm_l", "leftarm"],
+    "forearm_l": ["forearm_l", "lowerarm_l", "leftforearm"],
+    "hand_l": ["hand_l", "lefthand"],
+    "shoulder_r": ["shoulder_r", "clavicle_r", "rightshoulder"],
+    "upper_arm_r": ["upper_arm_r", "upperarm_r", "rightarm"],
+    "forearm_r": ["forearm_r", "lowerarm_r", "rightforearm"],
+    "hand_r": ["hand_r", "righthand"],
+    "upper_leg_l": ["upper_leg_l", "thigh_l", "leftupleg"],
+    "lower_leg_l": ["lower_leg_l", "calf_l", "leftleg"],
+    "foot_l": ["foot_l", "leftfoot"],
+    "upper_leg_r": ["upper_leg_r", "thigh_r", "rightupleg"],
+    "lower_leg_r": ["lower_leg_r", "calf_r", "rightleg"],
+    "foot_r": ["foot_r", "rightfoot"],
+}
+
+
+def _find_pose_bone(
+    armature: bpy.types.Object,
+    strata_name: str,
+) -> bpy.types.PoseBone | None:
+    """Find a pose bone matching a Strata bone name.
+
+    Tries exact match first, then aliases, then normalized comparison.
+    """
+    bones = armature.pose.bones
+    aliases = _STRATA_BONE_ALIASES.get(strata_name, [strata_name])
+
+    for alias in aliases:
+        bone = bones.get(alias)
+        if bone is not None:
+            return bone
+
+    # Fallback: case-insensitive + prefix-stripped
+    for alias in aliases:
+        alias_lower = alias.lower()
+        for pbone in bones:
+            if _normalize_bone_name(pbone.name) == alias_lower:
+                return pbone
+
+    return None
+
+
+def _apply_json_motion_pose(
+    armature: bpy.types.Object,
+    motion_data: dict,
+    frame_index: int,
+) -> int:
+    """Apply a single frame from a Strata JSON motion file to an armature.
+
+    Args:
+        armature: Character armature to pose.
+        motion_data: Parsed JSON motion data with 'frames' and 'rotation_order'.
+        frame_index: Index into the frames array.
+
+    Returns:
+        Number of bones successfully posed.
+    """
+    frames = motion_data["frames"]
+    if frame_index < 0 or frame_index >= len(frames):
+        logger.error("Frame index %d out of range (0-%d)", frame_index, len(frames) - 1)
+        return 0
+
+    frame = frames[frame_index]
+    rotation_order = motion_data.get("rotation_order", "YXZ")
+
+    # Start from T-pose
+    _apply_tpose(armature)
+
+    transferred = 0
+    for strata_name, bone_data in frame.items():
+        pbone = _find_pose_bone(armature, strata_name)
+        if pbone is None:
+            continue
+
+        rotation = bone_data.get("rotation")
+        if rotation is None:
+            continue
+
+        # Convert degrees to radians
+        rot_rad = [math.radians(r) for r in rotation]
+        pbone.rotation_mode = rotation_order
+        pbone.rotation_euler = Euler(rot_rad, rotation_order)
+
+        transferred += 1
+
+    bpy.context.view_layer.update()
+    return transferred
+
+
+def _import_animation_bvh(bvh_path: Path) -> bpy.types.Object | None:
+    """Import a BVH motion capture file and return its armature.
+
+    Uses Blender's built-in BVH importer. The imported armature is
+    temporary and should be cleaned up after use.
+
+    Args:
+        bvh_path: Path to the BVH file.
+
+    Returns:
+        The imported armature object, or None if import failed.
+    """
+    existing_objects = set(bpy.data.objects)
+
+    try:
+        bpy.ops.import_anim.bvh(
+            filepath=str(bvh_path),
+            use_fps_scale=True,
+            update_scene_fps=False,
+            update_scene_duration=False,
+            global_scale=1.0,
+        )
+    except Exception:
+        logger.exception("Failed to import BVH: %s", bvh_path)
+        return None
+
+    new_armatures = [
+        obj for obj in bpy.data.objects if obj not in existing_objects and obj.type == "ARMATURE"
+    ]
+
+    if not new_armatures:
+        logger.error("No armature found in BVH: %s", bvh_path.name)
+        return None
+
+    return new_armatures[0]
 
 
 def _import_animation_fbx(fbx_path: Path) -> bpy.types.Object | None:
@@ -512,11 +652,12 @@ def list_poses(
 ) -> list[PoseInfo]:
     """List all available poses from a pose library directory.
 
-    Scans for ``.fbx`` files and computes keyframe indices for each clip.
-    Optionally includes built-in T-pose and A-pose.
+    Scans for ``.fbx``, ``.bvh``, and Strata JSON motion files and computes
+    keyframe indices for each clip. Optionally includes built-in T-pose and
+    A-pose.
 
     Args:
-        pose_dir: Directory containing animation FBX files.
+        pose_dir: Directory containing animation files (FBX, BVH, or JSON).
         keyframes_per_clip: Number of keyframes to sample per animation.
         include_builtins: Whether to include T-pose and A-pose.
 
@@ -525,27 +666,64 @@ def list_poses(
     """
     poses: list[PoseInfo] = [TPOSE_INFO, APOSE_INFO] if include_builtins else []
 
-    # Scan for animation FBX files
     if not pose_dir.is_dir():
         logger.warning("Pose directory does not exist: %s", pose_dir)
         return poses
 
-    fbx_files = sorted(pose_dir.glob("*.fbx"))
-    if not fbx_files:
-        logger.warning("No .fbx files found in pose directory: %s", pose_dir)
+    # --- Strata JSON motion files ---
+    json_files = sorted(pose_dir.glob("*.json"))
+    for json_path in json_files:
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if data.get("skeleton") != "strata_19" or "frames" not in data:
+            continue
+
+        clip_name = json_path.stem.lower().replace(" ", "_")
+        total_frames = len(data["frames"])
+        sample_frames = _compute_sample_frames(total_frames, keyframes_per_clip)
+
+        for frame_offset in sample_frames:
+            poses.append(
+                PoseInfo(
+                    name=f"{clip_name}_frame_{frame_offset:04d}",
+                    source=json_path.name,
+                    frame=frame_offset,
+                )
+            )
+
+        logger.info(
+            "Indexed %s: %d frames, %d keyframes sampled",
+            json_path.name,
+            total_frames,
+            len(sample_frames),
+        )
+
+    # --- FBX and BVH animation files ---
+    anim_files = sorted(
+        p for p in pose_dir.iterdir()
+        if p.suffix.lower() in (".fbx", ".bvh") and p.is_file()
+    )
+    if not anim_files and not json_files:
+        logger.warning("No animation files found in pose directory: %s", pose_dir)
         return poses
 
-    for fbx_path in fbx_files:
-        clip_name = fbx_path.stem.lower().replace(" ", "_")
+    for anim_path in anim_files:
+        clip_name = anim_path.stem.lower().replace(" ", "_")
+        is_bvh = anim_path.suffix.lower() == ".bvh"
 
         # Import temporarily to read frame range
-        anim_armature = _import_animation_fbx(fbx_path)
+        if is_bvh:
+            anim_armature = _import_animation_bvh(anim_path)
+        else:
+            anim_armature = _import_animation_fbx(anim_path)
         if anim_armature is None:
             continue
 
         frame_range = _get_action_frame_range(anim_armature)
         if frame_range is None:
-            logger.warning("No animation data in %s — skipping", fbx_path.name)
+            logger.warning("No animation data in %s — skipping", anim_path.name)
             _cleanup_imported_armature(anim_armature)
             continue
 
@@ -558,7 +736,7 @@ def list_poses(
             poses.append(
                 PoseInfo(
                     name=f"{clip_name}_frame_{absolute_frame:02d}",
-                    source=fbx_path.name,
+                    source=anim_path.name,
                     frame=absolute_frame,
                 )
             )
@@ -566,7 +744,7 @@ def list_poses(
         _cleanup_imported_armature(anim_armature)
         logger.info(
             "Indexed %s: %d frames, %d keyframes sampled",
-            fbx_path.name,
+            anim_path.name,
             total_frames,
             len(sample_frames),
         )
@@ -607,13 +785,32 @@ def apply_pose(
         logger.error("Unknown built-in pose: %s", pose.name)
         return False
 
-    # Animation pose — load the source FBX
-    fbx_path = pose_dir / pose.source
-    if not fbx_path.is_file():
-        logger.error("Animation FBX not found: %s", fbx_path)
+    # Animation pose — load the source file
+    anim_path = pose_dir / pose.source
+    if not anim_path.is_file():
+        logger.error("Animation file not found: %s", anim_path)
         return False
 
-    anim_armature = _import_animation_fbx(fbx_path)
+    # Strata JSON motion files — apply directly without import
+    if anim_path.suffix.lower() == ".json":
+        try:
+            motion_data = json.loads(anim_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.error("Failed to read motion JSON %s: %s", anim_path, exc)
+            return False
+        transferred = _apply_json_motion_pose(armature, motion_data, pose.frame)
+        if transferred == 0:
+            logger.warning("No bones transferred for JSON pose %s", pose.name)
+            return False
+        logger.info("Applied JSON pose %s (%d bones)", pose.name, transferred)
+        return True
+
+    # FBX or BVH — import armature and transfer pose
+    is_bvh = anim_path.suffix.lower() == ".bvh"
+    if is_bvh:
+        anim_armature = _import_animation_bvh(anim_path)
+    else:
+        anim_armature = _import_animation_fbx(anim_path)
     if anim_armature is None:
         return False
 
