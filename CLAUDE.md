@@ -11,7 +11,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined
 | 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 | `training/train_segmentation.py` | Has pipeline + data |
 | 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
 | 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP (31→128→256→128→20) | `training/train_weights.py` | Has pipeline + data |
-| 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | **Not yet built** | Needs pipeline |
+| 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | `training/train_weights.py` (diffusion mode) | Has pipeline + data |
 | 5 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | **Not yet built** | Needs pipeline + data |
 | 6 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
 | 7 | **Back View Generation** | `back_view_generation.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
@@ -206,7 +206,7 @@ Running `training/configs/segmentation_a100_lean.yaml` on Lambda A100. Training 
 
 | Dataset | Examples | Annotations | Source |
 |---------|----------|-------------|--------|
-| `segmentation/` | 1,598 | 22-class seg + draw_order + joints | Mixamo pipeline (50 chars, 50 poses, flat style, front-only) |
+| `segmentation/` | 1,598 | 22-class seg + draw_ordare er + joints | Mixamo pipeline (50 chars, 50 poses, flat style, front-only) |
 | `live2d/` | 844 | 22-class seg + draw_order | Live2D .moc3 renders |
 | `humanrig/` | 11,434 | 22-class seg + joints + weights | HumanRig rendered chars (vertex weight → region) |
 | `unirig/` | ~10K (missing) | 22-class seg | UniRig humanoid subset — **not on A100, skipped** |
@@ -214,7 +214,7 @@ Running `training/configs/segmentation_a100_lean.yaml` on Lambda A100. Training 
 | `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) | SkyTNT anime-segmentation v1+v2 |
 | **Total loaded** | **25,494 train / 3,137 val** | | |
 
-### Segmentation Results (in progress)
+### Segmentation Results (completed)
 
 | Epoch | mIoU | Notes |
 |-------|------|-------|
@@ -223,9 +223,12 @@ Running `training/configs/segmentation_a100_lean.yaml` on Lambda A100. Training 
 | 25 | 0.508 | |
 | 40 | 0.524 | |
 | 50 | 0.532 | |
-| 60 | 0.539 | Still climbing, ~4 min/epoch |
+| 60 | 0.539 | |
+| 80 | 0.545 | |
+| 94 | 0.5453 | Best checkpoint |
+| 100 | 0.543 | Final epoch |
 
-Previous best was 0.264 mIoU with only ~2,442 22-class examples. HumanRig enrichment (11,434 more 22-class masks) drove the 2× improvement.
+**Best: 0.5453 mIoU** (epoch 94, early stopping saved). Previous best was 0.264 mIoU with only ~2,442 22-class examples. HumanRig enrichment (11,434 more 22-class masks) drove the 2× improvement.
 
 ### What's Missing from Training
 
@@ -237,27 +240,27 @@ Previous best was 0.264 mIoU with only ~2,442 22-class examples. HumanRig enrich
 ## Model 1: Segmentation
 What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), draw order depth map, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part.
 
-Score: **0.539 mIoU** (epoch 60/100, March 6 2026 run — still training). Previous: 0.264.
+Score: **0.5453 mIoU** (epoch 94/100, March 6 2026 A100 lean run). Previous: 0.264.
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
 
-Score: 
+Score: **0.001287 mean_offset_error** (epoch 13/80, early stopped at 28, March 6 2026 A100 lean run). 110K training examples, 97.9% presence accuracy.
 
 ## Model 3: Weight Prediction
 What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP, not image-based.
 
-Score: 
+Score: **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy.
 
 ## Model 4: Diffusion Weight Prediction
-Takes the same per-vertex features as model 3 (position, bone distances, etc.) plus encoder features sampled from model 1's segmentation backbone. The idea is that the segmentation model "sees" the character's visual appearance, so sampling those features at each vertex location gives the weight predictor extra context about body proportions. This helps with unusual characters (chibi, elongated limbs, loose clothing) where pure geometry-based weight prediction struggles. Has a training pipeline — will run in the next training.
+Takes the same per-vertex features as model 3 (position, bone distances, etc.) plus encoder features sampled from model 1's segmentation backbone. The idea is that the segmentation model "sees" the character's visual appearance, so sampling those features at each vertex location gives the weight predictor extra context about body proportions. This helps with unusual characters (chibi, elongated limbs, loose clothing) where pure geometry-based weight prediction struggles.
 
-Score:
+Score: **0.089449 MAE** (epoch 30/60, early stopped at 45, March 6 2026 A100 lean run). 54 training examples. Slightly worse than model 3 (0.0894 vs 0.0840) — encoder features don't add enough signal with so few weight examples.
 
 ## Model 5: Inpainting
-U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills. Needs training pipeline + paired occlusion data generated from fbanimehq.
+U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
-Score:
+Score: Training in progress (generating 112K occlusion pairs from fbanimehq, March 6 2026 A100 lean run).
 
 ## Model 6: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
