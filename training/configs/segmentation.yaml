@@ -33,7 +33,8 @@ training:
 
 loss:
   segmentation_weight: 1.0
-  draw_order_weight: 0.5
+  depth_weight: 0.5
+  normals_weight: 0.5
   confidence_weight: 0.1
 
 checkpointing:

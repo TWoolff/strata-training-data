@@ -6,8 +6,9 @@ CLI entry point::
     python training/train_segmentation.py --config training/configs/segmentation.yaml \\
         --resume checkpoints/segmentation/best.pt
 
-Trains on pipeline output with combined segmentation CE + draw order L1 +
-confidence BCE loss. Logs to TensorBoard and saves best/latest checkpoints.
+Trains on pipeline output with combined segmentation CE + depth L1 +
+normals L1 + confidence BCE loss. Logs to TensorBoard and saves best/latest
+checkpoints.
 """
 
 from __future__ import annotations
@@ -105,34 +106,44 @@ def compute_loss(
     """Compute combined multi-head loss.
 
     Args:
-        outputs: Model output dict with ``segmentation``, ``draw_order``,
-            ``confidence`` tensors.
-        targets: Target dict with ``segmentation``, ``draw_order``,
-            ``has_draw_order``, ``confidence_target`` tensors.
+        outputs: Model output dict with ``segmentation``, ``depth``,
+            ``normals``, ``confidence`` tensors.
+        targets: Target dict with ``segmentation``, ``depth``, ``has_depth``,
+            ``normals``, ``has_normals``, ``confidence_target`` tensors.
         class_weights: Per-class CE weights, shape ``[num_classes]``.
-        loss_weights: Dict with ``segmentation_weight``, ``draw_order_weight``,
-            ``confidence_weight`` scalars.
+        loss_weights: Dict with weight scalars for each loss component.
 
     Returns:
         ``(total_loss, component_dict)`` where ``component_dict`` maps loss
         names to their scalar values (for logging).
     """
+    device = outputs["segmentation"].device
+
     # Segmentation: CrossEntropyLoss with class weights
     seg_loss = F.cross_entropy(
         outputs["segmentation"],
         targets["segmentation"],
-        weight=class_weights.to(outputs["segmentation"].device),
+        weight=class_weights.to(device),
         ignore_index=-1,
     )
 
-    # Draw order: L1 loss, only for examples that have draw order data
-    has_do = targets["has_draw_order"]  # [B] bool
-    if has_do.any():
-        do_pred = outputs["draw_order"][has_do]  # [N, 1, H, W]
-        do_target = targets["draw_order"][has_do]
-        do_loss = F.l1_loss(do_pred, do_target)
+    # Depth: L1 loss, only for examples that have Marigold depth labels
+    has_depth = targets["has_depth"]  # [B] bool
+    if has_depth.any():
+        depth_pred = outputs["depth"][has_depth]  # [N, 1, H, W]
+        depth_target = targets["depth"][has_depth]
+        depth_loss = F.l1_loss(depth_pred, depth_target)
     else:
-        do_loss = torch.tensor(0.0, device=outputs["segmentation"].device)
+        depth_loss = torch.tensor(0.0, device=device)
+
+    # Normals: L1 loss, only for examples that have Marigold normal labels
+    has_normals = targets["has_normals"]  # [B] bool
+    if has_normals.any():
+        normals_pred = outputs["normals"][has_normals]  # [N, 3, H, W]
+        normals_target = targets["normals"][has_normals]
+        normals_loss = F.l1_loss(normals_pred, normals_target)
+    else:
+        normals_loss = torch.tensor(0.0, device=device)
 
     # Confidence: BCE loss
     conf_loss = F.binary_cross_entropy(
@@ -142,14 +153,16 @@ def compute_loss(
 
     # Weighted sum
     w_seg = loss_weights.get("segmentation_weight", 1.0)
-    w_do = loss_weights.get("draw_order_weight", 0.5)
+    w_depth = loss_weights.get("depth_weight", 0.5)
+    w_normals = loss_weights.get("normals_weight", 0.5)
     w_conf = loss_weights.get("confidence_weight", 0.1)
 
-    total = w_seg * seg_loss + w_do * do_loss + w_conf * conf_loss
+    total = w_seg * seg_loss + w_depth * depth_loss + w_normals * normals_loss + w_conf * conf_loss
 
     components = {
         "loss/segmentation": float(seg_loss),
-        "loss/draw_order": float(do_loss),
+        "loss/depth": float(depth_loss),
+        "loss/normals": float(normals_loss),
         "loss/confidence": float(conf_loss),
         "loss/total": float(total),
     }
@@ -188,12 +201,14 @@ def adjust_lr(
 
 
 def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
-    """Custom collate that stacks tensors and converts has_draw_order to bool tensor."""
+    """Custom collate that stacks tensors and converts booleans to bool tensors."""
     return {
         "image": torch.stack([b["image"] for b in batch]),
         "segmentation": torch.stack([b["segmentation"] for b in batch]),
-        "draw_order": torch.stack([b["draw_order"] for b in batch]),
-        "has_draw_order": torch.tensor([b["has_draw_order"] for b in batch], dtype=torch.bool),
+        "depth": torch.stack([b["depth"] for b in batch]),
+        "has_depth": torch.tensor([b["has_depth"] for b in batch], dtype=torch.bool),
+        "normals": torch.stack([b["normals"] for b in batch]),
+        "has_normals": torch.tensor([b["has_normals"] for b in batch], dtype=torch.bool),
         "confidence_target": torch.stack([b["confidence_target"] for b in batch]),
     }
 
@@ -315,6 +330,14 @@ def log_sample_overlays(
         pred_vis = torch.tensor(pred_masks[i], dtype=torch.float32) / num_classes
         writer.add_image(f"samples/{i}/gt_mask", gt_vis.unsqueeze(0), epoch)
         writer.add_image(f"samples/{i}/pred_mask", pred_vis.unsqueeze(0), epoch)
+
+        # Log depth prediction
+        depth_pred = outputs["depth"][i].cpu()  # [1, H, W]
+        writer.add_image(f"samples/{i}/depth_pred", depth_pred, epoch)
+
+        # Log normals prediction (shift from [-1,1] to [0,1] for visualization)
+        normals_pred = (outputs["normals"][i].cpu() + 1.0) / 2.0  # [3, H, W]
+        writer.add_image(f"samples/{i}/normals_pred", normals_pred, epoch)
 
 
 # ---------------------------------------------------------------------------

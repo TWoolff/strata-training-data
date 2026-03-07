@@ -6,13 +6,13 @@ Loads training examples from two directory layouts:
 
        dataset/images/{char_id}_pose_{nn}_{style}.png
        dataset/masks/{char_id}_pose_{nn}.png
-       dataset/draw_order/{char_id}_pose_{nn}.png
 
 2. **Per-example layout** (from ingest adapters)::
 
        dataset/{example_id}/image.png
        dataset/{example_id}/segmentation.png
-       dataset/{example_id}/draw_order.png
+       dataset/{example_id}/depth.png       (optional, Marigold LCM)
+       dataset/{example_id}/normals.png     (optional, Marigold LCM)
 
 Pipeline produces 20-class masks (IDs 0-19). The Rust runtime expects
 22 classes (0=bg, 1-19=body, 20=unused, 21=accessory). This dataset maps
@@ -111,7 +111,8 @@ class _Example:
 
     image_path: Path
     mask_path: Path
-    draw_order_path: Path | None
+    depth_path: Path | None
+    normals_path: Path | None
     metadata_path: Path | None
     example_id: str
 
@@ -143,7 +144,6 @@ def _discover_flat(dataset_dir: Path) -> list[_Example]:
     """Discover examples from flat layout (images/ + masks/ subdirs)."""
     images_dir = dataset_dir / "images"
     masks_dir = dataset_dir / "masks"
-    draw_order_dir = dataset_dir / "draw_order"
 
     if not images_dir.is_dir():
         return []
@@ -159,15 +159,12 @@ def _discover_flat(dataset_dir: Path) -> list[_Example]:
             logger.debug("No mask for %s — skipping", img_path.name)
             continue
 
-        draw_order_path = draw_order_dir / f"{mask_stem}.png"
-        if not draw_order_path.exists():
-            draw_order_path = None
-
         examples.append(
             _Example(
                 image_path=img_path,
                 mask_path=mask_path,
-                draw_order_path=draw_order_path,
+                depth_path=None,
+                normals_path=None,
                 metadata_path=None,
                 example_id=stem,
             )
@@ -202,7 +199,8 @@ def _discover_per_example(dataset_dir: Path) -> list[_Example]:
             if not image_path.exists() or not mask_path.exists():
                 continue
 
-            draw_order_path = cand / "draw_order.png"
+            depth_path = cand / "depth.png"
+            normals_path = cand / "normals.png"
             metadata_path = cand / "metadata.json"
 
             # For nested layout, use "parent_view" as example_id (e.g. "00000_front")
@@ -215,7 +213,8 @@ def _discover_per_example(dataset_dir: Path) -> list[_Example]:
                 _Example(
                     image_path=image_path,
                     mask_path=mask_path,
-                    draw_order_path=draw_order_path if draw_order_path.exists() else None,
+                    depth_path=depth_path if depth_path.exists() else None,
+                    normals_path=normals_path if normals_path.exists() else None,
                     metadata_path=metadata_path if metadata_path.exists() else None,
                     example_id=example_id,
                 )
@@ -288,11 +287,18 @@ class SegmentationDataset:
             ex for ex in all_examples if character_id_from_example(ex.example_id) in allowed_chars
         ]
 
+        # Count examples with depth/normals for logging
+        n_depth = sum(1 for ex in self.examples if ex.depth_path is not None)
+        n_normals = sum(1 for ex in self.examples if ex.normals_path is not None)
+
         logger.info(
-            "SegmentationDataset[%s]: %d examples (%d before split filter)",
+            "SegmentationDataset[%s]: %d examples (%d before split filter), "
+            "%d with depth, %d with normals",
             split,
             len(self.examples),
             len(all_examples),
+            n_depth,
+            n_normals,
         )
 
     def __len__(self) -> int:
@@ -302,8 +308,8 @@ class SegmentationDataset:
         """Load and return a single training example.
 
         Returns:
-            Dict with keys: ``image``, ``segmentation``, ``draw_order``,
-            ``has_draw_order``, ``confidence_target``.
+            Dict with keys: ``image``, ``segmentation``, ``depth``,
+            ``has_depth``, ``normals``, ``has_normals``, ``confidence_target``.
         """
         torch = self._torch
         ex = self.examples[index]
@@ -326,28 +332,36 @@ class SegmentationDataset:
         mask_np = np.array(mask, dtype=np.int64)
 
         # Clamp out-of-range class IDs to ignore_index (-1).
-        # Binary fg masks (0/255) and other non-22-class masks get their
-        # foreground pixels ignored by cross_entropy but still contribute
-        # to confidence training via the alpha channel.
         mask_np[mask_np >= NUM_CLASSES] = -1
 
-        # Load draw order (optional)
-        has_draw_order = ex.draw_order_path is not None
-        if has_draw_order:
-            draw_order_img = Image.open(ex.draw_order_path).convert("L")
-            if draw_order_img.size != (res, res):
-                draw_order_img = draw_order_img.resize((res, res), Image.BILINEAR)
-            draw_order_np = np.array(draw_order_img, dtype=np.float32) / 255.0
+        # Load depth (optional, Marigold LCM grayscale uint8)
+        has_depth = ex.depth_path is not None
+        if has_depth:
+            depth_img = Image.open(ex.depth_path).convert("L")
+            if depth_img.size != (res, res):
+                depth_img = depth_img.resize((res, res), Image.BILINEAR)
+            depth_np = np.array(depth_img, dtype=np.float32) / 255.0
         else:
-            draw_order_np = np.zeros((res, res), dtype=np.float32)
+            depth_np = np.zeros((res, res), dtype=np.float32)
+
+        # Load normals (optional, Marigold LCM RGB uint8 encoding [-1,1] as [0,255])
+        has_normals = ex.normals_path is not None
+        if has_normals:
+            normals_img = Image.open(ex.normals_path).convert("RGB")
+            if normals_img.size != (res, res):
+                normals_img = normals_img.resize((res, res), Image.BILINEAR)
+            # Convert from uint8 [0, 255] to float [-1, 1]
+            normals_np = np.array(normals_img, dtype=np.float32) / 255.0 * 2.0 - 1.0  # [H, W, 3]
+        else:
+            normals_np = np.zeros((res, res, 3), dtype=np.float32)
 
         # Convert image to numpy for augmentation
         img_np = np.array(img, dtype=np.float32) / 255.0  # [H, W, 3]
 
         # Augmentations (train split only, if enabled)
         if self.split == "train" and self.config.augment:
-            img_np, mask_np, draw_order_np, alpha = self._augment(
-                img_np, mask_np, draw_order_np, alpha
+            img_np, mask_np, depth_np, normals_np, alpha = self._augment(
+                img_np, mask_np, depth_np, normals_np, alpha
             )
 
         # Confidence target: 1.0 where image has alpha > 0 or mask > 0
@@ -358,14 +372,17 @@ class SegmentationDataset:
         img_tensor = normalize_imagenet(img_tensor)
 
         seg_tensor = torch.from_numpy(mask_np)  # [H, W] int64
-        draw_order_tensor = torch.from_numpy(draw_order_np).unsqueeze(0)  # [1, H, W]
+        depth_tensor = torch.from_numpy(depth_np).unsqueeze(0)  # [1, H, W]
+        normals_tensor = torch.from_numpy(normals_np.transpose(2, 0, 1))  # [3, H, W]
         confidence_tensor = torch.from_numpy(confidence).unsqueeze(0)  # [1, H, W]
 
         return {
             "image": img_tensor,
             "segmentation": seg_tensor,
-            "draw_order": draw_order_tensor,
-            "has_draw_order": has_draw_order,
+            "depth": depth_tensor,
+            "has_depth": has_depth,
+            "normals": normals_tensor,
+            "has_normals": has_normals,
             "confidence_target": confidence_tensor,
         }
 
@@ -377,19 +394,21 @@ class SegmentationDataset:
         self,
         img: np.ndarray,
         mask: np.ndarray,
-        draw_order: np.ndarray,
+        depth: np.ndarray,
+        normals: np.ndarray,
         alpha: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Apply training augmentations.
 
         Args:
             img: ``[H, W, 3]`` float32 image in [0, 1].
             mask: ``[H, W]`` int64 region IDs.
-            draw_order: ``[H, W]`` float32 depth in [0, 1].
+            depth: ``[H, W]`` float32 depth in [0, 1].
+            normals: ``[H, W, 3]`` float32 normals in [-1, 1].
             alpha: ``[H, W]`` uint8 alpha channel.
 
         Returns:
-            Augmented (img, mask, draw_order, alpha).
+            Augmented (img, mask, depth, normals, alpha).
         """
         rng = np.random.default_rng()
 
@@ -397,7 +416,10 @@ class SegmentationDataset:
         if self.config.horizontal_flip and rng.random() < 0.5:
             img = np.flip(img, axis=1).copy()
             mask = flip_mask(mask.astype(np.uint8)).astype(np.int64)
-            draw_order = np.flip(draw_order, axis=1).copy()
+            depth = np.flip(depth, axis=1).copy()
+            normals = np.flip(normals, axis=1).copy()
+            # Flip the X component of normals when horizontally flipping
+            normals[:, :, 0] = -normals[:, :, 0]
             alpha = np.flip(alpha, axis=1).copy()
 
         # Color jitter (image only)
@@ -418,11 +440,11 @@ class SegmentationDataset:
         if rotation > 0 or scale_range != (1.0, 1.0):
             angle = rng.uniform(-rotation, rotation) if rotation > 0 else 0.0
             scale = rng.uniform(scale_range[0], scale_range[1])
-            img, mask, draw_order, alpha = self._affine_transform(
-                img, mask, draw_order, alpha, angle=angle, scale=scale
+            img, mask, depth, normals, alpha = self._affine_transform(
+                img, mask, depth, normals, alpha, angle=angle, scale=scale
             )
 
-        return img, mask, draw_order, alpha
+        return img, mask, depth, normals, alpha
 
     @staticmethod
     def _color_jitter(
@@ -471,18 +493,14 @@ class SegmentationDataset:
     def _affine_transform(
         img: np.ndarray,
         mask: np.ndarray,
-        draw_order: np.ndarray,
+        depth: np.ndarray,
+        normals: np.ndarray,
         alpha: np.ndarray,
         *,
         angle: float,
         scale: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Apply rotation and scale via OpenCV affine transform.
-
-        Args:
-            angle: Rotation angle in degrees.
-            scale: Scale factor.
-        """
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Apply rotation and scale via OpenCV affine transform."""
         import cv2
 
         h, w = img.shape[:2]
@@ -493,7 +511,8 @@ class SegmentationDataset:
         mask = cv2.warpAffine(
             mask.astype(np.float32), mat, (w, h), flags=cv2.INTER_NEAREST, borderValue=0
         ).astype(np.int64)
-        draw_order = cv2.warpAffine(draw_order, mat, (w, h), flags=cv2.INTER_LINEAR, borderValue=0)
+        depth = cv2.warpAffine(depth, mat, (w, h), flags=cv2.INTER_LINEAR, borderValue=0)
+        normals = cv2.warpAffine(normals, mat, (w, h), flags=cv2.INTER_LINEAR, borderValue=0)
         alpha = cv2.warpAffine(alpha, mat, (w, h), flags=cv2.INTER_NEAREST, borderValue=0)
 
-        return img, mask, draw_order, alpha
+        return img, mask, depth, normals, alpha

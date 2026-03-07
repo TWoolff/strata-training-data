@@ -15,8 +15,9 @@ Usage::
 ONNX contracts (must match Rust runtime exactly):
 
 - ``segmentation.onnx``: input ``[1,3,512,512]`` →
-  ``segmentation[1,22,512,512]``, ``draw_order[1,1,512,512]``,
-  ``confidence[1,1,512,512]``
+  ``segmentation[1,22,512,512]``, ``depth[1,1,512,512]``,
+  ``normals[1,3,512,512]``, ``confidence[1,1,512,512]``,
+  ``encoder_features[1,960,64,64]``
 - ``joint_refinement.onnx``: input ``[1,3,512,512]`` →
   ``offsets[40]``, ``confidence[20]``, ``present[20]``
 - ``weight_prediction.onnx`` (weights model): input ``[1,3,512,512]`` →
@@ -63,9 +64,17 @@ class SegmentationWrapper(nn.Module):
         super().__init__()
         self.model = model
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         out = self.model(x)
-        return out["segmentation"], out["draw_order"], out["confidence"]
+        return (
+            out["segmentation"],
+            out["depth"],
+            out["normals"],
+            out["confidence"],
+            out["encoder_features"],
+        )
 
 
 class JointWrapper(nn.Module):
@@ -161,12 +170,14 @@ MODEL_CONFIGS: dict[str, dict] = {
         "model_class": SegmentationModel,
         "wrapper_class": SegmentationWrapper,
         "model_kwargs": {"num_classes": 22, "pretrained_backbone": False},
-        "output_names": ["segmentation", "draw_order", "confidence"],
+        "output_names": ["segmentation", "depth", "normals", "confidence", "encoder_features"],
         "dynamic_axes": {
             "input": {0: "batch"},
             "segmentation": {0: "batch"},
-            "draw_order": {0: "batch"},
+            "depth": {0: "batch"},
+            "normals": {0: "batch"},
             "confidence": {0: "batch"},
+            "encoder_features": {0: "batch"},
         },
         "default_filename": "segmentation.onnx",
     },
@@ -405,18 +416,25 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
 
 
 def _validate_segmentation_outputs(results: list[np.ndarray], names: list[str]) -> None:
-    seg, draw_order, confidence = results
+    seg, depth, normals, confidence, encoder_features = results
     if seg.shape != (1, 22, RESOLUTION, RESOLUTION):
         raise ValueError(f"segmentation shape: expected (1,22,512,512), got {seg.shape}")
-    if draw_order.shape != (1, 1, RESOLUTION, RESOLUTION):
-        raise ValueError(f"draw_order shape: expected (1,1,512,512), got {draw_order.shape}")
+    if depth.shape != (1, 1, RESOLUTION, RESOLUTION):
+        raise ValueError(f"depth shape: expected (1,1,512,512), got {depth.shape}")
+    if normals.shape != (1, 3, RESOLUTION, RESOLUTION):
+        raise ValueError(f"normals shape: expected (1,3,512,512), got {normals.shape}")
     if confidence.shape != (1, 1, RESOLUTION, RESOLUTION):
         raise ValueError(f"confidence shape: expected (1,1,512,512), got {confidence.shape}")
-    # draw_order and confidence should be in [0, 1] (sigmoid)
-    if draw_order.min() < -0.01 or draw_order.max() > 1.01:
-        raise ValueError(f"draw_order out of [0,1] range: [{draw_order.min()}, {draw_order.max()}]")
+    if encoder_features.shape[0] != 1 or encoder_features.shape[2:] != (64, 64):
+        raise ValueError(f"encoder_features shape: expected (1,C,64,64), got {encoder_features.shape}")
+    # depth and confidence should be in [0, 1] (sigmoid)
+    if depth.min() < -0.01 or depth.max() > 1.01:
+        raise ValueError(f"depth out of [0,1] range: [{depth.min()}, {depth.max()}]")
     if confidence.min() < -0.01 or confidence.max() > 1.01:
         raise ValueError(f"confidence out of [0,1] range: [{confidence.min()}, {confidence.max()}]")
+    # normals should be in [-1, 1] (tanh)
+    if normals.min() < -1.01 or normals.max() > 1.01:
+        raise ValueError(f"normals out of [-1,1] range: [{normals.min()}, {normals.max()}]")
 
 
 def _validate_joint_outputs(results: list[np.ndarray], names: list[str]) -> None:

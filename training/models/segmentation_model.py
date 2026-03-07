@@ -1,15 +1,24 @@
 """Multi-head DeepLabV3+ segmentation model for Strata.
 
-Three output heads sharing a MobileNetV3-Large backbone:
+Five output heads sharing a MobileNetV3-Large backbone:
 - **segmentation**: 22-class raw logits ``[B, 22, H, W]``
-- **draw_order**: depth in [0, 1] via sigmoid ``[B, 1, H, W]``
+- **depth**: monocular depth in [0, 1] via sigmoid ``[B, 1, H, W]``
+- **normals**: surface normals in [-1, 1] via tanh ``[B, 3, H, W]``
 - **confidence**: foreground confidence via sigmoid ``[B, 1, H, W]``
+- **encoder_features**: backbone activations for weight prediction ``[B, C, H/8, W/8]``
 
-ONNX contract (from ``strata/src-tauri/src/ai/segmentation.rs``):
+The depth head is trained with Marigold LCM depth labels. The normals head is
+trained with Marigold LCM normal labels. Both are knowledge-distilled from the
+Marigold diffusion model into this lightweight MobileNetV3 student — one forward
+pass produces segmentation + depth + normals.
+
+ONNX contract:
 - Input ``"input"``: ``[1, 3, 512, 512]`` float32
 - Output ``"segmentation"``: ``[1, 22, 512, 512]`` raw logits
-- Output ``"draw_order"``: ``[1, 1, 512, 512]`` sigmoid
+- Output ``"depth"``: ``[1, 1, 512, 512]`` sigmoid
+- Output ``"normals"``: ``[1, 3, 512, 512]`` tanh
 - Output ``"confidence"``: ``[1, 1, 512, 512]`` sigmoid
+- Output ``"encoder_features"``: ``[1, C, 64, 64]`` raw activations
 """
 
 from __future__ import annotations
@@ -24,15 +33,16 @@ from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large
 logger = logging.getLogger(__name__)
 
 NUM_CLASSES: int = 22  # 20 body regions + background + accessory
+ENCODER_FEATURE_SIZE: int = 64  # Downsampled feature map resolution
 
 
-def _make_aux_head(in_channels: int) -> nn.Sequential:
-    """Build a lightweight 2-conv auxiliary head (draw_order or confidence)."""
+def _make_aux_head(in_channels: int, out_channels: int = 1) -> nn.Sequential:
+    """Build a lightweight 2-conv auxiliary head."""
     return nn.Sequential(
         nn.Conv2d(in_channels, 256, kernel_size=3, padding=1, bias=False),
         nn.BatchNorm2d(256),
         nn.ReLU(inplace=True),
-        nn.Conv2d(256, 1, kernel_size=1),
+        nn.Conv2d(256, out_channels, kernel_size=1),
     )
 
 
@@ -64,8 +74,9 @@ class SegmentationModel(nn.Module):
         logger.info("Backbone output channels: %d", backbone_channels)
 
         # Auxiliary heads branch from backbone features
-        self.draw_order_head = _make_aux_head(backbone_channels)
-        self.confidence_head = _make_aux_head(backbone_channels)
+        self.depth_head = _make_aux_head(backbone_channels, out_channels=1)
+        self.normals_head = _make_aux_head(backbone_channels, out_channels=3)
+        self.confidence_head = _make_aux_head(backbone_channels, out_channels=1)
 
     def _detect_backbone_channels(self) -> int:
         """Run a dummy forward pass to detect backbone output channel count."""
@@ -83,14 +94,14 @@ class SegmentationModel(nn.Module):
         return channels
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
-        """Forward pass producing all three output heads.
+        """Forward pass producing all output heads.
 
         Args:
             x: Input tensor ``[B, 3, H, W]``.
 
         Returns:
-            Dict with keys ``"segmentation"``, ``"draw_order"``, ``"confidence"``.
-            All outputs are upsampled to the input spatial resolution.
+            Dict with keys ``"segmentation"``, ``"depth"``, ``"normals"``,
+            ``"confidence"``, ``"encoder_features"``.
         """
         input_shape = x.shape[-2:]
 
@@ -102,12 +113,15 @@ class SegmentationModel(nn.Module):
         seg = self.classifier(backbone_out)
         seg = F.interpolate(seg, size=input_shape, mode="bilinear", align_corners=False)
 
-        # Draw order head
-        draw_order = self.draw_order_head(backbone_out)
-        draw_order = F.interpolate(
-            draw_order, size=input_shape, mode="bilinear", align_corners=False
-        )
-        draw_order = torch.sigmoid(draw_order)
+        # Depth head (Marigold-distilled)
+        depth = self.depth_head(backbone_out)
+        depth = F.interpolate(depth, size=input_shape, mode="bilinear", align_corners=False)
+        depth = torch.sigmoid(depth)
+
+        # Normals head (Marigold-distilled, 3-channel)
+        normals = self.normals_head(backbone_out)
+        normals = F.interpolate(normals, size=input_shape, mode="bilinear", align_corners=False)
+        normals = torch.tanh(normals)
 
         # Confidence head
         confidence = self.confidence_head(backbone_out)
@@ -116,8 +130,18 @@ class SegmentationModel(nn.Module):
         )
         confidence = torch.sigmoid(confidence)
 
+        # Encoder features (downsampled for weight prediction)
+        encoder_features = F.interpolate(
+            backbone_out,
+            size=(ENCODER_FEATURE_SIZE, ENCODER_FEATURE_SIZE),
+            mode="bilinear",
+            align_corners=False,
+        )
+
         return {
             "segmentation": seg,
-            "draw_order": draw_order,
+            "depth": depth,
+            "normals": normals,
             "confidence": confidence,
+            "encoder_features": encoder_features,
         }
