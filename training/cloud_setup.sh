@@ -64,6 +64,7 @@ env_auth = false
 access_key_id = ${BUCKET_ACCESS_KEY}
 secret_access_key = ${BUCKET_SECRET}
 endpoint = fsn1.your-objectstorage.com
+region = fsn1
 acl = private
 RCLONE_EOF
 

@@ -143,17 +143,34 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 6: Generate occlusion pairs for inpainting (if not already done)
 # ---------------------------------------------------------------------------
-echo "[6/8] Generating occlusion pairs for inpainting training..."
-echo "  Source: ./data_cloud/fbanimehq"
-echo "  Log: $LOG_DIR/generate_occlusion.log"
-echo ""
+PAIRS_DIR="./data_cloud/inpainting_pairs"
+PAIRS_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -100 | wc -l)
 
-python -m training.data.generate_occlusion_pairs \
-    --source-dirs ./data_cloud/fbanimehq \
-    --output-dir ./data_cloud/inpainting_pairs \
-    --masks-per-image 3 \
-    --resolution 512 \
-    2>&1 | tee "$LOG_DIR/generate_occlusion.log"
+if [ "$PAIRS_COUNT" -ge 100 ]; then
+    echo "[6/8] Occlusion pairs already exist ($PAIRS_COUNT+ dirs in $PAIRS_DIR), skipping generation."
+else
+    echo "[6/8] Generating occlusion pairs for inpainting training..."
+    echo "  Source: ./data_cloud/fbanimehq"
+    echo "  Max: 15,000 source images × 3 masks = ~45K pairs"
+    echo "  Log: $LOG_DIR/generate_occlusion.log"
+    echo ""
+
+    python -m training.data.generate_occlusion_pairs \
+        --source-dirs ./data_cloud/fbanimehq \
+        --output-dir "$PAIRS_DIR" \
+        --masks-per-image 3 \
+        --resolution 512 \
+        --max-images 15000 \
+        2>&1 | tee "$LOG_DIR/generate_occlusion.log"
+
+    # Verify pairs were actually written to disk (disk space can cause silent failures)
+    VERIFY_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
+    echo "  Verification: $VERIFY_COUNT pair directories on disk"
+    if [ "$VERIFY_COUNT" -lt 1000 ]; then
+        echo "  WARNING: Very few pairs generated — check disk space (df -h)"
+        df -h .
+    fi
+fi
 
 echo ""
 echo "  Occlusion pair generation complete."

@@ -225,7 +225,17 @@ def process_image(
 
 
 def discover_images(source_dir: Path) -> list[Path]:
-    """Find all PNG/JPG images in a directory (recursive)."""
+    """Find character images in a Strata dataset directory.
+
+    Prefers ``image.png`` inside per-example subdirectories.  Falls back to
+    all PNG/JPG files only when no ``image.png`` files are found (flat layout).
+    """
+    # Prefer Strata-format: each subdir has image.png
+    strata_images = sorted(source_dir.glob("*/image.png"))
+    if strata_images:
+        return strata_images
+
+    # Fallback: flat directory of images
     images = []
     for ext in ("*.png", "*.jpg", "*.jpeg"):
         images.extend(source_dir.rglob(ext))
