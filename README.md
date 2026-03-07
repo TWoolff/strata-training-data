@@ -2,7 +2,7 @@
 
 Pipeline for generating labeled training data for 6 ONNX AI models that understand 2D illustrated characters — segmenting body regions, predicting skeleton joints, estimating skinning weights, inpainting occluded regions, and synthesizing novel views.
 
-![Benchmark overview — 7 test characters across all model outputs](output/training01_overview.png)
+![Benchmark overview — 7 test characters across all model outputs](docs/training01_overview.png)
 *Columns: Original | Segmentation (22 regions) | Joint Prediction (20 bones) | Draw Order | Surface Normals | Depth*
 
 ## Models
