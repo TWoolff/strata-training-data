@@ -1,40 +1,37 @@
 # Strata Synthetic Data Pipeline
 
-Blender-based pipeline that generates labeled training data for Strata's 7 ONNX AI models. Also houses animation intelligence scripts and curated metadata for animation training. Runs independently of the Strata codebase.
+Blender-based pipeline that generates labeled training data for Strata's 6 ONNX AI models. Also houses animation intelligence scripts and curated metadata for animation training. Runs independently of the Strata codebase.
 
-## Strata's 7 ONNX Models
+## Strata's 6 ONNX Models
 
-Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined in `src-tauri/src/ai/runtime.rs`:
+Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined in `src-tauri/src/ai/runtime.rs`:
 
 | # | Model | ONNX File | Architecture | Training Pipeline | Status |
 |---|-------|-----------|-------------|-------------------|--------|
 | 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 (multi-head: seg + depth + normals) | `training/train_segmentation.py` | Has pipeline + data |
 | 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
-| 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP (31→128→256→128→20) | `training/train_weights.py` | Has pipeline + data |
-| 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | `training/train_weights.py` (diffusion mode) | Has pipeline + data |
-| 5 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline, broken data loader |
-| 6 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
-| 7 | **Back View Generation** | `back_view_generation.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
+| 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP with optional encoder features (31→128→256→128→20, +encoder branch) | `training/train_weights.py` | Has pipeline + data |
+| 4 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline, broken data loader |
+| 5 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
+| 6 | **Novel View Synthesis** | `novel_view.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
 
 ### Model Details
 
-**1. Segmentation** — Input: [1,3,512,512] image. Outputs: 22-class body region logits + depth map (sigmoid, trained from Marigold depth labels) + surface normals [3-channel] + confidence mask + encoder_features (passed to model 4). Fine-tunes from ImageNet MobileNetV3. The depth and normals heads are distilled from Marigold LCM — one forward pass produces segmentation + depth + normals.
+**1. Segmentation** — Input: [1,3,512,512] image. Outputs: 22-class body region logits + depth map (sigmoid, trained from Marigold depth labels) + surface normals [3-channel] + confidence mask + encoder_features (passed to model 3). Fine-tunes from ImageNet MobileNetV3. The depth and normals heads are distilled from Marigold LCM — one forward pass produces segmentation + depth + normals.
 
 **2. Joint Refinement** — Input: [1,3,512,512] image. Outputs: [1,2,20] joint offsets (dx-first layout) + [1,20] confidence + [1,20] presence. Fine-tunes from ImageNet MobileNetV3. Falls back to geometric predictions if unavailable.
 
-**3. Weight Prediction** — Input: [1,31,2048,1] vertex features (position, bone distances, heat diffusion, region label). Outputs: [1,20,2048,1] per-bone weights + [1,1,2048,1] confidence. MLP trained from scratch (no pretrained backbone).
+**3. Weight Prediction** — Input A (always): [1,31,2048,1] vertex features (position, bone distances, heat diffusion, region label). Input B (optional): encoder features from model 1, bilinearly sampled at vertex positions. Outputs: [1,20,2048,1] per-bone weights + [1,1,2048,1] confidence. Single MLP with an optional encoder feature branch — encoder features are projected and concatenated with vertex features. During training, the encoder branch is randomly dropped (entire-branch dropout) so the model learns to work with or without visual context. At inference, Strata passes encoder features when available (improves accuracy for unusual proportions like chibi, elongated limbs, loose clothing) or zeros when not. Replaces the former separate weight_prediction.onnx and diffusion_weight_prediction.onnx.
 
-**4. Diffusion Weight Prediction** — Dual-input variant of model 3. Takes vertex features + bilinearly sampled encoder features from model 1's segmentation backbone. Improves weight prediction for unusual proportions (chibi, elongated limbs, loose clothing). **Training pipeline needed.**
+**4. Inpainting** — U-Net that fills occluded body regions in 2D paintings. Fallback: EdgeExtend (dilates visible edge pixels). **Training pipeline + paired data needed.**
 
-**5. Inpainting** — U-Net that fills occluded body regions in 2D paintings. Fallback: EdgeExtend (dilates visible edge pixels). **Training pipeline + paired data needed.**
+**5. Texture Inpainting** — Diffusion model that fills unobserved texture regions when generating 3D mesh. **Training pipeline + data needed.**
 
-**6. Texture Inpainting** — Diffusion model that fills unobserved texture regions when generating 3D mesh. **Training pipeline + data needed.**
-
-**7. Back View Generation** — Multi-view conditioned diffusion model. Generates back view from front + 3/4 view. Fallback: PaletteFill (mirror + color adjustment). **Training pipeline + multi-view data needed.**
+**6. Novel View Synthesis** — Multi-view conditioned diffusion model. Generates any unseen view (back, side, 3/4, etc.) from one or more reference views. Fallback: PaletteFill (mirror + color adjustment). **Training pipeline + multi-view data needed.**
 
 ### Training Coverage
 
-Models 1-3 have complete training pipelines with configs for local (4070 Ti), lean A100, and full A100 runs. Models 4-7 still need training pipelines built in this repo. All models are bundled in `../strata/src-tauri/models/` (~55MB total) and loaded lazily via the `ort` ONNX runtime crate.
+Models 1-3 have complete training pipelines with configs for local (4070 Ti), lean A100, and full A100 runs. Models 4-6 still need training pipelines built in this repo. All models are bundled in `../strata/src-tauri/models/` (~55MB total) and loaded lazily via the `ort` ONNX runtime crate.
 
 ## What This Project Does
 
@@ -210,7 +207,7 @@ Each training run follows this automated pattern:
 3. **One command** — `training/run_second.sh` (or run_third.sh, etc.) handles everything:
    - Seg enrichment (pseudo-label unlabeled datasets with trained Model 1)
    - Normals enrichment (Marigold surface normals on small datasets)
-   - Train all models (seg → joints → weights → diffusion weights → inpainting → ONNX export)
+   - Train all models (seg → joints → weights → inpainting → ONNX export)
    - Upload checkpoints, ONNX models, logs, and enriched data back to bucket
 4. **Destroy instance** — everything is safe in the bucket
 5. **Download to Mac** — `rclone copy` checkpoints + ONNX models
@@ -222,14 +219,14 @@ Each training run follows this automated pattern:
 |--------|---------|
 | `training/cloud_setup.sh lean` | Set up A100: install deps, configure rclone, download data |
 | `training/run_second.sh` | Complete second run: enrich → train → upload |
-| `training/train_all.sh lean` | Train all 5 models sequentially + ONNX export |
+| `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
 | `run_normals_enrich.py` | Enrich datasets with surface normals (Marigold LCM) |
 | `run_benchmark.py` | Benchmark all models on 7 Gemini test characters |
 
 ### Benchmark Test Set
 
-7 curated Gemini-generated character images at `/Volumes/TAMWoolff/data/preprocessed/gemini/` (druid, golem, knight, rogue, samurai, sorceres, spacemarine). `run_benchmark.py` produces a 5-column overview grid (Original | Segmentation | Joints | Draw Order | Surface Normals) saved as `output/trainingNN_overview.png`. Auto-increments run number. Use `--no-normals` for faster runs.
+7 curated Gemini-generated character images at `/Volumes/TAMWoolff/data/preprocessed/gemini/` (druid, golem, knight, rogue, samurai, sorceres, spacemarine). `run_benchmark.py` produces a 6-column overview grid (Original | Segmentation | Joints | Draw Order | Surface Normals | Depth) saved as `output/trainingNN_overview.png`. Auto-increments run number. Use `--no-normals` / `--no-depth` for faster runs.
 
 ### Surface Normals (Marigold)
 
@@ -237,7 +234,7 @@ All 2D image datasets should include `normals.png` — surface normal maps gener
 
 ## First Training Run (March 5-7 2026, A100 Lean) — COMPLETE
 
-All 5 models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX models, and logs uploaded to bucket + downloaded locally. Instance destroyed.
+All models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX models, and logs uploaded to bucket + downloaded locally. Instance destroyed.
 
 ### Training Data (first run)
 
@@ -274,26 +271,25 @@ What it does: Takes a 512×512 character image → predicts 2D positions of 20 s
 Score: **0.001287 mean_offset_error** (epoch 13/80, early stopped at 28, March 6 2026 A100 lean run). 110K training examples, 97.9% presence accuracy.
 
 ## Model 3: Weight Prediction
-What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP, not image-based.
+What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) + optionally encoder features from Model 1's segmentation backbone → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP with an optional encoder feature branch. When encoder features are available (sampled at vertex positions from the segmentation model), they provide visual context about body proportions — improving accuracy for unusual characters (chibi, elongated limbs, loose clothing). The encoder branch uses dropout during training so the model works with or without visual context.
 
-Score: **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy. Now have ~26.5K weight examples (HumanRig 11,434 + UniRig 14,950) for next run.
+Previously split into two separate models (weight_prediction.onnx + diffusion_weight_prediction.onnx). Now merged into a single model with optional encoder input.
 
-## Model 4: Diffusion Weight Prediction
-Takes the same per-vertex features as model 3 (position, bone distances, etc.) plus encoder features sampled from model 1's segmentation backbone. The idea is that the segmentation model "sees" the character's visual appearance, so sampling those features at each vertex location gives the weight predictor extra context about body proportions. This helps with unusual characters (chibi, elongated limbs, loose clothing) where pure geometry-based weight prediction struggles.
+Score (run 1, geometry-only): **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy.
+Score (run 1, with encoder features): **0.089449 MAE** (epoch 30/60, early stopped at 45). Slightly worse — encoder features don't add enough signal with so few weight examples.
+Now have ~26.5K weight examples (HumanRig 11,434 + UniRig 14,950) for next run — expect encoder features to help more with diverse data.
 
-Score: **0.089449 MAE** (epoch 30/60, early stopped at 45, March 6 2026 A100 lean run). 54 training examples. Slightly worse than model 3 (0.0894 vs 0.0840) — encoder features don't add enough signal with so few weight examples.
-
-## Model 5: Inpainting
+## Model 4: Inpainting
 U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
 Score: **BROKEN** — first run failed. Occlusion pair generation succeeded (338,395 pairs from fbanimehq) but dataset loader only found 3 examples (data path mismatch). All metrics 0.0000, early stopped at epoch 16. Needs data loader fix before next run.
 
-## Model 6: Texture Inpainting
+## Model 5: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
 
 Score:
 
-## Model 7: Back View Generation
-Multi-view conditioned diffusion model that generates a back view of a character given the front view (and optionally a 3/4 view). Currently Strata falls back to "PaletteFill" (mirror + color adjustment). A trained model would generate an actual back view with proper hair, clothing details, etc. Needs training pipeline + multi-view paired data (no pipeline exists yet).
+## Model 6: Novel View Synthesis
+Multi-view conditioned diffusion model that generates any unseen view (back, side, 3/4, etc.) from one or more reference views. Given a front-facing character painting, it can synthesize the back, sides, and any angle in between — producing consistent hair, clothing, and accessory details across all views. Currently Strata falls back to "PaletteFill" (mirror + color adjustment). Needs training pipeline + multi-view paired data (no pipeline exists yet).
 
 Score:

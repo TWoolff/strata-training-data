@@ -1,6 +1,6 @@
 # Strata Training Data — Checklist
 
-**Last updated:** March 6, 2026 (v17)
+**Last updated:** March 7, 2026 (v18)
 
 ---
 
@@ -8,14 +8,13 @@
 
 | Model | Metric | Score | Training Data | Notes |
 |-------|--------|-------|--------------|-------|
-| **1. Segmentation** | mIoU | 0.5453 | ~6K examples (Mixamo + Live2D with 22-class masks) | Best at epoch 94/100. Needs more illustrated-style masks. |
+| **1. Segmentation** (multi-head: seg + depth + normals) | mIoU | 0.5453 | ~6K examples (Mixamo + Live2D with 22-class masks) | Best at epoch 94/100. Depth + normals heads planned for run 3 (distilled from Marigold). |
 | **2. Joint Refinement** | Mean offset error | 0.001287 | ~142K examples with joints | Excellent |
-| **3. Weight Prediction** | MAE | 0.083958 | 54 examples (Mixamo only!) | Now have ~26.5K from HumanRig + UniRig |
-| **4. Diffusion Weights** | MAE | 0.089449 | 54 examples (Mixamo only!) | Same data limitation. Needs more data to show advantage over model 3. |
-| **5. Inpainting** | L1 | BROKEN (0.0000) | 338K occlusion pairs generated, but loader found only 3 | Data path mismatch — needs fix |
+| **3. Weight Prediction** (merged, optional encoder features) | MAE | 0.0840 (geom) / 0.0894 (w/ encoder) | 54 examples (Mixamo only!) | Now have ~26.5K from HumanRig + UniRig. Models 3+4 merged into single model. |
+| **4. Inpainting** | L1 | BROKEN (0.0000) | 338K occlusion pairs generated, but loader found only 3 | Data path mismatch — needs fix |
 
 **Key findings:**
-- Weight models (3 & 4) trained on only 54 Mixamo examples. HumanRig (11,434) + UniRig (14,950) weight.json now extracted — ~490x more data for next run.
+- Weight model trained on only 54 Mixamo examples. HumanRig (11,434) + UniRig (14,950) weight.json now extracted — ~490x more data for next run. Models 3+4 merged into single model with optional encoder features (branch dropout during training).
 - Inpainting pipeline broken: 338K occlusion pairs generated but dataset loader only found 3 (data path mismatch). All metrics 0.0000. Needs fix.
 - Checkpoints + ONNX + logs uploaded to bucket and downloaded locally. A100 instance destroyed March 7.
 
@@ -238,7 +237,7 @@ rclone copy ./output/unirig_weights/ hetzner:strata-training-data/unirig/ --tran
 
 ### Training Infrastructure
 
-All implemented: dataset loaders, DeepLabV3+ multi-head model, training metrics (mIoU), segmentation/joints/weights/diffusion-weights/inpainting training scripts, ONNX export + validation, evaluation/visualization. Configs for local, lean A100, full A100.
+All implemented: dataset loaders, DeepLabV3+ multi-head model (seg + depth + normals), training metrics (mIoU), segmentation/joints/weights/inpainting training scripts, ONNX export + validation, evaluation/visualization. Configs for local, lean A100, full A100. Models 3+4 merged into single weight prediction model. 6 models total (was 7).
 
 ### Cloud Storage
 
@@ -272,9 +271,9 @@ Hetzner Object Storage: `s3://strata-training-data` (Falkenstein). ~870K+ files,
 - **#190** Improve Live2D fragment-region mapping
 - **#191** Layered Temporal PSD dataset (blocked on access)
 
-### P2 — Future models (6 & 7)
-- **#206** Back view generation: architecture + data
-- **#207** Back view generation: training + ONNX
+### P2 — Future models (5 & 6)
+- **#206** Novel view synthesis: architecture + data (generates all unseen views, not just back)
+- **#207** Novel view synthesis: training + ONNX
 - **#210** Texture inpainting: architecture + data
 - **#211** Texture inpainting: training + ONNX
 
