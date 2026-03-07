@@ -1,8 +1,8 @@
 """Benchmark Strata models on the Gemini test set.
 
 Runs the 7 curated Gemini character images through all available models
-(segmentation, joints, draw order, surface normals) and produces a labeled
-overview grid.
+(segmentation, joints, draw order, surface normals, depth) and produces a
+labeled overview grid.
 
 Usage::
 
@@ -12,8 +12,8 @@ Usage::
     # Explicit name
     python run_benchmark.py --name training02
 
-    # Skip normals (faster, ~6s instead of ~40s)
-    python run_benchmark.py --no-normals
+    # Skip normals/depth (faster)
+    python run_benchmark.py --no-normals --no-depth
 
     # Custom test images (default: external HD gemini folder)
     python run_benchmark.py --input-dir ./my_test_images
@@ -79,6 +79,7 @@ RTMPOSE_DET_URL = "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/o
 RTMPOSE_POSE_URL = "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/rtmpose-m_simcc-body7_pt-body7_420e-256x192-e48f03d0_20230504.zip"
 
 MARIGOLD_NORMALS_MODEL = "prs-eth/marigold-normals-lcm-v0-1"
+MARIGOLD_DEPTH_MODEL = "prs-eth/marigold-depth-lcm-v1-0"
 
 
 def conf_color(conf: float) -> tuple[int, int, int]:
@@ -224,17 +225,49 @@ def run_normals(seg_results: dict[str, dict], device) -> dict[str, Image.Image]:
     return results
 
 
+def run_depth(seg_results: dict[str, dict], device) -> dict[str, Image.Image]:
+    """Run Marigold depth estimation. Returns {name: depth_pil_image}."""
+    import torch
+    from diffusers import MarigoldDepthPipeline
+
+    pipe = MarigoldDepthPipeline.from_pretrained(
+        MARIGOLD_DEPTH_MODEL,
+        torch_dtype=torch.float32,
+    )
+    pipe = pipe.to(device)
+
+    results = {}
+    for name, data in seg_results.items():
+        img = data["img"]
+        rgb = Image.new("RGB", img.size, (128, 128, 128))
+        rgb.paste(img, mask=img.split()[3])
+
+        output = pipe(rgb, num_inference_steps=4)
+        depth_np = output.prediction[0].squeeze()  # [H, W] float32 in [0, 1]
+        depth_uint8 = (depth_np * 255).clip(0, 255).astype(np.uint8)
+
+        # Mask out background
+        alpha = np.array(img)[:, :, 3]
+        depth_uint8[alpha < 10] = 0
+
+        results[name] = Image.fromarray(depth_uint8, "L")
+
+    return results
+
+
 def build_overview(
     names: list[str],
     seg_results: dict[str, dict],
     joint_results: dict[str, dict],
     normal_results: dict[str, Image.Image] | None,
+    depth_results: dict[str, Image.Image] | None,
     run_name: str,
 ) -> Image.Image:
     """Build the overview grid."""
     cell = 512
     has_normals = normal_results is not None and len(normal_results) > 0
-    cols = 5 if has_normals else 4
+    has_depth = depth_results is not None and len(depth_results) > 0
+    cols = 4 + (1 if has_normals else 0) + (1 if has_depth else 0)
     rows = len(names)
     header_h = 36
     footer_h = 24
@@ -247,6 +280,8 @@ def build_overview(
     labels = ["Original", "Segmentation (22-class)", "Joints (RTMPose)", "Draw Order"]
     if has_normals:
         labels.append("Surface Normals")
+    if has_depth:
+        labels.append("Depth (Marigold)")
     for i, label in enumerate(labels):
         x0 = i * cell
         gd.rectangle([x0, 0, x0 + cell - 1, header_h - 1], fill=(40, 40, 50))
@@ -338,10 +373,25 @@ def build_overview(
         do_color[:, :, 3] = 255
         grid.paste(Image.fromarray(do_color, "RGBA"), (cell * 3, y_off))
 
-        # Col 4: Surface normals
+        # Col 4+: Surface normals and depth
+        extra_col = 4
         if has_normals and name in normal_results:
             normal_img = normal_results[name].convert("RGBA")
-            grid.paste(normal_img, (cell * 4, y_off))
+            grid.paste(normal_img, (cell * extra_col, y_off))
+            extra_col += 1
+        if has_depth and name in depth_results:
+            depth_img = depth_results[name].convert("L")
+            # Apply a blue-white colormap for depth visualization
+            d_arr = np.array(depth_img).astype(np.float32) / 255.0
+            d_color = np.zeros((cell, cell, 4), dtype=np.uint8)
+            d_color[:, :, 0] = (d_arr * 200).astype(np.uint8)
+            d_color[:, :, 1] = (d_arr * 220).astype(np.uint8)
+            d_color[:, :, 2] = (80 + d_arr * 175).astype(np.uint8)
+            img_alpha = np.array(img)[:, :, 3]
+            d_color[img_alpha < 10] = [20, 20, 25, 255]
+            d_color[:, :, 3] = 255
+            grid.paste(Image.fromarray(d_color, "RGBA"), (cell * extra_col, y_off))
+            extra_col += 1
 
     # Footer
     gd.rectangle([0, total_h - footer_h, cell * cols, total_h], fill=(40, 40, 50))
@@ -370,6 +420,8 @@ def main():
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--no-normals", action="store_true",
                         help="Skip surface normal estimation (faster).")
+    parser.add_argument("--no-depth", action="store_true",
+                        help="Skip depth estimation (faster).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -399,6 +451,7 @@ def main():
     print(f"  Images: {len(images)} from {args.input_dir}")
     print(f"  Device: {device}")
     print(f"  Normals: {'skip' if args.no_normals else 'Marigold LCM'}")
+    print(f"  Depth:   {'skip' if args.no_depth else 'Marigold LCM'}")
     print()
 
     start = time.monotonic()
@@ -414,8 +467,13 @@ def main():
         print("Running Marigold surface normals...")
         normal_results = run_normals(seg_results, device)
 
+    depth_results = None
+    if not args.no_depth:
+        print("Running Marigold depth estimation...")
+        depth_results = run_depth(seg_results, device)
+
     print("Building overview grid...")
-    grid = build_overview(names, seg_results, joint_results, normal_results, run_name)
+    grid = build_overview(names, seg_results, joint_results, normal_results, depth_results, run_name)
 
     out_path = OUTPUT_DIR / f"{run_name}_overview.png"
     grid.save(out_path)

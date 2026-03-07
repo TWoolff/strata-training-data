@@ -112,9 +112,9 @@ echo "  Upload complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Upload enriched normals back to bucket (so we don't lose them)
+# 5. Upload enriched normals + depth back to bucket (so we don't lose them)
 # ---------------------------------------------------------------------------
-echo "[5/6] Uploading enriched data (normals) back to bucket..."
+echo "[5/6] Uploading enriched data (normals + depth) back to bucket..."
 echo ""
 
 for ds in segmentation live2d curated_diverse humanrig; do
@@ -122,12 +122,12 @@ for ds in segmentation live2d curated_diverse humanrig; do
         echo "  Uploading $ds..."
         rclone copy "./data_cloud/$ds/" "hetzner:strata-training-data/$ds/" \
             --transfers 32 --fast-list --size-only -P \
-            --include "*/normals.png"
+            --include "{*/normals.png,*/depth.png}"
         echo ""
     fi
 done
 
-echo "  Normals upload complete."
+echo "  Normals + depth upload complete."
 echo ""
 
 # ---------------------------------------------------------------------------
