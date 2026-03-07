@@ -43,26 +43,22 @@ MARIGOLD_NORMALS_MODEL = "prs-eth/marigold-normals-lcm-v0-1"
 MARIGOLD_DEPTH_MODEL = "prs-eth/marigold-depth-lcm-v1-0"
 
 
-def load_pipelines(device: torch.device, *, normals: bool = True, depth: bool = True):
-    """Load Marigold pipelines."""
+def load_pipeline(device: torch.device, mode: str):
+    """Load a single Marigold pipeline. mode is 'normals' or 'depth'."""
     dtype = torch.float16 if device.type == "cuda" else torch.float32
-    pipes = {}
-
-    if normals:
+    if mode == "normals":
         from diffusers import MarigoldNormalsPipeline
-        pipes["normals"] = MarigoldNormalsPipeline.from_pretrained(
+        pipe = MarigoldNormalsPipeline.from_pretrained(
             MARIGOLD_NORMALS_MODEL, torch_dtype=dtype,
         ).to(device)
-        logger.info("Loaded Marigold normals pipeline on %s", device)
-
-    if depth:
+    else:
         from diffusers import MarigoldDepthPipeline
-        pipes["depth"] = MarigoldDepthPipeline.from_pretrained(
+        pipe = MarigoldDepthPipeline.from_pretrained(
             MARIGOLD_DEPTH_MODEL, torch_dtype=dtype,
         ).to(device)
-        logger.info("Loaded Marigold depth pipeline on %s", device)
-
-    return pipes
+    pipe.set_progress_bar_config(disable=True)
+    logger.info("Loaded Marigold %s pipeline on %s", mode, device)
+    return pipe
 
 
 def prepare_rgb(image_path: Path) -> tuple[Image.Image, np.ndarray]:
@@ -202,122 +198,132 @@ def main() -> None:
         modes.append("depth")
     print(f"Found {total} examples to enrich in {args.input_dir}")
     print(f"  Modes: {' + '.join(modes)}")
-
-    pipes = load_pipelines(device, normals=do_normals, depth=do_depth)
-
-    # Suppress per-inference progress bars (very spammy with batching)
-    for p in pipes.values():
-        p.set_progress_bar_config(disable=True)
+    print(f"  Strategy: sequential model loading (one model in VRAM at a time)")
 
     batch_size = args.batch_size
     start = time.monotonic()
-    enriched = 0
     failed = 0
 
-    for batch_start in range(0, total, batch_size):
-        batch_dirs = examples[batch_start:batch_start + batch_size]
+    # Process each mode separately so only one model occupies VRAM at a time
+    for mode in modes:
+        is_normals = mode == "normals"
+        out_file = "normals.png" if is_normals else "depth.png"
 
-        # Load all images in this batch
-        batch_rgbs = []
-        batch_alphas = []
-        batch_valid = []  # track which indices loaded OK
-        for example_dir in batch_dirs:
-            try:
-                rgb, alpha = prepare_rgb(example_dir / "image.png")
-                batch_rgbs.append(rgb)
-                batch_alphas.append(alpha)
-                batch_valid.append(True)
-            except Exception as e:
-                logger.warning("Failed to load %s: %s", example_dir.name, e)
-                batch_rgbs.append(None)
-                batch_alphas.append(None)
-                batch_valid.append(False)
-                failed += 1
+        # Filter to examples needing this mode
+        if args.only_missing:
+            mode_examples = [d for d in examples if not (d / out_file).exists()]
+        else:
+            mode_examples = examples
+        mode_total = len(mode_examples)
 
-        # Filter to valid images only
-        valid_indices = [i for i, v in enumerate(batch_valid) if v]
-        if not valid_indices:
+        if mode_total == 0:
+            print(f"\n  {mode}: all done, skipping.")
             continue
-        valid_rgbs = [batch_rgbs[i] for i in valid_indices]
-        valid_alphas = [batch_alphas[i] for i in valid_indices]
-        valid_dirs = [batch_dirs[i] for i in valid_indices]
 
-        # Batch normals
-        normals_results = None
-        if do_normals:
+        print(f"\n  {mode}: {mode_total} images to process...")
+        pipe = load_pipeline(device, mode)
+
+        mode_done = 0
+        mode_start = time.monotonic()
+
+        for batch_start in range(0, mode_total, batch_size):
+            batch_dirs = mode_examples[batch_start:batch_start + batch_size]
+
+            # Load batch images
+            valid = []
+            for d in batch_dirs:
+                try:
+                    rgb, alpha = prepare_rgb(d / "image.png")
+                    valid.append((d, rgb, alpha))
+                except Exception as e:
+                    logger.warning("Failed to load %s: %s", d.name, e)
+                    failed += 1
+
+            if not valid:
+                continue
+
+            dirs, rgbs, alphas = zip(*valid)
+
+            # Run inference
             try:
-                normals_results = predict_normals_batch(pipes["normals"], valid_rgbs, valid_alphas, batch_size=batch_size)
+                if is_normals:
+                    results = predict_normals_batch(pipe, list(rgbs), list(alphas), batch_size=batch_size)
+                else:
+                    results = predict_depth_batch(pipe, list(rgbs), list(alphas), batch_size=batch_size)
             except Exception as e:
-                logger.warning("Normals batch failed (batch %d): %s", batch_start, e)
-                # Fallback to single-image
-                normals_results = []
-                for rgb, alpha in zip(valid_rgbs, valid_alphas):
+                logger.warning("Batch failed at %d: %s — falling back to single", batch_start, e)
+                results = []
+                predict_fn = predict_normals if is_normals else predict_depth
+                for rgb, alpha in zip(rgbs, alphas):
                     try:
-                        normals_results.append(predict_normals(pipes["normals"], rgb, alpha))
+                        results.append(predict_fn(pipe, rgb, alpha))
                     except Exception as e2:
-                        logger.warning("Normals single fallback failed: %s", e2)
-                        normals_results.append(None)
+                        logger.warning("Single fallback failed: %s", e2)
+                        results.append(None)
 
-        # Batch depth
-        depth_results = None
-        if do_depth:
-            try:
-                depth_results = predict_depth_batch(pipes["depth"], valid_rgbs, valid_alphas, batch_size=batch_size)
-            except Exception as e:
-                logger.warning("Depth batch failed (batch %d): %s", batch_start, e)
-                depth_results = []
-                for rgb, alpha in zip(valid_rgbs, valid_alphas):
-                    try:
-                        depth_results.append(predict_depth(pipes["depth"], rgb, alpha))
-                    except Exception as e2:
-                        logger.warning("Depth single fallback failed: %s", e2)
-                        depth_results.append(None)
+            # Save results
+            for j, d in enumerate(dirs):
+                if results[j] is None:
+                    failed += 1
+                    continue
+                try:
+                    if is_normals:
+                        Image.fromarray(results[j]).save(d / out_file)
+                    else:
+                        Image.fromarray(results[j], "L").save(d / out_file)
+                    mode_done += 1
+                except Exception as e:
+                    logger.warning("Failed saving %s: %s", d.name, e)
+                    failed += 1
 
-        # Save results
-        for j, example_dir in enumerate(valid_dirs):
-            try:
-                if normals_results and normals_results[j] is not None:
-                    if not (args.only_missing and (example_dir / "normals.png").exists()):
-                        Image.fromarray(normals_results[j]).save(example_dir / "normals.png")
+            processed = min(batch_start + len(batch_dirs), mode_total)
+            if processed % args.batch_log < batch_size or processed == mode_total:
+                elapsed = time.monotonic() - mode_start
+                speed = mode_done / elapsed if elapsed > 0 else 0
+                logger.info(
+                    "  %s: %d/%d done (%.1f img/s)",
+                    mode, processed, mode_total, speed,
+                )
 
-                if depth_results and depth_results[j] is not None:
-                    if not (args.only_missing and (example_dir / "depth.png").exists()):
-                        Image.fromarray(depth_results[j], "L").save(example_dir / "depth.png")
+        # Free VRAM before loading next model
+        del pipe
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elapsed = time.monotonic() - mode_start
+        print(f"  {mode}: {mode_done} done in {elapsed:.0f}s ({mode_done / elapsed:.1f} img/s)")
 
-                # Update metadata
-                meta_path = example_dir / "metadata.json"
-                if meta_path.exists():
-                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                    if do_normals:
-                        meta["has_normals"] = True
-                        meta["normals_source"] = "marigold_lcm_v0.1"
-                    if do_depth:
-                        meta["has_depth"] = True
-                        meta["depth_source"] = "marigold_depth_lcm_v1.0"
-                    meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-
-                enriched += 1
-            except Exception as e:
-                logger.warning("Failed saving %s: %s", example_dir.name, e)
-                failed += 1
-
-        processed = min(batch_start + len(batch_dirs), total)
-        if processed % args.batch_log < batch_size or processed == total:
-            elapsed = time.monotonic() - start
-            speed = enriched / elapsed if elapsed > 0 else 0
-            logger.info(
-                "Progress: %d/%d — %d enriched, %d failed (%.1f img/s)",
-                processed, total, enriched, failed, speed,
-            )
+    # Update metadata for all completed examples (single pass)
+    print("\nUpdating metadata...")
+    meta_updated = 0
+    for d in examples:
+        meta_path = d / "metadata.json"
+        if not meta_path.exists():
+            continue
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            changed = False
+            if do_normals and (d / "normals.png").exists():
+                if not meta.get("has_normals"):
+                    meta["has_normals"] = True
+                    meta["normals_source"] = "marigold_lcm_v0.1"
+                    changed = True
+            if do_depth and (d / "depth.png").exists():
+                if not meta.get("has_depth"):
+                    meta["has_depth"] = True
+                    meta["depth_source"] = "marigold_depth_lcm_v1.0"
+                    changed = True
+            if changed:
+                meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+                meta_updated += 1
+        except Exception:
+            pass
+    print(f"  Updated {meta_updated} metadata files.")
 
     elapsed = time.monotonic() - start
     print(f"\nEnrichment complete ({' + '.join(modes)}):")
-    print(f"  Enriched:  {enriched}")
     print(f"  Failed:    {failed}")
     print(f"  Total:     {total}")
     print(f"  Elapsed:   {elapsed:.1f}s")
-    if enriched > 0:
-        print(f"  Speed:     {enriched / elapsed:.1f} img/s")
 
 
 if __name__ == "__main__":
