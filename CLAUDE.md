@@ -12,7 +12,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined
 | 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
 | 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP (31→128→256→128→20) | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | `training/train_weights.py` (diffusion mode) | Has pipeline + data |
-| 5 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | **Not yet built** | Needs pipeline + data |
+| 5 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline, broken data loader |
 | 6 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
 | 7 | **Back View Generation** | `back_view_generation.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
 
@@ -190,52 +190,36 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~
 | `animerun_segment/` | 11,276 | 628 MiB | AnimeRun segment labels |
 | `conr/` | ~7,269 | ~580 MiB | CoNR multi-view anime character sheets |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
-| `humanrig/` | 137,209 | 5.6 GiB | HumanRig rendered chars + joints + weights |
+| `humanrig/` | 148,643+ | 5.6+ GiB | HumanRig rendered chars + joints + weights (incl. 11,434 weight.json) |
 | `ingest/vroid_lite/` | 9,302 | 771 MiB | VRoid Lite CC0 characters |
 | `instaorder/` | ~11,868 | ~1.5 GiB | InstaOrder draw order maps (val split) |
 | `live2d/` | 3,587 | 212 MiB | Live2D .moc3 rendered models |
+| `nova_human/` | ~40K | ~2.5 GiB | NOVA-Human ortho views + RTMPose joints |
 | `segmentation/` | 12,216 | 599 MiB | Mixamo pipeline segmentation output |
-| `unirig/` | 66,030 | 42.6 GiB | UniRig rigged meshes |
+| `unirig/` | 66,030+ | 42.6+ GiB | UniRig rigged meshes (+ 14,950 weight.json pending upload) |
 
 
-## Current Training Run (March 6 2026, A100 Lean)
+## First Training Run (March 5-7 2026, A100 Lean) — COMPLETE
 
-Running `training/configs/segmentation_a100_lean.yaml` on Lambda A100. Training all 3 models sequentially via `train_all.sh lean`.
+All 5 models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX models, and logs uploaded to bucket + downloaded locally. Instance destroyed.
 
-### Training Data (on A100 at `data_cloud/`)
+### Training Data (first run)
 
-| Dataset | Examples | Annotations | Source |
-|---------|----------|-------------|--------|
-| `segmentation/` | 1,598 | 22-class seg + draw_ordare er + joints | Mixamo pipeline (50 chars, 50 poses, flat style, front-only) |
-| `live2d/` | 844 | 22-class seg + draw_order | Live2D .moc3 renders |
-| `humanrig/` | 11,434 | 22-class seg + joints + weights | HumanRig rendered chars (vertex weight → region) |
-| `unirig/` | ~10K (missing) | 22-class seg | UniRig humanoid subset — **not on A100, skipped** |
-| `curated_diverse/` | 748 | fg/bg mask + draw_order (Depth Anything) | Hand-picked diverse characters |
-| `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) | SkyTNT anime-segmentation v1+v2 |
-| **Total loaded** | **25,494 train / 3,137 val** | | |
+| Dataset | Examples | Annotations |
+|---------|----------|-------------|
+| `segmentation/` | 1,598 | 22-class seg + draw_order + joints |
+| `live2d/` | 844 | 22-class seg + draw_order |
+| `humanrig/` | 11,434 | 22-class seg + joints + weights |
+| `curated_diverse/` | 748 | fg/bg mask + draw_order |
+| `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) |
+| **Total loaded** | **25,494 train / 3,137 val** | |
 
-### Segmentation Results (completed)
+### What's New for Second Run
 
-| Epoch | mIoU | Notes |
-|-------|------|-------|
-| 1 | 0.270 | Warm-up |
-| 10 | 0.481 | Fast improvement |
-| 25 | 0.508 | |
-| 40 | 0.524 | |
-| 50 | 0.532 | |
-| 60 | 0.539 | |
-| 80 | 0.545 | |
-| 94 | 0.5453 | Best checkpoint |
-| 100 | 0.543 | Final epoch |
-
-**Best: 0.5453 mIoU** (epoch 94, early stopping saved). Previous best was 0.264 mIoU with only ~2,442 22-class examples. HumanRig enrichment (11,434 more 22-class masks) drove the 2× improvement.
-
-### What's Missing from Training
-
-- **UniRig** (~10K examples) — raw data deleted from external HD, needs re-download
-- **NOVA-Human** (10K chars, ~41K ortho views) — ingesting locally with RTMPose joints + Depth Anything draw order enrichment. Will upload to bucket after completion.
-- **Multi-angle Mixamo** — existing data is front-only, flat-only. Re-render with 5 angles × 6 styles when external HD (with 2K Mixamo FBX poses) is available.
-- **Quaternius** (Universal Base Characters) — 10 UE-skeleton chars, can re-download and render with proper poses later.
+- **Weight data: 54 → ~26.5K examples** — HumanRig (11,434) + UniRig (14,950) weight.json extracted
+- **NOVA-Human** (~40K ortho views with RTMPose joints) — uploaded to bucket
+- **Inpainting data loader fix needed** — occlusion pairs generated (338K) but loader found only 3 examples
+- **UniRig weights** — 14,950 converted (pending upload to bucket)
 
 ## Model 1: Segmentation
 What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), draw order depth map, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part.
@@ -250,7 +234,7 @@ Score: **0.001287 mean_offset_error** (epoch 13/80, early stopped at 28, March 6
 ## Model 3: Weight Prediction
 What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP, not image-based.
 
-Score: **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy.
+Score: **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy. Now have ~26.5K weight examples (HumanRig 11,434 + UniRig 14,950) for next run.
 
 ## Model 4: Diffusion Weight Prediction
 Takes the same per-vertex features as model 3 (position, bone distances, etc.) plus encoder features sampled from model 1's segmentation backbone. The idea is that the segmentation model "sees" the character's visual appearance, so sampling those features at each vertex location gives the weight predictor extra context about body proportions. This helps with unusual characters (chibi, elongated limbs, loose clothing) where pure geometry-based weight prediction struggles.
@@ -260,7 +244,7 @@ Score: **0.089449 MAE** (epoch 30/60, early stopped at 45, March 6 2026 A100 lea
 ## Model 5: Inpainting
 U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
-Score: Training in progress (generating 112K occlusion pairs from fbanimehq, March 6 2026 A100 lean run).
+Score: **BROKEN** — first run failed. Occlusion pair generation succeeded (338,395 pairs from fbanimehq) but dataset loader only found 3 examples (data path mismatch). All metrics 0.0000, early stopped at epoch 16. Needs data loader fix before next run.
 
 ## Model 6: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).

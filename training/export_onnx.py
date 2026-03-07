@@ -9,7 +9,7 @@ Usage::
     python training/export_onnx.py --model segmentation --checkpoint best.pt --output seg.onnx
     python training/export_onnx.py --model joints --checkpoint best.pt --output joints.onnx
     python training/export_onnx.py --model weights --checkpoint best.pt --output weights.onnx
-    python training/export_onnx.py --model weights_vertex --checkpoint best.pt --output wv.onnx
+    python training/export_onnx.py --model weights_vertex --checkpoint best.pt --output wp.onnx
     python training/export_onnx.py --all --output-dir ./models/
 
 ONNX contracts (must match Rust runtime exactly):
@@ -19,9 +19,9 @@ ONNX contracts (must match Rust runtime exactly):
   ``confidence[1,1,512,512]``
 - ``joint_refinement.onnx``: input ``[1,3,512,512]`` →
   ``offsets[40]``, ``confidence[20]``, ``present[20]``
-- ``weight_prediction.onnx``: input ``[1,3,512,512]`` →
+- ``weight_prediction.onnx`` (weights model): input ``[1,3,512,512]`` →
   ``weights[1,20,N,1]``, ``confidence[1,1,N,1]``
-- ``weight_prediction_vertex.onnx``: input ``[1,31,2048,1]`` →
+- ``weight_prediction.onnx`` (weights_vertex model): input ``[1,31,2048,1]`` →
   ``weights[1,20,2048,1]``, ``confidence[1,1,2048,1]``
 """
 
@@ -202,7 +202,7 @@ MODEL_CONFIGS: dict[str, dict] = {
             "weights": {0: "batch", 2: "vertices"},
             "confidence": {0: "batch", 2: "vertices"},
         },
-        "default_filename": "weight_prediction_vertex.onnx",
+        "default_filename": "weight_prediction.onnx",
         "input_shape": (1, 31, 2048, 1),
     },
     "diffusion_weights": {
@@ -304,12 +304,23 @@ def export_model(
         do_constant_folding=True,
     )
 
-    # Check the ONNX model is well-formed
+    # Check the ONNX model is well-formed and ensure single-file output
     import onnx
 
-    onnx_model = onnx.load(str(output_path))
+    onnx_model = onnx.load(str(output_path), load_external_data=True)
     onnx.checker.check_model(onnx_model)
     logger.info("ONNX model check passed for %s", model_name)
+
+    # Force single self-contained .onnx file (no .onnx.data sidecar).
+    # onnx.load with load_external_data=True pulls all external tensors
+    # into memory; re-saving writes them inline into the protobuf.
+    onnx.save(onnx_model, str(output_path))
+
+    # Clean up any leftover .onnx.data sidecar file
+    data_file = Path(str(output_path) + ".data")
+    if data_file.exists():
+        data_file.unlink()
+        logger.info("Removed external data file: %s", data_file.name)
 
     # Post-export validation
     if validate:

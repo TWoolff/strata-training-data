@@ -200,7 +200,7 @@ python -m training.export_onnx \
 python -m training.export_onnx \
     --model weights_vertex \
     --checkpoint checkpoints/weights/best.pt \
-    --output "$ONNX_DIR/weight_prediction_vertex.onnx" \
+    --output "$ONNX_DIR/weight_prediction.onnx" \
     2>&1 | tee -a "$LOG_DIR/export.log"
 
 # Export diffusion weights (dual-input MLP)

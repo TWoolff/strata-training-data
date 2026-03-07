@@ -289,8 +289,11 @@ def main() -> None:
         images = discover_images(source_dir)
         logger.info("Found %d images in %s", len(images), source_dir)
         for img_path in images:
-            # Use relative path stem as example_id
-            example_id = f"{source_dir.name}_{img_path.stem}"
+            # Use relative path (including parent dirs) as example_id to avoid
+            # collisions when all files are named "image.png" (e.g., FBAnimeHQ)
+            rel = img_path.relative_to(source_dir)
+            parts = list(rel.parent.parts) + [rel.stem]
+            example_id = f"{source_dir.name}_{'_'.join(parts)}"
             all_images.append((example_id, img_path))
 
     if args.max_images > 0:
