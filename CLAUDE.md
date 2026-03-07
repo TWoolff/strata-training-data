@@ -218,7 +218,8 @@ Each training run follows this automated pattern:
 | Script | Purpose |
 |--------|---------|
 | `training/cloud_setup.sh lean` | Set up A100: install deps, configure rclone, download data |
-| `training/run_second.sh` | Complete second run: enrich → train → upload |
+| `training/run_second.sh` | Second run (abandoned): enrich → train → upload |
+| `training/run_third.sh` | Third run: Marigold enrich → train → upload → tar |
 | `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
 | `run_normals_enrich.py` | Enrich datasets with surface normals (Marigold LCM) |
@@ -247,23 +248,36 @@ All models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX mod
 | `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) |
 | **Total loaded** | **25,494 train / 3,137 val** | |
 
-### What's New for Second Run
+## Second Training Run (March 7 2026, A100 Lean) — ABANDONED
 
-- **Weight data: 54 → ~26.5K examples** — HumanRig (11,434) + UniRig (14,950) weight.json extracted
-- **NOVA-Human** (~40K ortho views with RTMPose joints) — uploaded to bucket
-- **Inpainting data loader fix needed** — occlusion pairs generated (338K) but loader found only 3 examples
-- **UniRig weights** — 14,950 converted (pending upload to bucket)
+Ran seg enrichment + Marigold normals/depth on ~5K images, then started segmentation training. Killed early — seg regressed to 0.38 mIoU (vs run 1's 0.545), likely due to noisy pseudo-labeled data. Other models skipped. Enriched datasets re-tarred and uploaded to bucket. Instance destroyed.
+
+Fixes deployed during run 2 (available for run 3):
+- Image discovery in occlusion pair generator fixed (was grabbing seg maps as source images)
+- Pair generation capped at 15K source images (~45K pairs) to avoid filling disk
+- rclone region=fsn1 added to cloud_setup.sh
+- All datasets tar-packed in bucket for faster setup (~30min vs 5h)
+
+### What's New for Third Run
+
+- **Segmentation model v2**: depth + normals heads (Marigold-distilled), replacing draw_order
+- **Weight data: 54 → ~27K examples** — HumanRig (11,434) + UniRig (14,950) + Mixamo (1,598)
+- **Inpainting data loader fixed** — image discovery now uses `glob("*/image.png")` not `rglob("*.png")`
+- **Marigold enrichment on unirig** — ~10K front views getting depth.png + normals.png
+- **PRD for Strata runtime**: `docs/prd-segmentation-model-v2.md` — ONNX contract change documentation
 
 ## Model 1: Segmentation (multi-head: seg + depth + normals)
 What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), pixel-level depth map, 3-channel surface normals, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part, how deep they are, and which direction they face. The depth and normals heads are distilled from Marigold LCM (knowledge distillation: big diffusion model labels → small MobileNetV3 student). One forward pass, three outputs.
 
-Score: **0.5453 mIoU** (epoch 94/100, March 6 2026 A100 lean run). Previous: 0.264.
+Score: **0.5453 mIoU** (run 1, epoch 94/100, March 6 2026). Run 2 regressed to 0.38 (killed early).
 
-### Next run plan (run 3):
-- Add normals head (3-channel output, L1 loss against Marigold normals labels)
-- Retrain depth head using Marigold depth labels instead of draw_order.png
-- ~14K examples with Marigold-quality depth + normals (segmentation, live2d, curated_diverse, humanrig)
-- Goal: depth and normals quality approaching Marigold on the benchmark test set
+### Run 3 changes (code ready, not yet trained):
+- Depth head: retrained with Marigold depth labels (replaces draw_order)
+- Normals head: new 3-channel output (tanh), L1 loss against Marigold normals labels
+- ~14K+ examples with depth.png + normals.png (segmentation, live2d, curated_diverse, humanrig, unirig)
+- ONNX outputs: segmentation, depth, normals, confidence, encoder_features (5 heads)
+- PRD for Strata Rust runtime changes: `docs/prd-segmentation-model-v2.md`
+- Goal: mIoU 0.55+ (recover from run 2), depth + normals quality approaching Marigold
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
@@ -282,7 +296,7 @@ Now have ~26.5K weight examples (HumanRig 11,434 + UniRig 14,950) for next run �
 ## Model 4: Inpainting
 U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
-Score: **BROKEN** — first run failed. Occlusion pair generation succeeded (338,395 pairs from fbanimehq) but dataset loader only found 3 examples (data path mismatch). All metrics 0.0000, early stopped at epoch 16. Needs data loader fix before next run.
+Score: **BROKEN** — run 1 failed. Root cause: `discover_images()` used `rglob("*.png")` which grabbed segmentation masks and depth maps as source images, producing almost no valid pairs. Fixed in commit `011c3ba` — now uses `glob("*/image.png")`. Also capped at 15K source images (~45K pairs). Should work in run 3.
 
 ## Model 5: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
