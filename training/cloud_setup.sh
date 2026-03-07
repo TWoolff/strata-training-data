@@ -79,24 +79,17 @@ TAR_BUCKET="hetzner:strata-training-data/tars"
 RCLONE_FLAGS="--transfers 32 --checkers 64 --fast-list --size-only -P"
 mkdir -p "$DATA_DIR"
 
-# Helper: download tar if available, otherwise fall back to individual files
+# Helper: download and extract tar archive
 download_dataset() {
     local ds="$1"
     local desc="$2"
 
     echo "  $ds ($desc)..."
-
-    # Check if tar exists in bucket
-    if rclone lsf "$TAR_BUCKET/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
-        echo "    → Downloading ${ds}.tar (fast)..."
-        rclone copy "$TAR_BUCKET/${ds}.tar" "$DATA_DIR/_tars/" $RCLONE_FLAGS
-        echo "    → Extracting..."
-        tar xf "$DATA_DIR/_tars/${ds}.tar" -C "$DATA_DIR/"
-        rm -f "$DATA_DIR/_tars/${ds}.tar"
-    else
-        echo "    → No tar archive, downloading individual files..."
-        rclone copy "hetzner:strata-training-data/${ds}/" "$DATA_DIR/${ds}/" $RCLONE_FLAGS
-    fi
+    echo "    → Downloading ${ds}.tar..."
+    rclone copy "$TAR_BUCKET/${ds}.tar" "$DATA_DIR/_tars/" $RCLONE_FLAGS
+    echo "    → Extracting..."
+    tar xf "$DATA_DIR/_tars/${ds}.tar" -C "$DATA_DIR/"
+    rm -f "$DATA_DIR/_tars/${ds}.tar"
     echo ""
 }
 
