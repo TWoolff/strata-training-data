@@ -85,9 +85,9 @@ def predict_normals(pipe, rgb: Image.Image, alpha: np.ndarray) -> np.ndarray:
     return normal_uint8
 
 
-def predict_normals_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray]) -> list[np.ndarray]:
+def predict_normals_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray], batch_size: int = 16) -> list[np.ndarray]:
     """Batch normals prediction. Returns list of uint8 [H, W, 3] normal maps."""
-    output = pipe(rgbs, num_inference_steps=4)
+    output = pipe(rgbs, num_inference_steps=4, batch_size=batch_size)
     results = []
     for i in range(len(rgbs)):
         normal_np = output.prediction[i]
@@ -108,9 +108,9 @@ def predict_depth(pipe, rgb: Image.Image, alpha: np.ndarray) -> np.ndarray:
     return depth_uint8
 
 
-def predict_depth_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray]) -> list[np.ndarray]:
+def predict_depth_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray], batch_size: int = 16) -> list[np.ndarray]:
     """Batch depth prediction. Returns list of uint8 [H, W] depth maps."""
-    output = pipe(rgbs, num_inference_steps=4)
+    output = pipe(rgbs, num_inference_steps=4, batch_size=batch_size)
     results = []
     for i in range(len(rgbs)):
         depth_np = output.prediction[i].squeeze()
@@ -246,7 +246,7 @@ def main() -> None:
         normals_results = None
         if do_normals:
             try:
-                normals_results = predict_normals_batch(pipes["normals"], valid_rgbs, valid_alphas)
+                normals_results = predict_normals_batch(pipes["normals"], valid_rgbs, valid_alphas, batch_size=batch_size)
             except Exception as e:
                 logger.warning("Normals batch failed (batch %d): %s", batch_start, e)
                 # Fallback to single-image
@@ -262,7 +262,7 @@ def main() -> None:
         depth_results = None
         if do_depth:
             try:
-                depth_results = predict_depth_batch(pipes["depth"], valid_rgbs, valid_alphas)
+                depth_results = predict_depth_batch(pipes["depth"], valid_rgbs, valid_alphas, batch_size=batch_size)
             except Exception as e:
                 logger.warning("Depth batch failed (batch %d): %s", batch_start, e)
                 depth_results = []
