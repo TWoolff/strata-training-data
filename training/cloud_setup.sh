@@ -75,8 +75,30 @@ rclone lsd hetzner:strata-training-data/ 2>/dev/null && echo "  Bucket connectio
 # ---------------------------------------------------------------------------
 echo ""
 DATA_DIR="./data_cloud"
+TAR_BUCKET="hetzner:strata-training-data/tars"
 RCLONE_FLAGS="--transfers 32 --checkers 64 --fast-list --size-only -P"
 mkdir -p "$DATA_DIR"
+
+# Helper: download tar if available, otherwise fall back to individual files
+download_dataset() {
+    local ds="$1"
+    local desc="$2"
+
+    echo "  $ds ($desc)..."
+
+    # Check if tar exists in bucket
+    if rclone lsf "$TAR_BUCKET/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
+        echo "    → Downloading ${ds}.tar (fast)..."
+        rclone copy "$TAR_BUCKET/${ds}.tar" "$DATA_DIR/_tars/" $RCLONE_FLAGS
+        echo "    → Extracting..."
+        tar xf "$DATA_DIR/_tars/${ds}.tar" -C "$DATA_DIR/"
+        rm -f "$DATA_DIR/_tars/${ds}.tar"
+    else
+        echo "    → No tar archive, downloading individual files..."
+        rclone copy "hetzner:strata-training-data/${ds}/" "$DATA_DIR/${ds}/" $RCLONE_FLAGS
+    fi
+    echo ""
+}
 
 # --- Core datasets (always downloaded) ---
 echo "[4/5] Downloading training data from Hetzner bucket..."
@@ -87,43 +109,23 @@ else
 fi
 echo ""
 
-echo "  [a] segmentation/ (Mixamo — ~600 MB, 1,598 renders)..."
-rclone copy hetzner:strata-training-data/segmentation/ "$DATA_DIR/segmentation/" $RCLONE_FLAGS
+mkdir -p "$DATA_DIR/_tars"
 
-echo ""
-echo "  [b] live2d/ (~212 MB, 844 examples)..."
-rclone copy hetzner:strata-training-data/live2d/ "$DATA_DIR/live2d/" $RCLONE_FLAGS
-
-echo ""
-echo "  [c] humanrig/ (~5.6 GB, 11,434 examples)..."
-rclone copy hetzner:strata-training-data/humanrig/ "$DATA_DIR/humanrig/" $RCLONE_FLAGS
-
-echo ""
-echo "  [d] anime_seg/ (~3.5 GB, 14,579 examples with joints)..."
-rclone copy hetzner:strata-training-data/anime_seg/ "$DATA_DIR/anime_seg/" $RCLONE_FLAGS
-
-echo ""
-echo "  [e] fbanimehq/ (~11.4 GB, ~101K full-body anime with joints)..."
-rclone copy hetzner:strata-training-data/fbanimehq/ "$DATA_DIR/fbanimehq/" $RCLONE_FLAGS
-
-echo ""
-echo "  [f] curated_diverse/ (~50 MB, 748 diverse 2D drawings with joints)..."
-rclone copy hetzner:strata-training-data/curated_diverse/ "$DATA_DIR/curated_diverse/" $RCLONE_FLAGS
+download_dataset "segmentation"   "Mixamo — ~600 MB, 1,598 renders"
+download_dataset "live2d"         "~212 MB, 844 examples"
+download_dataset "humanrig"       "~5.6 GB, 11,434 examples"
+download_dataset "anime_seg"      "~3.5 GB, 14,579 examples with joints"
+download_dataset "fbanimehq"      "~11.4 GB, ~101K full-body anime with joints"
+download_dataset "curated_diverse" "~50 MB, 748 diverse 2D drawings with joints"
 
 # --- Additional datasets (full mode only) ---
 if [ "$MODE" != "lean" ]; then
-    echo ""
-    echo "  [f] anime_instance_seg/ (~15 GB, ~45K examples)..."
-    rclone copy hetzner:strata-training-data/anime_instance_seg/ "$DATA_DIR/anime_instance_seg/" $RCLONE_FLAGS
-
-    echo ""
-    echo "  [g] instaorder/ (~7 GB, ~96K train+val examples)..."
-    rclone copy hetzner:strata-training-data/instaorder/ "$DATA_DIR/instaorder/" $RCLONE_FLAGS
-
-    # echo ""
-    # echo "  [h] unirig/ (~42.6 GB, 66K files)..."
-    # rclone copy hetzner:strata-training-data/unirig/ "$DATA_DIR/unirig/" $RCLONE_FLAGS
+    download_dataset "anime_instance_seg" "~15 GB, ~45K examples"
+    download_dataset "instaorder"         "~7 GB, ~96K train+val examples"
 fi
+
+# Clean up tar staging dir
+rmdir "$DATA_DIR/_tars" 2>/dev/null || true
 
 echo ""
 echo "  Download complete."
