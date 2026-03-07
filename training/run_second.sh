@@ -70,6 +70,7 @@ for ds in segmentation live2d curated_diverse humanrig; do
         python run_normals_enrich.py \
             --input-dir "./data_cloud/$ds" \
             --only-missing \
+            --batch-size 16 \
             2>&1 | tee "$LOG_DIR/enrich_normals_${ds}.log"
         echo ""
     fi
