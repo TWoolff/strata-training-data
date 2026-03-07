@@ -1,51 +1,70 @@
 # Strata Training Data — Checklist
 
-**Last updated:** March 7, 2026 (v18)
+**Last updated:** March 7, 2026 (v19)
 
 ---
 
-## First A100 Training Results (March 5, 2026)
+## A100 Training Results
+
+### Run 1 (March 5-6, 2026) — COMPLETE
 
 | Model | Metric | Score | Training Data | Notes |
 |-------|--------|-------|--------------|-------|
-| **1. Segmentation** (multi-head: seg + depth + normals) | mIoU | 0.5453 | ~6K examples (Mixamo + Live2D with 22-class masks) | Best at epoch 94/100. Depth + normals heads planned for run 3 (distilled from Marigold). |
-| **2. Joint Refinement** | Mean offset error | 0.001287 | ~142K examples with joints | Excellent |
-| **3. Weight Prediction** (merged, optional encoder features) | MAE | 0.0840 (geom) / 0.0894 (w/ encoder) | 54 examples (Mixamo only!) | Now have ~26.5K from HumanRig + UniRig. Models 3+4 merged into single model. |
-| **4. Inpainting** | L1 | BROKEN (0.0000) | 338K occlusion pairs generated, but loader found only 3 | Data path mismatch — needs fix |
+| **1. Segmentation** (multi-head) | mIoU | **0.5453** | ~6K examples (Mixamo + Live2D with 22-class masks) | Best at epoch 94/100. |
+| **2. Joint Refinement** | Mean offset error | **0.001287** | ~142K examples with joints | Excellent. Early stopped epoch 28. |
+| **3. Weight Prediction** (merged) | MAE | **0.0840** (geom) / 0.0894 (w/ encoder) | 54 examples (Mixamo only!) | Models 3+4 merged into single model. |
+| **4. Inpainting** | L1 | **BROKEN** (0.0000) | 338K pairs generated, loader found 3 | `rglob("*.png")` grabbed seg masks as source images. |
 
-**Key findings:**
-- Weight model trained on only 54 Mixamo examples. HumanRig (11,434) + UniRig (14,950) weight.json now extracted — ~490x more data for next run. Models 3+4 merged into single model with optional encoder features (branch dropout during training).
-- Inpainting pipeline broken: 338K occlusion pairs generated but dataset loader only found 3 (data path mismatch). All metrics 0.0000. Needs fix.
-- Checkpoints + ONNX + logs uploaded to bucket and downloaded locally. A100 instance destroyed March 7.
+### Run 2 (March 7, 2026) — ABANDONED
+
+Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other models skipped. Enriched datasets re-tarred and uploaded to bucket. Instance destroyed.
+
+**Fixes deployed during run 2:**
+- Inpainting image discovery: `glob("*/image.png")` not `rglob("*.png")` (commit `011c3ba`)
+- Pair generation capped at 15K source images (~45K pairs) to avoid filling disk
+- rclone `region=fsn1` added to cloud_setup.sh
+- All datasets tar-packed in bucket (~30min setup vs 5h loose files)
+
+### Run 3 (planned Monday March 10) — Code ready, not yet trained
+
+**What's new:**
+- Segmentation model v2: `draw_order` head replaced by Marigold-distilled `depth` (1-ch sigmoid) + `normals` (3-ch tanh)
+- ONNX outputs: segmentation, depth, normals, confidence, encoder_features (5 heads)
+- Weight data: 54 → ~27K examples (HumanRig 11,434 + UniRig 14,950 + Mixamo 1,598)
+- Marigold enrichment on unirig (~10K front views)
+- Inpainting data loader fixed
+- PRD for Strata Rust runtime: `docs/prd-segmentation-model-v2.md`
+
+**Expected scores:**
+- Segmentation: 0.545 → 0.55+ mIoU (recover + auxiliary depth/normals loss signal)
+- Weights: 0.084 → 0.03-0.05 MAE (~490x more data)
+- Inpainting: actually working (~45K occlusion pairs)
+- Depth + normals: quality approaching Marigold on benchmark characters
 
 ---
 
 ## What's in the Hetzner Bucket
 
-> **Verified March 6, 2026.**
+> **Verified March 7, 2026.** Core training datasets now stored as tar archives in `tars/` prefix. Loose files purged for tarred datasets. `cloud_setup.sh` downloads + extracts tars (~30min vs 5h for loose files).
 
-| Prefix | Files | Size |
-|--------|------:|-----:|
-| `animation/` (incl. 100style) | 18,628 | 66.7 GiB |
-| `anime_instance_seg/` | ~135K | ~15 GiB |
-| `anime_seg/` | ~65K | ~3.5 GiB |
-| `animerun/` | 11,276 | 663 MiB |
-| `animerun_correspondence/` | 19,493 | 930 MiB |
-| `animerun_flow/` | 16,704 | 11.6 GiB |
-| `animerun_linearea/` | 4,236 | 119 MiB |
-| `animerun_segment/` | 11,276 | 628 MiB |
-| `conr/` | ~7,269 | ~580 MiB |
-| `fbanimehq/` | 304,889 | 11.4 GiB |
-| `humanrig/` | 148,643+ | 5.6+ GiB |
-| `ingest/vroid_lite/` | 9,302 | 771 MiB |
-| `instaorder/` | ~11,868 | ~1.5 GiB |
-| `live2d/` | 3,587 | 212 MiB |
-| `nova_human/` | ~40K | ~2.5 GiB |
-| `segmentation/` | 12,216 | 599 MiB |
-| `unirig/` | 66,030+ | 42.6+ GiB |
-| **Total** | **~870K+** | **~166+ GiB** |
+| Prefix | Files | Size | Notes |
+|--------|------:|-----:|-------|
+| `tars/` | 7 | ~36 GiB | segmentation, live2d, humanrig, anime_seg, fbanimehq, curated_diverse, unirig |
+| `animation/` (incl. 100style) | 18,628 | 66.7 GiB | |
+| `anime_instance_seg/` | ~135K | ~15 GiB | Partially uploaded (~45K of 98K) |
+| `animerun/` | 11,276 | 663 MiB | |
+| `animerun_correspondence/` | 19,493 | 930 MiB | |
+| `animerun_flow/` | 16,704 | 11.6 GiB | |
+| `animerun_linearea/` | 4,236 | 119 MiB | |
+| `animerun_segment/` | 11,276 | 628 MiB | |
+| `conr/` | ~7,269 | ~580 MiB | |
+| `ingest/vroid_lite/` | 9,302 | 771 MiB | |
+| `instaorder/` | ~11,868 | ~1.5 GiB | |
+| `nova_human/` | ~40K | ~2.5 GiB | |
+| `checkpoints/` | varies | varies | Run 1 + run 2 checkpoints |
+| **Total** | | **~166+ GiB** | |
 
-> `anime_instance_seg/` partially uploaded (~45K of 98K). `humanrig/` includes 11,434 weight.json files. UniRig weight.json conversion in progress (14,950).
+> Core training datasets (segmentation, live2d, humanrig, anime_seg, fbanimehq, curated_diverse, unirig) are tar-packed. Loose files purged from bucket after tar verified. Includes Marigold-enriched normals.png + depth.png from run 2.
 
 ---
 
@@ -112,14 +131,20 @@
 | Mixamo renders | 105 | Yes | First run used only these 54 |
 | **Total** | **~26,489** | | ~490x improvement over first run |
 
-### Draw Order
+### Depth + Surface Normals (Marigold-distilled)
 
-| Dataset | Examples | Notes |
-|---------|--------:|-------|
-| Mixamo renders | ~5,250 | Per-pixel Z-depth |
-| Live2D composites | 844 | Fragment stacking |
-| InstaOrder (val) | 3,956 | Pairwise depth orderings |
-| **Total** | **~10,050** | Major gap — See-Through will add 9,102 |
+The segmentation model's depth and normals heads are trained against Marigold LCM labels. Any dataset with `depth.png` + `normals.png` provides supervision.
+
+| Dataset | Examples | depth.png | normals.png | Notes |
+|---------|--------:|:---------:|:-----------:|-------|
+| segmentation/ | 1,598 | Yes | Yes | Enriched in run 2 |
+| live2d/ | 844 | Yes | Yes | Enriched in run 2 |
+| curated_diverse/ | 748 | Yes | Yes | Enriched in run 2 |
+| humanrig/ | ~11,434 | Partial | Partial | ~4,800 done in run 2, rest in run 3 |
+| unirig/ | ~10,000 | Pending | Pending | Front views, enriched in run 3 |
+| **Total with labels** | **~14K+** | | | Conditional loss skips missing labels |
+
+Legacy `draw_order.png` still exists in some datasets but is no longer used for training.
 
 ---
 
@@ -128,10 +153,10 @@
 | Gap | Severity | Fix |
 |-----|----------|-----|
 | **22-region masks on illustrated images** | Critical | See-Through (late March 2026): 9,102 models with 19-region masks |
-| **Draw order on illustrations** | Critical | See-Through + Layered Temporal PSD |
-| **Weight prediction data** | Fixed | 54 -> ~26.5K examples (HumanRig + UniRig converters) |
+| **Depth + normals on all datasets** | Medium | Run 3 enriches unirig; humanrig partially done. Conditional loss handles missing. |
+| **Weight prediction data** | Fixed | 54 → ~27K examples (HumanRig + UniRig + Mixamo) |
+| **Inpainting data loader** | Fixed | Image discovery fixed (commit `011c3ba`), capped at 15K source images |
 | **Joints on anime_instance_seg** | Medium | Run RTMPose on remaining ~88K on A100 |
-| **NOVA-Human depth enrichment** | Medium | Run remaining ~30K depth on A100 (OOM on Mac) |
 | **Multi-angle Mixamo renders** | Medium | Re-render 105 chars with more styles + angles |
 
 ---
@@ -237,7 +262,7 @@ rclone copy ./output/unirig_weights/ hetzner:strata-training-data/unirig/ --tran
 
 ### Training Infrastructure
 
-All implemented: dataset loaders, DeepLabV3+ multi-head model (seg + depth + normals), training metrics (mIoU), segmentation/joints/weights/inpainting training scripts, ONNX export + validation, evaluation/visualization. Configs for local, lean A100, full A100. Models 3+4 merged into single weight prediction model. 6 models total (was 7).
+All implemented: dataset loaders, DeepLabV3+ multi-head model (seg + depth + normals + confidence + encoder_features), training metrics (mIoU), segmentation/joints/weights/inpainting training scripts, ONNX export + validation, evaluation/visualization. Configs for local, lean A100, full A100. Models 3+4 merged into single weight prediction model. 6 models total (was 7). Orchestration scripts: `run_second.sh`, `run_third.sh`. Tar-based bucket storage for fast A100 setup.
 
 ### Cloud Storage
 
