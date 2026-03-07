@@ -330,12 +330,26 @@ Dr. Chengze Li, Saint Francis University HK. In contact re: See-Through dataset.
 
 ## Legal Checklist
 
-- [ ] Mixamo: Adobe terms for ML training
-- [ ] UniRig Rig-XL: Objaverse-XL derived, check terms
-- [ ] AnimeRun: CC-BY-NC 4.0 — does Strata's use qualify?
-- [ ] HumanRig: CC-BY-NC-4.0 — non-commercial training use
-- [ ] FBAnimeHQ: Derived from Danbooru — check terms
-- [ ] NOVA-Human: Research use (VRoid Hub derived)
-- [ ] Live2D models: Per-model license in manifest
-- [ ] CMU mocap: Historically permissive, confirm
+Full audit: `docs/license-audit.md`
+
+**Safe (commercial training OK):**
+- [x] anime-seg v1+v2: Apache 2.0
+- [x] CartoonSegmentation: Apache 2.0
+- [x] CMU mocap: Free for all uses
+- [x] 100STYLE: CC-BY 4.0
+- [x] CoNR: CC-BY 4.0
+- [x] VRoid Lite: CC0
+- [x] UniRig / Rig-XL: ODC-BY (Objaverse-XL)
+- [x] InstaOrder: CC-BY-SA 4.0 (model weights not derivative)
+- [x] curated_diverse: AI-generated, no copyright holder
 - [x] LinkTo-Anime: CC-BY-NC-4.0 — permanently excluded
+
+**Needs review:**
+- [ ] Mixamo: Adobe ToS — ML training on renders unclear
+- [ ] Live2D models: Per-model license, needs manifest audit
+- [ ] FBAnimeHQ: Danbooru-derived — high risk, needs legal counsel
+
+**Restricted (CC-BY-NC / research only):**
+- [ ] AnimeRun: CC-BY-NC 4.0 — not used for core model training
+- [ ] HumanRig: CC-BY-NC 4.0 — contact authors for permission
+- [ ] NOVA-Human: Research license (VRoid Hub) — exclude from production
