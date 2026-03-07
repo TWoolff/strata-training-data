@@ -8,7 +8,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined
 
 | # | Model | ONNX File | Architecture | Training Pipeline | Status |
 |---|-------|-----------|-------------|-------------------|--------|
-| 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 | `training/train_segmentation.py` | Has pipeline + data |
+| 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 (multi-head: seg + depth + normals) | `training/train_segmentation.py` | Has pipeline + data |
 | 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
 | 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP (31→128→256→128→20) | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Diffusion Weight Prediction** | `diffusion_weight_prediction.onnx` | Dual-input MLP (vertex features + seg encoder features) | `training/train_weights.py` (diffusion mode) | Has pipeline + data |
@@ -18,7 +18,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 7 ONNX models defined
 
 ### Model Details
 
-**1. Segmentation** — Input: [1,3,512,512] image. Outputs: 22-class body region logits + draw order depth map (sigmoid) + confidence mask + encoder_features (passed to model 4). Fine-tunes from ImageNet MobileNetV3.
+**1. Segmentation** — Input: [1,3,512,512] image. Outputs: 22-class body region logits + depth map (sigmoid, trained from Marigold depth labels) + surface normals [3-channel] + confidence mask + encoder_features (passed to model 4). Fine-tunes from ImageNet MobileNetV3. The depth and normals heads are distilled from Marigold LCM — one forward pass produces segmentation + depth + normals.
 
 **2. Joint Refinement** — Input: [1,3,512,512] image. Outputs: [1,2,20] joint offsets (dx-first layout) + [1,20] confidence + [1,20] presence. Fine-tunes from ImageNet MobileNetV3. Falls back to geometric predictions if unavailable.
 
@@ -100,13 +100,14 @@ Per training example:
 example_001/
 ├── image.png           ← Character render (512×512, RGBA)
 ├── segmentation.png    ← Per-pixel label IDs (grayscale, 0-21)
-├── draw_order.png      ← Per-pixel depth (grayscale, 0=back 255=front)
-├── normals.png         ← Surface normals (RGB, Marigold LCM)
+├── draw_order.png      ← Per-pixel depth (grayscale, 0=back 255=front) — legacy, being replaced by depth.png
+├── depth.png           ← Depth map (grayscale uint8, Marigold LCM) — replaces draw_order as depth ground truth
+├── normals.png         ← Surface normals (RGB uint8, Marigold LCM) — encodes [-1,1] as [0,255]
 ├── joints.json         ← 2D joint positions
-└── metadata.json       ← Source type, style, pose name, camera angle, draw order values
+└── metadata.json       ← Source type, style, pose name, camera angle, enrichment flags
 ```
 
-Draw order is computed from vertex Z-depth relative to camera (Mixamo) or from explicit render order indices (Live2D). Normalized to [0, 1] range per frame.
+Draw order is computed from vertex Z-depth relative to camera (Mixamo) or from explicit render order indices (Live2D). Depth and normals are enriched via Marigold LCM (`run_normals_enrich.py`). The segmentation model's depth head will be retrained using depth.png labels in run 3.
 
 ### Render Setup
 
@@ -256,10 +257,16 @@ All 5 models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX m
 - **Inpainting data loader fix needed** — occlusion pairs generated (338K) but loader found only 3 examples
 - **UniRig weights** — 14,950 converted (pending upload to bucket)
 
-## Model 1: Segmentation
-What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), draw order depth map, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part.
+## Model 1: Segmentation (multi-head: seg + depth + normals)
+What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), pixel-level depth map, 3-channel surface normals, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part, how deep they are, and which direction they face. The depth and normals heads are distilled from Marigold LCM (knowledge distillation: big diffusion model labels → small MobileNetV3 student). One forward pass, three outputs.
 
 Score: **0.5453 mIoU** (epoch 94/100, March 6 2026 A100 lean run). Previous: 0.264.
+
+### Next run plan (run 3):
+- Add normals head (3-channel output, L1 loss against Marigold normals labels)
+- Retrain depth head using Marigold depth labels instead of draw_order.png
+- ~14K examples with Marigold-quality depth + normals (segmentation, live2d, curated_diverse, humanrig)
+- Goal: depth and normals quality approaching Marigold on the benchmark test set
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
