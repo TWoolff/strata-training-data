@@ -72,14 +72,19 @@ echo ""
 
 # Delete loose individual files from bucket (tars are the source of truth now)
 if [ "$KEEP_LOOSE" = "0" ] && [ ${#PACKED_DATASETS[@]} -gt 0 ]; then
-    echo "Cleaning up loose files from bucket (tars are now the source of truth)..."
+    echo "Cleaning up loose files from bucket (only for datasets we just tarred)..."
     echo ""
     for ds in "${PACKED_DATASETS[@]}"; do
-        echo "  Deleting $BUCKET_BASE/$ds/ ..."
-        rclone purge "$BUCKET_BASE/$ds/" 2>/dev/null || true
+        # Safety: only delete if the tar actually exists in the bucket
+        if rclone lsf "$BUCKET_TARS/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
+            echo "  Deleting $BUCKET_BASE/$ds/ (tar verified in bucket)..."
+            rclone purge "$BUCKET_BASE/$ds/" 2>/dev/null || true
+        else
+            echo "  SKIP deleting $ds/ — tar not found in bucket, keeping loose files"
+        fi
     done
     echo ""
-    echo "  Loose files removed. Only tars remain in bucket."
+    echo "  Cleanup complete."
 else
     echo "  KEEP_LOOSE=1 — keeping individual files in bucket."
 fi

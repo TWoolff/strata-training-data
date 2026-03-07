@@ -135,10 +135,15 @@ rclone copy "$TAR_DIR/" hetzner:strata-training-data/tars/ \
     --transfers 8 --fast-list -P
 echo ""
 
-echo "  Deleting loose files from bucket (tars are now the source of truth)..."
+echo "  Deleting loose files from bucket (only for datasets we just tarred)..."
 for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse; do
-    echo "    Deleting $ds/ ..."
-    rclone purge "hetzner:strata-training-data/$ds/" 2>/dev/null || true
+    # Safety: only delete if the tar actually exists in the bucket
+    if rclone lsf "hetzner:strata-training-data/tars/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
+        echo "    Deleting $ds/ (tar verified)..."
+        rclone purge "hetzner:strata-training-data/$ds/" 2>/dev/null || true
+    else
+        echo "    SKIP $ds/ — tar not found, keeping loose files"
+    fi
 done
 echo ""
 echo "  Tar upload complete. Future runs will download ~20 min instead of ~5 hours."
