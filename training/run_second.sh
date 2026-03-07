@@ -31,7 +31,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 0. Install extra deps (normals)
 # ---------------------------------------------------------------------------
-echo "[0/6] Installing extra dependencies..."
+echo "[0/7] Installing extra dependencies..."
 pip install -q diffusers transformers accelerate
 echo "  Done."
 echo ""
@@ -39,7 +39,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 1. Seg enrichment (pseudo-label ~168K images with trained Model 1)
 # ---------------------------------------------------------------------------
-echo "[1/6] Enriching datasets with 22-class segmentation..."
+echo "[1/7] Enriching datasets with 22-class segmentation..."
 echo "  Using checkpoint: checkpoints/segmentation/best.pt"
 echo ""
 
@@ -61,7 +61,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 2. Normals enrichment (small datasets only, ~2h)
 # ---------------------------------------------------------------------------
-echo "[2/6] Enriching datasets with surface normals (Marigold)..."
+echo "[2/7] Enriching datasets with surface normals + depth (Marigold)..."
 echo ""
 
 for ds in segmentation live2d curated_diverse humanrig; do
@@ -81,7 +81,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 3. Train all models
 # ---------------------------------------------------------------------------
-echo "[3/6] Training all models (lean config)..."
+echo "[3/7] Training all models (lean config)..."
 echo ""
 
 ./training/train_all.sh lean 2>&1 | tee "$LOG_DIR/train_all.log"
@@ -93,7 +93,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 4. Upload results to bucket
 # ---------------------------------------------------------------------------
-echo "[4/6] Uploading checkpoints, logs, and ONNX models to bucket..."
+echo "[4/7] Uploading checkpoints, logs, and ONNX models to bucket..."
 echo ""
 
 rclone copy ./checkpoints/ hetzner:strata-training-data/checkpoints/ \
@@ -114,7 +114,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 5. Upload enriched normals + depth back to bucket (so we don't lose them)
 # ---------------------------------------------------------------------------
-echo "[5/6] Uploading enriched data (normals + depth) back to bucket..."
+echo "[5/7] Uploading enriched data (normals + depth) back to bucket..."
 echo ""
 
 for ds in segmentation live2d curated_diverse humanrig; do
@@ -131,7 +131,33 @@ echo "  Normals + depth upload complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 6. Summary
+# 6. Pack datasets as tar archives for fast future downloads
+# ---------------------------------------------------------------------------
+echo "[6/7] Packing datasets as tar archives for future runs..."
+echo ""
+
+TAR_DIR="./data_cloud/_tars"
+mkdir -p "$TAR_DIR"
+
+for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse; do
+    if [ -d "./data_cloud/$ds" ]; then
+        echo "  Packing $ds..."
+        (cd ./data_cloud && tar cf - "$ds") > "$TAR_DIR/${ds}.tar"
+        tar_size=$(du -sh "$TAR_DIR/${ds}.tar" 2>/dev/null | cut -f1)
+        echo "    → ${ds}.tar ($tar_size)"
+    fi
+done
+
+echo ""
+echo "  Uploading tar archives to bucket..."
+rclone copy "$TAR_DIR/" hetzner:strata-training-data/tars/ \
+    --transfers 8 --fast-list -P
+echo ""
+echo "  Tar upload complete. Future runs will download ~20 min instead of ~5 hours."
+echo ""
+
+# ---------------------------------------------------------------------------
+# 7. Summary
 # ---------------------------------------------------------------------------
 echo "============================================"
 echo "  Second run complete!"
