@@ -5,6 +5,7 @@ model:
 data:
   dataset_dirs:
     - "./data_cloud/humanrig"
+    - "./data_cloud/unirig"
     - "./data_cloud/segmentation"
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

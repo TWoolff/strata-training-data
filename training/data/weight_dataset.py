@@ -93,7 +93,7 @@ class _WeightExample:
     """Paths for a single weight training example."""
 
     weights_path: Path
-    joints_path: Path
+    joints_path: Path | None
     example_id: str
 
 
@@ -130,25 +130,48 @@ def _discover_flat(dataset_dir: Path) -> list[_WeightExample]:
 
 
 def _discover_per_example(dataset_dir: Path) -> list[_WeightExample]:
-    """Discover examples from per-example layout ({id}/weights.json)."""
+    """Discover examples from per-example layout.
+
+    Supports two structures:
+    - ``{id}/weights.json`` + ``{id}/joints.json``
+    - ``{id}/{view}/weights.json`` (nested views, e.g. UniRig ``{id}/front/``)
+
+    When ``joints.json`` is absent, ``joints_path`` is set to ``None`` and
+    joint positions are derived from the weight data at load time.
+    """
     examples: list[_WeightExample] = []
     for child in sorted(dataset_dir.iterdir()):
         if not child.is_dir():
             continue
 
+        # Direct layout: {id}/weights.json
         weights_path = child / "weights.json"
-        joints_path = child / "joints.json"
-
-        if not weights_path.exists() or not joints_path.exists():
+        if weights_path.exists():
+            joints_path = child / "joints.json"
+            examples.append(
+                _WeightExample(
+                    weights_path=weights_path,
+                    joints_path=joints_path if joints_path.exists() else None,
+                    example_id=child.name,
+                )
+            )
             continue
 
-        examples.append(
-            _WeightExample(
-                weights_path=weights_path,
-                joints_path=joints_path,
-                example_id=child.name,
+        # Nested view layout: {id}/{view}/weights.json (e.g. UniRig front/)
+        for view_dir in sorted(child.iterdir()):
+            if not view_dir.is_dir():
+                continue
+            weights_path = view_dir / "weights.json"
+            if not weights_path.exists():
+                continue
+            joints_path = view_dir / "joints.json"
+            examples.append(
+                _WeightExample(
+                    weights_path=weights_path,
+                    joints_path=joints_path if joints_path.exists() else None,
+                    example_id=f"{child.name}_{view_dir.name}",
+                )
             )
-        )
 
     return examples
 
@@ -158,8 +181,16 @@ def _detect_layout(dataset_dir: Path) -> str:
     if (dataset_dir / "weights").is_dir():
         return "flat"
     for child in dataset_dir.iterdir():
-        if child.is_dir() and (child / "weights.json").exists():
+        if not child.is_dir():
+            continue
+        # Direct: {id}/weights.json
+        if (child / "weights.json").exists():
             return "per_example"
+        # Nested view: {id}/{view}/weights.json (e.g. UniRig)
+        for view_dir in child.iterdir():
+            if view_dir.is_dir() and (view_dir / "weights.json").exists():
+                return "per_example"
+        break  # Only check first child for detection
     return "flat"
 
 
@@ -185,6 +216,41 @@ def _parse_joint_positions(
             continue
         pos = joint_info.get("position", [0, 0])
         positions[bone_name] = (float(pos[0]), float(pos[1]))
+
+    return positions
+
+
+def _derive_joint_positions(
+    vertices: list[dict],
+) -> dict[str, tuple[float, float]]:
+    """Derive approximate joint positions from weight data.
+
+    Computes the weighted centroid of vertices for each bone — vertices
+    with higher weight for a bone are closer to that bone's joint.
+    Used when joints.json is unavailable (e.g. UniRig data).
+    """
+    bone_sum_x: dict[str, float] = {}
+    bone_sum_y: dict[str, float] = {}
+    bone_sum_w: dict[str, float] = {}
+
+    for vert in vertices:
+        vx, vy = float(vert["position"][0]), float(vert["position"][1])
+        for bone_name, weight in vert.get("weights", {}).items():
+            if bone_name not in BONE_TO_INDEX:
+                continue
+            w = float(weight)
+            bone_sum_x[bone_name] = bone_sum_x.get(bone_name, 0.0) + vx * w
+            bone_sum_y[bone_name] = bone_sum_y.get(bone_name, 0.0) + vy * w
+            bone_sum_w[bone_name] = bone_sum_w.get(bone_name, 0.0) + w
+
+    positions: dict[str, tuple[float, float]] = {}
+    for bone_name in bone_sum_w:
+        total_w = bone_sum_w[bone_name]
+        if total_w > 1e-6:
+            positions[bone_name] = (
+                bone_sum_x[bone_name] / total_w,
+                bone_sum_y[bone_name] / total_w,
+            )
 
     return positions
 
@@ -361,7 +427,10 @@ class WeightDataset:
         image_size = weight_data.get("image_size", [512, 512])
 
         # Load joint positions for bone distance computation
-        joint_positions = _parse_joint_positions(ex.joints_path)
+        if ex.joints_path is not None:
+            joint_positions = _parse_joint_positions(ex.joints_path)
+        else:
+            joint_positions = _derive_joint_positions(vertices)
 
         # Build feature tensor
         features, weights_target, confidence_target, num_verts = build_features(

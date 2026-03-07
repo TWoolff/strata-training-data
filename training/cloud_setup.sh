@@ -97,7 +97,7 @@ download_dataset() {
 # --- Core datasets (always downloaded) ---
 echo "[4/5] Downloading training data from Hetzner bucket..."
 if [ "$MODE" = "lean" ]; then
-    echo "  LEAN mode: core data only (~21 GB)"
+    echo "  LEAN mode: core data only (~36 GB)"
 else
     echo "  FULL mode: all data (~43 GB)"
 fi
@@ -111,6 +111,13 @@ download_dataset "humanrig"       "~5.6 GB, 11,434 examples"
 download_dataset "anime_seg"      "~3.5 GB, 14,579 examples with joints"
 download_dataset "fbanimehq"      "~11.4 GB, ~101K full-body anime with joints"
 download_dataset "curated_diverse" "~50 MB, 748 diverse 2D drawings with joints"
+
+# UniRig: download only front views with weights (skip back views to save space)
+echo "  unirig (~15 GB, ~15K front views with weights)..."
+echo "    → Downloading front/ subdirs only..."
+rclone copy "hetzner:strata-training-data/unirig/" "$DATA_DIR/unirig/" \
+    --include "*/front/**" $RCLONE_FLAGS
+echo ""
 
 # --- Additional datasets (full mode only) ---
 if [ "$MODE" != "lean" ]; then
@@ -130,7 +137,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
+for ds in segmentation live2d humanrig unirig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)
