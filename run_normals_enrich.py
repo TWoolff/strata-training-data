@@ -85,6 +85,20 @@ def predict_normals(pipe, rgb: Image.Image, alpha: np.ndarray) -> np.ndarray:
     return normal_uint8
 
 
+def predict_normals_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray]) -> list[np.ndarray]:
+    """Batch normals prediction. Returns list of uint8 [H, W, 3] normal maps."""
+    output = pipe(rgbs, num_inference_steps=4)
+    results = []
+    for i in range(len(rgbs)):
+        normal_np = output.prediction[i]
+        normal_uint8 = ((normal_np + 1.0) * 0.5 * 255).clip(0, 255).astype(np.uint8)
+        if normal_uint8.ndim == 3 and normal_uint8.shape[0] == 3:
+            normal_uint8 = normal_uint8.transpose(1, 2, 0)
+        normal_uint8[alphas[i] < 10] = 0
+        results.append(normal_uint8)
+    return results
+
+
 def predict_depth(pipe, rgb: Image.Image, alpha: np.ndarray) -> np.ndarray:
     """Returns uint8 [H, W] depth map (0=far, 255=near)."""
     output = pipe(rgb, num_inference_steps=4)
@@ -92,6 +106,18 @@ def predict_depth(pipe, rgb: Image.Image, alpha: np.ndarray) -> np.ndarray:
     depth_uint8 = (depth_np * 255).clip(0, 255).astype(np.uint8)
     depth_uint8[alpha < 10] = 0
     return depth_uint8
+
+
+def predict_depth_batch(pipe, rgbs: list[Image.Image], alphas: list[np.ndarray]) -> list[np.ndarray]:
+    """Batch depth prediction. Returns list of uint8 [H, W] depth maps."""
+    output = pipe(rgbs, num_inference_steps=4)
+    results = []
+    for i in range(len(rgbs)):
+        depth_np = output.prediction[i].squeeze()
+        depth_uint8 = (depth_np * 255).clip(0, 255).astype(np.uint8)
+        depth_uint8[alphas[i] < 10] = 0
+        results.append(depth_uint8)
+    return results
 
 
 def main() -> None:
@@ -117,6 +143,10 @@ def main() -> None:
     parser.add_argument(
         "--device", type=str, default=None,
         help="Device (default: auto-detect cuda/mps/cpu).",
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=16,
+        help="Batch size for Marigold inference (default 16 for A100).",
     )
     parser.add_argument(
         "--batch-log", type=int, default=50,
@@ -175,45 +205,109 @@ def main() -> None:
 
     pipes = load_pipelines(device, normals=do_normals, depth=do_depth)
 
+    # Suppress per-inference progress bars (very spammy with batching)
+    for p in pipes.values():
+        p.set_progress_bar_config(disable=True)
+
+    batch_size = args.batch_size
     start = time.monotonic()
     enriched = 0
     failed = 0
 
-    for i, example_dir in enumerate(examples):
-        try:
-            rgb, alpha = prepare_rgb(example_dir / "image.png")
+    for batch_start in range(0, total, batch_size):
+        batch_dirs = examples[batch_start:batch_start + batch_size]
 
-            if do_normals and not (args.only_missing and (example_dir / "normals.png").exists()):
-                normal_map = predict_normals(pipes["normals"], rgb, alpha)
-                Image.fromarray(normal_map).save(example_dir / "normals.png")
+        # Load all images in this batch
+        batch_rgbs = []
+        batch_alphas = []
+        batch_valid = []  # track which indices loaded OK
+        for example_dir in batch_dirs:
+            try:
+                rgb, alpha = prepare_rgb(example_dir / "image.png")
+                batch_rgbs.append(rgb)
+                batch_alphas.append(alpha)
+                batch_valid.append(True)
+            except Exception as e:
+                logger.warning("Failed to load %s: %s", example_dir.name, e)
+                batch_rgbs.append(None)
+                batch_alphas.append(None)
+                batch_valid.append(False)
+                failed += 1
 
-            if do_depth and not (args.only_missing and (example_dir / "depth.png").exists()):
-                depth_map = predict_depth(pipes["depth"], rgb, alpha)
-                Image.fromarray(depth_map, "L").save(example_dir / "depth.png")
+        # Filter to valid images only
+        valid_indices = [i for i, v in enumerate(batch_valid) if v]
+        if not valid_indices:
+            continue
+        valid_rgbs = [batch_rgbs[i] for i in valid_indices]
+        valid_alphas = [batch_alphas[i] for i in valid_indices]
+        valid_dirs = [batch_dirs[i] for i in valid_indices]
 
-            # Update metadata
-            meta_path = example_dir / "metadata.json"
-            if meta_path.exists():
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                if do_normals:
-                    meta["has_normals"] = True
-                    meta["normals_source"] = "marigold_lcm_v0.1"
-                if do_depth:
-                    meta["has_depth"] = True
-                    meta["depth_source"] = "marigold_depth_lcm_v1.0"
-                meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+        # Batch normals
+        normals_results = None
+        if do_normals:
+            try:
+                normals_results = predict_normals_batch(pipes["normals"], valid_rgbs, valid_alphas)
+            except Exception as e:
+                logger.warning("Normals batch failed (batch %d): %s", batch_start, e)
+                # Fallback to single-image
+                normals_results = []
+                for rgb, alpha in zip(valid_rgbs, valid_alphas):
+                    try:
+                        normals_results.append(predict_normals(pipes["normals"], rgb, alpha))
+                    except Exception as e2:
+                        logger.warning("Normals single fallback failed: %s", e2)
+                        normals_results.append(None)
 
-            enriched += 1
-        except Exception as e:
-            logger.warning("Failed %s: %s", example_dir.name, e)
-            failed += 1
+        # Batch depth
+        depth_results = None
+        if do_depth:
+            try:
+                depth_results = predict_depth_batch(pipes["depth"], valid_rgbs, valid_alphas)
+            except Exception as e:
+                logger.warning("Depth batch failed (batch %d): %s", batch_start, e)
+                depth_results = []
+                for rgb, alpha in zip(valid_rgbs, valid_alphas):
+                    try:
+                        depth_results.append(predict_depth(pipes["depth"], rgb, alpha))
+                    except Exception as e2:
+                        logger.warning("Depth single fallback failed: %s", e2)
+                        depth_results.append(None)
 
-        if (i + 1) % args.batch_log == 0 or (i + 1) == total:
+        # Save results
+        for j, example_dir in enumerate(valid_dirs):
+            try:
+                if normals_results and normals_results[j] is not None:
+                    if not (args.only_missing and (example_dir / "normals.png").exists()):
+                        Image.fromarray(normals_results[j]).save(example_dir / "normals.png")
+
+                if depth_results and depth_results[j] is not None:
+                    if not (args.only_missing and (example_dir / "depth.png").exists()):
+                        Image.fromarray(depth_results[j], "L").save(example_dir / "depth.png")
+
+                # Update metadata
+                meta_path = example_dir / "metadata.json"
+                if meta_path.exists():
+                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                    if do_normals:
+                        meta["has_normals"] = True
+                        meta["normals_source"] = "marigold_lcm_v0.1"
+                    if do_depth:
+                        meta["has_depth"] = True
+                        meta["depth_source"] = "marigold_depth_lcm_v1.0"
+                    meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+                enriched += 1
+            except Exception as e:
+                logger.warning("Failed saving %s: %s", example_dir.name, e)
+                failed += 1
+
+        processed = min(batch_start + len(batch_dirs), total)
+        if processed % args.batch_log < batch_size or processed == total:
             elapsed = time.monotonic() - start
             speed = enriched / elapsed if elapsed > 0 else 0
             logger.info(
                 "Progress: %d/%d — %d enriched, %d failed (%.1f img/s)",
-                i + 1, total, enriched, failed, speed,
+                processed, total, enriched, failed, speed,
             )
 
     elapsed = time.monotonic() - start
