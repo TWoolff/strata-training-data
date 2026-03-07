@@ -330,26 +330,37 @@ Dr. Chengze Li, Saint Francis University HK. In contact re: See-Through dataset.
 
 ## Legal Checklist
 
-Full audit: `docs/license-audit.md`
+Full audit: `docs/license-audit.md` (v2, March 7 2026)
 
 **Safe (commercial training OK):**
-- [x] anime-seg v1+v2: Apache 2.0
-- [x] CartoonSegmentation: Apache 2.0
-- [x] CMU mocap: Free for all uses
-- [x] 100STYLE: CC-BY 4.0
-- [x] CoNR: CC-BY 4.0
-- [x] VRoid Lite: CC0
-- [x] UniRig / Rig-XL: ODC-BY (Objaverse-XL)
-- [x] InstaOrder: CC-BY-SA 4.0 (model weights not derivative)
-- [x] curated_diverse: AI-generated, no copyright holder
-- [x] LinkTo-Anime: CC-BY-NC-4.0 — permanently excluded
+- [x] CMU mocap: Custom permissive — attribute CMU Graphics Lab
+- [x] 100STYLE: CC-BY 4.0 — attribute authors
+- [x] VRoid Lite: CC0 — no restrictions
+- [x] curated_diverse: AI-generated — no copyright holder
+- [x] InstaOrder: CC-BY-SA 4.0 — SA unlikely to apply to model weights
 
-**Needs review:**
-- [ ] Mixamo: Adobe ToS — ML training on renders unclear
-- [ ] Live2D models: Per-model license, needs manifest audit
-- [ ] FBAnimeHQ: Danbooru-derived — high risk, needs legal counsel
+**Likely safe (low-medium risk):**
+- [x] anime-seg v1+v2: Apache 2.0 / CC0 — masks safe, source images from Danbooru
+- [x] CoNR: MIT — some hand-drawn sheets may be copyrighted
 
-**Restricted (CC-BY-NC / research only):**
-- [ ] AnimeRun: CC-BY-NC 4.0 — not used for core model training
-- [ ] HumanRig: CC-BY-NC 4.0 — contact authors for permission
-- [ ] NOVA-Human: Research license (VRoid Hub) — exclude from production
+**Ambiguous (high risk — needs legal counsel):**
+- [ ] UniRig / Rig-XL: ODC-BY but Sketchfab ToS prohibits AI training on user content
+- [ ] FBAnimeHQ: CC0 dataset label but source images are copyrighted Danbooru art
+
+**PROHIBITED (must exclude from production training):**
+- [x] Mixamo renders: Adobe Additional Terms explicitly ban AI/ML training — **CRITICAL: only source of 22-class seg masks**
+- [x] Live2D models: Proprietary terms, no ML training permission
+- [x] CartoonSegmentation: No license, Bandai Namco IP, research fair use only
+- [x] AnimeRun: CC-BY-NC 4.0 — not used for core models
+- [x] HumanRig: CC-BY-NC 4.0 — contact authors for commercial permission
+- [x] NOVA-Human: VRoid Hub — Pixiv prohibits AI training data collection
+- [x] LinkTo-Anime: CC-BY-NC 4.0 — permanently excluded
+
+**Action items:**
+1. [ ] URGENT: Render VRoid Lite CC0 characters to replace Mixamo as 22-class seg source
+2. [ ] Contact HumanRig authors for commercial training permission
+3. [ ] Contact Live2D Inc. for ML training permission
+4. [ ] Legal counsel on FBAnimeHQ (discriminative model on Danbooru data)
+5. [ ] Legal counsel on UniRig/Objaverse-XL (Sketchfab ToS vs ODC-BY)
+6. [ ] Create production training configs excluding all prohibited datasets
+7. [ ] Create `ATTRIBUTIONS.md` for CC-BY/CC-BY-SA datasets
