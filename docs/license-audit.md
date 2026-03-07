@@ -1,6 +1,6 @@
 # License Audit: Training Datasets
 
-**Date:** March 7, 2026
+**Date:** March 7, 2026 (v2 — updated with detailed web research)
 **Purpose:** Confirm commercial ML training use is permitted for all datasets in the Hetzner bucket. Strata is a commercial desktop app — models trained on these datasets ship in the product.
 
 ## Key Legal Question
@@ -8,10 +8,10 @@
 > Does using CC-BY-NC data to train a commercial ML model constitute "commercial use"?
 
 **Conservative view:** Yes. The trained model is a commercial product, so training is commercial use.
-**Permissive view:** The training process is transformative — the model doesn't redistribute the data.
-**Legal reality:** No settled case law. The safest approach is to avoid CC-BY-NC data for commercial training, or seek explicit permission from dataset authors.
+**Creative Commons official guidance (2024):** "If AI training data includes the NonCommercial restriction, following the NC restriction would require that all stages, from copying the data during training to sharing the trained model, must not be for commercial gain."
+**Legal reality:** CC-BY-NC clearly prohibits commercial ML training per CC's own guidance.
 
-**Recommendation:** Flag CC-BY-NC datasets. Use them for research/development but prepare to exclude from production training if legal counsel advises.
+**Recommendation:** Exclude all CC-BY-NC and research-only datasets from production training. Use them only for research/development.
 
 ---
 
@@ -19,21 +19,21 @@
 
 | Dataset | License | Commercial Training | Risk | Action |
 |---------|---------|:-------------------:|:----:|--------|
-| Mixamo renders | Adobe ToS | Ambiguous | Medium | Review Adobe ToS for ML |
-| anime-seg v1+v2 | Apache 2.0 | **Yes** | Low | OK |
-| CartoonSegmentation | Apache 2.0 | **Yes** | Low | OK |
-| CMU mocap | Free for all uses | **Yes** | Low | OK |
-| 100STYLE | CC-BY 4.0 | **Yes** | Low | OK |
-| CoNR | CC-BY 4.0 | **Yes** | Low | OK |
-| InstaOrder | CC-BY-SA 4.0 | **Yes** (SA applies to derivatives) | Low | Model weights likely not "derivative" |
-| VRoid Lite | CC0 | **Yes** | None | OK |
-| curated_diverse | Mixed (AI-generated) | **Yes** | Low | AI-generated, no copyright holder |
-| UniRig / Rig-XL | ODC-BY (Objaverse-XL) | **Yes** | Low | Attribution required |
-| Live2D models | Per-model (varies) | Ambiguous | Medium | Check each model's license |
-| FBAnimeHQ | Danbooru-derived | Ambiguous | High | Source images may be copyrighted |
-| AnimeRun | CC-BY-NC 4.0 | **No** | High | Non-commercial only |
-| HumanRig | CC-BY-NC 4.0 | **No** | High | Non-commercial only |
-| NOVA-Human | Research license | **No** | High | VRoid Hub models, research only |
+| CMU mocap | Custom permissive | **OK** | Low | Safe |
+| 100STYLE | CC-BY 4.0 | **OK** | Low | Safe, attribute |
+| VRoid Lite | CC0 | **OK** | Low | Safe |
+| curated_diverse | AI-generated | **OK** | Low | No copyright holder |
+| InstaOrder | CC-BY-SA 4.0 | **OK** | Low | SA unlikely to apply to weights |
+| anime-seg v1+v2 | Apache 2.0 / CC0 | **OK*** | Low-Med | Masks OK; source images from Danbooru |
+| CoNR | MIT | **Likely OK** | Low-Med | Some hand-drawn sheets may be copyrighted |
+| UniRig / Rig-XL | ODC-BY (Objaverse-XL) | **Ambiguous** | High | Sketchfab ToS prohibits AI training |
+| FBAnimeHQ | CC0 (dataset) | **Ambiguous** | High | Source images are copyrighted Danbooru art |
+| Mixamo renders | Adobe Additional Terms | **PROHIBITED** | High | Explicit AI/ML training ban |
+| Live2D models | Proprietary | **PROHIBITED** | High | Restrictive terms, no ML permission |
+| CartoonSegmentation | None (research only) | **PROHIBITED** | High | Bandai Namco IP, no license |
+| AnimeRun | CC-BY-NC 4.0 | **PROHIBITED** | High | Non-commercial only |
+| HumanRig | CC-BY-NC 4.0 | **PROHIBITED** | High | Non-commercial only |
+| NOVA-Human | Per-model VRoid Hub | **PROHIBITED** | High | Pixiv prohibits AI training collection |
 
 ---
 
@@ -41,132 +41,156 @@
 
 ### SAFE: Clear Commercial Use Permitted
 
-#### anime-segmentation (SkyTNT) — Apache 2.0
-- **v1:** [GitHub repo](https://github.com/SkyTNT/anime-segmentation) — Apache 2.0 license
-- **v2:** Same license
-- **Verdict:** Fully permissible for commercial training. Attribution required.
-
-#### CartoonSegmentation — Apache 2.0
-- [GitHub repo](https://github.com/CartoonSegmentation/CartoonSegmentation) — Apache 2.0
-- **Verdict:** Fully permissible. Attribution required.
-
-#### CMU Mocap — Free for all uses
-- Carnegie Mellon Graphics Lab: historically "free for research and commercial use"
-- Standard citation: "The data used in this project was obtained from mocap.cs.cmu.edu"
-- **Verdict:** Safe. Include attribution.
+#### CMU Motion Capture — Custom permissive
+- License: "You may include this data in commercially-sold products, but you may not resell this data directly."
+- Training a model (not reselling data) falls within permitted use.
+- Source: [mocap.cs.cmu.edu](https://mocap.cs.cmu.edu/)
+- **Verdict:** Safe. Attribute CMU Graphics Lab.
 
 #### 100STYLE — CC-BY 4.0
-- [Project page](https://www.ianmasonresearch.com/100style)
 - CC-BY 4.0 explicitly permits commercial use with attribution.
-- **Verdict:** Safe. Attribute the authors.
-
-#### CoNR — CC-BY 4.0
-- [GitHub repo](https://github.com/megvii-research/CoNR)
-- CC-BY 4.0 explicitly permits commercial use.
-- **Verdict:** Safe. Attribute the authors.
+- Source: [100STYLE on Zenodo](https://zenodo.org/records/8127870)
+- **Verdict:** Safe. Attribute authors.
 
 #### VRoid Lite — CC0
-- CC0 characters explicitly released to public domain.
-- **Verdict:** No restrictions whatsoever.
-
-#### UniRig / Rig-XL — ODC-BY (via Objaverse-XL)
-- Objaverse-XL uses ODC-BY 1.0 (Open Data Commons Attribution License)
-- Permits commercial use with attribution.
-- UniRig paper itself may have separate terms for code/model, but the mesh data inherits Objaverse-XL license.
-- **Verdict:** Safe for data. Attribute Objaverse-XL.
-
-#### InstaOrder — CC-BY-SA 4.0
-- ShareAlike requires derivatives to use the same license.
-- Key question: are trained model weights a "derivative work" of the training data?
-- Legal consensus leans toward **no** — model weights are transformative, not a modification of the data.
-- **Verdict:** Low risk. Model weights are likely not a derivative. Include attribution.
+- CC0 is a full copyright waiver. No restrictions.
+- Curated to include only CC0-marked VRoid Hub models.
+- Note: Pixiv platform ToS may prohibit crawler-based collection, but CC0 intent is clear.
+- **Verdict:** Safe.
 
 #### curated_diverse — AI-generated images
-- 748 diverse character images generated by AI.
-- AI-generated content generally has no copyright holder (per US Copyright Office 2023 guidance).
-- **Verdict:** Safe. No copyright restrictions on AI-generated content.
+- 748 diverse character images generated by AI (Gemini/DALL-E).
+- Per US Copyright Office 2023 guidance, AI-generated content has no copyright holder.
+- **Verdict:** Safe.
+
+#### InstaOrder — CC-BY-SA 4.0
+- SA requires derivatives to use the same license.
+- Model weights are widely considered NOT a derivative work of training data.
+- Source: [InstaOrder GitHub](https://github.com/SNU-VGILab/InstaOrder)
+- **Verdict:** Safe. Model weights are not SA-encumbered.
+
+#### anime-segmentation (SkyTNT) — Apache 2.0 / CC0
+- Code: Apache 2.0. Dataset on HuggingFace: CC0.
+- Caveat: Source images likely from Danbooru (copyrighted fan art). Segmentation masks are SkyTNT's original work.
+- We train on the images + masks. The masks are CC0, the images' copyright status is uncertain.
+- Source: [GitHub (Apache 2.0)](https://github.com/SkyTNT/anime-segmentation), [HuggingFace (CC0)](https://huggingface.co/datasets/skytnt/anime-segmentation)
+- **Verdict:** Low-medium risk. Masks are safe; source image provenance is uncertain but we train a discriminative model (not generative).
+
+#### CoNR — MIT
+- MIT is maximally permissive.
+- Contains hand-drawn and synthesized character sheets. Synthesized are original; hand-drawn may include copyrighted anime IP.
+- Source: [CoNR GitHub](https://github.com/megvii-research/IJCAI2023-CoNR)
+- **Verdict:** Likely safe. MIT license is clear.
 
 ---
 
-### AMBIGUOUS: Needs Review
+### AMBIGUOUS: High Risk
 
-#### Mixamo Renders — Adobe Terms of Service
-- Mixamo characters are free to download and use in projects.
-- Adobe's ToS for Mixamo allows use in "your projects" but doesn't explicitly address ML training.
-- The renders are our own (generated by our Blender pipeline from Mixamo skeletons), not redistributed Mixamo content.
-- **Risk:** Medium. Adobe could argue training constitutes redistribution of their characters' appearance.
-- **Mitigation:** Our renders are transformative (different lighting, materials, viewpoints). The segmentation masks and joint annotations are our own labels.
-- **Action:** Review Adobe Mixamo ToS. Consider reaching out to Adobe for clarification.
+#### UniRig / Rig-XL — ODC-BY (Objaverse-XL)
+- UniRig code: MIT. Rig-XL data: derived from Objaverse-XL.
+- Objaverse-XL scraped models from Sketchfab (CC-BY 4.0), GitHub, Thingiverse, Polycam.
+- **Problem:** Sketchfab's ToS explicitly prohibit using user-generated content for training generative AI. Many artists were not informed. Polycam data is restricted to non-commercial academic research.
+- Source: [Objaverse-XL GitHub](https://github.com/allenai/objaverse-xl), [FlippedNormals ethics article](https://blog.flippednormals.com/objaverse-raises-concerns-about-ethics-of-scraping-3d-content/), [The Decoder: Sketchfab dispute](https://the-decoder.com/sketchfab-objaverse-ai-copyright-dispute-enters-third-dimension/)
+- **Verdict:** HIGH RISK. Despite ODC-BY license on the collection, Sketchfab ToS and artist consent issues create significant legal and reputational risk.
 
-#### Live2D Models — Per-model license
-- 280 models from various sources, each with its own license.
-- Some may be CC-BY, some may restrict commercial use, some may be unclear.
-- **Risk:** Medium. One improperly licensed model could taint the dataset.
-- **Action:** Audit manifest CSV. Remove any models without clear commercial-use permission.
-
-#### FBAnimeHQ — Danbooru-derived
-- FBAnimeHQ is a curated subset of Danbooru/Safebooru images.
-- Source images are copyrighted artworks posted by various artists.
-- Danbooru itself doesn't hold copyright — it's a tagging/hosting service.
-- Training on copyrighted images without permission is legally contested (see Stability AI lawsuits).
-- **Risk:** High. This is the same legal territory as Stable Diffusion training.
-- **Mitigation:** We're training a segmentation/joint model, not a generative image model. The model cannot reproduce the training images.
-- **Action:** Flag as high-risk. Consider excluding from production training if legal counsel advises. The model's primary training data comes from 3D renders (Mixamo, HumanRig) which are safer.
+#### FBAnimeHQ — CC0 (dataset), copyrighted (images)
+- Dataset released as CC0 by SkyTNT on HuggingFace.
+- Underlying images are from Danbooru — copyrighted fan art by various artists.
+- CC0 label cannot override original artists' copyrights. The dataset creator cannot waive rights they don't hold.
+- We train segmentation/joint models (not generative image models), which is more defensible.
+- Source: [FBAnimeHQ on HuggingFace](https://huggingface.co/datasets/skytnt/fbanimehq), [Danbooru2021 (Gwern)](https://gwern.net/danbooru2021)
+- **Verdict:** MEDIUM-HIGH RISK. Sole source for inpainting pairs and 101K joint examples.
 
 ---
 
-### RESTRICTED: Cannot Use for Commercial Training (Conservative)
+### PROHIBITED: Cannot Use for Commercial Training
+
+#### Mixamo — Adobe Additional Terms (CRITICAL)
+- Adobe's Mixamo Additional Terms (June 23, 2021) contain an explicit **"Restriction on AI/ML"** section:
+  > *"You will not, and will not instruct or allow third parties to, use the Services or Software (or any content, data, output, or other information received or derived from the Services or Software) to directly or indirectly create, train, test, or otherwise improve any machine learning algorithms or artificial intelligence systems, including, but not limited to, any architectures, models, or weights."*
+- This covers rendered images, segmentation masks, joint positions — everything derived from Mixamo characters.
+- Source: [Mixamo Additional Terms PDF](https://wwwimages2.adobe.com/content/dam/cc/en/legal/servicetou/Mixamo-Addl-Terms-en_US-20210623.pdf), [Adobe Community discussion](https://community.adobe.com/t5/mixamo-discussions/mixamo-license-for-machine-learning-datasets/td-p/14734915)
+- **Impact:** 1,598 segmentation examples (`segmentation/` dataset) + 105 weight examples. This is the foundation dataset.
+- **Action:** MUST EXCLUDE from production training. Replace with VRoid Lite renders, HumanRig (if NC permission granted), or new renders from non-Mixamo characters.
+
+#### Live2D — Proprietary Terms
+- Live2D Free Material License Agreement restricts usage to defined purposes.
+- Sample models: "may not be used for any purposes other than Internal evaluation of the Software and Training" (user training, not ML training).
+- No explicit ML training permission exists in any Live2D license tier.
+- Source: [Live2D Free Material License](https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html), [Live2D Sample Model Terms](https://www.live2d.com/eula/live2d-sample-model-terms_en.html)
+- **Impact:** 844 examples (`live2d/` dataset). Good 22-class segmentation data.
+- **Action:** MUST EXCLUDE from production training unless Live2D grants explicit ML permission.
+
+#### CartoonSegmentation — No License (Research Only)
+- No formal open-source license in the repository.
+- Project page states: "Copyright BANDAI NAMCO Entertainment Inc., We believe this is a fair use for research and educational purpose only."
+- Contains frames from Bandai Namco IP (anime shows).
+- Source: [CartoonSegmentation GitHub](https://github.com/CartoonSegmentation/CartoonSegmentation)
+- **Impact:** `anime_instance_seg/` (~135K files in bucket). NOT used in lean training configs.
+- **Action:** MUST EXCLUDE. Already not in lean configs, so no immediate impact.
 
 #### AnimeRun — CC-BY-NC 4.0
-- [Paper](https://arxiv.org/abs/2207.06922)
-- CC-BY-NC 4.0 explicitly prohibits commercial use.
-- **Verdict:** Cannot use for commercial model training under conservative interpretation.
-- **Current use:** `animerun*/` prefixes in bucket (~15 GiB). Used for optical flow and correspondence, NOT for core model training (seg, joints, weights).
-- **Action:** Keep for research. Do NOT use for production model training unless NC restriction is clarified with authors.
+- CC-BY-NC explicitly prohibits commercial use. CC's own guidance confirms this applies to ML training.
+- Source: [AnimeRun Project Page](https://lisiyao21.github.io/projects/AnimeRun), [CC on AI Training](https://creativecommons.org/using-cc-licensed-works-for-ai-training-2/)
+- **Impact:** `animerun*/` prefixes (~15 GiB). Used for optical flow/correspondence, NOT core model training.
+- **Action:** Exclude from production. Already not used for core models.
 
 #### HumanRig — CC-BY-NC 4.0
-- [Paper](https://arxiv.org/abs/2310.03200)
-- CC-BY-NC 4.0 explicitly prohibits commercial use.
-- **Verdict:** Cannot use for commercial model training under conservative interpretation.
-- **Current use:** 11,434 examples in `humanrig/`. Used heavily for weight prediction + segmentation.
-- **Impact:** Losing HumanRig would cut weight training data from 27K to ~16.5K (UniRig + Mixamo). Segmentation would lose 11K examples with 22-class masks.
-- **Action:** Contact HumanRig authors to request commercial training permission. If denied, train weights on UniRig+Mixamo only. For segmentation, the loss is smaller since humanrig examples are 3D-rendered (similar domain to Mixamo).
+- Same CC-BY-NC prohibition as AnimeRun.
+- Source: [HumanRig Project Page](https://c8241998.github.io/HumanRig/), [HumanRig GitHub](https://github.com/c8241998/HumanRig)
+- **Impact:** 11,434 examples. Major dataset for weights + segmentation.
+- **Action:** Contact authors for commercial training permission. If denied, train weights on UniRig+Mixamo only (but Mixamo is also prohibited — see above).
 
-#### NOVA-Human — Research use
-- Derived from VRoid Hub models. VRoid Hub has per-model licensing.
-- VRoid Hub explicitly defines "commercial use" as activities involving money exchange.
-- Most VRoid Hub models disallow corporate commercial use by default.
-- NOVA-Human dataset likely inherits these restrictions.
-- **Verdict:** Cannot use for commercial model training.
-- **Current use:** `nova_human/` (~40K images). Used for joint training (RTMPose joints).
-- **Impact:** Losing NOVA-Human cuts joint training from ~142K to ~102K examples. FBAnimeHQ still provides 101K.
-- **Action:** Exclude from production training. The joint model barely needs it — 101K FBAnimeHQ + 13K other sources is sufficient.
+#### NOVA-Human — VRoid Hub (Research Only)
+- Derived from 10.2K VRoid Hub models with heterogeneous per-model licenses.
+- Pixiv's September 2024 guidelines update prohibits AI training data collection from VRoid Hub.
+- Source: [NOVA-3D GitHub](https://github.com/NOVA-3D-Anime-Character-Synthesis/NOVA-3D), [VRoid Hub Guidelines Update](https://vroid.pixiv.help/hc/en-us/articles/37342372606873)
+- **Impact:** ~40K images with RTMPose joints.
+- **Action:** Exclude from production. Joint model still has 101K FBAnimeHQ examples.
 
 ---
 
-## Recommended Production Training Set
+## Production Training Set (Conservative)
 
-If we conservatively exclude all CC-BY-NC and research-only datasets:
+Excluding ALL prohibited + ambiguous datasets:
 
-| Model | Safe Datasets | Examples | Impact |
-|-------|--------------|----------|--------|
-| **Segmentation** | Mixamo, Live2D (audited), curated_diverse, anime_seg, UniRig | ~28K | Lose HumanRig 11K, but UniRig provides similar coverage |
-| **Joints** | FBAnimeHQ, Mixamo, anime_seg, Live2D | ~118K | Lose NOVA-Human 40K + HumanRig 11K. Still plenty. |
-| **Weights** | UniRig, Mixamo | ~16.5K | Lose HumanRig 11K. Still 300x more than run 1. |
-| **Inpainting** | FBAnimeHQ (source for pairs) | ~45K pairs | No change — FBAnimeHQ is the only source. |
+| Model | Safe Datasets | Examples | Viable? |
+|-------|--------------|----------|---------|
+| **Segmentation** | anime_seg, curated_diverse, InstaOrder | ~15K (fg/bg only, no 22-class!) | **CRITICAL GAP** — no 22-class mask source |
+| **Joints** | FBAnimeHQ*, anime_seg | ~116K | Yes, but FBAnimeHQ is ambiguous |
+| **Weights** | UniRig* | ~15K | Yes, but UniRig is ambiguous (Sketchfab) |
+| **Inpainting** | FBAnimeHQ* (pairs) | ~45K pairs | Yes, but FBAnimeHQ is ambiguous |
 
-**Bottom line:** Excluding CC-BY-NC datasets hurts but doesn't cripple any model. The biggest loss is HumanRig for weights (11K examples), but UniRig's 15K examples more than compensate.
+*\* Ambiguous datasets included to show non-zero training set. Without them, joints and inpainting have zero safe sources.*
 
-**Exception:** FBAnimeHQ's Danbooru-derived status is the biggest unresolved risk. It provides 101K joint examples and is the sole source for inpainting pairs. If legal counsel flags it, we'd need alternative sources (more Mixamo renders, VRoid Lite renders, or our own illustrated characters).
+### The Mixamo Problem
+
+Mixamo's AI/ML ban is the most damaging finding. Our `segmentation/` dataset (1,598 examples) is the **only source of high-quality 22-class body region masks**. Without it:
+- No 22-class segmentation training data from safe sources
+- The entire segmentation model depends on data we cannot legally use
+
+### Paths Forward
+
+1. **Generate new safe training data:** Render characters from CC0/CC-BY sources (VRoid Lite's 4,651 CC0 characters, Objaverse CC0 meshes) through our Blender pipeline. This replaces Mixamo as the primary segmentation data source.
+
+2. **Seek explicit permissions:**
+   - Contact HumanRig authors for commercial training permission
+   - Contact Live2D Inc. for ML training permission
+   - Consider Adobe's Mixamo team (unlikely to grant exception)
+
+3. **See-Through dataset (late March 2026):** 9,102 Live2D models with 19-class segmentation — if the license permits commercial training, this solves the 22-class gap.
+
+4. **Accept FBAnimeHQ risk:** For discriminative models (segmentation, joints), training on copyrighted images is more defensible than for generative models. The model cannot reproduce the training images. Many commercial ML products train on similar data.
 
 ---
 
 ## Action Items
 
-1. [ ] **Review Adobe Mixamo ToS** — Confirm ML training on rendered outputs is permitted
-2. [ ] **Audit Live2D manifest** — Check each model's license, remove non-commercial ones
-3. [ ] **Contact HumanRig authors** — Request commercial training permission
-4. [ ] **Legal counsel on FBAnimeHQ** — Get opinion on training segmentation/joint models on Danbooru-derived data
-5. [ ] **Legal counsel on CC-BY-NC** — Get definitive answer on whether ML training = commercial use
-6. [ ] **Prepare fallback training configs** — Configs that exclude CC-BY-NC + Danbooru data
-7. [ ] **Document attributions** — Create `ATTRIBUTIONS.md` for all CC-BY/CC-BY-SA datasets
+1. [ ] **URGENT: Render VRoid Lite characters** — Generate 22-class seg masks from CC0 VRoid characters to replace Mixamo data
+2. [ ] **Contact HumanRig authors** — Request commercial training permission (CC-BY-NC → explicit grant)
+3. [ ] **Contact Live2D Inc.** — Request ML training permission for rendered outputs
+4. [ ] **Legal counsel on FBAnimeHQ** — Discriminative model training on Danbooru-derived data
+5. [ ] **Legal counsel on UniRig/Objaverse-XL** — Sketchfab ToS vs ODC-BY license
+6. [ ] **See-Through license check** — When released, verify license before ingesting
+7. [ ] **Create production training configs** — Configs that exclude all prohibited datasets
+8. [ ] **Create `ATTRIBUTIONS.md`** — For all CC-BY/CC-BY-SA datasets used in production
