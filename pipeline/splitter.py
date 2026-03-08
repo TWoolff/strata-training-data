@@ -87,7 +87,7 @@ def _discover_characters(output_dir: Path) -> dict[str, str]:
             char_id = meta.get("id", meta_path.stem)
             source = meta.get("source", "") or _infer_source(char_id)
             char_sources[char_id] = source
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             logger.warning("Failed to read source metadata %s", meta_path)
 
     return char_sources

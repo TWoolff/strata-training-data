@@ -160,18 +160,22 @@ def setup_camera(
     meshes: list[bpy.types.Object],
     *,
     azimuth: float = 0.0,
+    elevation: float = 0.0,
 ) -> bpy.types.Object:
     """Create an orthographic camera that auto-frames the character.
 
     The camera orbits the character's bounding-box center at ``azimuth``
-    degrees around the vertical (Z) axis, always looking toward the center.
-    At azimuth 0 the camera faces front-on (looking along +Y).
+    degrees around the vertical (Z) axis and ``elevation`` degrees above
+    the horizontal plane, always looking toward the center.
+    At azimuth 0, elevation 0 the camera faces front-on (looking along +Y).
 
     Args:
         scene: The Blender scene to add the camera to.
         meshes: Character mesh objects to frame.
         azimuth: Horizontal rotation in degrees (0 = front, 90 = side,
             180 = back).
+        elevation: Vertical rotation in degrees above horizontal (0 = eye-level,
+            25 = slightly above).
 
     Returns:
         The camera object (already set as the scene's active camera).
@@ -185,10 +189,14 @@ def setup_camera(
 
     # For non-frontal views the visible horizontal extent includes depth
     az_rad = radians(azimuth)
+    el_rad = radians(elevation)
     apparent_width = abs(width * cos(az_rad)) + abs(depth * sin(az_rad))
 
+    # For elevated views, the apparent height shrinks and depth contributes
+    apparent_height = abs(height * cos(el_rad)) + abs(depth * sin(el_rad))
+
     # Orthographic scale: fit the larger dimension with padding
-    ortho_scale = max(apparent_width, height) * (1.0 + 2.0 * CAMERA_PADDING)
+    ortho_scale = max(apparent_width, apparent_height) * (1.0 + 2.0 * CAMERA_PADDING)
 
     # Create camera data block
     cam_data = bpy.data.cameras.new(name="strata_camera")
@@ -202,18 +210,16 @@ def setup_camera(
     scene.collection.objects.link(cam_obj)
 
     # Position: orbit around the character center at CAMERA_DISTANCE.
-    # At azimuth=0 the camera is at (center.x, center.y - D, center.z)
-    # looking along +Y.  Positive azimuth rotates clockwise when viewed
-    # from above (standard screen-space convention).
-    cam_x = bbox_center.x + CAMERA_DISTANCE * sin(az_rad)
-    cam_y = bbox_center.y - CAMERA_DISTANCE * cos(az_rad)
-    cam_z = bbox_center.z
+    # Azimuth rotates in the XY plane, elevation tilts up from horizontal.
+    cam_x = bbox_center.x + CAMERA_DISTANCE * sin(az_rad) * cos(el_rad)
+    cam_y = bbox_center.y - CAMERA_DISTANCE * cos(az_rad) * cos(el_rad)
+    cam_z = bbox_center.z + CAMERA_DISTANCE * sin(el_rad)
     cam_obj.location = (cam_x, cam_y, cam_z)
 
     # Rotation: camera always faces the character center.
     # Base rotation is 90° around X (to look along +Y).
-    # Azimuth adds a Z rotation.
-    cam_obj.rotation_euler = (radians(90), 0, az_rad)
+    # Elevation subtracts from the X rotation, azimuth adds Z rotation.
+    cam_obj.rotation_euler = (radians(90) - el_rad, 0, az_rad)
 
     # Set as active camera
     scene.camera = cam_obj
@@ -227,8 +233,9 @@ def setup_camera(
     scene.render.film_transparent = True
 
     logger.info(
-        "Camera setup: azimuth=%.0f°, ortho_scale=%.3f, center=(%.2f, %.2f), resolution=%dx%d",
+        "Camera setup: azimuth=%.0f°, elevation=%.0f°, ortho_scale=%.3f, center=(%.2f, %.2f), resolution=%dx%d",
         azimuth,
+        elevation,
         ortho_scale,
         bbox_center.x,
         bbox_center.z,
@@ -1150,4 +1157,6 @@ def apply_style(
         apply_cel_style(scene, meshes)
     elif style == "unlit":
         apply_unlit_style(scene, meshes)
+    elif style == "textured":
+        pass  # Keep original materials as-is, render with scene lighting
     # Post-render styles (pixel, painterly, sketch) are no-ops here

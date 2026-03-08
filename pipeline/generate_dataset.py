@@ -227,6 +227,18 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Extract per-region RGBA layers for layer decomposition training (See Through).",
     )
+    parser.add_argument(
+        "--no_tpose",
+        action="store_true",
+        default=False,
+        help="Skip T-pose (useful for rigs whose rest pose isn't a standard T-pose).",
+    )
+    parser.add_argument(
+        "--texture_map",
+        type=Path,
+        default=None,
+        help="JSON mapping rigged folder names to original GLB paths (for 'textured' style).",
+    )
 
     return parser.parse_args(script_args)
 
@@ -363,6 +375,7 @@ def process_character(
     import_result: ImportResult | None = None,
     enable_contours: bool = False,
     enable_layers: bool = False,
+    texture_map: dict[str, str] | None = None,
 ) -> CharacterResult:
     """Run the full pipeline for a single character across all poses.
 
@@ -443,6 +456,21 @@ def process_character(
             f"[{char_num}/{total_chars}] {char_id} WARNING: "
             f"{len(mapping.unmapped_bones)} unmapped bones: {mapping.unmapped_bones}"
         )
+
+    # --- Transfer textures from original GLB if available ---
+    if texture_map and char_id in texture_map:
+        from .importer import transfer_materials_from_glb
+
+        original_glb = Path(texture_map[char_id])
+        transfer_materials_from_glb(body_meshes, original_glb)
+    elif texture_map:
+        # Try matching by folder name
+        folder_name = fbx_path.parent.name
+        if folder_name in texture_map:
+            from .importer import transfer_materials_from_glb
+
+            original_glb = Path(texture_map[folder_name])
+            transfer_materials_from_glb(body_meshes, original_glb)
 
     # --- Store original materials for color pass ---
     original_materials = _backup_materials(body_meshes)
@@ -646,12 +674,13 @@ def _process_single_pose(
         for angle_name in camera_angles:
             angle_cfg = CAMERA_ANGLES[angle_name]
             azimuth = float(angle_cfg["azimuth"])
+            elevation = float(angle_cfg.get("elevation", 0))
 
             # --- Camera (recompute for each scale/pose/angle variant) ---
             old_cam = bpy.data.objects.get("strata_camera")
             if old_cam is not None:
                 bpy.data.objects.remove(old_cam, do_unlink=True)
-            camera = setup_camera(scene, meshes, azimuth=azimuth)
+            camera = setup_camera(scene, meshes, azimuth=azimuth, elevation=elevation)
 
             scene.render.resolution_x = resolution
             scene.render.resolution_y = resolution
@@ -982,6 +1011,15 @@ def main() -> None:
     live2d_dir: Path | None = args.live2d_dir
     enable_contours: bool = args.contours
     enable_layers: bool = args.layers
+    no_tpose: bool = args.no_tpose
+
+    # Load texture map if provided
+    texture_map: dict[str, str] | None = None
+    if args.texture_map and args.texture_map.is_file():
+        import json as _json
+
+        texture_map = _json.loads(args.texture_map.read_text())
+        print(f"Loaded texture map: {len(texture_map)} entries from {args.texture_map}")
 
     # Parse camera angles
     angles_raw = args.angles.strip()
@@ -998,8 +1036,18 @@ def main() -> None:
         print(f"ERROR: Input directory does not exist: {input_dir}")
         sys.exit(1)
 
-    # Discover FBX files
-    fbx_files = sorted(input_dir.glob("*.fbx"))
+    # Discover FBX files (search recursively for nested directory layouts)
+    # Exclude withSkin animation FBXs — those are processed separately by
+    # render_withskin_animations.py and would produce distorted rest-pose renders.
+    fbx_files = sorted(
+        f for f in input_dir.glob("*.fbx")
+        if "withSkin" not in f.name
+    )
+    if not fbx_files:
+        fbx_files = sorted(
+            f for f in input_dir.rglob("*.fbx")
+            if "withSkin" not in f.name
+        )
     if not fbx_files:
         print(f"ERROR: No .fbx files found in {input_dir}")
         sys.exit(1)
@@ -1016,6 +1064,15 @@ def main() -> None:
     # Discover poses
     print("Indexing pose library...")
     poses = list_poses(pose_dir)
+
+    # Filter out built-in poses if requested (e.g. Meshy rigs whose rest pose
+    # isn't a standard T-pose — applying T/A-pose rotations distorts the mesh).
+    # Replace with a no-op rest pose that keeps the character's native pose.
+    if no_tpose:
+        from pipeline.pose_applicator import RESTPOSE_INFO
+
+        poses = [p for p in poses if p.source != "built-in"]
+        poses.insert(0, RESTPOSE_INFO)
 
     # Apply --poses_per_character limit — evenly sample across all available
     # poses (after T-pose and A-pose) so we get diversity across the full
@@ -1089,6 +1146,7 @@ def main() -> None:
                 camera_angles=camera_angles,
                 enable_contours=enable_contours,
                 enable_layers=enable_layers,
+                texture_map=texture_map,
             )
         except Exception:
             logger.exception("Unhandled error processing %s", fbx_path.name)

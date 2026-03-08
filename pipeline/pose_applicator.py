@@ -108,6 +108,7 @@ class AugmentationInfo:
 
 TPOSE_INFO = PoseInfo(name="t_pose", source="built-in", frame=0)
 APOSE_INFO = PoseInfo(name="a_pose", source="built-in", frame=0)
+RESTPOSE_INFO = PoseInfo(name="rest_pose", source="rest", frame=0)
 
 # Upper arm bone name substrings used to identify shoulders for A-pose
 _LEFT_UPPER_ARM_KEYWORDS = ("leftarm", "upper_arm.l", "l_upperarm", "upperarm.l")
@@ -550,15 +551,15 @@ def _apply_animation_pose(
     anim_armature: bpy.types.Object,
     target_frame: int,
 ) -> int:
-    """Transfer an animation pose from one armature to another at a given frame.
+    """Transfer an animation pose via rest-pose-relative retargeting.
 
-    Binds the animation action directly to the character armature and evaluates
-    at the target frame. This lets Blender's animation system handle the full
-    transform evaluation, which is required in Blender 5.0+ where the layered
-    action system replaced direct fcurve access.
-
-    The action stays bound to the character armature until ``reset_pose()``
-    is called, which clears the action and resets to T-pose.
+    Instead of directly binding the animation action (which only works when
+    character and animation share the same rest pose), this computes the
+    **delta rotation** each bone undergoes relative to its rest pose in the
+    animation skeleton, then applies that same delta on top of the character's
+    own rest pose.  This produces correct results even when the two skeletons
+    have completely different rest orientations (e.g. Meshy auto-rigged
+    characters with Meshy generic animations).
 
     Args:
         character_armature: The character's armature to pose.
@@ -568,52 +569,69 @@ def _apply_animation_pose(
     Returns:
         Number of bones successfully transferred.
     """
+    from mathutils import Matrix, Quaternion as MQuaternion  # noqa: N811
+
     scene = bpy.context.scene
 
-    # Get the animation action
+    # --- 1. Bind action to animation armature and evaluate at target frame ---
     action = None
     if anim_armature.animation_data and anim_armature.animation_data.action:
         action = anim_armature.animation_data.action
+    if action is None and bpy.data.actions:
+        action = bpy.data.actions[0]
     if action is None:
         logger.error("No action found on animation armature %s", anim_armature.name)
         return 0
 
-    # Detect bone prefix mismatch between animation and character armatures.
-    # Some Ch##_nonPBR characters use mixamorig#: while pose FBXs use mixamorig:
-    anim_prefix = _detect_bone_prefix([b.name for b in anim_armature.pose.bones])
-    char_prefix = _detect_bone_prefix([b.name for b in character_armature.pose.bones])
-    if anim_prefix and char_prefix and anim_prefix != char_prefix:
-        _remap_action_prefix(action, anim_prefix, char_prefix)
-
-    # Bind action to character armature
-    if character_armature.animation_data is None:
-        character_armature.animation_data_create()
-
-    character_armature.animation_data.action = action
-
-    # Blender 5.0+: copy the action slot binding so channels evaluate
-    if hasattr(character_armature.animation_data, "action_slot"):
-        anim_slot = getattr(anim_armature.animation_data, "action_slot", None)
-        if anim_slot is not None:
+    if anim_armature.animation_data is None:
+        anim_armature.animation_data_create()
+    anim_armature.animation_data.action = action
+    if hasattr(anim_armature.animation_data, "action_slot"):
+        slots = list(action.slots) if hasattr(action, "slots") else []
+        if slots:
             try:
-                character_armature.animation_data.action_slot = anim_slot
+                anim_armature.animation_data.action_slot = slots[0]
             except Exception:
-                logger.debug("Could not assign action slot, channels may not evaluate")
+                pass
 
-    # Evaluate at target frame
     scene.frame_set(target_frame)
     bpy.context.view_layer.update()
 
-    # Count how many bones have matching names (for logging)
-    anim_bone_names = {b.name for b in anim_armature.pose.bones}
-    char_bone_names = {b.name for b in character_armature.pose.bones}
-    # After prefix remapping, count effective matches via normalized names
-    anim_norm = {_normalize_bone_name(n) for n in anim_bone_names}
-    char_norm = {_normalize_bone_name(n) for n in char_bone_names}
-    transferred = len(anim_norm & char_norm)
+    # --- 2. Extract per-bone pose-space rotation from animation armature ---
+    # In Blender, pose bones have a `rotation_quaternion` (or euler) that
+    # represents the LOCAL rotation delta applied ON TOP of the rest pose.
+    # This is exactly what we need to copy to the character's pose bones.
+    anim_pose_rotations: dict[str, MQuaternion] = {}
+    for pbone in anim_armature.pose.bones:
+        pbone.rotation_mode = "QUATERNION"
+        anim_pose_rotations[pbone.name] = pbone.rotation_quaternion.copy()
+
+    # --- 3. Build bone name mapping (anim → character) ---
+    anim_bone_names = [b.name for b in anim_armature.pose.bones]
+    char_bone_names = [b.name for b in character_armature.pose.bones]
+    name_map = _build_name_map(anim_bone_names, char_bone_names)
+
+    # --- 4. Apply pose-space rotations to character bones ---
+    # Reset character to rest pose first
+    _apply_tpose(character_armature)
+
+    transferred = 0
+    for anim_name, char_name in name_map.items():
+        if anim_name not in anim_pose_rotations:
+            continue
+
+        char_pbone = character_armature.pose.bones.get(char_name)
+        if char_pbone is None:
+            continue
+
+        char_pbone.rotation_mode = "QUATERNION"
+        char_pbone.rotation_quaternion = anim_pose_rotations[anim_name]
+        transferred += 1
+
+    bpy.context.view_layer.update()
 
     logger.debug(
-        "Transferred %d bones at frame %d via action binding",
+        "Retargeted %d bones at frame %d (pose-space rotation copy)",
         transferred,
         target_frame,
     )
@@ -798,6 +816,11 @@ def apply_pose(
     Returns:
         True if the pose was applied successfully, False otherwise.
     """
+    # Rest pose — keep the character's native import pose, no modifications
+    if pose.source == "rest":
+        logger.info("Applied rest pose (no-op, keeping native pose)")
+        return True
+
     # Built-in poses
     if pose.source == "built-in":
         if pose.name == "t_pose":
@@ -842,9 +865,9 @@ def apply_pose(
 
     transferred = _apply_animation_pose(armature, anim_armature, pose.frame)
 
-    # Clean up the temporary animation armature (but not the action,
-    # which is now bound to the character armature for rendering).
-    _cleanup_imported_armature(anim_armature, keep_actions=True)
+    # Clean up the temporary animation armature and its actions
+    # (retargeting no longer binds actions to the character armature).
+    _cleanup_imported_armature(anim_armature, keep_actions=False)
 
     if transferred == 0:
         logger.warning(

@@ -97,17 +97,22 @@ download_dataset() {
 # --- Core datasets (always downloaded) ---
 echo "[4/5] Downloading training data from Hetzner bucket..."
 if [ "$MODE" = "lean" ]; then
-    echo "  LEAN mode: core data only (~36 GB)"
+    echo "  LEAN mode: core data only (~45 GB)"
 else
-    echo "  FULL mode: all data (~43 GB)"
+    echo "  FULL mode: all data (~55 GB)"
 fi
 echo ""
 
 mkdir -p "$DATA_DIR/_tars"
 
-download_dataset "segmentation"   "Mixamo — ~600 MB, 1,598 renders"
+# Meshy CC0 — primary CC0-licensed dataset (replaces Mixamo)
+download_dataset "meshy_cc0"          "Meshy CC0 flat: ~7,700 examples, 22-class seg + joints + depth + normals"
+download_dataset "meshy_cc0_textured" "Meshy CC0 textured: ~8,200 examples, 22-class seg + joints + depth + normals"
+download_dataset "meshy_cc0_unrigged" "Meshy CC0 unrigged: ~20K textured multi-view (image + depth + normals only)"
+
+# Other clean-licensed datasets
 download_dataset "live2d"         "~212 MB, 844 examples"
-download_dataset "humanrig"       "~5.6 GB, 11,434 examples"
+download_dataset "humanrig"       "~5.6 GB, 11,434 examples (weights)"
 download_dataset "anime_seg"      "~3.5 GB, 14,579 examples with joints"
 download_dataset "fbanimehq"      "~11.4 GB, ~101K full-body anime with joints"
 download_dataset "curated_diverse" "~50 MB, 748 diverse 2D drawings with joints"
@@ -137,7 +142,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in segmentation live2d humanrig unirig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
+for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)

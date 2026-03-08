@@ -174,7 +174,7 @@ def _count_images_by_source(output_dir: Path) -> dict[str, int]:
                 char_id = meta.get("id", meta_path.stem)
                 source = meta.get("source", "unknown")
                 char_source[char_id] = source if source else "unknown"
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 logger.warning("Failed to read source metadata %s", meta_path)
 
     for img_path in images_dir.glob("*.png"):
@@ -302,7 +302,7 @@ def _collect_quality_info(
                 if unmapped:
                     char_id = meta.get("id", meta_path.stem)
                     unmapped_bone_characters.append(char_id)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 logger.warning("Failed to read source metadata %s", meta_path)
 
     return {

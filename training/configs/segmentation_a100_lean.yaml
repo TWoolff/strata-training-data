@@ -1,6 +1,6 @@
 # Lean A100 config — core datasets, longer training for production quality
-# ~28K+ examples (13K 22-class seg + 15K confidence-only)
-# Est. time: ~4-5h on A100 (with early stopping)
+# ~44K+ examples (21K 22-class seg + 15K confidence-only + 8K textured)
+# Est. time: ~5-6h on A100 (with early stopping)
 model:
   backbone: "mobilenet_v3_large"
   num_classes: 22
@@ -8,7 +8,8 @@ model:
 
 data:
   dataset_dirs:
-    - "./data_cloud/segmentation"        # Mixamo: 1,598 examples, 22-class + draw_order + joints
+    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: ~7,700 examples, 22-class seg + joints + depth + normals
+    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: ~8,200 examples, 22-class seg + joints + depth + normals
     - "./data_cloud/live2d"              # Live2D: 844 examples, 22-class + draw_order
     - "./data_cloud/humanrig"            # HumanRig: 11,434 examples, 22-class + joints + weights
     - "./data_cloud/unirig"              # UniRig: ~10K humanoid subset, 22-class seg masks

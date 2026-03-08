@@ -3,10 +3,11 @@
 # Strata Training — Third Run (A100)
 #
 # Key changes from run 2:
+#   - Meshy CC0 dataset: ~36K new CC0-licensed examples (flat + textured + unrigged)
+#   - Dropped Mixamo (proprietary license) from seg + joints training
 #   - Segmentation model now has depth + normals heads (Marigold-distilled)
-#   - Weight data: 54 → ~26.5K examples (HumanRig + UniRig)
-#   - Normals enrichment on unirig dataset
-#   - No seg enrichment needed (done in run 2)
+#   - Weight data: 54 → ~27K examples (HumanRig + UniRig — kept for weights only)
+#   - Inpainting pair generation now includes Meshy textured images
 #
 # Prerequisites:
 #   export BUCKET_ACCESS_KEY='...'
@@ -35,20 +36,21 @@ echo ""
 # ---------------------------------------------------------------------------
 # 0. Install extra deps (Marigold normals + depth)
 # ---------------------------------------------------------------------------
-echo "[0/6] Installing extra dependencies..."
+echo "[0/7] Installing extra dependencies..."
 pip install -q diffusers transformers accelerate
 echo "  Done."
 echo ""
 
 # ---------------------------------------------------------------------------
 # 1. Normals + depth enrichment (Marigold LCM)
-#    Enrich datasets that need depth.png + normals.png for the new seg heads.
+#    Meshy datasets already have Blender-rendered depth/normals.
+#    Enrich remaining datasets that need Marigold depth.png + normals.png.
 #    --only-missing skips examples already enriched in run 2.
 # ---------------------------------------------------------------------------
-echo "[1/6] Enriching datasets with surface normals + depth (Marigold)..."
+echo "[1/7] Enriching datasets with surface normals + depth (Marigold)..."
 echo ""
 
-for ds in segmentation live2d curated_diverse humanrig unirig; do
+for ds in live2d curated_diverse humanrig unirig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Enriching $ds with normals + depth..."
         python run_normals_enrich.py \
@@ -64,9 +66,30 @@ echo "  Normals enrichment complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2. Train all models
+# 2. Generate inpainting pairs from Meshy textured + other datasets
 # ---------------------------------------------------------------------------
-echo "[2/6] Training all models (lean config)..."
+echo "[2/7] Generating inpainting occlusion pairs..."
+echo ""
+
+python -m training.data.generate_occlusion_pairs \
+    --source-dirs \
+        ./data_cloud/meshy_cc0_textured \
+        ./data_cloud/meshy_cc0_unrigged \
+        ./data_cloud/humanrig \
+        ./data_cloud/curated_diverse \
+    --output-dir ./data_cloud/inpainting_pairs \
+    --max-source-images 15000 \
+    --pairs-per-image 3 \
+    2>&1 | tee "$LOG_DIR/generate_inpainting_pairs.log"
+
+echo ""
+echo "  Inpainting pairs generated."
+echo ""
+
+# ---------------------------------------------------------------------------
+# 3. Train all models
+# ---------------------------------------------------------------------------
+echo "[3/7] Training all models (lean config)..."
 echo ""
 
 ./training/train_all.sh lean 2>&1 | tee "$LOG_DIR/train_all.log"
@@ -76,9 +99,9 @@ echo "  Training complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 3. Upload results to bucket
+# 4. Upload results to bucket
 # ---------------------------------------------------------------------------
-echo "[3/6] Uploading checkpoints, logs, and ONNX models to bucket..."
+echo "[4/7] Uploading checkpoints, logs, and ONNX models to bucket..."
 echo ""
 
 rclone copy ./checkpoints/ hetzner:strata-training-data/checkpoints/ \
@@ -97,23 +120,22 @@ echo "  Upload complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 4. Pack datasets as tar archives (includes newly enriched normals + depth)
+# 5. Pack enriched datasets as tar archives
 # ---------------------------------------------------------------------------
-echo "[4/6] Packing datasets as tar archives (includes enriched data)..."
+echo "[5/7] Packing enriched datasets as tar archives..."
 echo ""
 
 TAR_DIR="./data_cloud/_tars"
 mkdir -p "$TAR_DIR"
 
-# Only re-tar datasets that were enriched (normals/depth added)
-# anime_seg and fbanimehq are unchanged — skip them to save ~30GB upload
-for ds in segmentation live2d humanrig curated_diverse unirig; do
+# Re-tar datasets that were enriched (normals/depth added)
+# Meshy datasets are uploaded separately from Mac before the run
+for ds in live2d humanrig curated_diverse unirig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Packing $ds..."
         (cd ./data_cloud && tar cf - "$ds") > "$TAR_DIR/${ds}.tar"
         tar_size=$(du -sh "$TAR_DIR/${ds}.tar" 2>/dev/null | cut -f1)
         echo "    → ${ds}.tar ($tar_size)"
-        # Upload immediately and remove local tar to save disk space
         echo "    → Uploading..."
         rclone copy "$TAR_DIR/${ds}.tar" hetzner:strata-training-data/tars/ \
             --transfers 8 --fast-list -P
@@ -123,7 +145,7 @@ for ds in segmentation live2d humanrig curated_diverse unirig; do
 done
 
 echo "  Deleting loose files from bucket (only for datasets we just tarred)..."
-for ds in segmentation live2d humanrig curated_diverse unirig; do
+for ds in live2d humanrig curated_diverse unirig; do
     if rclone lsf "hetzner:strata-training-data/tars/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
         echo "    Deleting $ds/ (tar verified)..."
         rclone purge "hetzner:strata-training-data/$ds/" 2>/dev/null || true
@@ -136,12 +158,12 @@ echo "  Tar upload complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Clean up tar staging dir
+# 6. Clean up tar staging dir
 # ---------------------------------------------------------------------------
 rmdir "$TAR_DIR" 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
-# 6. Summary
+# 7. Summary
 # ---------------------------------------------------------------------------
 echo "============================================"
 echo "  Third run complete!"

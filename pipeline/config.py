@@ -764,11 +764,42 @@ BACKGROUND_TRANSPARENT: bool = True
 CameraAngle = dict[str, int]
 
 CAMERA_ANGLES: dict[str, CameraAngle] = {
+    # Eye-level (0°) — standard character art views, full 360°
     "front": {"azimuth": 0, "elevation": 0},
+    "front_22": {"azimuth": 22, "elevation": 0},
     "three_quarter": {"azimuth": 45, "elevation": 0},
+    "three_quarter_67": {"azimuth": 67, "elevation": 0},
     "side": {"azimuth": 90, "elevation": 0},
+    "side_112": {"azimuth": 112, "elevation": 0},
     "three_quarter_back": {"azimuth": 135, "elevation": 0},
+    "three_quarter_back_157": {"azimuth": 157, "elevation": 0},
     "back": {"azimuth": 180, "elevation": 0},
+    "three_quarter_back_left": {"azimuth": 225, "elevation": 0},
+    "side_left": {"azimuth": 270, "elevation": 0},
+    "three_quarter_left": {"azimuth": 315, "elevation": 0},
+    # Slightly elevated (25°) — character select screens, UI poses
+    "front_high": {"azimuth": 0, "elevation": 25},
+    "three_quarter_high": {"azimuth": 45, "elevation": 25},
+    "side_high": {"azimuth": 90, "elevation": 25},
+    "back_high": {"azimuth": 180, "elevation": 25},
+    # Low angle (-15°) — heroic/dynamic shots, VTuber webcam perspective
+    "front_low": {"azimuth": 0, "elevation": -15},
+    "three_quarter_low": {"azimuth": 45, "elevation": -15},
+    "side_low": {"azimuth": 90, "elevation": -15},
+    # Isometric / Diablo-style (~35°), full 360°
+    "iso_front": {"azimuth": 0, "elevation": 35},
+    "iso_front_right": {"azimuth": 45, "elevation": 35},
+    "iso_right": {"azimuth": 90, "elevation": 35},
+    "iso_back_right": {"azimuth": 135, "elevation": 35},
+    "iso_back": {"azimuth": 180, "elevation": 35},
+    "iso_back_left": {"azimuth": 225, "elevation": 35},
+    "iso_left": {"azimuth": 270, "elevation": 35},
+    "iso_front_left": {"azimuth": 315, "elevation": 35},
+    # Top-down (~60°) — MOBA/RTS views
+    "topdown_front": {"azimuth": 0, "elevation": 60},
+    "topdown_right": {"azimuth": 90, "elevation": 60},
+    "topdown_back": {"azimuth": 180, "elevation": 60},
+    "topdown_left": {"azimuth": 270, "elevation": 60},
 }
 
 DEFAULT_CAMERA_ANGLES: list[str] = ["front"]
@@ -842,8 +873,8 @@ WEIGHT_THRESHOLD: float = 0.01  # Minimum bone weight to include (noise reductio
 # Render-time (Blender shaders): flat, cel, unlit
 # Post-render (Python/PIL/OpenCV): pixel, painterly, sketch
 
-ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit"]
-RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit"}
+ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit", "textured"]
+RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit", "textured"}
 POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
 
 # Style routing registry: maps style name → type ("render" or "post")
@@ -853,6 +884,7 @@ STYLE_REGISTRY: dict[str, str] = {
     "flat": "render",
     "cel": "render",
     "unlit": "render",
+    "textured": "render",
     "pixel": "post",
     "painterly": "post",
     "sketch": "post",

@@ -128,7 +128,18 @@ def _normalize_transforms(
     for obj in all_objects:
         obj.scale *= scale_factor
 
-    _apply_transforms(all_objects, scale=True)
+    # Only apply (bake) transforms on meshes that are NOT skinned to an armature.
+    # Applying scale to an armature with skinned children breaks the deformation
+    # (bone positions get baked at the new scale, but vertex group weights still
+    # reference the original bone-space positions).  Instead, leave the armature
+    # scale as an object-level property — Blender evaluates it correctly at render.
+    skinned_meshes = {
+        m for m in meshes
+        if any(mod.type == "ARMATURE" for mod in m.modifiers)
+    }
+    unskinned = [o for o in all_objects if o not in skinned_meshes and o != armature]
+    if unskinned:
+        _apply_transforms(unskinned, scale=True)
 
     # Recompute bounding box after scale
     bbox_min, bbox_max = _combined_bounding_box(meshes)
@@ -140,7 +151,8 @@ def _normalize_transforms(
     for obj in all_objects:
         obj.location += offset
 
-    _apply_transforms(all_objects, location=True)
+    if unskinned:
+        _apply_transforms(unskinned, location=True)
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +197,22 @@ def import_character(fbx_path: Path) -> ImportResult | None:
         elif obj.type == "MESH":
             meshes.append(obj)
 
+    # Filter out stray meshes not parented to any armature (e.g. default Cube).
+    # These inflate the bounding box and break camera framing.
+    if armatures:
+        armature_names = {a.name for a in armatures}
+        parented = [m for m in meshes if m.parent and m.parent.name in armature_names]
+        if parented:
+            stray = len(meshes) - len(parented)
+            if stray > 0:
+                logger.info(
+                    "Filtered %d stray mesh(es) not parented to armature", stray
+                )
+                for m in meshes:
+                    if m not in parented:
+                        bpy.data.objects.remove(m, do_unlink=True)
+            meshes = parented
+
     if not armatures:
         logger.error("No armature found in %s — skipping", fbx_path.name)
         return None
@@ -217,3 +245,76 @@ def import_character(fbx_path: Path) -> ImportResult | None:
         armature=armature,
         meshes=meshes,
     )
+
+
+def transfer_materials_from_glb(
+    meshes: list[bpy.types.Object],
+    original_glb: Path,
+) -> bool:
+    """Transfer materials from an original unrigged GLB onto rigged meshes.
+
+    The Meshy rigging API strips textures. This imports the original GLB
+    (which has materials + 2048x2048 textures), copies material slots to
+    the rigged meshes (same topology/UVs), then removes the original mesh.
+
+    Args:
+        meshes: Rigged mesh objects (no materials).
+        original_glb: Path to the original unrigged GLB with textures.
+
+    Returns:
+        True if materials were transferred, False otherwise.
+    """
+    if not original_glb.is_file():
+        logger.warning("Original GLB not found: %s", original_glb)
+        return False
+
+    # Track existing objects
+    existing = set(bpy.data.objects)
+
+    try:
+        bpy.ops.import_scene.gltf(filepath=str(original_glb))
+    except Exception:
+        logger.exception("Failed to import original GLB: %s", original_glb)
+        return False
+
+    # Find newly imported meshes
+    new_objects = [o for o in bpy.data.objects if o not in existing]
+    new_meshes = [o for o in new_objects if o.type == "MESH"]
+
+    if not new_meshes:
+        logger.warning("No mesh in original GLB: %s", original_glb.name)
+        for o in new_objects:
+            bpy.data.objects.remove(o, do_unlink=True)
+        return False
+
+    # Collect materials from the original mesh
+    original_materials = []
+    for orig_mesh in new_meshes:
+        for slot in orig_mesh.material_slots:
+            if slot.material and slot.material not in original_materials:
+                original_materials.append(slot.material)
+
+    if not original_materials:
+        logger.warning("No materials in original GLB: %s", original_glb.name)
+        for o in new_objects:
+            bpy.data.objects.remove(o, do_unlink=True)
+        return False
+
+    # Transfer materials to rigged meshes
+    for rigged_mesh in meshes:
+        # Clear existing empty slots
+        rigged_mesh.data.materials.clear()
+        # Add materials from original
+        for mat in original_materials:
+            rigged_mesh.data.materials.append(mat)
+
+    # Remove the imported original objects
+    for o in new_objects:
+        bpy.data.objects.remove(o, do_unlink=True)
+
+    logger.info(
+        "Transferred %d material(s) from %s",
+        len(original_materials),
+        original_glb.name,
+    )
+    return True
