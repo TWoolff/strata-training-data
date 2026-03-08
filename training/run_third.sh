@@ -105,7 +105,9 @@ echo ""
 TAR_DIR="./data_cloud/_tars"
 mkdir -p "$TAR_DIR"
 
-for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse unirig; do
+# Only re-tar datasets that were enriched (normals/depth added)
+# anime_seg and fbanimehq are unchanged — skip them to save ~30GB upload
+for ds in segmentation live2d humanrig curated_diverse unirig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Packing $ds..."
         (cd ./data_cloud && tar cf - "$ds") > "$TAR_DIR/${ds}.tar"
@@ -121,7 +123,7 @@ for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse uniri
 done
 
 echo "  Deleting loose files from bucket (only for datasets we just tarred)..."
-for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse unirig; do
+for ds in segmentation live2d humanrig curated_diverse unirig; do
     if rclone lsf "hetzner:strata-training-data/tars/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
         echo "    Deleting $ds/ (tar verified)..."
         rclone purge "hetzner:strata-training-data/$ds/" 2>/dev/null || true
