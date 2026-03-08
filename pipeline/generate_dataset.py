@@ -80,6 +80,8 @@ from .renderer import (
     convert_rgb_to_grayscale_mask,
     create_region_materials,
     render_color,
+    render_depth,
+    render_normals,
     render_segmentation,
     restore_style,
     setup_camera,
@@ -694,6 +696,25 @@ def _process_single_pose(
                 draw_order_out_path, format="PNG", compress_level=9
             )
 
+            # --- Depth render (Blender Camera Data, ground truth) ---
+            _restore_materials(meshes, original_materials)
+            setup_color_render(scene)
+            depth_out_path = output_dir / "depth" / f"{char_id}{pose_suffix}.png"
+            render_depth(scene, depth_out_path, meshes)
+
+            # --- Normals render (Blender Geometry Normal, ground truth) ---
+            normals_out_path = output_dir / "normals" / f"{char_id}{pose_suffix}.png"
+            render_normals(scene, normals_out_path, meshes)
+
+            # Re-assign seg materials for any subsequent passes
+            for mesh_idx, mesh_obj in enumerate(meshes):
+                assign_region_materials(
+                    mesh_obj,
+                    mesh_idx,
+                    mapping.vertex_to_region,
+                    region_materials,
+                )
+
             # --- Per-region RGBA layers ---
             if enable_layers:
                 from .layer_extractor import extract_layers
@@ -826,6 +847,17 @@ def _process_single_pose(
                 # Flip draw order map (horizontal mirror)
                 do_img = Image.open(draw_order_out_path)
                 do_img.transpose(Image.FLIP_LEFT_RIGHT).save(draw_order_out_path, format="PNG")
+
+                # Flip depth map
+                depth_img = Image.open(depth_out_path)
+                depth_img.transpose(Image.FLIP_LEFT_RIGHT).save(depth_out_path, format="PNG")
+
+                # Flip normals map (horizontal flip + invert X channel)
+                normals_img = Image.open(normals_out_path)
+                normals_flipped = normals_img.transpose(Image.FLIP_LEFT_RIGHT)
+                narr = np.array(normals_flipped)
+                narr[:, :, 0] = 255 - narr[:, :, 0]  # invert X normal
+                Image.fromarray(narr).save(normals_out_path, format="PNG")
 
                 for _style, img_path in color_paths.items():
                     img = Image.open(img_path)

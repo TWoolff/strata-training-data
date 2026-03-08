@@ -41,6 +41,8 @@ _SUBDIRS: list[str] = [
     "joints",
     "weights",
     "draw_order",
+    "depth",
+    "normals",
     "measurements",
     "sources",
     "contours",

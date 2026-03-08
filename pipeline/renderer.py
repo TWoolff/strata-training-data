@@ -910,6 +910,225 @@ def restore_style(
     logger.info("Restored scene after '%s' style", style)
 
 
+# ---------------------------------------------------------------------------
+# Depth + normals render passes (material-based, works in EEVEE)
+# ---------------------------------------------------------------------------
+
+_DEPTH_MAT_NAME = "strata_depth_mat"
+_NORMAL_MAT_NAME = "strata_normal_mat"
+
+
+def _create_depth_material() -> bpy.types.Material:
+    """Create a material that outputs camera-space Z as grayscale via Camera Data node."""
+    mat = bpy.data.materials.get(_DEPTH_MAT_NAME)
+    if mat is not None:
+        bpy.data.materials.remove(mat)
+
+    mat = bpy.data.materials.new(name=_DEPTH_MAT_NAME)
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    nodes.clear()
+
+    output = nodes.new(type="ShaderNodeOutputMaterial")
+    output.location = (600, 0)
+
+    # Camera Data → View Z Depth
+    cam_data = nodes.new(type="ShaderNodeCameraData")
+    cam_data.location = (0, 0)
+
+    # Map Range: clip_start..clip_end → 1..0 (near=white, far=black)
+    map_range = nodes.new(type="ShaderNodeMapRange")
+    map_range.location = (200, 0)
+    map_range.inputs["From Min"].default_value = 0.1
+    map_range.inputs["From Max"].default_value = 100.0
+    map_range.inputs["To Min"].default_value = 1.0
+    map_range.inputs["To Max"].default_value = 0.0
+    map_range.clamp = True
+    links.new(cam_data.outputs["View Z Depth"], map_range.inputs["Value"])
+
+    # Emission shader with depth value
+    emission = nodes.new(type="ShaderNodeEmission")
+    emission.location = (400, 0)
+    emission.inputs["Strength"].default_value = 1.0
+    links.new(map_range.outputs["Result"], emission.inputs["Color"])
+    links.new(emission.outputs["Emission"], output.inputs["Surface"])
+
+    return mat
+
+
+def _create_normal_material() -> bpy.types.Material:
+    """Create a material that outputs world-space normals as RGB via Geometry node."""
+    mat = bpy.data.materials.get(_NORMAL_MAT_NAME)
+    if mat is not None:
+        bpy.data.materials.remove(mat)
+
+    mat = bpy.data.materials.new(name=_NORMAL_MAT_NAME)
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    links = mat.node_tree.links
+    nodes.clear()
+
+    output = nodes.new(type="ShaderNodeOutputMaterial")
+    output.location = (600, 0)
+
+    # Geometry node → Normal (world space)
+    geom = nodes.new(type="ShaderNodeNewGeometry")
+    geom.location = (0, 0)
+
+    # Map Range: [-1, 1] → [0, 1] per component
+    # Use Vector Math to remap: (normal + 1) * 0.5
+    add_node = nodes.new(type="ShaderNodeVectorMath")
+    add_node.operation = "ADD"
+    add_node.location = (200, 0)
+    add_node.inputs[1].default_value = (1.0, 1.0, 1.0)
+    links.new(geom.outputs["Normal"], add_node.inputs[0])
+
+    scale_node = nodes.new(type="ShaderNodeVectorMath")
+    scale_node.operation = "SCALE"
+    scale_node.location = (400, 0)
+    scale_node.inputs["Scale"].default_value = 0.5
+    links.new(add_node.outputs["Vector"], scale_node.inputs[0])
+
+    # Emission shader with normal color
+    emission = nodes.new(type="ShaderNodeEmission")
+    emission.location = (600, 0)
+    emission.inputs["Strength"].default_value = 1.0
+    links.new(scale_node.outputs["Vector"], emission.inputs["Color"])
+
+    output.location = (800, 0)
+    links.new(emission.outputs["Emission"], output.inputs["Surface"])
+
+    return mat
+
+
+def render_depth(
+    scene: bpy.types.Scene,
+    output_path: Path,
+    meshes: list[bpy.types.Object],
+) -> Path:
+    """Render a depth map using a Camera Data material.
+
+    Produces an 8-bit grayscale PNG where 0 = far, 255 = near.
+    Background is 0 (transparent pixels).
+
+    Args:
+        scene: The Blender scene (camera must be set up).
+        output_path: File path for the output depth PNG.
+        meshes: Character mesh objects.
+
+    Returns:
+        The path to the rendered depth image.
+    """
+    # Create depth material with correct clip range
+    depth_mat = _create_depth_material()
+    cam = scene.camera.data
+    # Update map range to match camera clip
+    for node in depth_mat.node_tree.nodes:
+        if node.type == "MAP_RANGE":
+            node.inputs["From Min"].default_value = cam.clip_start
+            node.inputs["From Max"].default_value = cam.clip_end
+            break
+
+    # Backup and replace materials
+    saved_mats = {}
+    for mesh_obj in meshes:
+        saved_mats[mesh_obj.name] = [slot.material for slot in mesh_obj.material_slots]
+        for slot in mesh_obj.material_slots:
+            slot.material = depth_mat
+
+    # Render settings — emission only, no lighting, no AA, Raw color
+    old_filter = scene.render.filter_size
+    old_view_transform = scene.view_settings.view_transform
+    scene.render.filter_size = 0.0
+    scene.view_settings.view_transform = "Raw"
+    scene.render.filepath = str(output_path)
+
+    bpy.ops.render.render(write_still=True)
+
+    # Convert to grayscale
+    depth_img = Image.open(output_path).convert("RGBA")
+    depth_arr = np.array(depth_img)
+    gray = depth_arr[:, :, 0].copy()
+    gray[depth_arr[:, :, 3] == 0] = 0
+    Image.fromarray(gray, mode="L").save(output_path, format="PNG", compress_level=9)
+
+    # Restore materials
+    for mesh_obj in meshes:
+        for i, mat in enumerate(saved_mats[mesh_obj.name]):
+            if i < len(mesh_obj.material_slots):
+                mesh_obj.material_slots[i].material = mat
+
+    scene.render.filter_size = old_filter
+    scene.view_settings.view_transform = old_view_transform
+
+    # Clean up
+    bpy.data.materials.remove(depth_mat)
+
+    logger.info("Depth map rendered to %s", output_path)
+    return output_path
+
+
+def render_normals(
+    scene: bpy.types.Scene,
+    output_path: Path,
+    meshes: list[bpy.types.Object],
+) -> Path:
+    """Render surface normals using a Geometry Normal material.
+
+    Produces an RGB uint8 PNG where normals in [-1, 1] are mapped to [0, 255].
+    Background pixels are set to (128, 128, 255).
+
+    Args:
+        scene: The Blender scene (camera must be set up).
+        output_path: File path for the output normals PNG.
+        meshes: Character mesh objects.
+
+    Returns:
+        The path to the rendered normals image.
+    """
+    normal_mat = _create_normal_material()
+
+    # Backup and replace materials
+    saved_mats = {}
+    for mesh_obj in meshes:
+        saved_mats[mesh_obj.name] = [slot.material for slot in mesh_obj.material_slots]
+        for slot in mesh_obj.material_slots:
+            slot.material = normal_mat
+
+    # Render settings — emission only, no AA, Raw color
+    old_filter = scene.render.filter_size
+    old_view_transform = scene.view_settings.view_transform
+    scene.render.filter_size = 0.0
+    scene.view_settings.view_transform = "Raw"
+    scene.render.filepath = str(output_path)
+
+    bpy.ops.render.render(write_still=True)
+
+    # Process: set background to flat normal (128, 128, 255)
+    normals_img = Image.open(output_path).convert("RGBA")
+    normals_arr = np.array(normals_img)
+    alpha = normals_arr[:, :, 3]
+    rgb = normals_arr[:, :, :3].copy()
+    rgb[alpha == 0] = [128, 128, 255]
+    Image.fromarray(rgb, mode="RGB").save(output_path, format="PNG", compress_level=6)
+
+    # Restore materials
+    for mesh_obj in meshes:
+        for i, mat in enumerate(saved_mats[mesh_obj.name]):
+            if i < len(mesh_obj.material_slots):
+                mesh_obj.material_slots[i].material = mat
+
+    scene.render.filter_size = old_filter
+    scene.view_settings.view_transform = old_view_transform
+
+    # Clean up
+    bpy.data.materials.remove(normal_mat)
+
+    logger.info("Normals map rendered to %s", output_path)
+    return output_path
+
+
 def apply_style(
     scene: bpy.types.Scene,
     meshes: list[bpy.types.Object],

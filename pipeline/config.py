@@ -187,9 +187,11 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "upper_body": 3,
     "torso_upper": 3,
     "Spine2": 3,
+    "Spine02": 3,  # Meshy auto-rig naming
     "spine": 4,
     "Spine": 4,
     "Spine1": 4,
+    "Spine01": 4,  # Meshy auto-rig naming
     "torso": 4,
     "torso_lower": 4,
     "abdomen": 4,
