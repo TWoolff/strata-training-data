@@ -560,6 +560,202 @@ def evaluate_weights(
 
 
 # ---------------------------------------------------------------------------
+# Back view evaluation
+# ---------------------------------------------------------------------------
+
+
+def evaluate_back_view(
+    checkpoint_path: Path,
+    dataset_dirs: list[Path],
+    output_dir: Path,
+    config_path: Path | None = None,
+    grid_n: int = 8,
+) -> dict:
+    """Run back view generation model evaluation on the test set.
+
+    Args:
+        checkpoint_path: Path to model checkpoint.
+        dataset_dirs: Directories containing paired back view data.
+        output_dir: Directory to write evaluation outputs.
+        config_path: Optional YAML config for dataset settings.
+        grid_n: Number of rows in the visual comparison grid.
+
+    Returns:
+        Summary metrics dict.
+    """
+    from PIL import Image
+
+    from training.data.back_view_dataset import BackViewDataset, BackViewDatasetConfig
+    from training.models.back_view_model import BackViewModel
+
+    device = _select_device()
+    logger.info("Evaluating back view model on %s", device)
+
+    # Load model
+    model = BackViewModel(in_channels=8, out_channels=4)
+    load_checkpoint(checkpoint_path, model)
+    model = model.to(device)
+    model.eval()
+
+    # Load test dataset
+    ds_config = BackViewDatasetConfig(
+        dataset_dirs=dataset_dirs,
+        split="test",
+        horizontal_flip=False,
+        color_jitter={},
+    )
+    test_dataset = BackViewDataset(ds_config)
+    if len(test_dataset) == 0:
+        logger.warning("Test dataset is empty — skipping back view evaluation")
+        return {"model": "back_view", "error": "empty_test_set"}
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=4,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+    )
+
+    # Metrics accumulators
+    total_l1 = 0.0
+    total_psnr = 0.0
+    total_ssim = 0.0
+    n_examples = 0
+
+    # Visual comparison grid
+    grid_rows: list[np.ndarray] = []
+
+    with torch.no_grad():
+        for batch in test_loader:
+            image = batch["image"].to(device)  # [B, 8, H, W]
+            target = batch["target"]  # [B, 4, H, W]
+
+            pred = model(image)["output"].cpu()  # [B, 4, H, W]
+
+            for i in range(pred.shape[0]):
+                pred_i = pred[i].numpy()  # [4, H, W]
+                target_i = target[i].numpy()  # [4, H, W]
+                alpha = target_i[3]  # [H, W]
+                mask = alpha > 0.5
+
+                if mask.sum() == 0:
+                    continue
+
+                # L1 on non-transparent pixels
+                diff = np.abs(pred_i[:3] - target_i[:3])
+                l1 = diff[:, mask].mean()
+                total_l1 += float(l1)
+
+                # PSNR on character region
+                mse = (diff[:, mask] ** 2).mean()
+                psnr = 10 * np.log10(1.0 / max(float(mse), 1e-10))
+                total_psnr += psnr
+
+                # SSIM (structural similarity on full image RGB)
+                pred_rgb = np.clip(pred_i[:3].transpose(1, 2, 0), 0, 1)
+                target_rgb = np.clip(target_i[:3].transpose(1, 2, 0), 0, 1)
+                ssim_val = _compute_ssim(pred_rgb, target_rgb)
+                total_ssim += ssim_val
+
+                n_examples += 1
+
+                # Collect grid examples
+                if len(grid_rows) < grid_n:
+                    front = image[i, :4].cpu().numpy()  # [4, H, W]
+                    tq = image[i, 4:8].cpu().numpy()  # [4, H, W]
+                    diff_map = np.abs(pred_i[:3] - target_i[:3]).mean(axis=0)  # [H, W]
+                    diff_rgb = np.stack([diff_map] * 3, axis=0) * 5  # amplify
+                    diff_rgb = np.clip(diff_rgb, 0, 1)
+
+                    row = np.concatenate(
+                        [
+                            _rgba_to_rgb_uint8(front),
+                            _rgba_to_rgb_uint8(tq),
+                            _rgba_to_rgb_uint8(pred_i),
+                            _rgba_to_rgb_uint8(target_i),
+                            (diff_rgb.transpose(1, 2, 0) * 255).astype(np.uint8),
+                        ],
+                        axis=1,
+                    )
+                    grid_rows.append(row)
+
+    if n_examples == 0:
+        logger.warning("No valid examples for back view evaluation")
+        return {"model": "back_view", "error": "no_valid_examples"}
+
+    avg_l1 = total_l1 / n_examples
+    avg_psnr = total_psnr / n_examples
+    avg_ssim = total_ssim / n_examples
+
+    # Print results
+    print("\n=== Back View Evaluation ===")
+    print(f"L1 (character region): {avg_l1:.4f}")
+    print(f"PSNR:                  {avg_psnr:.2f} dB")
+    print(f"SSIM:                  {avg_ssim:.4f}")
+    print(f"Test Examples:         {n_examples}")
+
+    # Save outputs
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Visual comparison grid
+    if grid_rows:
+        grid = np.concatenate(grid_rows, axis=0)
+        Image.fromarray(grid).save(output_dir / "comparison_grid.png")
+        logger.info("Saved comparison grid to %s", output_dir / "comparison_grid.png")
+
+    # Summary JSON
+    summary = {
+        "model": "back_view",
+        "num_examples": n_examples,
+        "l1": avg_l1,
+        "psnr_db": avg_psnr,
+        "ssim": avg_ssim,
+    }
+
+    with open(output_dir / "summary.json", "w") as f:
+        json.dump(summary, f, indent=2)
+    logger.info("Saved evaluation summary to %s", output_dir / "summary.json")
+
+    return summary
+
+
+def _rgba_to_rgb_uint8(tensor: np.ndarray) -> np.ndarray:
+    """Convert [4, H, W] float RGBA to [H, W, 3] uint8 RGB on white background."""
+    rgb = tensor[:3].transpose(1, 2, 0)  # [H, W, 3]
+    alpha = tensor[3:4].transpose(1, 2, 0)  # [H, W, 1]
+    composited = rgb * alpha + (1.0 - alpha)  # white background
+    return np.clip(composited * 255, 0, 255).astype(np.uint8)
+
+
+def _compute_ssim(
+    img1: np.ndarray,
+    img2: np.ndarray,
+    window_size: int = 11,
+    c1: float = 0.01**2,
+    c2: float = 0.03**2,
+) -> float:
+    """Compute mean SSIM between two [H, W, 3] float images in [0, 1]."""
+    from scipy.ndimage import uniform_filter
+
+    ssim_vals = []
+    for c in range(3):
+        a = img1[:, :, c]
+        b = img2[:, :, c]
+        mu_a = uniform_filter(a, window_size)
+        mu_b = uniform_filter(b, window_size)
+        sigma_a2 = uniform_filter(a * a, window_size) - mu_a * mu_a
+        sigma_b2 = uniform_filter(b * b, window_size) - mu_b * mu_b
+        sigma_ab = uniform_filter(a * b, window_size) - mu_a * mu_b
+
+        num = (2 * mu_a * mu_b + c1) * (2 * sigma_ab + c2)
+        den = (mu_a**2 + mu_b**2 + c1) * (sigma_a2 + sigma_b2 + c2)
+        ssim_vals.append(float(np.mean(num / den)))
+
+    return float(np.mean(ssim_vals))
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -570,7 +766,7 @@ def main() -> None:
     parser.add_argument(
         "--model",
         type=str,
-        choices=["segmentation", "joints", "weights"],
+        choices=["segmentation", "joints", "weights", "back_view"],
         help="Model type to evaluate",
     )
     parser.add_argument(
@@ -659,6 +855,16 @@ def main() -> None:
         else:
             logger.warning("Weight checkpoint not found: %s", weight_ckpt)
 
+        bv_ckpt = Path("checkpoints/back_view/best.pt")
+        if bv_ckpt.exists():
+            summaries["back_view"] = evaluate_back_view(
+                bv_ckpt,
+                dataset_dirs,
+                output_base / "back_view",
+            )
+        else:
+            logger.warning("Back view checkpoint not found: %s", bv_ckpt)
+
     elif args.model == "segmentation":
         summaries["segmentation"] = evaluate_segmentation(
             Path(args.checkpoint),
@@ -678,6 +884,12 @@ def main() -> None:
             Path(args.checkpoint),
             dataset_dirs,
             output_base / "weights",
+        )
+    elif args.model == "back_view":
+        summaries["back_view"] = evaluate_back_view(
+            Path(args.checkpoint),
+            dataset_dirs,
+            output_base / "back_view",
         )
 
     # Combined summary
