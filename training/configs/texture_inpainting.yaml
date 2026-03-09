@@ -1,0 +1,36 @@
+# Local config — texture inpainting U-Net (Model 5 — texture)
+# For 4070 Ti / local dev machines
+model:
+  in_channels: 5      # RGBA + observation mask
+  out_channels: 4     # RGBA
+
+data:
+  dataset_dirs:
+    - "./data_cloud/texture_pairs"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: true
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1}
+  random_mask_augmentation: true
+
+training:
+  batch_size: 2
+  num_workers: 4
+  epochs: 50
+  optimizer: "adam"
+  learning_rate: 2.0e-4
+  weight_decay: 1.0e-5
+  warmup_epochs: 3
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/texture_inpainting"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/l1"
