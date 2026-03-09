@@ -9,7 +9,6 @@ data:
   dataset_dirs:
     - "./data_cloud/humanrig"            # HumanRig: 11,434 with skinning weights
     - "./data_cloud/unirig"             # UniRig: ~14,950 with skinning weights (nested view dirs)
-    - "./data_cloud/segmentation"        # Mixamo: 1,598 with weights
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   max_vertices: 2048

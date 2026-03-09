@@ -125,9 +125,9 @@ rclone copy "hetzner:strata-training-data/unirig/" "$DATA_DIR/unirig/" \
 echo ""
 
 # --- Additional datasets (full mode only) ---
+# anime_instance_seg and instaorder removed — prohibited licenses / unused
 if [ "$MODE" != "lean" ]; then
-    download_dataset "anime_instance_seg" "~15 GB, ~45K examples"
-    download_dataset "instaorder"         "~7 GB, ~96K train+val examples"
+    echo "  (No additional full-mode datasets currently configured)"
 fi
 
 # Clean up tar staging dir
@@ -142,7 +142,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq curated_diverse anime_instance_seg instaorder; do
+for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq curated_diverse; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)

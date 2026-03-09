@@ -10,7 +10,7 @@ model:
 data:
   dataset_dirs:
     - "./data_cloud/humanrig"          # HumanRig: 11,434 with skinning weights
-    - "./data_cloud/segmentation"      # Mixamo: 1,598 with weights
+    - "./data_cloud/unirig"            # UniRig: ~14,950 with skinning weights
   encoder_features_dirs:
     - "./data_cloud/encoder_features"
   split_seed: 42

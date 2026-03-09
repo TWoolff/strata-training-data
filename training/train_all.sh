@@ -115,7 +115,7 @@ echo ""
 
 python -m training.data.precompute_encoder_features \
     --segmentation-checkpoint checkpoints/segmentation/best.pt \
-    --data-dirs ./data_cloud/humanrig ./data_cloud/segmentation \
+    --data-dirs ./data_cloud/humanrig ./data_cloud/unirig \
     --output-dir ./data_cloud/encoder_features \
     --only-missing \
     2>&1 | tee "$LOG_DIR/precompute_encoder.log"
