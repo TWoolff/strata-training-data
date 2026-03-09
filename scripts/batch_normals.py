@@ -42,6 +42,7 @@ DATASETS_2D = [
     "animerun",
     "conr",
     "fbanimehq",
+    "gemini_diverse",
     "instaorder",
     "live2d",
 ]

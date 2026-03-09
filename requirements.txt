@@ -14,5 +14,8 @@ onnxruntime>=1.16
 # Background removal
 rembg>=2.0
 
+# Gemini API (image generation for gemini_diverse dataset)
+google-genai>=1.0
+
 # Manual annotation pipeline (Label Studio server — install separately)
 # pip install label-studio
