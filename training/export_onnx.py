@@ -43,6 +43,7 @@ from training.models.diffusion_weight_model import DiffusionWeightPredictionMode
 from training.models.inpainting_model import InpaintingModel
 from training.models.joint_model import JointModel
 from training.models.segmentation_model import SegmentationModel
+from training.models.texture_inpainting_model import TextureInpaintingModel
 from training.models.weight_model import WeightModel
 from training.models.weight_prediction_model import WeightPredictionModel
 from training.utils.checkpoint import load_checkpoint
@@ -154,10 +155,23 @@ class InpaintingWrapper(nn.Module):
         super().__init__()
         self.model = model
 
-    def forward(
-        self, image: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor]:
+    def forward(self, image: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor]:
         out = self.model(image, mask)
+        return (out["inpainted"],)
+
+
+class TextureInpaintingWrapper(nn.Module):
+    """Wraps TextureInpaintingModel for ONNX export (dict → tuple).
+
+    ONNX contract uses a single ``"input"`` tensor (5ch: RGBA + observation mask).
+    """
+
+    def __init__(self, model: TextureInpaintingModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor]:
+        out = self.model(x)
         return (out["inpainted"],)
 
 
@@ -246,6 +260,18 @@ MODEL_CONFIGS: dict[str, dict] = {
         "default_filename": "inpainting.onnx",
         "input_shapes": [(1, 4, RESOLUTION, RESOLUTION), (1, 1, RESOLUTION, RESOLUTION)],
         "dual_input": True,
+    },
+    "texture_inpainting": {
+        "model_class": TextureInpaintingModel,
+        "wrapper_class": TextureInpaintingWrapper,
+        "model_kwargs": {"in_channels": 5, "out_channels": 4},
+        "output_names": ["inpainted"],
+        "dynamic_axes": {
+            "input": {0: "batch"},
+            "inpainted": {0: "batch"},
+        },
+        "default_filename": "texture_inpainting.onnx",
+        "input_shape": (1, 5, RESOLUTION, RESOLUTION),
     },
 }
 
@@ -411,6 +437,8 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
         _validate_diffusion_weight_outputs(results, expected_names)
     elif model_name == "inpainting":
         _validate_inpainting_outputs(results, expected_names)
+    elif model_name == "texture_inpainting":
+        _validate_texture_inpainting_outputs(results, expected_names)
 
     logger.info("Validation passed for %s", model_name)
 
@@ -426,7 +454,9 @@ def _validate_segmentation_outputs(results: list[np.ndarray], names: list[str]) 
     if confidence.shape != (1, 1, RESOLUTION, RESOLUTION):
         raise ValueError(f"confidence shape: expected (1,1,512,512), got {confidence.shape}")
     if encoder_features.shape[0] != 1 or encoder_features.shape[2:] != (64, 64):
-        raise ValueError(f"encoder_features shape: expected (1,C,64,64), got {encoder_features.shape}")
+        raise ValueError(
+            f"encoder_features shape: expected (1,C,64,64), got {encoder_features.shape}"
+        )
     # depth and confidence should be in [0, 1] (sigmoid)
     if depth.min() < -0.01 or depth.max() > 1.01:
         raise ValueError(f"depth out of [0,1] range: [{depth.min()}, {depth.max()}]")
@@ -496,9 +526,18 @@ def _validate_inpainting_outputs(results: list[np.ndarray], names: list[str]) ->
         )
     # Output should be in [0, 1] (sigmoid)
     if inpainted.min() < -0.01 or inpainted.max() > 1.01:
+        raise ValueError(f"inpainted out of [0,1] range: [{inpainted.min()}, {inpainted.max()}]")
+
+
+def _validate_texture_inpainting_outputs(results: list[np.ndarray], names: list[str]) -> None:
+    (inpainted,) = results
+    if inpainted.shape != (1, 4, RESOLUTION, RESOLUTION):
         raise ValueError(
-            f"inpainted out of [0,1] range: [{inpainted.min()}, {inpainted.max()}]"
+            f"inpainted shape: expected (1,4,{RESOLUTION},{RESOLUTION}), got {inpainted.shape}"
         )
+    # Output should be in [0, 1] (sigmoid)
+    if inpainted.min() < -0.01 or inpainted.max() > 1.01:
+        raise ValueError(f"inpainted out of [0,1] range: [{inpainted.min()}, {inpainted.max()}]")
 
 
 # ---------------------------------------------------------------------------
@@ -513,7 +552,15 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["segmentation", "joints", "weights", "weights_vertex", "diffusion_weights", "inpainting"],
+        choices=[
+            "segmentation",
+            "joints",
+            "weights",
+            "weights_vertex",
+            "diffusion_weights",
+            "inpainting",
+            "texture_inpainting",
+        ],
         help="Model to export.",
     )
     parser.add_argument(
@@ -575,6 +622,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "weights_vertex": Path("checkpoints/weights/best.pt"),
         "diffusion_weights": Path("checkpoints/diffusion_weights/best.pt"),
         "inpainting": Path("checkpoints/inpainting/best.pt"),
+        "texture_inpainting": Path("checkpoints/texture_inpainting/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():
