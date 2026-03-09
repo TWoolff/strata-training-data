@@ -78,8 +78,8 @@ python -m training.data.generate_occlusion_pairs \
         ./data_cloud/humanrig \
         ./data_cloud/curated_diverse \
     --output-dir ./data_cloud/inpainting_pairs \
-    --max-source-images 15000 \
-    --pairs-per-image 3 \
+    --max-images 15000 \
+    --masks-per-image 3 \
     2>&1 | tee "$LOG_DIR/generate_inpainting_pairs.log"
 
 echo ""

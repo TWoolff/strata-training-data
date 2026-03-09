@@ -62,9 +62,32 @@ echo "  Cleaned macOS resource forks."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2. Tar pack each dataset
+# 2. Delete dirs not needed for training (before tarring)
+#    Training loaders only read: images/, masks/, depth/, normals/, joints/,
+#    splits.json, sources/, and metadata.json (in per-example dirs).
+#    Everything else is pipeline output we can regenerate.
 # ---------------------------------------------------------------------------
-echo "[2/4] Packing tar archives..."
+echo "[2/5] Stripping unnecessary dirs to reduce tar size..."
+
+STRIP_DIRS="draw_order contours layers measurements mesh weights"
+for ds in meshy_cc0 meshy_cc0_textured; do
+    if [ ! -d "$DATA_DIR/$ds" ]; then continue; fi
+    for subdir in $STRIP_DIRS; do
+        if [ -d "$DATA_DIR/$ds/$subdir" ]; then
+            size=$(du -sh "$DATA_DIR/$ds/$subdir" 2>/dev/null | cut -f1)
+            echo "  Deleting $ds/$subdir/ ($size)..."
+            rm -rf "$DATA_DIR/$ds/$subdir"
+        fi
+    done
+done
+
+echo "  Done stripping."
+echo ""
+
+# ---------------------------------------------------------------------------
+# 3. Tar pack each dataset
+# ---------------------------------------------------------------------------
+echo "[3/5] Packing tar archives..."
 mkdir -p "$TAR_DIR"
 
 for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged; do
@@ -83,7 +106,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 3. Upload tars to bucket
 # ---------------------------------------------------------------------------
-echo "[3/4] Uploading tar archives to bucket..."
+echo "[4/5] Uploading tar archives to bucket..."
 
 for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged; do
     tar_file="$TAR_DIR/${ds}.tar"
@@ -102,7 +125,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 4. Verify uploads
 # ---------------------------------------------------------------------------
-echo "[4/4] Verifying uploads..."
+echo "[5/5] Verifying uploads..."
 
 for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged; do
     if rclone lsf "$TAR_BUCKET/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
