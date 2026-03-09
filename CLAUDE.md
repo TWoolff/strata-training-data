@@ -244,7 +244,7 @@ All models trained on Lambda A100 via `train_all.sh lean`. Checkpoints, ONNX mod
 | `segmentation/` | 1,598 | 22-class seg + draw_order + joints |
 | `live2d/` | 844 | 22-class seg + draw_order |
 | `humanrig/` | 11,434 | 22-class seg + joints + weights |
-| `curated_diverse/` | 748 | fg/bg mask + draw_order |
+| ~~`curated_diverse/`~~ | ~~748~~ | ~~fg/bg mask + draw_order~~ — **REMOVED: ArtStation, no AI training permission** |
 | `anime_seg/` | ~14K | fg/bg mask + joints (RTMPose) |
 | **Total loaded** | **25,494 train / 3,137 val** | |
 
@@ -274,7 +274,7 @@ Score: **0.5453 mIoU** (run 1, epoch 94/100, March 6 2026). Run 2 regressed to 0
 ### Run 3 changes (code ready, not yet trained):
 - Depth head: retrained with Marigold depth labels (replaces draw_order)
 - Normals head: new 3-channel output (tanh), L1 loss against Marigold normals labels
-- ~14K+ examples with depth.png + normals.png (segmentation, live2d, curated_diverse, humanrig, unirig)
+- ~14K+ examples with depth.png + normals.png (segmentation, live2d, humanrig, unirig)
 - ONNX outputs: segmentation, depth, normals, confidence, encoder_features (5 heads)
 - PRD for Strata Rust runtime changes: `docs/prd-segmentation-model-v2.md`
 - Goal: mIoU 0.55+ (recover from run 2), depth + normals quality approaching Marigold

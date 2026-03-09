@@ -64,7 +64,7 @@ echo ""
 echo "[2/6] Enriching datasets with surface normals + depth (Marigold)..."
 echo ""
 
-for ds in segmentation live2d curated_diverse humanrig; do
+for ds in segmentation live2d humanrig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Enriching $ds with normals..."
         python run_normals_enrich.py \
@@ -121,7 +121,7 @@ echo ""
 TAR_DIR="./data_cloud/_tars"
 mkdir -p "$TAR_DIR"
 
-for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse; do
+for ds in segmentation live2d humanrig anime_seg fbanimehq; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Packing $ds..."
         (cd ./data_cloud && tar cf - "$ds") > "$TAR_DIR/${ds}.tar"
@@ -137,7 +137,7 @@ rclone copy "$TAR_DIR/" hetzner:strata-training-data/tars/ \
 echo ""
 
 echo "  Deleting loose files from bucket (only for datasets we just tarred)..."
-for ds in segmentation live2d humanrig anime_seg fbanimehq curated_diverse; do
+for ds in segmentation live2d humanrig anime_seg fbanimehq; do
     # Safety: only delete if the tar actually exists in the bucket
     if rclone lsf "hetzner:strata-training-data/tars/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
         echo "    Deleting $ds/ (tar verified)..."

@@ -1,6 +1,8 @@
-"""Full pipeline for curated diverse images.
+"""DEPRECATED: curated_diverse removed from training pipeline — ArtStation artwork, no AI training permission.
 
-Runs all three steps:
+This script is kept for reference but should NOT be used to generate training data.
+
+Previously ran all three steps:
 1. Ingest: rembg background removal → resize → fg mask → metadata
 2. RTMPose: 2D joint estimation
 3. Depth Anything v2: monocular depth → draw order map

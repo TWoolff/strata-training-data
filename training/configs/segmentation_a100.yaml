@@ -11,7 +11,6 @@ data:
     - "./data_cloud/anime_seg"          # Per-example: binary fg → confidence only (mask≥22 → ignore)
     - "./data_cloud/anime_instance_seg" # Per-example: instance masks + metadata
     - "./data_cloud/unirig"             # UniRig: ~10K humanoid 22-class seg (diverse 3D meshes)
-    - "./data_cloud/curated_diverse"    # Curated diverse: 748 diverse 2D, binary fg + draw_order
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

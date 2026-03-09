@@ -7,11 +7,11 @@ Walks ingest output directories, runs Depth Anything v2 inference on each
 Usage::
 
     python3 run_depth_enrich.py \
-        --input_dir ./output/curated_diverse \
+        --input_dir ./output/anime_seg \
         --depth_model ./models/depth_anything_v2_vits.onnx
 
     python3 run_depth_enrich.py \
-        --input_dir ./output/curated_diverse \
+        --input_dir ./output/anime_seg \
         --depth_model ./models/depth_anything_v2_vits.onnx \
         --only_missing
 """

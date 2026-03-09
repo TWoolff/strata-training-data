@@ -6,13 +6,13 @@ confidence values. Useful for verifying RTMPose enrichment quality.
 Usage::
 
     python3 scripts/visualize_joints.py \
-        --input_dir /Volumes/TAMWoolff/data/output/curated_diverse \
-        --output_dir /Volumes/TAMWoolff/data/output/curated_diverse_viz
+        --input_dir /Volumes/TAMWoolff/data/output/anime_seg \
+        --output_dir /Volumes/TAMWoolff/data/output/anime_seg_viz
 
     # Only first 10:
     python3 scripts/visualize_joints.py \
-        --input_dir /Volumes/TAMWoolff/data/output/curated_diverse \
-        --output_dir /Volumes/TAMWoolff/data/output/curated_diverse_viz \
+        --input_dir /Volumes/TAMWoolff/data/output/anime_seg \
+        --output_dir /Volumes/TAMWoolff/data/output/anime_seg_viz \
         --max_images 10
 """
 

@@ -13,7 +13,6 @@ data:
     - "./data_cloud/live2d"              # Live2D: 844 examples, 22-class + draw_order
     - "./data_cloud/humanrig"            # HumanRig: 11,434 examples, 22-class + joints + weights
     - "./data_cloud/unirig"              # UniRig: ~10K humanoid subset, 22-class seg masks
-    - "./data_cloud/curated_diverse"     # Curated diverse: 748, binary fg → confidence + draw_order
     - "./data_cloud/anime_seg"           # anime_seg: 14K, binary fg → confidence only
   resolution: 512
   split_seed: 42

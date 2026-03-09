@@ -50,7 +50,7 @@ echo ""
 echo "[1/7] Enriching datasets with surface normals + depth (Marigold)..."
 echo ""
 
-for ds in live2d curated_diverse humanrig unirig; do
+for ds in live2d humanrig unirig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Enriching $ds with normals + depth..."
         python run_normals_enrich.py \
@@ -76,7 +76,6 @@ python -m training.data.generate_occlusion_pairs \
         ./data_cloud/meshy_cc0_textured \
         ./data_cloud/meshy_cc0_unrigged \
         ./data_cloud/humanrig \
-        ./data_cloud/curated_diverse \
     --output-dir ./data_cloud/inpainting_pairs \
     --max-images 15000 \
     --masks-per-image 3 \
@@ -130,7 +129,7 @@ mkdir -p "$TAR_DIR"
 
 # Re-tar datasets that were enriched (normals/depth added)
 # Meshy datasets are uploaded separately from Mac before the run
-for ds in live2d humanrig curated_diverse unirig; do
+for ds in live2d humanrig unirig; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Packing $ds..."
         (cd ./data_cloud && tar cf - "$ds") > "$TAR_DIR/${ds}.tar"
@@ -145,7 +144,7 @@ for ds in live2d humanrig curated_diverse unirig; do
 done
 
 echo "  Deleting loose files from bucket (only for datasets we just tarred)..."
-for ds in live2d humanrig curated_diverse unirig; do
+for ds in live2d humanrig unirig; do
     if rclone lsf "hetzner:strata-training-data/tars/${ds}.tar" 2>/dev/null | grep -q "${ds}.tar"; then
         echo "    Deleting $ds/ (tar verified)..."
         rclone purge "hetzner:strata-training-data/$ds/" 2>/dev/null || true

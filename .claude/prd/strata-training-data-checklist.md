@@ -49,7 +49,7 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 
 | Prefix | Files | Size | Notes |
 |--------|------:|-----:|-------|
-| `tars/` | 7 | ~36 GiB | segmentation, live2d, humanrig, anime_seg, fbanimehq, curated_diverse, unirig |
+| `tars/` | 7 | ~36 GiB | segmentation, live2d, humanrig, anime_seg, fbanimehq, unirig (curated_diverse removed — ArtStation) |
 | `animation/` (incl. 100style) | 18,628 | 66.7 GiB | |
 | `anime_instance_seg/` | ~135K | ~15 GiB | Partially uploaded (~45K of 98K) |
 | `animerun/` | 11,276 | 663 MiB | |
@@ -64,7 +64,7 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 | `checkpoints/` | varies | varies | Run 1 + run 2 checkpoints |
 | **Total** | | **~166+ GiB** | |
 
-> Core training datasets (segmentation, live2d, humanrig, anime_seg, fbanimehq, curated_diverse, unirig) are tar-packed. Loose files purged from bucket after tar verified. Includes Marigold-enriched normals.png + depth.png from run 2.
+> Core training datasets (segmentation, live2d, humanrig, anime_seg, fbanimehq, unirig) are tar-packed. curated_diverse removed (ArtStation — no AI training permission). Loose files purged from bucket after tar verified. Includes Marigold-enriched normals.png + depth.png from run 2.
 
 ---
 
@@ -139,7 +139,7 @@ The segmentation model's depth and normals heads are trained against Marigold LC
 |---------|--------:|:---------:|:-----------:|-------|
 | segmentation/ | 1,598 | Yes | Yes | Enriched in run 2 |
 | live2d/ | 844 | Yes | Yes | Enriched in run 2 |
-| curated_diverse/ | 748 | Yes | Yes | Enriched in run 2 |
+| ~~curated_diverse/~~ | ~~748~~ | | | **REMOVED — ArtStation, no AI training permission** |
 | humanrig/ | ~11,434 | Partial | Partial | ~4,800 done in run 2, rest in run 3 |
 | unirig/ | ~10,000 | Pending | Pending | Front views, enriched in run 3 |
 | **Total with labels** | **~14K+** | | | Conditional loss skips missing labels |
@@ -336,7 +336,6 @@ Full audit: `docs/license-audit.md` (v2, March 7 2026)
 - [x] CMU mocap: Custom permissive — attribute CMU Graphics Lab
 - [x] 100STYLE: CC-BY 4.0 — attribute authors
 - [x] VRoid Lite: CC0 — no restrictions
-- [x] curated_diverse: AI-generated — no copyright holder
 - [x] InstaOrder: CC-BY-SA 4.0 — SA unlikely to apply to model weights
 
 **Likely safe (low-medium risk):**

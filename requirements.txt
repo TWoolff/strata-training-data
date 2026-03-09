@@ -11,7 +11,7 @@ psd-tools>=2.0
 rtmlib>=0.1.0
 onnxruntime>=1.16
 
-# Background removal (curated_diverse adapter)
+# Background removal
 rembg>=2.0
 
 # Manual annotation pipeline (Label Studio server — install separately)

@@ -6,7 +6,7 @@ inference, filters out low-quality results, and uploads normal maps + metadata
 back to the bucket.
 
 Usage:
-    python scripts/batch_normals.py --dataset curated_diverse --batch-size 4
+    python scripts/batch_normals.py --dataset anime_seg --batch-size 4
     python scripts/batch_normals.py --dataset all --batch-size 8
     python scripts/batch_normals.py --dataset anime_seg --max-examples 100  # test run
 
@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 # Datasets that are 2D-origin and contain character images worth processing
 DATASETS_2D = [
-    "curated_diverse",
     "anime_seg",
     "anime_instance_seg",
     "animerun",

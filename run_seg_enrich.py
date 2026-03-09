@@ -10,19 +10,19 @@ Usage::
 
     # Process existing pipeline output (subdirs with image.png)
     python run_seg_enrich.py \
-        --input-dir ./output/curated_diverse \
+        --input-dir ./output/anime_seg \
         --checkpoint checkpoints/segmentation/best.pt
 
     # Process flat directory of loose images
     python run_seg_enrich.py \
         --input-dir /Volumes/TAMWoolff/data/preprocessed/currated_diverse \
         --checkpoint checkpoints/segmentation/best.pt \
-        --output-dir ./output/curated_diverse_enriched \
+        --output-dir ./output/anime_seg_enriched \
         --flat
 
     # Skip already-enriched examples
     python run_seg_enrich.py \
-        --input-dir ./output/curated_diverse \
+        --input-dir ./output/anime_seg \
         --checkpoint checkpoints/segmentation/best.pt \
         --only-missing
 """
@@ -170,7 +170,7 @@ def process_flat_image(
     rembg_session=None,
 ) -> bool:
     """Process a loose image file → create example subdirectory with all outputs."""
-    example_id = f"curated_diverse_{image_path.stem}"
+    example_id = f"anime_seg_{image_path.stem}"
     example_dir = output_dir / example_id
     example_dir.mkdir(parents=True, exist_ok=True)
 
@@ -202,7 +202,7 @@ def process_flat_image(
     # Metadata
     meta = {
         "id": example_id,
-        "source": "curated_diverse",
+        "source": "anime_seg",
         "source_filename": image_path.name,
         "resolution": resolution,
         "original_width": original_w,
@@ -302,7 +302,7 @@ def main() -> None:
         logger.info("Found %d images in %s", total, args.input_dir)
 
         for i, img_path in enumerate(images):
-            example_id = f"curated_diverse_{img_path.stem}"
+            example_id = f"anime_seg_{img_path.stem}"
             example_dir = args.output_dir / example_id
 
             if args.only_missing and (example_dir / "segmentation.png").exists():

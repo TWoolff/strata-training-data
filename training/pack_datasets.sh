@@ -22,7 +22,7 @@ BUCKET_TARS="$BUCKET_BASE/tars"
 KEEP_LOOSE="${KEEP_LOOSE:-0}"
 
 # Default datasets to pack (all lean-mode datasets)
-ALL_DATASETS=(segmentation live2d humanrig anime_seg fbanimehq curated_diverse)
+ALL_DATASETS=(segmentation live2d humanrig anime_seg fbanimehq)
 
 if [ $# -gt 0 ]; then
     DATASETS=("$@")

@@ -12,7 +12,7 @@ Usage::
     from pipeline.depth_estimator import load_depth_model, enrich_example
 
     model = load_depth_model("models/depth_anything_v2_vits.onnx")
-    enrich_example(model, Path("output/curated_diverse/example_001"))
+    enrich_example(model, Path("output/anime_seg/example_001"))
 """
 
 from __future__ import annotations

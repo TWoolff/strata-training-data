@@ -1,4 +1,6 @@
-"""Convert manually curated diverse character images to Strata training format.
+"""DEPRECATED: curated_diverse removed from training pipeline — ArtStation artwork, no AI training permission.
+
+Convert manually curated diverse character images to Strata training format.
 
 Pipeline per image:
 1. Background removal via rembg (U²-Net)
