@@ -39,6 +39,7 @@ import torch.nn as nn
 if TYPE_CHECKING:
     import numpy as np
 
+from training.models.back_view_model import BackViewModel
 from training.models.diffusion_weight_model import DiffusionWeightPredictionModel
 from training.models.inpainting_model import InpaintingModel
 from training.models.joint_model import JointModel
@@ -175,6 +176,21 @@ class TextureInpaintingWrapper(nn.Module):
         return (out["inpainted"],)
 
 
+class BackViewWrapper(nn.Module):
+    """Wraps BackViewModel for ONNX export (dict → tuple).
+
+    ONNX contract uses a single ``"input"`` tensor (8ch: front RGBA + 3/4 RGBA).
+    """
+
+    def __init__(self, model: BackViewModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor]:
+        out = self.model(x)
+        return (out["output"],)
+
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -272,6 +288,18 @@ MODEL_CONFIGS: dict[str, dict] = {
         },
         "default_filename": "texture_inpainting.onnx",
         "input_shape": (1, 5, RESOLUTION, RESOLUTION),
+    },
+    "back_view": {
+        "model_class": BackViewModel,
+        "wrapper_class": BackViewWrapper,
+        "model_kwargs": {"in_channels": 8, "out_channels": 4},
+        "output_names": ["output"],
+        "dynamic_axes": {
+            "input": {0: "batch"},
+            "output": {0: "batch"},
+        },
+        "default_filename": "back_view_generation.onnx",
+        "input_shape": (1, 8, RESOLUTION, RESOLUTION),
     },
 }
 
@@ -439,6 +467,8 @@ def validate_onnx(model_name: str, onnx_path: Path) -> None:
         _validate_inpainting_outputs(results, expected_names)
     elif model_name == "texture_inpainting":
         _validate_texture_inpainting_outputs(results, expected_names)
+    elif model_name == "back_view":
+        _validate_back_view_outputs(results, expected_names)
 
     logger.info("Validation passed for %s", model_name)
 
@@ -540,6 +570,17 @@ def _validate_texture_inpainting_outputs(results: list[np.ndarray], names: list[
         raise ValueError(f"inpainted out of [0,1] range: [{inpainted.min()}, {inpainted.max()}]")
 
 
+def _validate_back_view_outputs(results: list[np.ndarray], names: list[str]) -> None:
+    (output,) = results
+    if output.shape != (1, 4, RESOLUTION, RESOLUTION):
+        raise ValueError(
+            f"output shape: expected (1,4,{RESOLUTION},{RESOLUTION}), got {output.shape}"
+        )
+    # Output should be in [0, 1] (sigmoid)
+    if output.min() < -0.01 or output.max() > 1.01:
+        raise ValueError(f"output out of [0,1] range: [{output.min()}, {output.max()}]")
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -560,6 +601,7 @@ def main(argv: list[str] | None = None) -> None:
             "diffusion_weights",
             "inpainting",
             "texture_inpainting",
+            "back_view",
         ],
         help="Model to export.",
     )
@@ -623,6 +665,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "diffusion_weights": Path("checkpoints/diffusion_weights/best.pt"),
         "inpainting": Path("checkpoints/inpainting/best.pt"),
         "texture_inpainting": Path("checkpoints/texture_inpainting/best.pt"),
+        "back_view": Path("checkpoints/back_view/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():
