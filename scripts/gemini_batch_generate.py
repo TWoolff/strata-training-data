@@ -219,18 +219,23 @@ def run_batch(
             "google-genai SDK not installed. Run: pip install google-genai"
         ) from exc
 
-    api_key = os.environ.get("GOOGLE_API_KEY", "")
+    api_key = os.environ.get("GOOGLE_API_KEY", "") or os.environ.get(
+        "GEMINI_KEY", ""
+    )
     if not api_key:
         # Try .env file
         env_path = Path(__file__).resolve().parent.parent / ".env"
         if env_path.exists():
             for line in env_path.read_text().splitlines():
-                if line.startswith("GOOGLE_API_KEY="):
+                line = line.strip()
+                if line.startswith("GOOGLE_API_KEY=") or line.startswith(
+                    "GEMINI_KEY="
+                ):
                     api_key = line.split("=", 1)[1].strip().strip("'\"")
                     break
     if not api_key:
         raise ValueError(
-            "GOOGLE_API_KEY not set. Export it or add to .env file."
+            "GOOGLE_API_KEY or GEMINI_KEY not set. Export it or add to .env file."
         )
 
     client = genai.Client(api_key=api_key)
