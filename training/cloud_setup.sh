@@ -117,6 +117,9 @@ download_dataset "anime_seg"      "~3.5 GB, 14,579 examples with joints"
 download_dataset "fbanimehq"      "~11.4 GB, ~101K full-body anime with joints"
 download_dataset "curated_diverse" "~50 MB, 748 diverse 2D drawings with joints"
 
+# UV texture pairs for texture inpainting training
+download_dataset "texture_pairs"  "UV texture pairs: partial + complete + mask"
+
 # UniRig: download only front views with weights (skip back views to save space)
 echo "  unirig (~15 GB, ~15K front views with weights)..."
 echo "    → Downloading front/ subdirs only..."
@@ -142,7 +145,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq curated_diverse; do
+for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq curated_diverse texture_pairs; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)

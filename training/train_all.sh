@@ -10,6 +10,7 @@
 #   3. Weight Prediction (per-vertex MLP, 20 bones)
 #   4. Diffusion Weight Prediction (dual-input MLP: vertex features + seg encoder)
 #   5. Inpainting (U-Net: RGBA + mask → completed RGBA)
+#   6. Texture Inpainting (U-Net: partial UV + mask → completed UV texture)
 #
 # Usage:
 #   chmod +x training/train_all.sh
@@ -32,6 +33,7 @@ if [ "$MODE" = "local" ]; then
     WEIGHT_CONFIG="training/configs/weights.yaml"
     DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights.yaml"
     INPAINT_CONFIG="training/configs/inpainting.yaml"
+    TEX_INPAINT_CONFIG="training/configs/texture_inpainting.yaml"
     echo "Using LOCAL configs (default batch sizes)"
 elif [ "$MODE" = "lean" ]; then
     SEG_CONFIG="training/configs/segmentation_a100_lean.yaml"
@@ -39,6 +41,7 @@ elif [ "$MODE" = "lean" ]; then
     WEIGHT_CONFIG="training/configs/weights_a100_lean.yaml"
     DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights_a100_lean.yaml"
     INPAINT_CONFIG="training/configs/inpainting_a100_lean.yaml"
+    TEX_INPAINT_CONFIG="training/configs/texture_inpainting_a100_lean.yaml"
     echo "Using LEAN A100 configs (core data only, ~6-8h)"
 else
     SEG_CONFIG="training/configs/segmentation_a100.yaml"
@@ -46,6 +49,7 @@ else
     WEIGHT_CONFIG="training/configs/weights_a100.yaml"
     DIFF_WEIGHT_CONFIG="training/configs/diffusion_weights_a100.yaml"
     INPAINT_CONFIG="training/configs/inpainting_a100.yaml"
+    TEX_INPAINT_CONFIG="training/configs/texture_inpainting_a100.yaml"
     echo "Using FULL A100 configs (all data, ~8-12h)"
 fi
 
@@ -60,7 +64,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 1: Segmentation (DeepLabV3+ multi-head)
 # ---------------------------------------------------------------------------
-echo "[1/8] Training SEGMENTATION model..."
+echo "[1/9] Training SEGMENTATION model..."
 echo "  Config: $SEG_CONFIG"
 echo "  Log: $LOG_DIR/segmentation.log"
 echo ""
@@ -76,7 +80,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 2: Joint Refinement
 # ---------------------------------------------------------------------------
-echo "[2/8] Training JOINT REFINEMENT model..."
+echo "[2/9] Training JOINT REFINEMENT model..."
 echo "  Config: $JOINT_CONFIG"
 echo "  Log: $LOG_DIR/joints.log"
 echo ""
@@ -92,7 +96,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 3: Weight Prediction (per-vertex MLP)
 # ---------------------------------------------------------------------------
-echo "[3/8] Training WEIGHT PREDICTION model (per-vertex MLP)..."
+echo "[3/9] Training WEIGHT PREDICTION model (per-vertex MLP)..."
 echo "  Config: $WEIGHT_CONFIG"
 echo "  Log: $LOG_DIR/weights.log"
 echo ""
@@ -108,7 +112,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 4: Precompute encoder features (requires trained segmentation model)
 # ---------------------------------------------------------------------------
-echo "[4/8] Precomputing encoder features for diffusion weight training..."
+echo "[4/9] Precomputing encoder features for diffusion weight training..."
 echo "  Checkpoint: checkpoints/segmentation/best.pt"
 echo "  Log: $LOG_DIR/precompute_encoder.log"
 echo ""
@@ -127,7 +131,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 4: Diffusion Weight Prediction (dual-input MLP)
 # ---------------------------------------------------------------------------
-echo "[5/8] Training DIFFUSION WEIGHT PREDICTION model..."
+echo "[5/9] Training DIFFUSION WEIGHT PREDICTION model..."
 echo "  Config: $DIFF_WEIGHT_CONFIG"
 echo "  Log: $LOG_DIR/diffusion_weights.log"
 echo ""
@@ -147,9 +151,9 @@ PAIRS_DIR="./data_cloud/inpainting_pairs"
 PAIRS_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -100 | wc -l)
 
 if [ "$PAIRS_COUNT" -ge 100 ]; then
-    echo "[6/8] Occlusion pairs already exist ($PAIRS_COUNT+ dirs in $PAIRS_DIR), skipping generation."
+    echo "[6/9] Occlusion pairs already exist ($PAIRS_COUNT+ dirs in $PAIRS_DIR), skipping generation."
 else
-    echo "[6/8] Generating occlusion pairs for inpainting training..."
+    echo "[6/9] Generating occlusion pairs for inpainting training..."
     echo "  Source: ./data_cloud/fbanimehq"
     echo "  Max: 15,000 source images × 3 masks = ~45K pairs"
     echo "  Log: $LOG_DIR/generate_occlusion.log"
@@ -179,7 +183,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Model 5: Inpainting (U-Net)
 # ---------------------------------------------------------------------------
-echo "[7/8] Training INPAINTING model (U-Net)..."
+echo "[7/9] Training INPAINTING model (U-Net)..."
 echo "  Config: $INPAINT_CONFIG"
 echo "  Log: $LOG_DIR/inpainting.log"
 echo ""
@@ -193,9 +197,25 @@ echo "  Inpainting training complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# Step 8: ONNX Export
+# Model 6: Texture Inpainting (U-Net)
 # ---------------------------------------------------------------------------
-echo "[8/8] Exporting all models to ONNX..."
+echo "[8/9] Training TEXTURE INPAINTING model (U-Net)..."
+echo "  Config: $TEX_INPAINT_CONFIG"
+echo "  Log: $LOG_DIR/texture_inpainting.log"
+echo ""
+
+python -m training.train_texture_inpainting \
+    --config "$TEX_INPAINT_CONFIG" \
+    2>&1 | tee "$LOG_DIR/texture_inpainting.log"
+
+echo ""
+echo "  Texture inpainting training complete."
+echo ""
+
+# ---------------------------------------------------------------------------
+# Step 9: ONNX Export
+# ---------------------------------------------------------------------------
+echo "[9/9] Exporting all models to ONNX..."
 echo "  Output: $ONNX_DIR/"
 echo ""
 
@@ -232,6 +252,13 @@ python -m training.export_onnx \
     --model inpainting \
     --checkpoint checkpoints/inpainting/best.pt \
     --output "$ONNX_DIR/inpainting.onnx" \
+    2>&1 | tee -a "$LOG_DIR/export.log"
+
+# Export texture inpainting (U-Net)
+python -m training.export_onnx \
+    --model texture_inpainting \
+    --checkpoint checkpoints/texture_inpainting/best.pt \
+    --output "$ONNX_DIR/texture_inpainting.onnx" \
     2>&1 | tee -a "$LOG_DIR/export.log"
 
 echo ""
