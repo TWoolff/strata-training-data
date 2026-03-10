@@ -432,32 +432,38 @@ def train(config: dict, resume_path: str | None = None) -> None:
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # ---- Scheduler (cosine annealing after warmup) ----
+    # ---- Scheduler + Resume ----
     epochs = train_cfg.get("epochs", 200)
     warmup_epochs = train_cfg.get("warmup_epochs", 5)
+    start_epoch = 0
+    global_step = 0
+
+    if resume_path is not None:
+        # Load model weights and optimizer state (skip scheduler — we'll create a fresh one)
+        info = load_checkpoint(resume_path, model, optimizer, scheduler=None)
+        start_epoch = info["epoch"] + 1
+        global_step = start_epoch * len(train_loader)
+        if start_epoch >= epochs:
+            # Treat configured epochs as "additional epochs from resume point"
+            total_new_epochs = epochs
+            epochs = start_epoch + total_new_epochs
+            logger.info("Resuming from epoch %d — training %d more epochs (to %d)", start_epoch, total_new_epochs, epochs)
+        else:
+            logger.info("Resuming from epoch %d", start_epoch)
+        # Reset optimizer LR to configured value (checkpoint may have decayed LR)
+        for pg in optimizer.param_groups:
+            pg["lr"] = lr
+
+    # Create scheduler spanning only the remaining training window
+    remaining_epochs = epochs - start_epoch
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=epochs - warmup_epochs, eta_min=0
+        optimizer, T_max=max(remaining_epochs - warmup_epochs, 1), eta_min=0
     )
 
     # ---- Early stopping ----
     patience = ckpt_cfg.get("early_stopping_patience", 20)
     es_metric = ckpt_cfg.get("early_stopping_metric", "val/miou")
     early_stopping = EarlyStopping(patience=patience, metric_name=es_metric, mode="max")
-
-    # ---- Resume from checkpoint ----
-    start_epoch = 0
-    global_step = 0
-    if resume_path is not None:
-        info = load_checkpoint(resume_path, model, optimizer, scheduler)
-        start_epoch = info["epoch"] + 1
-        global_step = start_epoch * len(train_loader)
-        # If resuming past the configured epoch count, extend to train the
-        # requested number of epochs from the resume point.
-        if start_epoch >= epochs:
-            epochs = start_epoch + epochs
-            logger.info("Resuming from epoch %d — extended total epochs to %d", start_epoch, epochs)
-        else:
-            logger.info("Resuming from epoch %d", start_epoch)
 
     # ---- TensorBoard ----
     save_dir = Path(ckpt_cfg.get("save_dir", "./checkpoints/segmentation"))
