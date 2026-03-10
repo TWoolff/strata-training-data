@@ -451,7 +451,13 @@ def train(config: dict, resume_path: str | None = None) -> None:
         info = load_checkpoint(resume_path, model, optimizer, scheduler)
         start_epoch = info["epoch"] + 1
         global_step = start_epoch * len(train_loader)
-        logger.info("Resuming from epoch %d", start_epoch)
+        # If resuming past the configured epoch count, extend to train the
+        # requested number of epochs from the resume point.
+        if start_epoch >= epochs:
+            epochs = start_epoch + epochs
+            logger.info("Resuming from epoch %d — extended total epochs to %d", start_epoch, epochs)
+        else:
+            logger.info("Resuming from epoch %d", start_epoch)
 
     # ---- TensorBoard ----
     save_dir = Path(ckpt_cfg.get("save_dir", "./checkpoints/segmentation"))
