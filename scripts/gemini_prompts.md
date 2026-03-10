@@ -428,7 +428,7 @@ Save each image as `gemini_NNN.png` into `/Volumes/TAMWoolff/data/raw/gemini_div
 
 <!-- 190. Full-body painterly digital painting of a Haitian revolutionary soldier in colonial-era uniform. The character is masculine-presenting, slim and athletic, with dark skin. The character is in a relaxed casual stance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-## Mixed Styles (191-200)
+<!-- ## Mixed Styles (191-200) -->
 
 <!-- 191. Full-body pastel chalk drawing of a moon priestess in silver robes with a crescent staff. The character is feminine-presenting, tall and lanky, with dark skin. The character is standing facing forward in a neutral pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 

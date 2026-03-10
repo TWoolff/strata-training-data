@@ -150,10 +150,22 @@ def _discover_characters(dataset_dirs: list[Path]) -> set[str]:
                 example_id = img_path.stem
                 char_ids.add(character_id_from_example(example_id))
 
-        # Per-example layout: {example_id}/image.png
+        # Per-example layout: {example_id}/image.png or weights.json
         for child in dataset_dir.iterdir():
-            if child.is_dir() and (child / "image.png").exists():
+            if not child.is_dir():
+                continue
+            # Direct: {id}/image.png or {id}/weights.json
+            if (child / "image.png").exists() or (child / "weights.json").exists():
                 char_ids.add(character_id_from_example(child.name))
+                continue
+            # Nested view: {id}/{view}/image.png or {id}/{view}/weights.json
+            for view_dir in child.iterdir():
+                if view_dir.is_dir() and (
+                    (view_dir / "image.png").exists()
+                    or (view_dir / "weights.json").exists()
+                ):
+                    char_ids.add(character_id_from_example(child.name))
+                    break
 
         # Fallback: scan sources/ metadata
         sources_dir = dataset_dir / "sources"
