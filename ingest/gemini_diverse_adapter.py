@@ -110,13 +110,64 @@ def remove_background(img: Image.Image) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 
+def _crop_to_foreground(
+    img: Image.Image,
+    padding_ratio: float = 0.10,
+) -> Image.Image:
+    """Crop to foreground bounding box with padding, keeping square aspect."""
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+
+    alpha = np.array(img.split()[-1])
+    rows = np.any(alpha >= _ALPHA_THRESHOLD, axis=1)
+    cols = np.any(alpha >= _ALPHA_THRESHOLD, axis=0)
+
+    if not rows.any():
+        return img
+
+    y_min, y_max = np.where(rows)[0][[0, -1]]
+    x_min, x_max = np.where(cols)[0][[0, -1]]
+
+    # Add padding
+    w, h = img.size
+    fg_w = x_max - x_min + 1
+    fg_h = y_max - y_min + 1
+    pad = int(max(fg_w, fg_h) * padding_ratio)
+
+    x_min = max(0, x_min - pad)
+    y_min = max(0, y_min - pad)
+    x_max = min(w - 1, x_max + pad)
+    y_max = min(h - 1, y_max + pad)
+
+    # Make square by expanding the shorter side
+    crop_w = x_max - x_min + 1
+    crop_h = y_max - y_min + 1
+    if crop_w > crop_h:
+        diff = crop_w - crop_h
+        y_min = max(0, y_min - diff // 2)
+        y_max = min(h - 1, y_min + crop_w - 1)
+        if y_max - y_min + 1 < crop_w:
+            y_min = max(0, y_max - crop_w + 1)
+    elif crop_h > crop_w:
+        diff = crop_h - crop_w
+        x_min = max(0, x_min - diff // 2)
+        x_max = min(w - 1, x_min + crop_h - 1)
+        if x_max - x_min + 1 < crop_h:
+            x_min = max(0, x_max - crop_h + 1)
+
+    return img.crop((x_min, y_min, x_max + 1, y_max + 1))
+
+
 def _resize_to_strata(
     img: Image.Image,
     resolution: int = STRATA_RESOLUTION,
 ) -> Image.Image:
-    """Resize to *resolution*×*resolution*, centered on a transparent canvas."""
+    """Crop to foreground, then resize to *resolution*×*resolution*."""
     if img.mode != "RGBA":
         img = img.convert("RGBA")
+
+    # Crop to character bounding box first
+    img = _crop_to_foreground(img)
 
     w, h = img.size
     if w == resolution and h == resolution:

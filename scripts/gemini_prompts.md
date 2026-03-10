@@ -434,15 +434,15 @@ Save each image as `gemini_NNN.png` into `/Volumes/TAMWoolff/data/raw/gemini_div
 
 <!-- 192. Full-body retro game art illustration of a wrestler in a lucha libre mask and tights. The character is masculine-presenting, muscular and broad-shouldered, with brown skin. The character is in a dynamic action pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-193. Full-body paper cutout style of a puppeteer in a striped vest with marionette strings. The character is androgynous, short and compact, with light skin. The character is standing in a three-quarter view. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+<!-- 193. Full-body paper cutout style of a puppeteer in a striped vest with marionette strings. The character is androgynous, short and compact, with light skin. The character is standing in a three-quarter view. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-194. Full-body linocut print of a geisha warrior in a battle-ready kimono with a hidden blade. The character is feminine-presenting, slim and athletic, with tan skin. The character is in a dynamic action pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+<!-- 194. Full-body linocut print of a geisha warrior in a battle-ready kimono with a hidden blade. The character is feminine-presenting, slim and athletic, with tan skin. The character is in a dynamic action pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-195. Full-body ink wash painting of a Taoist immortal floating with a gourd and sword. The character is masculine-presenting, slim and athletic, with medium skin. The character is standing with arms slightly away from body (A-pose). Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+<!-- 195. Full-body ink wash painting of a Taoist immortal floating with a gourd and sword. The character is masculine-presenting, slim and athletic, with medium skin. The character is standing with arms slightly away from body (A-pose). Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-196. Full-body screenprint style of a breakdancer in a tracksuit and sneakers. The character is masculine-presenting, short and compact, with dark skin. The character is in a dynamic action pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+<!-- 196. Full-body screenprint style of a breakdancer in a tracksuit and sneakers. The character is masculine-presenting, short and compact, with dark skin. The character is in a dynamic action pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
-197. Full-body crayon drawing style of a scarecrow come to life in patchwork clothes and a straw hat. The character is androgynous, tall and lanky, with tan skin. The character is in a relaxed casual stance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+<!-- 197. Full-body crayon drawing style of a scarecrow come to life in patchwork clothes and a straw hat. The character is androgynous, tall and lanky, with tan skin. The character is in a relaxed casual stance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground. -->
 
 198. Full-body batik textile art style of a jungle shaman with a feathered mask and bone staff. The character is feminine-presenting, stocky and sturdy, with brown skin. The character is standing facing forward in a neutral pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
 
@@ -450,13 +450,12 @@ Save each image as `gemini_NNN.png` into `/Volumes/TAMWoolff/data/raw/gemini_div
 
 200. Full-body mosaic tile art style of a Byzantine empress in imperial purple and gold regalia. The character is feminine-presenting, muscular and broad-shouldered, with medium skin. The character is standing with arms slightly away from body (A-pose). Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
 
----
 
-## Segmentation-Optimized Prompts (201-300)
+<!-- ## Segmentation-Optimized Prompts (201-300)
 
 These prompts prioritize: T-pose/A-pose for clean pseudo-labels, clear limb separation from torso, visible hands and feet, distinct clothing boundaries between body regions, and styles that produce flat color regions (ideal for segmentation model training).
 
-### Flat Vector — T-Pose/A-Pose Focus (201-215)
+### Flat Vector — T-Pose/A-Pose Focus (201-215) -->
 
 201. Full-body flat vector illustration of a medieval page boy in a simple tunic and hose. The character is masculine-presenting, slim and athletic, with light skin. The character is standing in a T-pose with arms extended straight out to the sides, palms down. All limbs clearly separated from the body with visible gaps. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
 

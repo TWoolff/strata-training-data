@@ -309,9 +309,9 @@ Multi-view conditioned diffusion model that generates any unseen view (back, sid
 
 Score:
 
-## Third Training Run (March 9-10 2026, A100 Lean) — IN PROGRESS
+## Third Training Run (March 9-10 2026, A100 Lean) — COMPLETE
 
-Seg and joints trained from scratch. Weights trained with split_loader fix (UniRig discovery). Encoder feature precompute in progress.
+Seg and joints trained from scratch. Weights trained with split_loader fix (UniRig discovery). Encoder features precomputed + diffusion weights trained. All checkpoints uploaded to bucket as `checkpoints_run3/`. Instance destroyed.
 
 ### Run 3 Results
 
@@ -320,8 +320,7 @@ Seg and joints trained from scratch. Weights trained with split_loader fix (UniR
 | Segmentation | 0.3728 mIoU (epoch 93/100) | Regressed from 0.545 | Noisy Meshy CC0 auto-rig data |
 | Joints | 0.001206 mean_err (epoch 21, early stop 36) | Improved from 0.001287 | Slight improvement |
 | Weights | 0.023137 MAE (epoch 18, early stop 33) | **3.6x better** (was 0.084) | 12K examples via split_loader fix |
-| Encoder features | In progress | N/A | float16 + vertex cap (MAX_VERTICES=2048) |
-| Diffusion weights | Pending encoder features | N/A | Will run after precompute |
+| Diffusion weights | 0.021646 MAE (epoch 42/60) | **Better than geometry-only** | 9,129 examples with encoder features |
 | Inpainting | Not retrained | N/A | Scheduled for run 4 |
 
 ### Run 3 Fixes
@@ -335,8 +334,8 @@ Seg and joints trained from scratch. Weights trained with split_loader fix (UniR
 **Goal: Ship-ready models 1-4.** Script: `training/run_fourth.sh`
 
 ### Pre-Run 4 Checklist
-1. [ ] **Save run 1 seg checkpoint** — copy run 1's `best.pt` (0.545 mIoU) to bucket as `checkpoints_run1/segmentation/best.pt`. Run 3's seg checkpoint (0.3728) is worse — must resume from run 1.
-2. [ ] **Finish run 3** — complete encoder feature precompute + diffusion weights on current A100. Upload all checkpoints to bucket as `checkpoints_run3/`.
+1. [x] **Save run 1 seg checkpoint** — saved to bucket as `checkpoints_run1/segmentation/best.pt`. Run 3's seg (0.3728) is worse — run 4 resumes from run 1.
+2. [x] **Finish run 3** — encoder features (11,434) + diffusion weights (0.0216 MAE) trained. All checkpoints uploaded as `checkpoints_run3/`.
 3. [ ] **Ingest Gemini images** — run `scripts/ingest_gemini.py` on all ~300 Gemini illustrations, using run 1's seg checkpoint for pseudo-labeling 22-class masks. Upload to bucket as `gemini_diverse/`.
 4. [ ] **Run quality filter locally** — run `scripts/filter_seg_quality.py` on meshy_cc0, meshy_cc0_textured, humanrig, unirig to generate `quality_filter.json` per dataset. Upload each to bucket. The seg dataset loader auto-reads this file to skip rejected examples.
 5. [ ] **Push all code fixes** — ensure split_loader, weight_dataset, precompute, filter script, and seg dataset quality filter support are in main.

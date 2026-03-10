@@ -102,8 +102,9 @@ def predict_segmentation(
     seg_logits = out["segmentation"][0]  # [22, H, W]
     seg_mask = seg_logits.argmax(dim=0).cpu().numpy().astype(np.uint8)
 
-    # Draw order: already sigmoid'd, scale to 0-255
-    draw_order = (out["draw_order"][0, 0].cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
+    # Depth (v2) or draw_order (v1): already sigmoid'd, scale to 0-255
+    depth_key = "depth" if "depth" in out else "draw_order"
+    draw_order = (out[depth_key][0, 0].cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
 
     # Confidence
     confidence = out["confidence"][0, 0].cpu().numpy()
