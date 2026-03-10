@@ -30,6 +30,12 @@ class ImportResult:
     character_id: str
     armature: bpy.types.Object
     meshes: list[bpy.types.Object] = field(default_factory=list)
+    azimuth_offset: float = 0.0
+    """Extra azimuth rotation (degrees) to compensate for facing direction.
+
+    VRM/glTF characters face +Y (azimuth_offset=180), Mixamo faces -Y (0).
+    Added to camera azimuth at render time so "front" always shows the face.
+    """
 
 
 # ---------------------------------------------------------------------------

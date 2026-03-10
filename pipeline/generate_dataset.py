@@ -515,6 +515,7 @@ def process_character(
                 camera_angles=camera_angles,
                 enable_contours=enable_contours,
                 enable_layers=enable_layers,
+                azimuth_offset=import_result.azimuth_offset,
             )
             result.poses_succeeded += 1
             result.style_counts += pose_style_counts
@@ -618,6 +619,7 @@ def _process_single_pose(
     camera_angles: list[str] | None = None,
     enable_contours: bool = False,
     enable_layers: bool = False,
+    azimuth_offset: float = 0.0,
 ) -> Counter:
     """Process a single pose for a character (all augmentation and angle variants).
 
@@ -673,7 +675,7 @@ def _process_single_pose(
         # --- Camera angle loop ---
         for angle_name in camera_angles:
             angle_cfg = CAMERA_ANGLES[angle_name]
-            azimuth = float(angle_cfg["azimuth"])
+            azimuth = float(angle_cfg["azimuth"]) + azimuth_offset
             elevation = float(angle_cfg.get("elevation", 0))
 
             # --- Camera (recompute for each scale/pose/angle variant) ---
@@ -1032,24 +1034,27 @@ def main() -> None:
                 print(f"ERROR: Unknown camera angle '{a}'. Available: {ALL_CAMERA_ANGLES}")
                 sys.exit(1)
 
-    if not input_dir.is_dir():
-        print(f"ERROR: Input directory does not exist: {input_dir}")
-        sys.exit(1)
-
     # Discover FBX files (search recursively for nested directory layouts)
     # Exclude withSkin animation FBXs — those are processed separately by
     # render_withskin_animations.py and would produce distorted rest-pose renders.
-    fbx_files = sorted(
-        f for f in input_dir.glob("*.fbx")
-        if "withSkin" not in f.name
-    )
-    if not fbx_files:
+    fbx_files: list[Path] = []
+    if input_dir.is_dir():
         fbx_files = sorted(
-            f for f in input_dir.rglob("*.fbx")
+            f for f in input_dir.glob("*.fbx")
             if "withSkin" not in f.name
         )
-    if not fbx_files:
-        print(f"ERROR: No .fbx files found in {input_dir}")
+        if not fbx_files:
+            fbx_files = sorted(
+                f for f in input_dir.rglob("*.fbx")
+                if "withSkin" not in f.name
+            )
+
+    # Allow VRoid-only runs without FBX files
+    has_vroid = vroid_dir is not None and vroid_dir.is_dir()
+    has_spine = spine_dir is not None and spine_dir.is_dir()
+    has_live2d = live2d_dir is not None and live2d_dir.is_dir()
+    if not fbx_files and not has_vroid and not has_spine and not has_live2d:
+        print(f"ERROR: No .fbx files found in {input_dir} and no --vroid_dir/--spine_dir/--live2d_dir provided")
         sys.exit(1)
 
     # Apply --max_characters limit
@@ -1199,7 +1204,10 @@ def main() -> None:
     if vroid_dir is not None and vroid_dir.is_dir():
         from .vroid_importer import import_vrm
 
-        vrm_files = sorted(vroid_dir.glob("*.vrm"))
+        vrm_files = sorted(
+            f for f in (list(vroid_dir.glob("*.vrm")) + list(vroid_dir.glob("*.glb")))
+            if not f.name.startswith("._")
+        )
         if vrm_files:
             if max_characters > 0:
                 vrm_files = vrm_files[:max_characters]
@@ -1263,7 +1271,7 @@ def main() -> None:
 
             print(f"VRoid: {len(vrm_files)} characters processed")
         else:
-            print(f"WARNING: No .vrm files found in {vroid_dir}")
+            print(f"WARNING: No .vrm/.glb files found in {vroid_dir}")
 
     # --- Process Live2D models (if --live2d_dir provided) ---
     if live2d_dir is not None and live2d_dir.is_dir():

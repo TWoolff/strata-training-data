@@ -136,14 +136,137 @@ def _normalize_bone_name(name: str) -> str:
     return name.lower()
 
 
+# Mapping from VRM humanoid bone names → Mixamo bone names (after prefix strip).
+# VRM uses J_Bip_C_/J_Bip_L_/J_Bip_R_ prefixes with PascalCase names.
+# Mixamo uses mixamorig: prefix with PascalCase names.
+# Keys are lowercased VRM names (after stripping J_Bip_ prefix).
+# Values are lowercased Mixamo names (after stripping mixamorig: prefix).
+_VRM_TO_MIXAMO: dict[str, str] = {
+    # Torso (C = center)
+    "c_hips": "hips",
+    "c_spine": "spine",
+    "c_chest": "spine1",
+    "c_upperchest": "spine2",
+    "c_neck": "neck",
+    "c_head": "head",
+    # Left arm
+    "l_shoulder": "leftshoulder",
+    "l_upperarm": "leftarm",
+    "l_lowerarm": "leftforearm",
+    "l_hand": "lefthand",
+    # Right arm
+    "r_shoulder": "rightshoulder",
+    "r_upperarm": "rightarm",
+    "r_lowerarm": "rightforearm",
+    "r_hand": "righthand",
+    # Left leg
+    "l_upperleg": "leftupleg",
+    "l_lowerleg": "leftleg",
+    "l_foot": "leftfoot",
+    "l_toebase": "lefttoebase",
+    # Right leg
+    "r_upperleg": "rightupleg",
+    "r_lowerleg": "rightleg",
+    "r_foot": "rightfoot",
+    "r_toebase": "righttoebase",
+    # Fingers — left
+    "l_thumb1": "lefthandthumb1",
+    "l_thumb2": "lefthandthumb2",
+    "l_thumb3": "lefthandthumb3",
+    "l_index1": "lefthandindex1",
+    "l_index2": "lefthandindex2",
+    "l_index3": "lefthandindex3",
+    "l_middle1": "lefthandmiddle1",
+    "l_middle2": "lefthandmiddle2",
+    "l_middle3": "lefthandmiddle3",
+    "l_ring1": "lefthandring1",
+    "l_ring2": "lefthandring2",
+    "l_ring3": "lefthandring3",
+    "l_little1": "lefthandpinky1",
+    "l_little2": "lefthandpinky2",
+    "l_little3": "lefthandpinky3",
+    # Fingers — right
+    "r_thumb1": "righthandthumb1",
+    "r_thumb2": "righthandthumb2",
+    "r_thumb3": "righthandthumb3",
+    "r_index1": "righthandindex1",
+    "r_index2": "righthandindex2",
+    "r_index3": "righthandindex3",
+    "r_middle1": "righthandmiddle1",
+    "r_middle2": "righthandmiddle2",
+    "r_middle3": "righthandmiddle3",
+    "r_ring1": "righthandring1",
+    "r_ring2": "righthandring2",
+    "r_ring3": "righthandring3",
+    "r_little1": "righthandpinky1",
+    "r_little2": "righthandpinky2",
+    "r_little3": "righthandpinky3",
+}
+
+# Reverse mapping: Mixamo normalized → VRM normalized
+_MIXAMO_TO_VRM: dict[str, str] = {v: k for k, v in _VRM_TO_MIXAMO.items()}
+
+# CMU/BVH bone names → VRM normalized names.
+# 100STYLE BVH files use CMU naming (RightShoulder, LeftElbow, etc.)
+_CMU_TO_VRM: dict[str, str] = {
+    "hips": "c_hips",
+    "chest": "c_spine",       # CMU Chest = first spine
+    "chest2": "c_spine",      # Sometimes Chest2 = spine
+    "chest3": "c_chest",      # Chest3 = chest
+    "chest4": "c_upperchest", # Chest4 = upper chest
+    "neck": "c_neck",
+    "head": "c_head",
+    "leftcollar": "l_shoulder",
+    "leftshoulder": "l_upperarm",
+    "leftelbow": "l_lowerarm",
+    "leftwrist": "l_hand",
+    "rightcollar": "r_shoulder",
+    "rightshoulder": "r_upperarm",
+    "rightelbow": "r_lowerarm",
+    "rightwrist": "r_hand",
+    "lefthip": "l_upperleg",
+    "leftknee": "l_lowerleg",
+    "leftankle": "l_foot",
+    "lefttoe": "l_toebase",
+    "righthip": "r_upperleg",
+    "rightknee": "r_lowerleg",
+    "rightankle": "r_foot",
+    "righttoe": "r_toebase",
+}
+
+
+def _normalize_vrm_bone(name: str) -> str:
+    """Normalize a VRM bone name by stripping the J_Bip_ prefix and lowercasing.
+
+    Args:
+        name: Raw VRM bone name (e.g. ``"J_Bip_L_UpperArm"``).
+
+    Returns:
+        Normalized name (e.g. ``"l_upperarm"``), or lowercased original if
+        the prefix is not found.
+    """
+    if name.startswith("J_Bip_"):
+        return name[6:].lower()
+    return name.lower()
+
+
 def _build_name_map(
     source_bones: list[str],
     target_bones: list[str],
 ) -> dict[str, str]:
     """Build a mapping from source bone names to target bone names.
 
-    First tries exact name matches, then falls back to normalized
-    (prefix-stripped, lowercased) comparison.
+    Matching priority:
+    1. Exact name match
+    2. CMU/BVH → VRM alias match (checked early to prevent false
+       normalized matches like ``RightShoulder`` → ``J_Bip_R_Shoulder``
+       when the correct mapping is ``RightShoulder`` → ``J_Bip_R_UpperArm``)
+    3. VRM ↔ Mixamo humanoid alias match
+    4. Normalized (prefix-stripped, lowercased) match (fallback)
+    5. VRM → Mixamo reverse alias match
+
+    Each target bone can only be claimed once to prevent duplicate mappings
+    (e.g. both ``Chest`` and ``Chest2`` mapping to the same VRM spine bone).
 
     Args:
         source_bones: Bone names from the animation armature.
@@ -153,16 +276,60 @@ def _build_name_map(
         Dict mapping source bone name → target bone name.
     """
     mapping: dict[str, str] = {}
+    claimed_targets: set[str] = set()
     target_set = set(target_bones)
     target_normalized = {_normalize_bone_name(t): t for t in target_bones}
 
+    # Also build a VRM-normalized index for target bones
+    target_vrm_normalized = {_normalize_vrm_bone(t): t for t in target_bones}
+
+    def _claim(sname: str, tname: str) -> bool:
+        if tname in claimed_targets:
+            return False
+        mapping[sname] = tname
+        claimed_targets.add(tname)
+        return True
+
     for sname in source_bones:
+        src_norm = _normalize_bone_name(sname)
+
+        # 1. Exact match
         if sname in target_set:
-            mapping[sname] = sname
-        else:
-            t_match = target_normalized.get(_normalize_bone_name(sname))
+            _claim(sname, sname)
+            continue
+
+        # 2. CMU/BVH → VRM alias match (before normalized to avoid
+        #    RightShoulder matching J_Bip_R_Shoulder instead of J_Bip_R_UpperArm)
+        cmu_vrm = _CMU_TO_VRM.get(src_norm)
+        if cmu_vrm is not None:
+            t_match = target_vrm_normalized.get(cmu_vrm)
             if t_match is not None:
-                mapping[sname] = t_match
+                _claim(sname, t_match)
+                continue
+
+        # 3. VRM ↔ Mixamo alias match
+        # Check if source is Mixamo and target is VRM
+        vrm_alias = _MIXAMO_TO_VRM.get(src_norm)
+        if vrm_alias is not None:
+            t_match = target_vrm_normalized.get(vrm_alias)
+            if t_match is not None:
+                _claim(sname, t_match)
+                continue
+
+        # 4. Normalized (prefix-stripped) match (fallback)
+        t_match = target_normalized.get(src_norm)
+        if t_match is not None:
+            _claim(sname, t_match)
+            continue
+
+        # 5. Check if source is VRM and target is Mixamo
+        src_vrm_norm = _normalize_vrm_bone(sname)
+        mixamo_alias = _VRM_TO_MIXAMO.get(src_vrm_norm)
+        if mixamo_alias is not None:
+            t_match = target_normalized.get(mixamo_alias)
+            if t_match is not None:
+                _claim(sname, t_match)
+                continue
 
     return mapping
 
@@ -208,25 +375,25 @@ def _compute_sample_frames(total_frames: int, num_keyframes: int) -> list[int]:
 # Mapping from Strata 19-bone names to common armature bone name patterns.
 # Used to find the matching pose bone for each motion channel.
 _STRATA_BONE_ALIASES: dict[str, list[str]] = {
-    "hips": ["hips", "pelvis", "root"],
-    "spine": ["spine", "spine_01"],
-    "chest": ["chest", "spine_02", "spine_03", "spine2"],
-    "neck": ["neck", "neck_01"],
-    "head": ["head"],
-    "shoulder_l": ["shoulder_l", "clavicle_l", "leftshoulder"],
-    "upper_arm_l": ["upper_arm_l", "upperarm_l", "leftarm"],
-    "forearm_l": ["forearm_l", "lowerarm_l", "leftforearm"],
-    "hand_l": ["hand_l", "lefthand"],
-    "shoulder_r": ["shoulder_r", "clavicle_r", "rightshoulder"],
-    "upper_arm_r": ["upper_arm_r", "upperarm_r", "rightarm"],
-    "forearm_r": ["forearm_r", "lowerarm_r", "rightforearm"],
-    "hand_r": ["hand_r", "righthand"],
-    "upper_leg_l": ["upper_leg_l", "thigh_l", "leftupleg"],
-    "lower_leg_l": ["lower_leg_l", "calf_l", "leftleg"],
-    "foot_l": ["foot_l", "leftfoot"],
-    "upper_leg_r": ["upper_leg_r", "thigh_r", "rightupleg"],
-    "lower_leg_r": ["lower_leg_r", "calf_r", "rightleg"],
-    "foot_r": ["foot_r", "rightfoot"],
+    "hips": ["hips", "pelvis", "root", "J_Bip_C_Hips"],
+    "spine": ["spine", "spine_01", "J_Bip_C_Spine"],
+    "chest": ["chest", "spine_02", "spine_03", "spine2", "J_Bip_C_Chest", "J_Bip_C_UpperChest"],
+    "neck": ["neck", "neck_01", "J_Bip_C_Neck"],
+    "head": ["head", "J_Bip_C_Head"],
+    "shoulder_l": ["shoulder_l", "clavicle_l", "leftshoulder", "J_Bip_L_Shoulder"],
+    "upper_arm_l": ["upper_arm_l", "upperarm_l", "leftarm", "J_Bip_L_UpperArm"],
+    "forearm_l": ["forearm_l", "lowerarm_l", "leftforearm", "J_Bip_L_LowerArm"],
+    "hand_l": ["hand_l", "lefthand", "J_Bip_L_Hand"],
+    "shoulder_r": ["shoulder_r", "clavicle_r", "rightshoulder", "J_Bip_R_Shoulder"],
+    "upper_arm_r": ["upper_arm_r", "upperarm_r", "rightarm", "J_Bip_R_UpperArm"],
+    "forearm_r": ["forearm_r", "lowerarm_r", "rightforearm", "J_Bip_R_LowerArm"],
+    "hand_r": ["hand_r", "righthand", "J_Bip_R_Hand"],
+    "upper_leg_l": ["upper_leg_l", "thigh_l", "leftupleg", "J_Bip_L_UpperLeg"],
+    "lower_leg_l": ["lower_leg_l", "calf_l", "leftleg", "J_Bip_L_LowerLeg"],
+    "foot_l": ["foot_l", "leftfoot", "J_Bip_L_Foot"],
+    "upper_leg_r": ["upper_leg_r", "thigh_r", "rightupleg", "J_Bip_R_UpperLeg"],
+    "lower_leg_r": ["lower_leg_r", "calf_r", "rightleg", "J_Bip_R_LowerLeg"],
+    "foot_r": ["foot_r", "rightfoot", "J_Bip_R_Foot"],
 }
 
 
@@ -551,15 +718,31 @@ def _apply_animation_pose(
     anim_armature: bpy.types.Object,
     target_frame: int,
 ) -> int:
-    """Transfer an animation pose via rest-pose-relative retargeting.
+    """Transfer an animation pose using parent-local rest-pose correction.
 
-    Instead of directly binding the animation action (which only works when
-    character and animation share the same rest pose), this computes the
-    **delta rotation** each bone undergoes relative to its rest pose in the
-    animation skeleton, then applies that same delta on top of the character's
-    own rest pose.  This produces correct results even when the two skeletons
-    have completely different rest orientations (e.g. Meshy auto-rigged
-    characters with Meshy generic animations).
+    For each matched bone pair, computes the animation's local-space rotation
+    delta (how much the bone rotated from rest to posed in its parent's frame),
+    then re-expresses that delta in the character bone's local frame using a
+    correction matrix derived from comparing parent-relative rest poses.
+
+    Math for child bones::
+
+        anim_rest_local  = inv(anim_parent_rest)  @ anim_rest
+        anim_posed_local = inv(anim_parent_posed) @ anim_posed
+        local_delta = inv(anim_rest_local) @ anim_posed_local
+
+        R = inv(anim_rest_local) @ char_rest_local
+        pose_basis = inv(R) @ local_delta @ R
+
+    This works because R maps the character bone's local axes to the anim
+    bone's local axes, so conjugating the delta by R re-expresses it in
+    the character's coordinate frame.
+
+    For root bones, armature space is used directly, and the Y-axis
+    rotation (world facing direction from mocap) is zeroed out.
+
+    The animation armature is cleaned up immediately — no constraints or
+    edit-mode modifications are needed.
 
     Args:
         character_armature: The character's armature to pose.
@@ -569,7 +752,7 @@ def _apply_animation_pose(
     Returns:
         Number of bones successfully transferred.
     """
-    from mathutils import Matrix, Quaternion as MQuaternion  # noqa: N811
+    from mathutils import Quaternion  # noqa: F811
 
     scene = bpy.context.scene
 
@@ -594,44 +777,101 @@ def _apply_animation_pose(
             except Exception:
                 pass
 
+    # --- 2. Evaluate animation at target frame ---
     scene.frame_set(target_frame)
     bpy.context.view_layer.update()
-
-    # --- 2. Extract per-bone pose-space rotation from animation armature ---
-    # In Blender, pose bones have a `rotation_quaternion` (or euler) that
-    # represents the LOCAL rotation delta applied ON TOP of the rest pose.
-    # This is exactly what we need to copy to the character's pose bones.
-    anim_pose_rotations: dict[str, MQuaternion] = {}
-    for pbone in anim_armature.pose.bones:
-        pbone.rotation_mode = "QUATERNION"
-        anim_pose_rotations[pbone.name] = pbone.rotation_quaternion.copy()
 
     # --- 3. Build bone name mapping (anim → character) ---
     anim_bone_names = [b.name for b in anim_armature.pose.bones]
     char_bone_names = [b.name for b in character_armature.pose.bones]
     name_map = _build_name_map(anim_bone_names, char_bone_names)
 
-    # --- 4. Apply pose-space rotations to character bones ---
-    # Reset character to rest pose first
+    if not name_map:
+        logger.warning("No bone name matches between animation and character")
+        return 0
+
+    logger.debug(
+        "Bone name map: %d matches (anim has %d, char has %d)",
+        len(name_map),
+        len(anim_bone_names),
+        len(char_bone_names),
+    )
+
+    # --- 4. Reset character to T-pose ---
     _apply_tpose(character_armature)
+    bpy.context.view_layer.update()
 
+    # --- 5. Sort by bone depth (parents before children) ---
+    def _bone_depth(bone_name: str) -> int:
+        b = character_armature.data.bones.get(bone_name)
+        d = 0
+        while b and b.parent:
+            d += 1
+            b = b.parent
+        return d
+
+    sorted_pairs = sorted(name_map.items(), key=lambda p: _bone_depth(p[1]))
+
+    # --- 6. Compute and apply corrected rotation for each bone ---
     transferred = 0
-    for anim_name, char_name in name_map.items():
-        if anim_name not in anim_pose_rotations:
+    for anim_name, char_name in sorted_pairs:
+        char_pbone = character_armature.pose.bones.get(char_name)
+        anim_pbone = anim_armature.pose.bones.get(anim_name)
+        if char_pbone is None or anim_pbone is None:
             continue
 
-        char_pbone = character_armature.pose.bones.get(char_name)
-        if char_pbone is None:
+        # Skip secondary/physics bones and finger bones
+        name_lower = char_pbone.name.lower()
+        if "j_sec_" in name_lower or "_sec_" in name_lower:
             continue
+        if any(
+            kw in name_lower
+            for kw in ("thumb", "index", "middle", "ring", "little", "pinky", "finger")
+        ):
+            continue
+
+        anim_rest = anim_pbone.bone.matrix_local.to_3x3()
+        anim_posed = anim_pbone.matrix.to_3x3()
+        char_rest = char_pbone.bone.matrix_local.to_3x3()
+
+        if anim_pbone.parent and char_pbone.parent:
+            # Child bone: work in parent-relative space
+            anim_parent_rest = anim_pbone.parent.bone.matrix_local.to_3x3()
+            char_parent_rest = char_pbone.parent.bone.matrix_local.to_3x3()
+            anim_parent_posed = anim_pbone.parent.matrix.to_3x3()
+
+            anim_rest_local = anim_parent_rest.inverted() @ anim_rest
+            char_rest_local = char_parent_rest.inverted() @ char_rest
+            anim_posed_local = anim_parent_posed.inverted() @ anim_posed
+
+            local_delta = anim_rest_local.inverted() @ anim_posed_local
+            R = anim_rest_local.inverted() @ char_rest_local
+            pose_basis = R.inverted() @ local_delta @ R
+            q = pose_basis.to_quaternion()
+        elif not anim_pbone.parent and not char_pbone.parent:
+            # Root bone: use armature space directly
+            local_delta = anim_rest.inverted() @ anim_posed
+            R = anim_rest.inverted() @ char_rest
+            pose_basis = R.inverted() @ local_delta @ R
+            q = pose_basis.to_quaternion()
+            # Zero out facing direction (Y-rotation from mocap)
+            e = q.to_euler("YXZ")
+            e.y = 0.0
+            q = e.to_quaternion()
+        else:
+            # Mismatched parent hierarchy — world-space fallback
+            world_delta = anim_posed @ anim_rest.inverted()
+            pose_basis_mat = char_rest.inverted() @ world_delta @ char_rest
+            q = pose_basis_mat.to_quaternion()
 
         char_pbone.rotation_mode = "QUATERNION"
-        char_pbone.rotation_quaternion = anim_pose_rotations[anim_name]
+        char_pbone.rotation_quaternion = q
         transferred += 1
 
     bpy.context.view_layer.update()
 
     logger.debug(
-        "Retargeted %d bones at frame %d (pose-space rotation copy)",
+        "Retargeted %d bones at frame %d (direct quaternion transfer)",
         transferred,
         target_frame,
     )
@@ -667,6 +907,11 @@ def _apply_apose(armature: bpy.types.Object) -> None:
 
     for pbone in armature.pose.bones:
         name_lower = pbone.name.lower()
+
+        # Skip secondary/physics bones (J_Sec_*) — they are children of the
+        # primary bones and inherit rotation automatically
+        if "j_sec_" in name_lower or "_sec_" in name_lower:
+            continue
 
         is_left_arm = any(kw in name_lower for kw in _LEFT_UPPER_ARM_KEYWORDS)
         is_right_arm = any(kw in name_lower for kw in _RIGHT_UPPER_ARM_KEYWORDS)
@@ -719,7 +964,7 @@ def list_poses(
     for json_path in json_files:
         try:
             data = json.loads(json_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             continue
         if data.get("skeleton") != "strata_19" or "frames" not in data:
             continue
@@ -747,7 +992,9 @@ def list_poses(
     # --- FBX and BVH animation files ---
     anim_files = sorted(
         p for p in pose_dir.iterdir()
-        if p.suffix.lower() in (".fbx", ".bvh") and p.is_file()
+        if p.suffix.lower() in (".fbx", ".bvh")
+        and p.is_file()
+        and not p.name.startswith("._")  # Skip macOS resource fork files
     )
     if not anim_files and not json_files:
         logger.warning("No animation files found in pose directory: %s", pose_dir)
@@ -865,8 +1112,8 @@ def apply_pose(
 
     transferred = _apply_animation_pose(armature, anim_armature, pose.frame)
 
-    # Clean up the temporary animation armature and its actions
-    # (retargeting no longer binds actions to the character armature).
+    # Clean up the imported animation armature (no longer needed —
+    # pose is baked directly as quaternions, not via constraints)
     _cleanup_imported_armature(anim_armature, keep_actions=False)
 
     if transferred == 0:
@@ -885,12 +1132,12 @@ def reset_pose(armature: bpy.types.Object) -> None:
     """Reset an armature to its rest pose (T-pose).
 
     Call this between pose applications to ensure a clean state.
-    Also clears any bound animation action from the armature.
+    Also clears any bound animation action and retarget constraints.
 
     Args:
         armature: The armature to reset.
     """
-    # Clear any bound animation action (left from _apply_animation_pose)
+    # Clear any bound animation action
     if armature.animation_data and armature.animation_data.action:
         armature.animation_data.action = None
 

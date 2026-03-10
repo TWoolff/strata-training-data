@@ -173,9 +173,9 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
 
-### Bucket Contents (as of March 4 2026)
+### Bucket Contents (as of March 10 2026)
 
-Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~160+ GiB total.
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~870K+ files, ~176+ GiB total.
 
 | Prefix | Files | Size | Source |
 |--------|------:|-----:|--------|
@@ -189,10 +189,14 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~790K+ files, ~
 | `animerun_segment/` | 11,276 | 628 MiB | AnimeRun segment labels |
 | `conr/` | ~7,269 | ~580 MiB | CoNR multi-view anime character sheets |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
+| `gemini_diverse/` | ~1,300 | ~55 MiB | 221 Gemini pseudo-labeled examples |
 | `humanrig/` | 148,643+ | 5.6+ GiB | HumanRig rendered chars + joints + weights (incl. 11,434 weight.json) |
 | `ingest/vroid_lite/` | 9,302 | 771 MiB | VRoid Lite CC0 characters |
 | `instaorder/` | ~11,868 | ~1.5 GiB | InstaOrder draw order maps (val split) |
 | `live2d/` | 3,587 | 212 MiB | Live2D .moc3 rendered models |
+| `meshy_cc0/` | ~20K | ~3 GiB | Meshy CC0 rigged multi-view renders |
+| `meshy_cc0_textured/` | ~20K | ~3 GiB | Meshy CC0 textured multi-view renders |
+| `meshy_cc0_unrigged/` | ~20K | ~4 GiB | Meshy CC0 unrigged multi-view (image + depth + normals) |
 | `nova_human/` | ~40K | ~2.5 GiB | NOVA-Human ortho views + RTMPose joints |
 | `segmentation/` | 12,216 | 599 MiB | Mixamo pipeline segmentation output |
 | `unirig/` | 66,030+ | 42.6+ GiB | UniRig rigged meshes (+ 14,950 weight.json pending upload) |
@@ -220,6 +224,7 @@ Each training run follows this automated pattern:
 | `training/cloud_setup.sh lean` | Set up A100: install deps, configure rclone, download data |
 | `training/run_second.sh` | Second run (abandoned): enrich → train → upload |
 | `training/run_third.sh` | Third run: Marigold enrich → train → upload → tar |
+| `training/run_fourth.sh` | Fourth run: quality filter → seg fine-tune → inpainting → ONNX → upload |
 | `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
 | `run_normals_enrich.py` | Enrich datasets with surface normals (Marigold LCM) |
@@ -336,9 +341,9 @@ Seg and joints trained from scratch. Weights trained with split_loader fix (UniR
 ### Pre-Run 4 Checklist
 1. [x] **Save run 1 seg checkpoint** — saved to bucket as `checkpoints_run1/segmentation/best.pt`. Run 3's seg (0.3728) is worse — run 4 resumes from run 1.
 2. [x] **Finish run 3** — encoder features (11,434) + diffusion weights (0.0216 MAE) trained. All checkpoints uploaded as `checkpoints_run3/`.
-3. [ ] **Ingest Gemini images** — run `scripts/ingest_gemini.py` on all ~300 Gemini illustrations, using run 1's seg checkpoint for pseudo-labeling 22-class masks. Upload to bucket as `gemini_diverse/`.
-4. [ ] **Run quality filter locally** — run `scripts/filter_seg_quality.py` on meshy_cc0, meshy_cc0_textured, humanrig, unirig to generate `quality_filter.json` per dataset. Upload each to bucket. The seg dataset loader auto-reads this file to skip rejected examples.
-5. [ ] **Push all code fixes** — ensure split_loader, weight_dataset, precompute, filter script, and seg dataset quality filter support are in main.
+3. [x] **Ingest Gemini images** — 221 examples pseudo-labeled with run 1's seg checkpoint. Uploaded to bucket as `gemini_diverse/`.
+4. [x] **Quality filter** — `scripts/filter_seg_quality.py` integrated into seg dataset loader. Runs on A100 during training.
+5. [x] **Push all code fixes** — split_loader, weight_dataset, precompute, filter script, gemini adapter, seg enrich depth key fix all pushed to main.
 
 ### Pseudo-Labeling Strategy (self-training loop)
 Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on them → run 4's improved model re-labels Gemini data at the end of the run (step 7 of `run_fourth.sh`), bootstrapping better labels for future runs.
@@ -351,7 +356,7 @@ Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on t
 | 1 | Download Gemini diverse dataset | ~2 min |
 | 2 | Run quality filter on seg masks | ~10 min |
 | 3 | Marigold normals/depth enrichment on new data | ~30 min |
-| 4 | **Train segmentation** — resume from run 1 (0.545 mIoU), fine-tune 50 epochs at 5e-5 LR, label smoothing 0.05 | ~2-3 hrs |
+| 4 | **Train segmentation** — resume from run 1 (0.545 mIoU), fine-tune 50 epochs at 5e-5 LR, label smoothing 0.05 | ~5 hrs (6 min/epoch × 50) |
 | 5 | Generate inpainting pairs + train inpainting | ~1 hr |
 | 6 | ONNX export (all 4 models) | ~5 min |
 | 7 | Re-enrich Gemini data with new seg model (bootstrap for run 5) | ~5 min |
@@ -359,10 +364,17 @@ Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on t
 
 **NOT retraining in run 4**: Joints (0.001206 is good enough), Weights (0.023 MAE is 3.6x better than run 1).
 
+### Run 4 Training Data
+- 30,021 train / 3,711 val (loaded on A100)
+- Datasets: humanrig, meshy_cc0, meshy_cc0_textured, meshy_cc0_unrigged, anime_seg, fbanimehq, gemini_diverse
+- Note: unirig not downloaded (42GB too large for lean mode)
+- Note: live2d removed (prohibited license)
+
 ### Run 4 Seg Data Strategy
 - **Quality filter** per-example masks: reject <4 regions, >70% single region, missing head/torso
-- **Keep**: humanrig (11K, ground-truth), unirig (~10K), anime_seg (14K binary), gemini_diverse (~300 pseudo-labeled)
+- **Keep**: humanrig (11K, ground-truth), anime_seg (14K binary), fbanimehq (~101K), gemini_diverse (221 pseudo-labeled)
 - **Filter**: meshy_cc0 + meshy_cc0_textured — keep only examples that pass quality filter
+- **New**: meshy_cc0_unrigged (~20K, image+depth+normals only, no seg masks)
 - **Remove**: live2d (prohibited license)
 - **Label smoothing**: 0.05 to reduce impact of remaining noisy labels
 - **Expected**: mIoU 0.55-0.65 (recover run 1 quality + gain from cleaner data + Gemini domain diversity)

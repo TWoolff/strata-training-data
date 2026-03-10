@@ -1,6 +1,6 @@
 # Strata Training Data — Checklist
 
-**Last updated:** March 7, 2026 (v19)
+**Last updated:** March 10, 2026 (v20)
 
 ---
 
@@ -25,21 +25,41 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 - rclone `region=fsn1` added to cloud_setup.sh
 - All datasets tar-packed in bucket (~30min setup vs 5h loose files)
 
-### Run 3 (planned Monday March 10) — Code ready, not yet trained
+### Run 3 (March 9-10, 2026) — COMPLETE
 
-**What's new:**
-- Segmentation model v2: `draw_order` head replaced by Marigold-distilled `depth` (1-ch sigmoid) + `normals` (3-ch tanh)
+| Model | Metric | Score | Training Data | Notes |
+|-------|--------|-------|--------------|-------|
+| **1. Segmentation** (multi-head) | mIoU | **0.3728** | ~30K examples (+ noisy Meshy CC0 auto-rig) | Regressed from 0.545. Noisy auto-rigged data hurt. |
+| **2. Joint Refinement** | Mean offset error | **0.001206** | ~110K+ examples | Slight improvement over run 1 (0.001287). Early stopped epoch 36. |
+| **3. Weight Prediction** (geometry) | MAE | **0.023137** | 12,027 examples (HumanRig via split_loader fix) | **3.6x better** than run 1 (0.084). Early stopped epoch 33. |
+| **3b. Weight Prediction** (w/ encoder) | MAE | **0.021646** | 9,129 examples with encoder features | Better than geometry-only. Encoder features help with more data. |
+| **4. Inpainting** | — | Not retrained | — | Scheduled for run 4. |
+
+**Key fixes deployed in run 3:**
+- `split_loader.py`: Added nested view + weight-only dataset discovery (UniRig `{id}/front/weights.json`)
+- `weight_dataset.py`: Fixed example_id mismatch — used `child.name` instead of `{child}_{view}`
+- `precompute_encoder_features.py`: float16 saving + MAX_VERTICES=2048 cap (200GB → 42GB)
+- Segmentation model v2: depth + normals heads (Marigold-distilled), replacing draw_order
 - ONNX outputs: segmentation, depth, normals, confidence, encoder_features (5 heads)
-- Weight data: 54 → ~27K examples (HumanRig 11,434 + UniRig 14,950 + Mixamo 1,598)
-- Marigold enrichment on unirig (~10K front views)
-- Inpainting data loader fixed
-- PRD for Strata Rust runtime: `docs/prd-segmentation-model-v2.md`
 
-**Expected scores:**
-- Segmentation: 0.545 → 0.55+ mIoU (recover + auxiliary depth/normals loss signal)
-- Weights: 0.084 → 0.03-0.05 MAE (~490x more data)
-- Inpainting: actually working (~45K occlusion pairs)
-- Depth + normals: quality approaching Marigold on benchmark characters
+**Lesson learned:** Noisy auto-rigged Meshy CC0 data caused seg regression. Run 4 will quality-filter these examples.
+
+### Run 4 (March 10, 2026) — IN PROGRESS
+
+**Goal: Ship-ready models 1-4.** Script: `training/run_fourth.sh`
+
+**Strategy:**
+- Resume seg from run 1 checkpoint (0.545 mIoU), not run 3 (0.3728)
+- Quality filter Meshy CC0 data (reject <4 regions, >70% single region, missing head/torso)
+- Add ~221 Gemini diverse pseudo-labeled examples for domain diversity
+- Label smoothing 0.05 to reduce impact of remaining noisy labels
+- Fine-tune 50 epochs at 5e-5 LR
+- Train inpainting (first real attempt with fixed data loader)
+- NOT retraining: joints (0.001206 good enough), weights (0.023 MAE is 3.6x better)
+
+**Data:** 30,021 train / 3,711 val (with quality filtering + meshy_cc0 + meshy_cc0_textured + meshy_cc0_unrigged)
+
+**Expected:** mIoU 0.55-0.65 (recover + cleaner data + Gemini domain diversity)
 
 ---
 
@@ -61,8 +81,12 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 | `ingest/vroid_lite/` | 9,302 | 771 MiB | |
 | `instaorder/` | ~11,868 | ~1.5 GiB | |
 | `nova_human/` | ~40K | ~2.5 GiB | |
-| `checkpoints/` | varies | varies | Run 1 + run 2 checkpoints |
-| **Total** | | **~166+ GiB** | |
+| `gemini_diverse/` | ~1,300 | ~55 MiB | 221 Gemini pseudo-labeled examples |
+| `meshy_cc0/` | ~20K | ~3 GiB | Meshy CC0 rigged multi-view renders |
+| `meshy_cc0_textured/` | ~20K | ~3 GiB | Meshy CC0 textured multi-view renders |
+| `meshy_cc0_unrigged/` | ~20K | ~4 GiB | Meshy CC0 unrigged multi-view (image + depth + normals only) |
+| `checkpoints/` | varies | varies | Run 1 + run 2 + run 3 checkpoints |
+| **Total** | | **~176+ GiB** | |
 
 > Core training datasets (segmentation, live2d, humanrig, anime_seg, fbanimehq, unirig) are tar-packed. curated_diverse removed (ArtStation — no AI training permission). Loose files purged from bucket after tar verified. Includes Marigold-enriched normals.png + depth.png from run 2.
 
@@ -100,14 +124,18 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 
 | Dataset | Examples | 22-Region Masks | Joints | Style |
 |---------|--------:|:---:|:---:|-------|
-| Mixamo renders | ~5,250 | Yes | Yes | 3D rendered |
-| Live2D composites | 844 | Yes | Yes | 2D illustrated |
-| NOVA-Human | ~40,000 | No (fg/bg) | RTMPose | 3D rendered (VRoid) |
-| HumanRig | 34,302 | No | Ground truth | 3D rendered |
+| ~~Mixamo renders~~ | ~~5,250~~ | ~~Yes~~ | ~~Yes~~ | ~~3D rendered~~ — **PROHIBITED (Adobe ToS)** |
+| ~~Live2D composites~~ | ~~844~~ | ~~Yes~~ | ~~Yes~~ | ~~2D illustrated~~ — **PROHIBITED (Live2D ToS)** |
+| Meshy CC0 (rigged) | ~4,700 | Yes (auto-rig) | No | 3D rendered (quality-filtered) |
+| Meshy CC0 (textured) | ~4,700 | Yes (auto-rig) | No | 3D rendered (quality-filtered) |
+| Meshy CC0 (unrigged) | ~20K | No (image+depth+normals only) | No | 3D rendered |
+| Gemini diverse | 221 | Yes (pseudo-labeled) | No | 2D illustrated (AI-generated) |
+| HumanRig | 34,302 | Yes (auto-rig) | Ground truth | 3D rendered |
 | anime-seg v1+v2 | ~14,586 | No (fg/bg) | RTMPose | 2D illustrated |
 | anime_instance_seg | 98,428 | No (instance) | Partial | 2D illustrated |
 | FBAnimeHQ | ~101,630 | No | RTMPose | 2D illustrated |
-| **With 22-region masks** | **~6,094** | | | **Critical gap** |
+| NOVA-Human | ~40,000 | No (fg/bg) | RTMPose | 3D rendered (VRoid) |
+| **With 22-region masks** | **~44K** | | | **Improved from ~6K (Meshy CC0 + HumanRig + Gemini)** |
 
 ### Joint Prediction (19 bones)
 
@@ -152,12 +180,13 @@ Legacy `draw_order.png` still exists in some datasets but is no longer used for 
 
 | Gap | Severity | Fix |
 |-----|----------|-----|
-| **22-region masks on illustrated images** | Critical | See-Through (late March 2026): 9,102 models with 19-region masks |
-| **Depth + normals on all datasets** | Medium | Run 3 enriches unirig; humanrig partially done. Conditional loss handles missing. |
-| **Weight prediction data** | Fixed | 54 → ~27K examples (HumanRig + UniRig + Mixamo) |
-| **Inpainting data loader** | Fixed | Image discovery fixed (commit `011c3ba`), capped at 15K source images |
+| **Seg quality regression** | Critical | Run 4 in progress: quality filter + resume from run 1 checkpoint + label smoothing |
+| **22-region masks on illustrated images** | High | Only Gemini (221) has pseudo-labeled 2D masks. See-Through (late March): 9,102 models with 19-region masks |
+| **Depth + normals on all datasets** | Medium | Conditional loss handles missing. Meshy CC0 unrigged has depth+normals. |
+| **Weight prediction data** | Fixed (run 3) | 54 → 12K examples, 0.084 → 0.023 MAE (3.6x improvement) |
+| **Inpainting model** | In progress | Run 4 will train inpainting for first time with fixed data loader |
 | **Joints on anime_instance_seg** | Medium | Run RTMPose on remaining ~88K on A100 |
-| **Multi-angle Mixamo renders** | Medium | Re-render 105 chars with more styles + angles |
+| **Mixamo/Live2D prohibited** | Legal | Replaced by Meshy CC0 + Gemini. Need more illustrated 22-class data (See-Through). |
 
 ---
 

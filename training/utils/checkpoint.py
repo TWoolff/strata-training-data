@@ -76,8 +76,16 @@ def load_checkpoint(
     path = Path(path)
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
 
-    model.load_state_dict(checkpoint["model_state_dict"])
-    logger.info("Loaded model weights from %s", path)
+    incompatible = model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+    if incompatible.missing_keys or incompatible.unexpected_keys:
+        logger.warning(
+            "Non-strict load from %s: %d missing, %d unexpected keys",
+            path,
+            len(incompatible.missing_keys),
+            len(incompatible.unexpected_keys),
+        )
+    else:
+        logger.info("Loaded model weights from %s", path)
 
     if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

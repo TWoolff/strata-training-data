@@ -71,6 +71,11 @@ def _apply_apose(armature: bpy.types.Object) -> None:
     for pbone in armature.pose.bones:
         name_lower = pbone.name.lower()
 
+        # Skip secondary/physics bones (J_Sec_*) — rotating these causes
+        # double deformation and stretched limbs
+        if "j_sec_" in name_lower or "_sec_" in name_lower:
+            continue
+
         is_left_arm = any(kw in name_lower for kw in _VRM_LEFT_UPPER_ARM_KEYWORDS)
         is_right_arm = any(kw in name_lower for kw in _VRM_RIGHT_UPPER_ARM_KEYWORDS)
 
@@ -208,37 +213,45 @@ def _convert_mtoon_materials(meshes: list[bpy.types.Object]) -> None:
 
 
 def import_vrm(vrm_path: Path) -> ImportResult | None:
-    """Import a VRM character, normalize it, and return structured references.
+    """Import a VRM/GLB character, normalize it, and return structured references.
+
+    Supports both .vrm files (via VRM Add-on) and .glb files (via glTF importer).
+    VRoid Hub exports characters as .glb with VRM extensions — both formats
+    contain the same VRM humanoid skeleton data.
 
     Args:
-        vrm_path: Path to the .vrm file.
+        vrm_path: Path to the .vrm or .glb file.
 
     Returns:
         An ImportResult with armature/mesh references, or None if the file
-        is invalid or the VRM add-on is not available.
+        is invalid or the required add-on is not available.
     """
     vrm_path = Path(vrm_path)
     character_id = f"vroid_{vrm_path.stem}"
+    suffix = vrm_path.suffix.lower()
 
     if not vrm_path.is_file():
-        logger.error("VRM file not found: %s", vrm_path)
-        return None
-
-    if not _vrm_addon_available():
-        logger.error(
-            "VRM Add-on for Blender is not installed. "
-            "Install from: https://vrm-addon-for-blender.info/"
-        )
+        logger.error("VRM/GLB file not found: %s", vrm_path)
         return None
 
     # Clean slate
     clear_scene()
 
-    # Import VRM
+    # Import based on file extension
     try:
-        bpy.ops.import_scene.vrm(filepath=str(vrm_path))
+        if suffix == ".glb" or suffix == ".gltf":
+            bpy.ops.import_scene.gltf(filepath=str(vrm_path))
+            logger.info("Imported GLB via glTF importer: %s", vrm_path.name)
+        else:
+            if not _vrm_addon_available():
+                logger.error(
+                    "VRM Add-on for Blender is not installed. "
+                    "Install from: https://vrm-addon-for-blender.info/"
+                )
+                return None
+            bpy.ops.import_scene.vrm(filepath=str(vrm_path))
     except Exception:
-        logger.exception("Failed to import VRM: %s", vrm_path)
+        logger.exception("Failed to import %s: %s", suffix, vrm_path)
         return None
 
     # Discover armature(s) and mesh(es)
@@ -271,8 +284,13 @@ def import_vrm(vrm_path: Path) -> ImportResult | None:
     # Convert MToon materials before any rendering
     _convert_mtoon_materials(meshes)
 
-    # Apply A-pose normalization (VRoid models are typically T-pose)
-    _apply_apose(armature)
+    # VRoid models import in clean T-pose — no pose normalization needed.
+    # The pose applicator handles T-pose/A-pose at render time.
+
+    # VRM/glTF characters face +Y after import (Mixamo faces -Y).
+    # Rather than rotating geometry (which changes bone axes and breaks
+    # A-pose rotations), we pass azimuth_offset=180 so the camera
+    # compensates at render time.
 
     # Normalize scale and position
     _normalize_transforms(armature, meshes)
@@ -289,4 +307,5 @@ def import_vrm(vrm_path: Path) -> ImportResult | None:
         character_id=character_id,
         armature=armature,
         meshes=meshes,
+        azimuth_offset=180.0,  # VRM faces +Y, camera expects -Y
     )
