@@ -119,12 +119,14 @@ def compute_loss(
     """
     device = outputs["segmentation"].device
 
-    # Segmentation: CrossEntropyLoss with class weights
+    # Segmentation: CrossEntropyLoss with class weights + optional label smoothing
+    label_smoothing = loss_weights.get("label_smoothing", 0.0)
     seg_loss = F.cross_entropy(
         outputs["segmentation"],
         targets["segmentation"],
         weight=class_weights.to(device),
         ignore_index=-1,
+        label_smoothing=label_smoothing,
     )
 
     # Depth: L1 loss, only for examples that have Marigold depth labels

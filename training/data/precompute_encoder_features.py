@@ -252,8 +252,8 @@ def main() -> None:
                 feature_map, vertex_positions, image_size[0], image_size[1]
             )
 
-            # Save
-            np.save(out_path, sampled)
+            # Save as float16 to halve disk usage (~3.5MB vs ~7.5MB per file)
+            np.save(out_path, sampled.astype(np.float16))
             processed += 1
 
             if processed % 500 == 0:

@@ -1,0 +1,57 @@
+# Run 4 — segmentation config
+# Strategy: Resume from run 1 checkpoint (0.545 mIoU), fine-tune on clean data
+# Key changes from run 3:
+#   - Resume from run 1 best.pt (not ImageNet) — starts at 0.545 instead of 0.20
+#   - Add gemini_diverse (191 pseudo-labeled 2D illustrations)
+#   - Lower LR for fine-tuning (5e-5 vs 1e-4)
+#   - Stronger augmentation to combat overfitting
+#   - Label smoothing via soft targets (handled in loss config)
+#   - Fewer epochs (50) since we're fine-tuning, not training from scratch
+#
+# Expected: mIoU 0.55-0.60+ (recover run 1 quality + gain from new data)
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: false             # Will resume from run 1 checkpoint instead
+
+data:
+  dataset_dirs:
+    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: ~7,700, 22-class seg + depth + normals
+    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: ~8,200, 22-class seg + depth + normals
+    - "./data_cloud/live2d"              # Live2D: 844, 22-class + draw_order
+    - "./data_cloud/humanrig"            # HumanRig: 11,434, 22-class + joints + weights
+    - "./data_cloud/unirig"             # UniRig: ~10K, 22-class seg masks
+    - "./data_cloud/anime_seg"           # anime_seg: 14K, binary fg → confidence only
+    - "./data_cloud/gemini_diverse"      # Gemini 2D illustrations: ~191, pseudo-labeled 22-class
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 32
+  num_workers: 8
+  epochs: 50                             # Fewer epochs — fine-tuning, not from scratch
+  optimizer: "adamw"
+  learning_rate: 5.0e-5                  # Lower LR for fine-tuning from trained checkpoint
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 2
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.5
+  normals_weight: 0.5
+  confidence_weight: 0.1
+  label_smoothing: 0.05                  # Reduce impact of noisy labels
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/miou"
