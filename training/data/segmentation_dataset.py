@@ -23,6 +23,7 @@ Pure Python + PIL/NumPy/Torch (no Blender dependency).
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -224,6 +225,27 @@ def _discover_per_example(dataset_dir: Path) -> list[_Example]:
 
 
 # ---------------------------------------------------------------------------
+# Quality filter
+# ---------------------------------------------------------------------------
+
+
+def _load_quality_rejects(dataset_dirs: list[Path]) -> set[str]:
+    """Load rejected example IDs from quality_filter.json in each dataset dir."""
+    rejected: set[str] = set()
+    for dataset_dir in dataset_dirs:
+        qf_path = dataset_dir / "quality_filter.json"
+        if not qf_path.exists():
+            continue
+        try:
+            data = json.loads(qf_path.read_text(encoding="utf-8"))
+            reject_dict = data.get("rejected", {})
+            rejected.update(reject_dict.keys())
+        except (json.JSONDecodeError, OSError):
+            logger.warning("Failed to read quality filter: %s", qf_path)
+    return rejected
+
+
+# ---------------------------------------------------------------------------
 # Dataset
 # ---------------------------------------------------------------------------
 
@@ -286,6 +308,21 @@ class SegmentationDataset:
         self.examples = [
             ex for ex in all_examples if character_id_from_example(ex.example_id) in allowed_chars
         ]
+        n_after_split = len(self.examples)
+
+        # Filter by quality_filter.json (reject bad segmentation masks)
+        rejected_ids = _load_quality_rejects(dataset_dirs)
+        if rejected_ids:
+            self.examples = [
+                ex for ex in self.examples if ex.example_id not in rejected_ids
+            ]
+            n_rejected = n_after_split - len(self.examples)
+            if n_rejected > 0:
+                logger.info(
+                    "Quality filter removed %d examples (%d reject IDs loaded)",
+                    n_rejected,
+                    len(rejected_ids),
+                )
 
         # Count examples with depth/normals for logging
         n_depth = sum(1 for ex in self.examples if ex.depth_path is not None)

@@ -2,19 +2,17 @@
 # =============================================================================
 # Strata Training — Fourth Run (A100)
 #
-# Key changes from run 3:
-#   - Segmentation: resume from run 1 checkpoint (0.545 mIoU), not ImageNet
-#   - Gemini diverse: ~191 pseudo-labeled 2D illustrations (domain gap bridge)
-#   - UniRig weights: split_loader fix unlocks 14,950 weight examples
-#   - Stronger augmentation + label smoothing to combat noisy labels
-#   - Lower LR (5e-5) for fine-tuning
+# Goal: Ship-ready models 1-4
+#   - Model 1 (Seg): Fine-tune from run 1 (0.545 mIoU) + Gemini data + label smoothing
+#   - Model 2 (Joints): Keep run 3 checkpoint (0.001206) — no retraining needed
+#   - Model 3 (Weights): Keep run 3 checkpoint (0.023 MAE) — no retraining needed
+#   - Model 4 (Inpainting): Train with fixed data loader + occlusion pairs
 #
 # Prerequisites:
 #   export BUCKET_ACCESS_KEY='...'
 #   export BUCKET_SECRET='...'
 #   git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
 #   ./training/cloud_setup.sh lean
-#   rclone copy hetzner:strata-training-data/checkpoints/ ./checkpoints/ --transfers 32 --fast-list -P
 #
 # Usage:
 #   chmod +x training/run_fourth.sh
@@ -34,17 +32,48 @@ echo "============================================"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 0. Install extra deps
+# 0. Download run 1 seg checkpoint (the good one — 0.545 mIoU)
 # ---------------------------------------------------------------------------
-echo "[0/8] Installing extra dependencies..."
-pip install -q diffusers transformers accelerate
-echo "  Done."
+echo "[0/6] Downloading run 1 segmentation checkpoint..."
+echo ""
+
+RUN1_CKPT="checkpoints/segmentation/run1_best.pt"
+if [ -f "$RUN1_CKPT" ]; then
+    echo "  run1_best.pt already exists."
+else
+    # Download from bucket — run 1 checkpoint was saved as checkpoints_run1/
+    rclone copy hetzner:strata-training-data/checkpoints_run1/segmentation/best.pt \
+        ./checkpoints/segmentation/ --transfers 32 --fast-list -P
+    if [ -f "checkpoints/segmentation/best.pt" ]; then
+        cp checkpoints/segmentation/best.pt "$RUN1_CKPT"
+        echo "  Saved as $RUN1_CKPT"
+    else
+        echo "  WARNING: Could not find run 1 checkpoint in bucket."
+        echo "  Trying checkpoints/segmentation/best.pt from current bucket..."
+        rclone copy hetzner:strata-training-data/checkpoints/segmentation/best.pt \
+            ./checkpoints/segmentation/ --transfers 32 --fast-list -P
+        if [ -f "checkpoints/segmentation/best.pt" ]; then
+            cp checkpoints/segmentation/best.pt "$RUN1_CKPT"
+            echo "  Saved as $RUN1_CKPT"
+        else
+            echo "  FATAL: No segmentation checkpoint found. Cannot resume."
+            exit 1
+        fi
+    fi
+fi
+
+# Also download run 3 joints + weights checkpoints (keep those)
+echo "  Downloading run 3 joints + weights checkpoints..."
+rclone copy hetzner:strata-training-data/checkpoints_run3/joints/ \
+    ./checkpoints/joints/ --transfers 32 --fast-list -P
+rclone copy hetzner:strata-training-data/checkpoints_run3/weights/ \
+    ./checkpoints/weights/ --transfers 32 --fast-list -P
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Download Gemini diverse dataset from bucket
+# 1. Download Gemini diverse dataset
 # ---------------------------------------------------------------------------
-echo "[1/8] Downloading Gemini diverse dataset..."
+echo "[1/6] Downloading Gemini diverse dataset..."
 echo ""
 
 if [ -d "./data_cloud/gemini_diverse" ] && [ "$(ls -A ./data_cloud/gemini_diverse 2>/dev/null | head -1)" ]; then
@@ -56,14 +85,42 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2. Normals + depth enrichment for new datasets
+# 2. Run quality filter on seg masks (reject bad labels)
 # ---------------------------------------------------------------------------
-echo "[2/8] Enriching new datasets with surface normals + depth (Marigold)..."
+echo "[2/8] Running segmentation quality filter..."
 echo ""
 
-for ds in gemini_diverse live2d; do
+for ds in humanrig unirig meshy_cc0 meshy_cc0_textured gemini_diverse; do
+    ds_dir="./data_cloud/$ds"
+    if [ -d "$ds_dir" ] && [ ! -f "$ds_dir/quality_filter.json" ]; then
+        echo "  Filtering $ds..."
+        python scripts/filter_seg_quality.py \
+            --data-dirs "$ds_dir" \
+            --output-dir "$ds_dir" \
+            --min-regions 4 \
+            --max-single-region 0.70 \
+            --min-foreground 0.05 \
+            2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+    else
+        echo "  $ds: already filtered or not present, skipping."
+    fi
+done
+
+echo ""
+echo "  Quality filter complete."
+echo ""
+
+# ---------------------------------------------------------------------------
+# 3. Normals + depth enrichment for datasets missing them
+# ---------------------------------------------------------------------------
+echo "[3/8] Enriching datasets with surface normals + depth (Marigold)..."
+echo ""
+
+pip install -q diffusers transformers accelerate 2>/dev/null
+
+for ds in gemini_diverse; do
     if [ -d "./data_cloud/$ds" ]; then
-        echo "  Enriching $ds with normals + depth..."
+        echo "  Enriching $ds..."
         python run_normals_enrich.py \
             --input-dir "./data_cloud/$ds" \
             --only-missing \
@@ -73,62 +130,22 @@ for ds in gemini_diverse live2d; do
     fi
 done
 
-echo "  Normals enrichment complete."
+echo "  Enrichment complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 3. Generate inpainting pairs
-# ---------------------------------------------------------------------------
-echo "[3/8] Generating inpainting occlusion pairs..."
-echo ""
-
-PAIRS_DIR="./data_cloud/inpainting_pairs"
-PAIRS_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -100 | wc -l)
-
-if [ "$PAIRS_COUNT" -ge 100 ]; then
-    echo "  Occlusion pairs already exist ($PAIRS_COUNT+ dirs), skipping."
-else
-    python -m training.data.generate_occlusion_pairs \
-        --source-dirs \
-            ./data_cloud/meshy_cc0_textured \
-            ./data_cloud/meshy_cc0_unrigged \
-            ./data_cloud/humanrig \
-            ./data_cloud/gemini_diverse \
-        --output-dir "$PAIRS_DIR" \
-        --max-images 15000 \
-        --masks-per-image 3 \
-        2>&1 | tee "$LOG_DIR/generate_inpainting_pairs.log"
-fi
-echo ""
-
-# ---------------------------------------------------------------------------
-# 4. Train segmentation (resume from run 1 checkpoint)
+# 4. Train segmentation (resume from run 1 — 0.545 mIoU)
 # ---------------------------------------------------------------------------
 echo "[4/8] Training SEGMENTATION model (resume from run 1)..."
 echo ""
-
-# Use run 1 checkpoint as starting point
-RUN1_CKPT="checkpoints/segmentation/run1_best.pt"
-if [ ! -f "$RUN1_CKPT" ]; then
-    # Try to find run 1's best checkpoint
-    if [ -f "checkpoints/segmentation/best.pt" ]; then
-        echo "  Using existing best.pt as resume checkpoint"
-        RUN1_CKPT="checkpoints/segmentation/best.pt"
-    else
-        echo "  WARNING: No run 1 checkpoint found, training from ImageNet"
-        RUN1_CKPT=""
-    fi
-fi
-
-RESUME_FLAG=""
-if [ -n "$RUN1_CKPT" ]; then
-    RESUME_FLAG="--resume $RUN1_CKPT"
-    echo "  Resuming from: $RUN1_CKPT"
-fi
+echo "  Resuming from: $RUN1_CKPT"
+echo "  Config: training/configs/segmentation_a100_run4.yaml"
+echo "  Strategy: Fine-tune at 5e-5 LR, 50 epochs, label smoothing 0.05"
+echo ""
 
 python -m training.train_segmentation \
     --config training/configs/segmentation_a100_run4.yaml \
-    $RESUME_FLAG \
+    --resume "$RUN1_CKPT" \
     2>&1 | tee "$LOG_DIR/segmentation.log"
 
 echo ""
@@ -136,53 +153,26 @@ echo "  Segmentation training complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Train joints (reuse run 3 config — already good)
+# 5. Generate inpainting pairs + train inpainting
 # ---------------------------------------------------------------------------
-echo "[5/8] Training JOINT REFINEMENT model..."
+echo "[5/8] Generating inpainting pairs + training INPAINTING model..."
 echo ""
 
-python -m training.train_joints \
-    --config training/configs/joints_a100_lean.yaml \
-    2>&1 | tee "$LOG_DIR/joints.log"
+PAIRS_DIR="./data_cloud/inpainting_pairs"
+PAIRS_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -100 | wc -l)
 
-echo ""
-echo "  Joint training complete."
-echo ""
-
-# ---------------------------------------------------------------------------
-# 6. Train weights (with UniRig fix)
-# ---------------------------------------------------------------------------
-echo "[6/8] Training WEIGHT PREDICTION model..."
-echo ""
-
-python -m training.train_weights \
-    --config training/configs/weights_a100_run4.yaml \
-    2>&1 | tee "$LOG_DIR/weights.log"
-
-echo ""
-echo "  Weight prediction training complete."
-echo ""
-
-# ---------------------------------------------------------------------------
-# 7. Precompute encoder features + train diffusion weights + inpainting
-# ---------------------------------------------------------------------------
-echo "[7/8] Precomputing encoder features..."
-echo ""
-
-python -m training.data.precompute_encoder_features \
-    --segmentation-checkpoint checkpoints/segmentation/best.pt \
-    --data-dirs ./data_cloud/humanrig ./data_cloud/unirig \
-    --output-dir ./data_cloud/encoder_features \
-    --only-missing \
-    2>&1 | tee "$LOG_DIR/precompute_encoder.log"
-
-echo ""
-echo "  Training DIFFUSION WEIGHT PREDICTION model..."
-echo ""
-
-python -m training.train_diffusion_weights \
-    --config training/configs/diffusion_weights_a100_lean.yaml \
-    2>&1 | tee "$LOG_DIR/diffusion_weights.log"
+if [ "$PAIRS_COUNT" -ge 100 ]; then
+    echo "  Occlusion pairs already exist ($PAIRS_COUNT+ dirs), skipping generation."
+else
+    python -m training.data.generate_occlusion_pairs \
+        --source-dirs \
+            ./data_cloud/humanrig \
+            ./data_cloud/gemini_diverse \
+        --output-dir "$PAIRS_DIR" \
+        --max-images 15000 \
+        --masks-per-image 3 \
+        2>&1 | tee "$LOG_DIR/generate_inpainting_pairs.log"
+fi
 
 echo ""
 echo "  Training INPAINTING model..."
@@ -193,19 +183,13 @@ python -m training.train_inpainting \
     2>&1 | tee "$LOG_DIR/inpainting.log"
 
 echo ""
-echo "  Training TEXTURE INPAINTING model..."
-echo ""
-
-python -m training.train_texture_inpainting \
-    --config training/configs/texture_inpainting_a100_lean.yaml \
-    2>&1 | tee "$LOG_DIR/texture_inpainting.log"
-
+echo "  Inpainting training complete."
 echo ""
 
 # ---------------------------------------------------------------------------
-# 8. ONNX Export + Upload
+# 6. ONNX Export (all 4 models)
 # ---------------------------------------------------------------------------
-echo "[8/8] Exporting to ONNX + uploading results..."
+echo "[6/8] Exporting all models to ONNX..."
 echo ""
 
 ONNX_DIR="./models/onnx"
@@ -215,14 +199,12 @@ for model_export in \
     "segmentation checkpoints/segmentation/best.pt segmentation.onnx" \
     "joints checkpoints/joints/best.pt joint_refinement.onnx" \
     "weights_vertex checkpoints/weights/best.pt weight_prediction.onnx" \
-    "diffusion_weights checkpoints/diffusion_weights/best.pt diffusion_weight_prediction.onnx" \
-    "inpainting checkpoints/inpainting/best.pt inpainting.onnx" \
-    "texture_inpainting checkpoints/texture_inpainting/best.pt texture_inpainting.onnx"
+    "inpainting checkpoints/inpainting/best.pt inpainting.onnx"
 do
     set -- $model_export
     model_name=$1 ckpt=$2 onnx_file=$3
     if [ -f "$ckpt" ]; then
-        echo "  Exporting $model_name → $onnx_file"
+        echo "  Exporting $model_name -> $onnx_file"
         python -m training.export_onnx \
             --model "$model_name" \
             --checkpoint "$ckpt" \
@@ -234,12 +216,36 @@ do
 done
 
 echo ""
-echo "  Uploading to bucket..."
-rclone copy ./checkpoints/ hetzner:strata-training-data/checkpoints/ \
+
+# ---------------------------------------------------------------------------
+# 7. Seg-enrich new Gemini data with run 4 model (for run 5 bootstrap)
+# ---------------------------------------------------------------------------
+echo "[7/8] Re-enriching Gemini data with updated seg model..."
+echo ""
+
+if [ -d "./data_cloud/gemini_diverse" ]; then
+    python run_seg_enrich.py \
+        --checkpoint checkpoints/segmentation/best.pt \
+        --input-dir ./data_cloud/gemini_diverse \
+        --only-missing \
+        2>&1 | tee "$LOG_DIR/seg_enrich_gemini.log"
+    echo "  Re-enrichment complete."
+else
+    echo "  No gemini_diverse dir, skipping."
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# 8. Upload everything to bucket
+# ---------------------------------------------------------------------------
+echo "[8/8] Uploading checkpoints, logs, and ONNX models..."
+echo ""
+
+rclone copy ./checkpoints/ hetzner:strata-training-data/checkpoints_run4/ \
     --transfers 32 --fast-list -P
 rclone copy ./logs/ hetzner:strata-training-data/logs/ \
     --transfers 32 --fast-list -P
-rclone copy ./models/onnx/ hetzner:strata-training-data/models/onnx/ \
+rclone copy ./models/onnx/ hetzner:strata-training-data/models/onnx_run4/ \
     --transfers 32 --fast-list -P
 
 echo ""
@@ -254,7 +260,7 @@ echo "  Checkpoints:"
 ls -lh checkpoints/*/best.pt 2>/dev/null || echo "  (no checkpoints found)"
 echo ""
 echo "  To download results to Mac:"
-echo "    rclone copy hetzner:strata-training-data/checkpoints/ ./checkpoints/ --transfers 32 --fast-list -P"
-echo "    rclone copy hetzner:strata-training-data/models/onnx/ ./models/onnx/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/checkpoints_run4/ ./checkpoints/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/models/onnx_run4/ ./models/onnx/ --transfers 32 --fast-list -P"
 echo "    rclone copy hetzner:strata-training-data/logs/ ./logs/ --transfers 32 --fast-list -P"
 echo "============================================"

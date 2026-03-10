@@ -28,6 +28,7 @@ from training.data.weight_dataset import (
     _detect_layout,
     _discover_flat,
     _discover_per_example,
+    _derive_joint_positions,
     _parse_joint_positions,
     _WeightExample,
     build_features,
@@ -210,7 +211,10 @@ class DiffusionWeightDataset:
         image_size = weight_data.get("image_size", [512, 512])
 
         # Load joint positions
-        joint_positions = _parse_joint_positions(ex.joints_path)
+        if ex.joints_path is not None:
+            joint_positions = _parse_joint_positions(ex.joints_path)
+        else:
+            joint_positions = _derive_joint_positions(vertices)
 
         # Build standard 31-dim features
         features, weights_target, confidence_target, num_verts = build_features(

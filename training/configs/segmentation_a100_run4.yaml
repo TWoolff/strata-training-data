@@ -17,13 +17,14 @@ model:
 
 data:
   dataset_dirs:
-    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: ~7,700, 22-class seg + depth + normals
-    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: ~8,200, 22-class seg + depth + normals
-    - "./data_cloud/live2d"              # Live2D: 844, 22-class + draw_order
-    - "./data_cloud/humanrig"            # HumanRig: 11,434, 22-class + joints + weights
+    - "./data_cloud/humanrig"            # HumanRig: 11,434, ground-truth 22-class + joints + weights
     - "./data_cloud/unirig"             # UniRig: ~10K, 22-class seg masks
+    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: ~7,700, quality-filtered 22-class
+    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: ~8,200, quality-filtered 22-class
     - "./data_cloud/anime_seg"           # anime_seg: 14K, binary fg → confidence only
-    - "./data_cloud/gemini_diverse"      # Gemini 2D illustrations: ~191, pseudo-labeled 22-class
+    - "./data_cloud/gemini_diverse"      # Gemini 2D illustrations: ~300, pseudo-labeled 22-class
+    # REMOVED: live2d — prohibited license
+  quality_filter: true                   # Skip examples listed in quality_filter.json reject list
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}

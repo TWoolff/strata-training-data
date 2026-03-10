@@ -282,7 +282,8 @@ Score: **0.5453 mIoU** (run 1, epoch 94/100, March 6 2026). Run 2 regressed to 0
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
 
-Score: **0.001287 mean_offset_error** (epoch 13/80, early stopped at 28, March 6 2026 A100 lean run). 110K training examples, 97.9% presence accuracy.
+Score (run 1): **0.001287 mean_offset_error** (epoch 13/80, early stopped at 28, March 6 2026 A100 lean run). 110K training examples, 97.9% presence accuracy.
+Score (run 3): **0.001206 mean_offset_error** (epoch 21/80, early stopped at 36, March 10 2026). Slight improvement.
 
 ## Model 3: Weight Prediction
 What it does: Takes per-vertex features (position, bone distances, heat diffusion, region label — 31 features per vertex) + optionally encoder features from Model 1's segmentation backbone → predicts skinning weights for 20 bones. This determines how each mesh vertex deforms when bones move. It's a small MLP with an optional encoder feature branch. When encoder features are available (sampled at vertex positions from the segmentation model), they provide visual context about body proportions — improving accuracy for unusual characters (chibi, elongated limbs, loose clothing). The encoder branch uses dropout during training so the model works with or without visual context.
@@ -291,12 +292,12 @@ Previously split into two separate models (weight_prediction.onnx + diffusion_we
 
 Score (run 1, geometry-only): **0.083958 MAE** (epoch 53/100, early stopped at 68, March 6 2026 A100 lean run). Only 54 training examples (Mixamo segmentation data). 98.7% confidence accuracy.
 Score (run 1, with encoder features): **0.089449 MAE** (epoch 30/60, early stopped at 45). Slightly worse — encoder features don't add enough signal with so few weight examples.
-Now have ~26.5K weight examples (HumanRig 11,434 + UniRig 14,950) for next run — expect encoder features to help more with diverse data.
+Score (run 3, geometry-only): **0.023137 MAE** (epoch 18/100, early stopped at 33, March 10 2026). 12,027 training examples (HumanRig via UniRig split_loader fix). 3.6x improvement over run 1.
 
 ## Model 4: Inpainting
 U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
-Score: **BROKEN** — run 1 failed. Root cause: `discover_images()` used `rglob("*.png")` which grabbed segmentation masks and depth maps as source images, producing almost no valid pairs. Fixed in commit `011c3ba` — now uses `glob("*/image.png")`. Also capped at 15K source images (~45K pairs). Should work in run 3.
+Score: **BROKEN** — run 1 failed. Root cause: `discover_images()` used `rglob("*.png")` which grabbed segmentation masks and depth maps as source images, producing almost no valid pairs. Fixed in commit `011c3ba` — now uses `glob("*/image.png")`. Also capped at 15K source images (~45K pairs). Not retrained in run 3 — scheduled for run 4.
 
 ## Model 5: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
@@ -307,3 +308,62 @@ Score:
 Multi-view conditioned diffusion model that generates any unseen view (back, side, 3/4, etc.) from one or more reference views. Given a front-facing character painting, it can synthesize the back, sides, and any angle in between — producing consistent hair, clothing, and accessory details across all views. Currently Strata falls back to "PaletteFill" (mirror + color adjustment). Needs training pipeline + multi-view paired data (no pipeline exists yet).
 
 Score:
+
+## Third Training Run (March 9-10 2026, A100 Lean) — IN PROGRESS
+
+Seg and joints trained from scratch. Weights trained with split_loader fix (UniRig discovery). Encoder feature precompute in progress.
+
+### Run 3 Results
+
+| Model | Score | vs Run 1 | Notes |
+|-------|-------|----------|-------|
+| Segmentation | 0.3728 mIoU (epoch 93/100) | Regressed from 0.545 | Noisy Meshy CC0 auto-rig data |
+| Joints | 0.001206 mean_err (epoch 21, early stop 36) | Improved from 0.001287 | Slight improvement |
+| Weights | 0.023137 MAE (epoch 18, early stop 33) | **3.6x better** (was 0.084) | 12K examples via split_loader fix |
+| Encoder features | In progress | N/A | float16 + vertex cap (MAX_VERTICES=2048) |
+| Diffusion weights | Pending encoder features | N/A | Will run after precompute |
+| Inpainting | Not retrained | N/A | Scheduled for run 4 |
+
+### Run 3 Fixes
+- **split_loader.py**: Added nested view + weight-only dataset discovery (UniRig `{id}/front/weights.json`)
+- **weight_dataset.py**: Fixed example_id mismatch — used `child.name` instead of `{child}_{view}` so split filter matches
+- **precompute_encoder_features.py**: Added float16 saving + MAX_VERTICES=2048 cap to prevent disk exhaustion
+- **Disk space**: Original float32 uncapped encoder features filled 200GB; capped float16 uses ~42GB for 11K examples
+
+## Fourth Training Run — PLAN
+
+**Goal: Ship-ready models 1-4.** Script: `training/run_fourth.sh`
+
+### Pre-Run 4 Checklist
+1. [ ] **Save run 1 seg checkpoint** — copy run 1's `best.pt` (0.545 mIoU) to bucket as `checkpoints_run1/segmentation/best.pt`. Run 3's seg checkpoint (0.3728) is worse — must resume from run 1.
+2. [ ] **Finish run 3** — complete encoder feature precompute + diffusion weights on current A100. Upload all checkpoints to bucket as `checkpoints_run3/`.
+3. [ ] **Ingest Gemini images** — run `scripts/ingest_gemini.py` on all ~300 Gemini illustrations, using run 1's seg checkpoint for pseudo-labeling 22-class masks. Upload to bucket as `gemini_diverse/`.
+4. [ ] **Run quality filter locally** — run `scripts/filter_seg_quality.py` on meshy_cc0, meshy_cc0_textured, humanrig, unirig to generate `quality_filter.json` per dataset. Upload each to bucket. The seg dataset loader auto-reads this file to skip rejected examples.
+5. [ ] **Push all code fixes** — ensure split_loader, weight_dataset, precompute, filter script, and seg dataset quality filter support are in main.
+
+### Pseudo-Labeling Strategy (self-training loop)
+Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on them → run 4's improved model re-labels Gemini data at the end of the run (step 7 of `run_fourth.sh`), bootstrapping better labels for future runs.
+
+### Run 4 Strategy
+
+| Step | Task | Est. Time |
+|------|------|-----------|
+| 0 | Download run 1 seg + run 3 joints/weights checkpoints | ~2 min |
+| 1 | Download Gemini diverse dataset | ~2 min |
+| 2 | Run quality filter on seg masks | ~10 min |
+| 3 | Marigold normals/depth enrichment on new data | ~30 min |
+| 4 | **Train segmentation** — resume from run 1 (0.545 mIoU), fine-tune 50 epochs at 5e-5 LR, label smoothing 0.05 | ~2-3 hrs |
+| 5 | Generate inpainting pairs + train inpainting | ~1 hr |
+| 6 | ONNX export (all 4 models) | ~5 min |
+| 7 | Re-enrich Gemini data with new seg model (bootstrap for run 5) | ~5 min |
+| 8 | Upload to bucket | ~5 min |
+
+**NOT retraining in run 4**: Joints (0.001206 is good enough), Weights (0.023 MAE is 3.6x better than run 1).
+
+### Run 4 Seg Data Strategy
+- **Quality filter** per-example masks: reject <4 regions, >70% single region, missing head/torso
+- **Keep**: humanrig (11K, ground-truth), unirig (~10K), anime_seg (14K binary), gemini_diverse (~300 pseudo-labeled)
+- **Filter**: meshy_cc0 + meshy_cc0_textured — keep only examples that pass quality filter
+- **Remove**: live2d (prohibited license)
+- **Label smoothing**: 0.05 to reduce impact of remaining noisy labels
+- **Expected**: mIoU 0.55-0.65 (recover run 1 quality + gain from cleaner data + Gemini domain diversity)
