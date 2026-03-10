@@ -169,7 +169,9 @@ def _discover_per_example(dataset_dir: Path) -> list[_WeightExample]:
                 _WeightExample(
                     weights_path=weights_path,
                     joints_path=joints_path if joints_path.exists() else None,
-                    example_id=f"{child.name}_{view_dir.name}",
+                    # Use parent dir name as example_id so character_id_from_example
+                    # matches the split_loader's discovery (which uses child.name)
+                    example_id=child.name,
                 )
             )
 

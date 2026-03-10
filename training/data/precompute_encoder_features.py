@@ -35,6 +35,9 @@ logger = logging.getLogger(__name__)
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
+# Cap vertices to match weight model's max — reduces .npy from ~30MB to ~3.7MB
+MAX_VERTICES = 2048
+
 
 def load_segmentation_backbone(
     checkpoint_path: Path,
@@ -238,7 +241,11 @@ def main() -> None:
                 skipped += 1
                 continue
 
-            # Extract vertex positions
+            # Extract vertex positions (cap at MAX_VERTICES to bound file size)
+            if len(vertices) > MAX_VERTICES:
+                # Uniformly subsample to keep spatial coverage
+                indices = np.linspace(0, len(vertices) - 1, MAX_VERTICES, dtype=int)
+                vertices = [vertices[i] for i in indices]
             vertex_positions = [
                 (float(v["position"][0]), float(v["position"][1])) for v in vertices
             ]
