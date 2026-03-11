@@ -111,14 +111,12 @@ download_dataset "meshy_cc0_textured" "Meshy CC0 textured: ~8,200 examples, 22-c
 download_dataset "meshy_cc0_unrigged" "Meshy CC0 unrigged: ~20K textured multi-view (image + depth + normals only)"
 
 # Other clean-licensed datasets
-download_dataset "live2d"         "~212 MB, 844 examples"
+# live2d removed — Live2D ToS prohibits AI/ML training
 download_dataset "humanrig"       "~5.6 GB, 11,434 examples (weights)"
 download_dataset "anime_seg"      "~3.5 GB, 14,579 examples with joints"
 download_dataset "fbanimehq"      "~11.4 GB, ~101K full-body anime with joints"
 # curated_diverse removed — ArtStation artwork, no AI training permission
-
-# UV texture pairs for texture inpainting training
-download_dataset "texture_pairs"  "UV texture pairs: partial + complete + mask"
+# texture_pairs — not yet generated, will be added in future runs
 
 # UniRig: download only front views with weights (skip back views to save space)
 echo "  unirig (~15 GB, ~15K front views with weights)..."
@@ -145,7 +143,7 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[5/5] Verifying downloaded data..."
 
-for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged live2d humanrig unirig anime_seg fbanimehq texture_pairs; do
+for ds in meshy_cc0 meshy_cc0_textured meshy_cc0_unrigged humanrig unirig anime_seg fbanimehq; do
     if [[ -d "$DATA_DIR/$ds" ]]; then
         count=$(find "$DATA_DIR/$ds" -type f | wc -l)
         size=$(du -sh "$DATA_DIR/$ds" 2>/dev/null | cut -f1)
