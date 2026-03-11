@@ -189,7 +189,7 @@ Many datasets that were previously loose files have been consolidated into `tars
 | ~~`curated_diverse/`~~ | — | — | **DELETED** (ArtStation, prohibited) |
 | `encoder_features/` | 11,434 | 41.9 GiB | Precomputed seg encoder features for weight training (float16) |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
-| `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples (seg + normals + draw_order) |
+| `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples (seg + normals + draw_order). 698 training images ingested locally, pending upload. |
 | `humanrig/` | 262,983 | 16.2 GiB | HumanRig rendered chars + joints + weights + Marigold normals (run 3) |
 | ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
 | `logs/` | 61 | 10.8 MiB | Training logs (runs 1-3) |
@@ -234,6 +234,7 @@ Each training run follows this automated pattern:
 | `training/run_second.sh` | Second run (abandoned): enrich → train → upload |
 | `training/run_third.sh` | Third run: Marigold enrich → train → upload → tar |
 | `training/run_fourth.sh` | Fourth run: quality filter → seg fine-tune → inpainting → ONNX → upload |
+| `training/run_fifth.sh` | Fifth run: joints retrain (posed GT) → seg fine-tune → weights refresh → ONNX → upload |
 | `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
 | `run_normals_enrich.py` | Enrich datasets with surface normals (Marigold LCM) |
@@ -388,44 +389,66 @@ Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on t
 - **Label smoothing**: 0.05 to reduce impact of remaining noisy labels
 - **Expected**: mIoU 0.55-0.65 (recover run 1 quality + gain from cleaner data + Gemini domain diversity)
 
-## Fifth Training Run — PLAN
+## Fifth Training Run — IN PROGRESS
 
-**Goal: Ground-truth joints upgrade + Gemini domain expansion.** Script: `training/run_fifth.sh` (not yet created)
+**Goal: Ground-truth joints upgrade + Gemini domain expansion + encoder features refresh.** Script: `training/run_fifth.sh`
 
 ### Pre-Run 5 Tasks (local Mac, before A100)
-1. [ ] **Render HumanRig posed dataset** — 1,000 chars × 15 Mixamo FBX poses × 3 angles (front, three_quarter, side) = **45,000 ground-truth joint examples**. Script: `run_humanrig_posed.py`. Output: `/Volumes/TAMWoolff/data/preprocessed/humanrig_posed/`. ~8 hrs on Mac.
+1. [x] **Render HumanRig posed dataset** — 1,000 chars × 15 Mixamo FBX poses × 3 angles (front, three_quarter, side) = **45,000 ground-truth joint examples**. Script: `run_humanrig_posed.py`. Output: `/Volumes/TAMWoolff/data/preprocessed/humanrig_posed/`. IN PROGRESS on Mac.
 2. [ ] **Upload humanrig_posed to bucket** — `rclone copy` to `humanrig_posed/` prefix. Tar-pack for fast A100 setup.
-3. [ ] **Generate more Gemini characters** — expand from 221 → ~800 (600 train + 200 validation) using prompts in `scripts/gemini_prompts.md`. Pseudo-label training set with run 4's improved seg model.
-4. [ ] **Create `training/run_fifth.sh`** — orchestration script following run_fourth.sh pattern.
+3. [x] **Generate more Gemini characters** — expanded from 221 → **698 training images** (target was 600). 698 raw images ingested via `scripts/ingest_gemini.py --only-new --no-seg`. Pseudo-labeling deferred to A100.
+4. [ ] **Generate ~200 Gemini validation images** — held-out characters (never trained on). Can double as novel view benchmark for run 6+.
+5. [x] **Create `training/run_fifth.sh`** — orchestration script with pre-flight checks, 8 steps.
+6. [x] **Create `training/configs/joints_a100_run5.yaml`** — joints config with humanrig_posed dataset.
 
 ### Run 5 Strategy
 
 | Step | Task | Est. Time |
 |------|------|-----------|
-| 0 | Download run 4 checkpoints + humanrig_posed tar | ~5 min |
-| 1 | **Retrain joints** — add 45K ground-truth posed examples (humanrig_posed) | ~30 min |
-| 2 | **Retrain seg** — resume from run 4, add re-labeled Gemini data | ~5 hrs |
-| 3 | Recompute encoder features with new seg model | ~2 hrs |
-| 4 | Retrain weights with new encoder features | ~1 hr |
-| 5 | ONNX export (all models) | ~5 min |
-| 6 | Upload to bucket | ~5 min |
+| 0 | Download run 4 seg checkpoint + humanrig_posed tar + expanded Gemini | ~5 min |
+| 1 | Verify all datasets present (fail-fast if humanrig_posed missing) | ~1 min |
+| 2 | Quality filter + Marigold normals/depth on new data | ~30 min |
+| 3 | **Train joints** — retrain with 45K posed GT examples | ~4-6 hrs |
+| 4 | **Train seg** — resume from run 4, add expanded Gemini data (698 examples) | ~5 hrs |
+| 5 | Recompute encoder features with new seg model + retrain weights | ~2-3 hrs |
+| 6 | ONNX export (all 4 models) | ~5 min |
+| 7 | Re-enrich Gemini data with new seg model (bootstrap for run 6) | ~5 min |
+| 8 | Upload to bucket | ~5 min |
+
+**Total estimated: ~12-14 hrs on A100.** Joints and seg are sequential (single GPU). Early stopping should help — run 3 joints stopped at epoch 36/80.
+
+**NOT retraining in run 5**: Inpainting (keeps run 4 checkpoint).
 
 ### Run 5 Joints Data (the big upgrade)
 
 | Dataset | Examples | Source | Quality |
 |---------|--------:|--------|---------|
-| HumanRig (T-pose, existing) | 34,302 | Ground truth (reprojected 3D) | High |
+| HumanRig (T-pose, existing) | 11,434 | Ground truth (reprojected 3D) | High |
 | **HumanRig (posed, NEW)** | **~45,000** | **Ground truth (Blender raycast)** | **High** |
+| Meshy CC0 (flat + textured) | ~15,900 | Pipeline joints | Medium |
 | FBAnimeHQ | ~101,630 | RTMPose | Medium (noisy on anime) |
 | anime-seg v1+v2 | 14,579 | RTMPose | Medium |
-| **GT ratio** | **~79K / ~195K = 40%** | | **Up from 19%** |
+| Gemini diverse | ~698 | Pseudo-labeled | Medium |
+| **GT ratio** | **~56K / ~189K = 30%** | | **Up from 19%** |
 
 The posed dataset adds diverse dynamic poses (kicks, crawling, dancing, planking, grenade throws) with perfect ground-truth joint positions via Blender raycast — no RTMPose noise. This should improve accuracy especially for non-standing poses where RTMPose struggles on illustrated characters.
+
+### Run 5 Gemini Data
+
+| Split | Count | Notes |
+|-------|------:|-------|
+| Training | 698 | Ingested, pseudo-labeling on A100 |
+| Validation (held-out) | ~200 | TODO — separate characters, never trained on |
+| **Total** | **~900** | Up from 221 in run 4 |
 
 ### Key Files
 - `ingest/humanrig_posed_renderer.py` — production batch renderer (render_posed_sample, render_directory)
 - `run_humanrig_posed.py` — Blender CLI entry point
+- `scripts/ingest_gemini.py` — Gemini ingest + pseudo-label pipeline
 - `pipeline/pose_applicator.py` — FBX/BVH pose retargeting (with action-clearing fix for FBX)
+- `training/run_fifth.sh` — A100 orchestration (pre-flight → joints → seg → weights → ONNX → upload)
+- `training/configs/joints_a100_run5.yaml` — joints config with humanrig_posed
+- `training/configs/segmentation_a100_run5.yaml` — seg config with expanded Gemini
 - Mixamo FBX poses: `/Volumes/TAMWoolff/data/poses/` (13 clips: Hurricane Kick, Crawling, Hip Hop Dancing, etc.)
 
 ### Production Render Command
@@ -466,6 +489,6 @@ Models 1-4 (trained in runs 4-5) generate the labeled data that models 5-6 need:
 **The flywheel**: Each run's models become data generators for the next.
 
 - Run 7+: Models 5-6 generate multi-view illustrated pairs from Gemini characters → retrain models 5-6 on better synthetic data → improved models generate even better pairs
-- **Gemini characters**: Target ~800 total front-view characters (570 prompts exist). ~600 for training, ~200 held-out validation (never train on these). Quality and diversity > quantity.
+- **Gemini characters**: 698 training images ingested (target was 600). ~200 held-out validation characters still needed (never train on these). Quality and diversity > quantity.
 - **Multi-view Gemini prompts**: Generate matched front/back/side prompts only when needed as a validation benchmark for model 6 — not for training (too inconsistent across views).
 - **Scale**: 600 training front views × 4 synthesized angles = 2,400 illustrated multi-view pairs per iteration, growing with each improvement cycle.
