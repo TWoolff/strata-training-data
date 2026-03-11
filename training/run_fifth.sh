@@ -165,11 +165,27 @@ else
     rmdir ./data_cloud/_tars 2>/dev/null || true
 fi
 
-# Download expanded Gemini diverse
+# Download expanded Gemini diverse (prefer tar, fall back to loose files)
 echo ""
 echo "  Downloading expanded gemini_diverse..."
-rclone copy hetzner:strata-training-data/gemini_diverse/ ./data_cloud/gemini_diverse/ \
-    --transfers 32 --checkers 64 --fast-list --size-only -P
+if [ -d "./data_cloud/gemini_diverse" ] && [ "$(ls -A ./data_cloud/gemini_diverse 2>/dev/null | head -1)" ]; then
+    echo "  gemini_diverse already exists, skipping."
+else
+    mkdir -p ./data_cloud/_tars
+    rclone copy hetzner:strata-training-data/tars/gemini_diverse.tar \
+        ./data_cloud/_tars/ --transfers 32 --fast-list -P
+    if [ -f "./data_cloud/_tars/gemini_diverse.tar" ]; then
+        echo "  Extracting gemini_diverse.tar..."
+        tar xf ./data_cloud/_tars/gemini_diverse.tar -C ./data_cloud/
+        rm -f ./data_cloud/_tars/gemini_diverse.tar
+    else
+        echo "  Tar not found. Trying loose files..."
+        rclone copy hetzner:strata-training-data/gemini_diverse/ \
+            ./data_cloud/gemini_diverse/ --transfers 32 --checkers 64 \
+            --fast-list --size-only -P
+    fi
+    rmdir ./data_cloud/_tars 2>/dev/null || true
+fi
 
 echo ""
 
