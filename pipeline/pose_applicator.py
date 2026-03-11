@@ -302,10 +302,19 @@ def _build_name_map(
         #    RightShoulder matching J_Bip_R_Shoulder instead of J_Bip_R_UpperArm)
         cmu_vrm = _CMU_TO_VRM.get(src_norm)
         if cmu_vrm is not None:
+            # 2a. Try VRM-normalized target (for VRM/J_Bip_ targets)
             t_match = target_vrm_normalized.get(cmu_vrm)
             if t_match is not None:
                 _claim(sname, t_match)
                 continue
+            # 2b. Try CMU→VRM→Mixamo chain (for bare Mixamo targets like
+            #     HumanRig: LeftArm, Spine, etc.)
+            mixamo_name = _VRM_TO_MIXAMO.get(cmu_vrm)
+            if mixamo_name is not None:
+                t_match = target_normalized.get(mixamo_name)
+                if t_match is not None:
+                    _claim(sname, t_match)
+                    continue
 
         # 3. VRM ↔ Mixamo alias match
         # Check if source is Mixamo and target is VRM
@@ -756,6 +765,12 @@ def _apply_animation_pose(
 
     scene = bpy.context.scene
 
+    # --- 0. Clear any action auto-bound to the CHARACTER armature ---
+    # FBX import can auto-assign actions to armatures with matching names,
+    # which would override our manual pose bone rotations.
+    if character_armature.animation_data and character_armature.animation_data.action:
+        character_armature.animation_data.action = None
+
     # --- 1. Bind action to animation armature and evaluate at target frame ---
     action = None
     if anim_armature.animation_data and anim_armature.animation_data.action:
@@ -867,6 +882,11 @@ def _apply_animation_pose(
         char_pbone.rotation_mode = "QUATERNION"
         char_pbone.rotation_quaternion = q
         transferred += 1
+
+    # Clear any action that might have been auto-bound to the character
+    # during frame_set evaluation (Blender can re-bind actions by name).
+    if character_armature.animation_data and character_armature.animation_data.action:
+        character_armature.animation_data.action = None
 
     bpy.context.view_layer.update()
 

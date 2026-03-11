@@ -387,3 +387,85 @@ Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on t
 - **Remove**: live2d (prohibited license)
 - **Label smoothing**: 0.05 to reduce impact of remaining noisy labels
 - **Expected**: mIoU 0.55-0.65 (recover run 1 quality + gain from cleaner data + Gemini domain diversity)
+
+## Fifth Training Run — PLAN
+
+**Goal: Ground-truth joints upgrade + Gemini domain expansion.** Script: `training/run_fifth.sh` (not yet created)
+
+### Pre-Run 5 Tasks (local Mac, before A100)
+1. [ ] **Render HumanRig posed dataset** — 1,000 chars × 15 Mixamo FBX poses × 3 angles (front, three_quarter, side) = **45,000 ground-truth joint examples**. Script: `run_humanrig_posed.py`. Output: `/Volumes/TAMWoolff/data/preprocessed/humanrig_posed/`. ~8 hrs on Mac.
+2. [ ] **Upload humanrig_posed to bucket** — `rclone copy` to `humanrig_posed/` prefix. Tar-pack for fast A100 setup.
+3. [ ] **Generate more Gemini characters** — expand from 221 → ~800 (600 train + 200 validation) using prompts in `scripts/gemini_prompts.md`. Pseudo-label training set with run 4's improved seg model.
+4. [ ] **Create `training/run_fifth.sh`** — orchestration script following run_fourth.sh pattern.
+
+### Run 5 Strategy
+
+| Step | Task | Est. Time |
+|------|------|-----------|
+| 0 | Download run 4 checkpoints + humanrig_posed tar | ~5 min |
+| 1 | **Retrain joints** — add 45K ground-truth posed examples (humanrig_posed) | ~30 min |
+| 2 | **Retrain seg** — resume from run 4, add re-labeled Gemini data | ~5 hrs |
+| 3 | Recompute encoder features with new seg model | ~2 hrs |
+| 4 | Retrain weights with new encoder features | ~1 hr |
+| 5 | ONNX export (all models) | ~5 min |
+| 6 | Upload to bucket | ~5 min |
+
+### Run 5 Joints Data (the big upgrade)
+
+| Dataset | Examples | Source | Quality |
+|---------|--------:|--------|---------|
+| HumanRig (T-pose, existing) | 34,302 | Ground truth (reprojected 3D) | High |
+| **HumanRig (posed, NEW)** | **~45,000** | **Ground truth (Blender raycast)** | **High** |
+| FBAnimeHQ | ~101,630 | RTMPose | Medium (noisy on anime) |
+| anime-seg v1+v2 | 14,579 | RTMPose | Medium |
+| **GT ratio** | **~79K / ~195K = 40%** | | **Up from 19%** |
+
+The posed dataset adds diverse dynamic poses (kicks, crawling, dancing, planking, grenade throws) with perfect ground-truth joint positions via Blender raycast — no RTMPose noise. This should improve accuracy especially for non-standing poses where RTMPose struggles on illustrated characters.
+
+### Key Files
+- `ingest/humanrig_posed_renderer.py` — production batch renderer (render_posed_sample, render_directory)
+- `run_humanrig_posed.py` — Blender CLI entry point
+- `pipeline/pose_applicator.py` — FBX/BVH pose retargeting (with action-clearing fix for FBX)
+- Mixamo FBX poses: `/Volumes/TAMWoolff/data/poses/` (13 clips: Hurricane Kick, Crawling, Hip Hop Dancing, etc.)
+
+### Production Render Command
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender --background --python run_humanrig_posed.py -- \
+    --input_dir /Volumes/TAMWoolff/data/preprocessed/humanrig/data/54T/chuzedong/autorig/preprocess/humanrig_opensource_final \
+    --pose_dir /Volumes/TAMWoolff/data/poses \
+    --output_dir /Volumes/TAMWoolff/data/preprocessed/humanrig_posed \
+    --max_samples 1000 \
+    --angles front,three_quarter,side \
+    --only_new
+```
+
+## Sixth Training Run — OUTLINE
+
+**Goal: Train models 5 (texture inpainting) and 6 (novel view synthesis).**
+
+### Data Strategy — Self-Bootstrapping Loop
+Models 1-4 (trained in runs 4-5) generate the labeled data that models 5-6 need:
+
+1. **Pretrain on 3D renders**: HumanRig + Meshy CC0 multi-angle renders provide perfect GT pairs (front→back, front→side). Style augmentation (cel-shading, flat, sketch) bridges the 3D→illustrated domain gap.
+2. **Synthesize illustrated pairs**: Run models 1-4 on Gemini front-view characters to get seg+depth+normals+joints. Model 6 then generates back/side views conditioned on these features. Model 5 generates complete UV textures from partial front-view unwraps.
+3. **Filter + retrain**: Confidence thresholds and cross-view consistency checks filter bad synthetic outputs. Retrain on combined 3D GT + filtered synthetic pairs.
+
+### Model 6 (Novel View) Training Pairs
+- Input: front-view image + seg + depth + normals + joints
+- Target: back/side/3/4 view of same character
+- 3D source: HumanRig multi-angle (built in run 5 prep) + Meshy CC0 multi-angle
+- Illustrated source: Gemini front views → model-6-synthesized other views (iterative)
+
+### Model 5 (Texture Inpainting) Training Pairs
+- Input: partial UV texture (from front-view unwrap onto 3D mesh)
+- Target: complete UV texture (from full 3D model)
+- Source: HumanRig + Meshy CC0 GLBs (have complete textures to create partial→complete pairs)
+
+## Seventh Run and Beyond — OUTLINE
+
+**The flywheel**: Each run's models become data generators for the next.
+
+- Run 7+: Models 5-6 generate multi-view illustrated pairs from Gemini characters → retrain models 5-6 on better synthetic data → improved models generate even better pairs
+- **Gemini characters**: Target ~800 total front-view characters (570 prompts exist). ~600 for training, ~200 held-out validation (never train on these). Quality and diversity > quantity.
+- **Multi-view Gemini prompts**: Generate matched front/back/side prompts only when needed as a validation benchmark for model 6 — not for training (too inconsistent across views).
+- **Scale**: 600 training front views × 4 synthesized angles = 2,400 illustrated multi-view pairs per iteration, growing with each improvement cycle.

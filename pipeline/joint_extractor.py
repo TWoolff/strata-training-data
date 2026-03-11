@@ -172,8 +172,17 @@ def _check_occlusion(
     hit_dist = (location - ray_origin).length
     bone_dist = (bone_world_pos - ray_origin).length
 
-    # Small tolerance to avoid self-occlusion artifacts
-    tolerance = 0.02
+    # Bones sit inside the mesh, so the first ray hit is always the front
+    # surface *before* the bone center.  A joint is "visible" when the gap
+    # (bone_dist - hit_dist) is small — i.e. the bone is just beneath the
+    # surface.  A joint is "occluded" when another body part sits in front,
+    # producing a large gap.
+    #
+    # Use a generous tolerance (0.15 world units ≈ 15-20% of a HumanRig
+    # character's height, or ~0.1% of a Mixamo character).  This prevents
+    # false occlusion from self-intersection while still detecting real
+    # occlusion from other body parts.
+    tolerance = 0.15
     return hit_dist >= (bone_dist - tolerance)
 
 

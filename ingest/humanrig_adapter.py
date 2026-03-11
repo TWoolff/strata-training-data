@@ -318,14 +318,18 @@ def _load_camera(
     return extrinsic, intrinsic
 
 
-def _rotation_y(angle_deg: float) -> np.ndarray:
-    """4×4 homogeneous rotation matrix around the Y-axis (world space).
+def _rotation_z(angle_deg: float) -> np.ndarray:
+    """4×4 homogeneous rotation matrix around the Z-axis (world up).
 
-    Positive angle rotates the world clockwise when viewed from above,
-    which is equivalent to rotating the camera counter-clockwise.
+    HumanRig uses Z-up coordinates: X=left/right, Y=depth, Z=vertical.
+    Rotating around Z orbits the camera horizontally around the character.
+
+    Positive angle rotates world points counter-clockwise when viewed
+    from above (looking down -Z), equivalent to orbiting the camera
+    clockwise (front → right side → back → left side).
 
     Args:
-        angle_deg: Rotation angle in degrees.
+        angle_deg: Rotation angle in degrees (0=front, 90=side, 180=back).
 
     Returns:
         4×4 float64 rotation matrix.
@@ -334,9 +338,9 @@ def _rotation_y(angle_deg: float) -> np.ndarray:
     c, s = math.cos(theta), math.sin(theta)
     return np.array(
         [
-            [c, 0, s, 0],
-            [0, 1, 0, 0],
-            [-s, 0, c, 0],
+            [c, -s, 0, 0],
+            [s, c, 0, 0],
+            [0, 0, 1, 0],
             [0, 0, 0, 1],
         ],
         dtype=np.float64,
@@ -354,8 +358,12 @@ def _project_joints(
     """Project 3D joint positions to 2D screen coordinates.
 
     Rotates all world-space joint positions by ``azimuth_deg`` degrees around
-    the Y-axis, then projects through the (unchanged) camera intrinsics.
-    This simulates orbiting the camera around the character.
+    the Z-axis (world up in HumanRig), then projects through the camera.
+    This simulates orbiting the camera horizontally around the character.
+
+    HumanRig's extrinsic matrix uses an OpenGL-style convention where
+    visible points have negative z_c in camera space.  The projection
+    divides by z_c directly (not abs(z_c)), which produces correct results.
 
     The intrinsics are assumed to describe the original image resolution
     (1024×1024).  Output coordinates are scaled to ``output_resolution``.
@@ -372,7 +380,7 @@ def _project_joints(
         Mapping of joint name → [x_px, y_px] in output resolution (float).
     """
     scale = output_resolution / original_resolution
-    R_world = _rotation_y(azimuth_deg)
+    R_world = _rotation_z(azimuth_deg)
 
     projected: dict[str, list[float]] = {}
     for joint_name, xyz in bone_3d.items():
@@ -384,8 +392,9 @@ def _project_joints(
         p_cam = extrinsic @ p_rotated  # shape (4,)
         x_c, y_c, z_c = p_cam[:3]
 
-        if z_c <= 0:
-            # Behind camera — project to edge; still useful as sentinel.
+        # HumanRig uses OpenGL convention: visible points have z_c < 0.
+        # Skip truly degenerate cases (exactly on the camera plane).
+        if abs(z_c) < 1e-6:
             projected[joint_name] = [0.0, 0.0]
             continue
 

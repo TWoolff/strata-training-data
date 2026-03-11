@@ -2,12 +2,11 @@
 # =============================================================================
 # Strata Training — Fifth Run (A100)
 #
-# Goal: Improved seg model + retrain inpainting
-#   - Model 1 (Seg): Fine-tune from run 4 checkpoint with expanded Gemini data
-#     + VRoid CC0 multi-pose + cleaner pseudo-labels
-#   - Model 2 (Joints): Keep run 3 checkpoint (0.001206) — no retraining
-#   - Model 3 (Weights): Keep run 3 checkpoint (0.023 MAE) — no retraining
-#   - Model 4 (Inpainting): Retrain with more diverse occlusion pairs
+# Goal: Ground-truth joints upgrade + seg improvement + encoder features refresh
+#   - Model 1 (Seg): Resume from run 4, add expanded Gemini data
+#   - Model 2 (Joints): Retrain with 45K new posed ground-truth examples
+#   - Model 3 (Weights): Recompute encoder features with new seg, retrain
+#   - Model 4 (Inpainting): Keep run 4 checkpoint — no retraining needed
 #
 # Prerequisites:
 #   export BUCKET_ACCESS_KEY='...'
@@ -60,87 +59,22 @@ else
     echo "  OK: CUDA available ($GPU_NAME)"
 fi
 
-# --- Check 3: Resume checkpoint exists ---
-RUN4_CKPT="checkpoints/segmentation/run4_best.pt"
-if [ ! -f "$RUN4_CKPT" ]; then
-    echo "  WARN: $RUN4_CKPT not found, will download from bucket"
-    echo "        Downloading run 4 seg checkpoint..."
-    mkdir -p checkpoints/segmentation
-    rclone copy hetzner:strata-training-data/checkpoints_run4/segmentation/best.pt \
-        ./checkpoints/segmentation/ --transfers 32 --fast-list -P
-    if [ -f "checkpoints/segmentation/best.pt" ]; then
-        cp checkpoints/segmentation/best.pt "$RUN4_CKPT"
-        echo "  OK: Downloaded and saved as $RUN4_CKPT"
-    else
-        echo "  FAIL: Could not download run 4 seg checkpoint from bucket"
-        echo "        Checked: checkpoints_run4/segmentation/best.pt"
-        PREFLIGHT_FAIL=1
-    fi
-else
-    echo "  OK: Resume checkpoint exists ($RUN4_CKPT)"
-fi
-
-# --- Check 4: Run 3 joints + weights checkpoints ---
-for model_dir in joints weights; do
-    ckpt="checkpoints/$model_dir/best.pt"
-    if [ ! -f "$ckpt" ]; then
-        echo "  WARN: $ckpt not found, downloading from bucket..."
-        mkdir -p "checkpoints/$model_dir"
-        rclone copy "hetzner:strata-training-data/checkpoints_run3/$model_dir/" \
-            "./checkpoints/$model_dir/" --transfers 32 --fast-list -P
-        if [ -f "$ckpt" ]; then
-            echo "  OK: Downloaded $ckpt"
-        else
-            echo "  WARN: Could not download $ckpt (non-fatal, we're not retraining)"
-        fi
-    else
-        echo "  OK: $ckpt exists"
-    fi
-done
-
-# --- Check 5: Training data directories exist and have content ---
-REQUIRED_DATASETS="humanrig meshy_cc0 meshy_cc0_textured anime_seg fbanimehq gemini_diverse"
-OPTIONAL_DATASETS="unirig meshy_cc0_unrigged vroid_cc0"
-
-for ds in $REQUIRED_DATASETS; do
-    ds_dir="./data_cloud/$ds"
-    if [ ! -d "$ds_dir" ] || [ -z "$(ls -A "$ds_dir" 2>/dev/null | head -1)" ]; then
-        echo "  FAIL: Required dataset missing or empty: $ds_dir"
-        PREFLIGHT_FAIL=1
-    else
-        count=$(find "$ds_dir" -name "*.png" -o -name "*.json" | head -1000 | wc -l)
-        echo "  OK: $ds ($count+ files)"
-    fi
-done
-
-for ds in $OPTIONAL_DATASETS; do
-    ds_dir="./data_cloud/$ds"
-    if [ ! -d "$ds_dir" ] || [ -z "$(ls -A "$ds_dir" 2>/dev/null | head -1)" ]; then
-        echo "  SKIP: Optional dataset not present: $ds (will continue without it)"
-    else
-        count=$(find "$ds_dir" -name "*.png" -o -name "*.json" | head -1000 | wc -l)
-        echo "  OK: $ds ($count+ files)"
-    fi
-done
-
-# --- Check 6: Training config exists ---
+# --- Check 3: Seg config exists ---
 SEG_CONFIG="training/configs/segmentation_a100_run5.yaml"
-if [ ! -f "$SEG_CONFIG" ]; then
-    echo "  FAIL: Seg config not found: $SEG_CONFIG"
-    PREFLIGHT_FAIL=1
-else
-    echo "  OK: Seg config exists ($SEG_CONFIG)"
-fi
-
+JOINTS_CONFIG="training/configs/joints_a100_run5.yaml"
 INP_CONFIG="training/configs/inpainting_a100_lean.yaml"
-if [ ! -f "$INP_CONFIG" ]; then
-    echo "  FAIL: Inpainting config not found: $INP_CONFIG"
-    PREFLIGHT_FAIL=1
-else
-    echo "  OK: Inpainting config exists ($INP_CONFIG)"
-fi
+WEIGHTS_CONFIG="training/configs/weights_a100_lean.yaml"
 
-# --- Check 7: Python imports work ---
+for cfg in "$SEG_CONFIG" "$JOINTS_CONFIG" "$INP_CONFIG" "$WEIGHTS_CONFIG"; do
+    if [ ! -f "$cfg" ]; then
+        echo "  FAIL: Config not found: $cfg"
+        PREFLIGHT_FAIL=1
+    else
+        echo "  OK: $cfg"
+    fi
+done
+
+# --- Check 4: Python imports work ---
 if ! python -c "from training.train_segmentation import *" &>/dev/null; then
     echo "  FAIL: Cannot import training.train_segmentation"
     PREFLIGHT_FAIL=1
@@ -148,36 +82,17 @@ else
     echo "  OK: Python training imports"
 fi
 
-# --- Check 8: Disk space (need at least 20 GB free) ---
+# --- Check 5: Disk space (need at least 30 GB free for encoder features + checkpoints) ---
 FREE_GB=$(df -BG . | tail -1 | awk '{print $4}' | tr -d 'G')
-if [ "$FREE_GB" -lt 20 ]; then
-    echo "  FAIL: Only ${FREE_GB}GB free disk space (need 20GB+)"
+if [ "$FREE_GB" -lt 30 ]; then
+    echo "  FAIL: Only ${FREE_GB}GB free disk space (need 30GB+)"
     PREFLIGHT_FAIL=1
 else
     echo "  OK: ${FREE_GB}GB free disk space"
 fi
 
-# --- Check 9: Verify resume checkpoint loads ---
-if [ -f "$RUN4_CKPT" ]; then
-    if python -c "
-import torch
-ckpt = torch.load('$RUN4_CKPT', map_location='cpu', weights_only=False)
-assert 'model_state_dict' in ckpt, 'No model_state_dict in checkpoint'
-assert 'epoch' in ckpt, 'No epoch in checkpoint'
-epoch = ckpt['epoch']
-miou = ckpt.get('metrics', {}).get('val/miou', 'unknown')
-print(f'Checkpoint OK: epoch {epoch}, mIoU {miou}')
-" 2>/dev/null; then
-        echo "  OK: Resume checkpoint is valid"
-    else
-        echo "  FAIL: Resume checkpoint is corrupted or incompatible"
-        PREFLIGHT_FAIL=1
-    fi
-fi
-
 echo ""
 
-# --- Final verdict ---
 if [ "$PREFLIGHT_FAIL" -ne 0 ]; then
     echo "=========================================="
     echo "  PRE-FLIGHT FAILED — fix issues above"
@@ -186,17 +101,110 @@ if [ "$PREFLIGHT_FAIL" -ne 0 ]; then
 fi
 
 echo "=========================================="
-echo "  PRE-FLIGHT PASSED — starting training"
+echo "  PRE-FLIGHT PASSED — starting setup"
 echo "=========================================="
 echo ""
 
 # =============================================================================
-# STEP 1: Quality filter on seg masks
+# STEP 0: Download checkpoints + humanrig_posed dataset
 # =============================================================================
-echo "[1/7] Running segmentation quality filter..."
+echo "[0/8] Downloading run 4 checkpoints + humanrig_posed..."
 echo ""
 
-for ds in humanrig unirig meshy_cc0 meshy_cc0_textured gemini_diverse vroid_cc0; do
+# Run 4 seg checkpoint (to resume from)
+RUN4_SEG_CKPT="checkpoints/segmentation/run4_best.pt"
+if [ -f "$RUN4_SEG_CKPT" ]; then
+    echo "  run4_best.pt already exists."
+else
+    mkdir -p checkpoints/segmentation
+    rclone copy hetzner:strata-training-data/checkpoints_run4/segmentation/best.pt \
+        ./checkpoints/segmentation/ --transfers 32 --fast-list -P
+    if [ -f "checkpoints/segmentation/best.pt" ]; then
+        cp checkpoints/segmentation/best.pt "$RUN4_SEG_CKPT"
+        echo "  Saved as $RUN4_SEG_CKPT"
+    else
+        echo "  WARNING: Run 4 seg checkpoint not found. Trying run 1..."
+        rclone copy hetzner:strata-training-data/checkpoints_run1/segmentation/best.pt \
+            ./checkpoints/segmentation/ --transfers 32 --fast-list -P
+        if [ -f "checkpoints/segmentation/best.pt" ]; then
+            cp checkpoints/segmentation/best.pt "$RUN4_SEG_CKPT"
+            echo "  Fell back to run 1 checkpoint."
+        else
+            echo "  FATAL: No segmentation checkpoint found."
+            exit 1
+        fi
+    fi
+fi
+
+# Run 4 inpainting checkpoint (keep as-is, not retraining)
+echo "  Downloading run 4 inpainting checkpoint..."
+mkdir -p checkpoints/inpainting
+rclone copy hetzner:strata-training-data/checkpoints_run4/inpainting/ \
+    ./checkpoints/inpainting/ --transfers 32 --fast-list -P 2>/dev/null || \
+    echo "  (no inpainting checkpoint found — will skip ONNX export for inpainting)"
+
+# Download humanrig_posed
+echo ""
+echo "  Downloading humanrig_posed dataset..."
+if [ -d "./data_cloud/humanrig_posed" ] && [ "$(ls -A ./data_cloud/humanrig_posed 2>/dev/null | head -1)" ]; then
+    echo "  humanrig_posed already exists, skipping."
+else
+    mkdir -p ./data_cloud/_tars
+    rclone copy hetzner:strata-training-data/tars/humanrig_posed.tar \
+        ./data_cloud/_tars/ --transfers 32 --fast-list -P
+    if [ -f "./data_cloud/_tars/humanrig_posed.tar" ]; then
+        echo "  Extracting humanrig_posed.tar..."
+        tar xf ./data_cloud/_tars/humanrig_posed.tar -C ./data_cloud/
+        rm -f ./data_cloud/_tars/humanrig_posed.tar
+    else
+        echo "  Tar not found. Trying loose files..."
+        rclone copy hetzner:strata-training-data/humanrig_posed/ \
+            ./data_cloud/humanrig_posed/ --transfers 32 --checkers 64 \
+            --fast-list --size-only -P
+    fi
+    rmdir ./data_cloud/_tars 2>/dev/null || true
+fi
+
+# Download expanded Gemini diverse
+echo ""
+echo "  Downloading expanded gemini_diverse..."
+rclone copy hetzner:strata-training-data/gemini_diverse/ ./data_cloud/gemini_diverse/ \
+    --transfers 32 --checkers 64 --fast-list --size-only -P
+
+echo ""
+
+# =============================================================================
+# STEP 1: Verify data
+# =============================================================================
+echo "[1/8] Verifying downloaded data..."
+echo ""
+
+for ds in humanrig humanrig_posed meshy_cc0 meshy_cc0_textured anime_seg fbanimehq gemini_diverse; do
+    if [ -d "./data_cloud/$ds" ]; then
+        count=$(find "./data_cloud/$ds" -type f | head -200000 | wc -l)
+        size=$(du -sh "./data_cloud/$ds" 2>/dev/null | cut -f1)
+        echo "  $ds: $count files ($size)"
+    else
+        echo "  $ds: NOT FOUND"
+    fi
+done
+
+# humanrig_posed is the whole point of run 5
+if [ ! -d "./data_cloud/humanrig_posed" ] || [ -z "$(ls -A ./data_cloud/humanrig_posed 2>/dev/null | head -1)" ]; then
+    echo ""
+    echo "  FATAL: humanrig_posed not found. This is the core new dataset for run 5."
+    echo "  Upload first: rclone copy /path/to/humanrig_posed hetzner:strata-training-data/humanrig_posed/ ..."
+    exit 1
+fi
+echo ""
+
+# =============================================================================
+# STEP 2: Quality filter + Marigold enrichment
+# =============================================================================
+echo "[2/8] Running quality filter + Marigold enrichment..."
+echo ""
+
+for ds in humanrig humanrig_posed meshy_cc0 meshy_cc0_textured gemini_diverse; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ] && [ ! -f "$ds_dir/quality_filter.json" ]; then
         echo "  Filtering $ds..."
@@ -213,18 +221,10 @@ for ds in humanrig unirig meshy_cc0 meshy_cc0_textured gemini_diverse vroid_cc0;
 done
 
 echo ""
-echo "  Quality filter complete."
-echo ""
-
-# =============================================================================
-# STEP 2: Normals + depth enrichment for datasets missing them
-# =============================================================================
-echo "[2/7] Enriching datasets with surface normals + depth (Marigold)..."
-echo ""
-
+echo "  Enriching new datasets with normals + depth (Marigold)..."
 pip install -q diffusers transformers accelerate 2>/dev/null
 
-for ds in gemini_diverse vroid_cc0; do
+for ds in humanrig_posed gemini_diverse; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Enriching $ds..."
         python run_normals_enrich.py \
@@ -240,20 +240,38 @@ echo "  Enrichment complete."
 echo ""
 
 # =============================================================================
-# STEP 3: Train segmentation (resume from run 4)
+# STEP 3: Train joints (THE BIG UPGRADE — 45K posed GT examples)
 # =============================================================================
-echo "[3/7] Training SEGMENTATION model (resume from run 4)..."
+echo "[3/8] Training JOINTS model (with humanrig_posed GT data)..."
 echo ""
-echo "  Resuming from: $RUN4_CKPT"
+echo "  Config: $JOINTS_CONFIG"
+echo "  New: ~45K ground-truth posed examples (Blender raycast)"
+echo "  GT ratio: ~40% (up from ~19%)"
+echo ""
+
+python -m training.train_joints \
+    --config "$JOINTS_CONFIG" \
+    2>&1 | tee "$LOG_DIR/joints.log"
+
+echo ""
+echo "  Joints training complete."
+echo ""
+
+# =============================================================================
+# STEP 4: Train segmentation (resume from run 4)
+# =============================================================================
+echo "[4/8] Training SEGMENTATION model (resume from run 4)..."
+echo ""
+echo "  Resuming from: $RUN4_SEG_CKPT"
 echo "  Config: $SEG_CONFIG"
+echo "  New: expanded gemini_diverse (500+)"
 echo ""
 
 python -m training.train_segmentation \
     --config "$SEG_CONFIG" \
-    --resume "$RUN4_CKPT" \
+    --resume "$RUN4_SEG_CKPT" \
     2>&1 | tee "$LOG_DIR/segmentation.log"
 
-# Verify training actually produced a checkpoint
 if [ ! -f "checkpoints/segmentation/best.pt" ]; then
     echo "  ERROR: No best.pt produced by segmentation training!"
     exit 1
@@ -264,43 +282,35 @@ echo "  Segmentation training complete."
 echo ""
 
 # =============================================================================
-# STEP 4: Generate inpainting pairs + train inpainting
+# STEP 5: Recompute encoder features + retrain weights
 # =============================================================================
-echo "[4/7] Generating inpainting pairs + training INPAINTING model..."
+echo "[5/8] Recomputing encoder features with new seg model..."
 echo ""
 
-PAIRS_DIR="./data_cloud/inpainting_pairs"
-PAIRS_COUNT=$(find "$PAIRS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -100 | wc -l)
-
-if [ "$PAIRS_COUNT" -ge 100 ]; then
-    echo "  Occlusion pairs already exist ($PAIRS_COUNT+ dirs), skipping generation."
-else
-    python -m training.data.generate_occlusion_pairs \
-        --source-dirs \
-            ./data_cloud/humanrig \
-            ./data_cloud/gemini_diverse \
-        --output-dir "$PAIRS_DIR" \
-        --max-images 15000 \
-        --masks-per-image 3 \
-        2>&1 | tee "$LOG_DIR/generate_inpainting_pairs.log"
-fi
+python -m training.data.precompute_encoder_features \
+    --checkpoint checkpoints/segmentation/best.pt \
+    --data-dirs ./data_cloud/humanrig ./data_cloud/humanrig_posed \
+    --output-dir ./data_cloud/encoder_features \
+    --batch-size 16 \
+    --fp16 \
+    2>&1 | tee "$LOG_DIR/precompute_encoder.log"
 
 echo ""
-echo "  Training INPAINTING model..."
+echo "  Training WEIGHTS model with new encoder features..."
 echo ""
 
-python -m training.train_inpainting \
-    --config "$INP_CONFIG" \
-    2>&1 | tee "$LOG_DIR/inpainting.log"
+python -m training.train_weights \
+    --config "$WEIGHTS_CONFIG" \
+    2>&1 | tee "$LOG_DIR/weights.log"
 
 echo ""
-echo "  Inpainting training complete."
+echo "  Weights training complete."
 echo ""
 
 # =============================================================================
-# STEP 5: ONNX Export (all 4 models)
+# STEP 6: ONNX Export (all 4 models)
 # =============================================================================
-echo "[5/7] Exporting all models to ONNX..."
+echo "[6/8] Exporting all models to ONNX..."
 echo ""
 
 ONNX_DIR="./models/onnx"
@@ -329,9 +339,9 @@ done
 echo ""
 
 # =============================================================================
-# STEP 6: Re-enrich Gemini data with run 5 model (bootstrap for run 6)
+# STEP 7: Re-enrich Gemini data with run 5 model (bootstrap for run 6)
 # =============================================================================
-echo "[6/7] Re-enriching Gemini data with updated seg model..."
+echo "[7/8] Re-enriching Gemini data with updated seg model..."
 echo ""
 
 if [ -d "./data_cloud/gemini_diverse" ]; then
@@ -347,9 +357,9 @@ fi
 echo ""
 
 # =============================================================================
-# STEP 7: Upload everything to bucket
+# STEP 8: Upload everything to bucket
 # =============================================================================
-echo "[7/7] Uploading checkpoints, logs, and ONNX models..."
+echo "[8/8] Uploading checkpoints, logs, ONNX models, and encoder features..."
 echo ""
 
 rclone copy ./checkpoints/ hetzner:strata-training-data/checkpoints_run5/ \
@@ -358,13 +368,16 @@ rclone copy ./logs/ hetzner:strata-training-data/logs/ \
     --transfers 32 --fast-list -P
 rclone copy ./models/onnx/ hetzner:strata-training-data/models/onnx_run5/ \
     --transfers 32 --fast-list -P
+rclone copy ./data_cloud/encoder_features/ hetzner:strata-training-data/encoder_features_run5/ \
+    --transfers 32 --fast-list -P
 
-# Upload re-enriched Gemini data
-if [ -d "./data_cloud/gemini_diverse" ]; then
-    echo "  Uploading re-enriched gemini_diverse..."
-    rclone copy ./data_cloud/gemini_diverse/ hetzner:strata-training-data/gemini_diverse/ \
-        --transfers 32 --checkers 64 --fast-list --size-only -P
-fi
+# Upload enriched datasets back
+echo ""
+echo "  Uploading enriched humanrig_posed + gemini_diverse..."
+rclone copy ./data_cloud/humanrig_posed/ hetzner:strata-training-data/humanrig_posed/ \
+    --transfers 32 --checkers 64 --fast-list --size-only -P
+rclone copy ./data_cloud/gemini_diverse/ hetzner:strata-training-data/gemini_diverse/ \
+    --transfers 32 --checkers 64 --fast-list --size-only -P
 
 echo ""
 echo "============================================"

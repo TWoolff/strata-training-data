@@ -61,6 +61,24 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 
 **Expected:** mIoU 0.55-0.65 (recover + cleaner data + Gemini domain diversity)
 
+### Run 5 (planned) — Ground-Truth Joints Upgrade
+
+**Goal: Improve joint model with 45K posed ground-truth examples.** Script: `training/run_fifth.sh` (not yet created)
+
+**Pre-run (local Mac):**
+- [ ] Render HumanRig posed dataset: 1,000 chars × 15 Mixamo FBX poses × 3 angles = ~45K examples (~8 hrs)
+- [ ] Upload `humanrig_posed/` to bucket + tar-pack
+- [ ] Expand Gemini diverse to ~500+ examples, pseudo-label with run 4 seg model
+
+**Strategy:**
+- Retrain joints with 45K new ground-truth posed examples (GT ratio: 19% → 40%)
+- Resume seg from run 4, add expanded Gemini data
+- Recompute encoder features + retrain weights with new seg backbone
+- Posed data includes dynamic poses: kicks, crawling, dancing, planking, grenade throws
+- Joint source: Blender raycast (perfect GT, no RTMPose noise)
+
+**Expected:** Joint mean_offset_error < 0.001 (improve from run 3's 0.001206)
+
 ---
 
 ## What's in the Hetzner Bucket
@@ -150,13 +168,14 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 | Dataset | Examples | Source |
 |---------|--------:|-------|
 | FBAnimeHQ | ~101,630 | RTMPose |
+| **HumanRig (posed, run 5)** | **~45,000** | **Ground truth (Blender raycast)** |
 | NOVA-Human | ~40,000 | RTMPose |
-| HumanRig | 34,302 | Ground truth |
+| HumanRig (T-pose) | 34,302 | Ground truth (reprojected 3D) |
 | anime-seg v1+v2 | 14,579 | RTMPose |
 | anime_instance_seg | 10,072 | RTMPose (partial) |
 | Mixamo renders | ~5,250 | Ground truth |
 | Live2D composites | 844 | Ground truth |
-| **Total** | **~206,677** | |
+| **Total** | **~251,677** | **GT ratio: ~40% (up from 19%)** |
 
 ### Weight Prediction MLP (20 bones)
 
@@ -292,6 +311,7 @@ Legacy `draw_order.png` still exists in some datasets but is no longer used for 
 | `conr_adapter.py` | Working |
 | `unirig_adapter.py` + `unirig_skeleton_mapper.py` | Working |
 | `humanrig_adapter.py` + `humanrig_blender_renderer.py` | Working |
+| `humanrig_posed_renderer.py` + `run_humanrig_posed.py` | Working (tested 2 samples, 0 errors) |
 | `humanrig_weights_converter.py` | Working (11,434 extracted) |
 | `unirig_weights_converter.py` | Working (14,950 converted, 1,691 failed) |
 
