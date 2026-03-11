@@ -173,33 +173,42 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
 
-### Bucket Contents (as of March 10 2026)
+### Bucket Contents (as of March 10 2026, post-run 3)
 
-Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~870K+ files, ~176+ GiB total.
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~755K files, ~248 GiB total.
+
+Many datasets that were previously loose files have been consolidated into `tars/` for fast A100 setup. Loose-file prefixes (anime_instance_seg, animerun*, conr, ingest/vroid_lite, instaorder, nova_human, meshy_cc0*, segmentation) were purged after tarring.
 
 | Prefix | Files | Size | Source |
 |--------|------:|-----:|--------|
 | `animation/` | 18,628 | 66.7 GiB | 100STYLE retargeted mocap (100 styles × 8-10 contents) |
-| `anime_instance_seg/` | ~135K | ~15 GiB | CartoonSegmentation instance masks (partially uploaded ~45K) |
-| `anime_seg/` | ~65K | ~3.5 GiB | SkyTNT anime-segmentation v1+v2, RTMPose joints enriched |
-| `animerun/` | 11,276 | 663 MiB | AnimeRun v2.2 segmentation frames |
-| `animerun_correspondence/` | 19,493 | 930 MiB | AnimeRun cross-frame correspondence |
-| `animerun_flow/` | 16,704 | 11.6 GiB | AnimeRun optical flow pairs |
-| `animerun_linearea/` | 4,236 | 119 MiB | AnimeRun line area maps |
-| `animerun_segment/` | 11,276 | 628 MiB | AnimeRun segment labels |
-| `conr/` | ~7,269 | ~580 MiB | CoNR multi-view anime character sheets |
+| `anime_seg/` | 64,984 | 2.6 GiB | SkyTNT anime-segmentation v1+v2, RTMPose joints enriched |
+| `checkpoints/` | 16 | 708 MiB | Run 1 checkpoints (all models) |
+| `checkpoints_run1/` | 1 | 203 MiB | Run 1 seg best.pt (for run 4 resume) |
+| `checkpoints_run3/` | 21 | 808 MiB | Run 3 checkpoints (seg, joints, weights, diffusion_weights, inpainting) |
+| ~~`curated_diverse/`~~ | — | — | **DELETED** (ArtStation, prohibited) |
+| `encoder_features/` | 11,434 | 41.9 GiB | Precomputed seg encoder features for weight training (float16) |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
-| `gemini_diverse/` | ~1,300 | ~55 MiB | 221 Gemini pseudo-labeled examples |
-| `humanrig/` | 148,643+ | 5.6+ GiB | HumanRig rendered chars + joints + weights (incl. 11,434 weight.json) |
-| `ingest/vroid_lite/` | 9,302 | 771 MiB | VRoid Lite CC0 characters |
-| `instaorder/` | ~11,868 | ~1.5 GiB | InstaOrder draw order maps (val split) |
-| `live2d/` | 3,587 | 212 MiB | Live2D .moc3 rendered models |
-| `meshy_cc0/` | ~20K | ~3 GiB | Meshy CC0 rigged multi-view renders |
-| `meshy_cc0_textured/` | ~20K | ~3 GiB | Meshy CC0 textured multi-view renders |
-| `meshy_cc0_unrigged/` | ~20K | ~4 GiB | Meshy CC0 unrigged multi-view (image + depth + normals) |
-| `nova_human/` | ~40K | ~2.5 GiB | NOVA-Human ortho views + RTMPose joints |
-| `segmentation/` | 12,216 | 599 MiB | Mixamo pipeline segmentation output |
-| `unirig/` | 66,030+ | 42.6+ GiB | UniRig rigged meshes (+ 14,950 weight.json pending upload) |
+| `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples (seg + normals + draw_order) |
+| `humanrig/` | 262,983 | 16.2 GiB | HumanRig rendered chars + joints + weights + Marigold normals (run 3) |
+| ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
+| `logs/` | 61 | 10.8 MiB | Training logs (runs 1-3) |
+| `models/` | 10 | 186 MiB | ONNX exports (seg, joints, weights, diffusion_weights, inpainting) |
+| `tars/` | 12 | 44.9 GiB | Tar-packed datasets for fast A100 setup (see below) |
+| `unirig/` | 80,980 | 52.7 GiB | UniRig rigged meshes + 14,950 weight.json uploaded |
+
+**Tar contents** (`tars/` prefix):
+| Tar | Size | Contents |
+|-----|-----:|---------|
+| `humanrig.tar` | 16.8 GiB | HumanRig dataset |
+| `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ dataset |
+| `meshy_cc0_textured.tar` | 4.3 GiB | Meshy CC0 textured renders |
+| `meshy_cc0_unrigged.tar` | 4.0 GiB | Meshy CC0 unrigged renders |
+| `anime_seg.tar` | 3.0 GiB | anime-segmentation v1+v2 |
+| `meshy_cc0.tar` | 1.5 GiB | Meshy CC0 rigged renders |
+| `segmentation.tar` | 426 MiB | Mixamo pipeline output |
+| ~~`curated_diverse.tar`~~ | — | **DELETED** (prohibited) |
+| ~~`live2d.tar`~~ | — | **DELETED** (prohibited) |
 
 
 ## A100 Training Run Workflow

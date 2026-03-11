@@ -1,6 +1,6 @@
 # Strata Training Data — Checklist
 
-**Last updated:** March 10, 2026 (v20)
+**Last updated:** March 10, 2026 (v21 — post-run 3 bucket audit)
 
 ---
 
@@ -65,30 +65,38 @@ Seg regressed to 0.38 mIoU at epoch 44 (vs run 1's 0.545). Killed early. Other m
 
 ## What's in the Hetzner Bucket
 
-> **Verified March 7, 2026.** Core training datasets now stored as tar archives in `tars/` prefix. Loose files purged for tarred datasets. `cloud_setup.sh` downloads + extracts tars (~30min vs 5h for loose files).
+> **Verified March 10, 2026 (post-run 3).** ~755K files, ~248 GiB total. Many datasets consolidated into `tars/` — loose-file prefixes (anime_instance_seg, animerun*, conr, ingest/vroid_lite, instaorder, nova_human, meshy_cc0*, segmentation) purged after tarring.
 
 | Prefix | Files | Size | Notes |
 |--------|------:|-----:|-------|
-| `tars/` | 7 | ~36 GiB | segmentation, live2d, humanrig, anime_seg, fbanimehq, unirig (curated_diverse removed — ArtStation) |
-| `animation/` (incl. 100style) | 18,628 | 66.7 GiB | |
-| `anime_instance_seg/` | ~135K | ~15 GiB | Partially uploaded (~45K of 98K) |
-| `animerun/` | 11,276 | 663 MiB | |
-| `animerun_correspondence/` | 19,493 | 930 MiB | |
-| `animerun_flow/` | 16,704 | 11.6 GiB | |
-| `animerun_linearea/` | 4,236 | 119 MiB | |
-| `animerun_segment/` | 11,276 | 628 MiB | |
-| `conr/` | ~7,269 | ~580 MiB | |
-| `ingest/vroid_lite/` | 9,302 | 771 MiB | |
-| `instaorder/` | ~11,868 | ~1.5 GiB | |
-| `nova_human/` | ~40K | ~2.5 GiB | |
-| `gemini_diverse/` | ~1,300 | ~55 MiB | 221 Gemini pseudo-labeled examples |
-| `meshy_cc0/` | ~20K | ~3 GiB | Meshy CC0 rigged multi-view renders |
-| `meshy_cc0_textured/` | ~20K | ~3 GiB | Meshy CC0 textured multi-view renders |
-| `meshy_cc0_unrigged/` | ~20K | ~4 GiB | Meshy CC0 unrigged multi-view (image + depth + normals only) |
-| `checkpoints/` | varies | varies | Run 1 + run 2 + run 3 checkpoints |
-| **Total** | | **~176+ GiB** | |
+| `animation/` | 18,628 | 66.7 GiB | 100STYLE retargeted mocap |
+| `anime_seg/` | 64,984 | 2.6 GiB | anime-segmentation v1+v2, RTMPose joints |
+| `checkpoints/` | 16 | 708 MiB | Run 1 checkpoints (all models) |
+| `checkpoints_run1/` | 1 | 203 MiB | Run 1 seg best.pt (for run 4 resume) |
+| `checkpoints_run3/` | 21 | 808 MiB | Run 3: seg, joints, weights, diffusion_weights, inpainting |
+| ~~`curated_diverse/`~~ | — | — | **DELETED** (ArtStation, prohibited) |
+| `encoder_features/` | 11,434 | 41.9 GiB | Precomputed seg encoder features (float16, run 3) |
+| `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
+| `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples |
+| `humanrig/` | 262,983 | 16.2 GiB | HumanRig + Marigold normals (enriched run 3) |
+| ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
+| `logs/` | 61 | 10.8 MiB | Training logs (runs 1-3) |
+| `models/` | 10 | 186 MiB | ONNX exports (5 models) |
+| `tars/` | 12 | 44.9 GiB | Tar-packed datasets (see below) |
+| `unirig/` | 80,980 | 52.7 GiB | UniRig meshes + 14,950 weight.json |
+| **Total** | **~755K** | **~248 GiB** | |
 
-> Core training datasets (segmentation, live2d, humanrig, anime_seg, fbanimehq, unirig) are tar-packed. curated_diverse removed (ArtStation — no AI training permission). Loose files purged from bucket after tar verified. Includes Marigold-enriched normals.png + depth.png from run 2.
+**Tar contents:**
+| Tar | Size | Contents |
+|-----|-----:|---------|
+| `humanrig.tar` | 16.8 GiB | HumanRig dataset |
+| `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ |
+| `meshy_cc0_textured.tar` | 4.3 GiB | Meshy CC0 textured renders |
+| `meshy_cc0_unrigged.tar` | 4.0 GiB | Meshy CC0 unrigged (image+depth+normals) |
+| `anime_seg.tar` | 3.0 GiB | anime-segmentation v1+v2 |
+| `meshy_cc0.tar` | 1.5 GiB | Meshy CC0 rigged renders |
+| `segmentation.tar` | 426 MiB | Mixamo pipeline output |
+> `curated_diverse` and `live2d` (loose + tar) deleted from bucket on March 10, 2026 — prohibited licenses.
 
 ---
 
@@ -168,9 +176,9 @@ The segmentation model's depth and normals heads are trained against Marigold LC
 | segmentation/ | 1,598 | Yes | Yes | Enriched in run 2 |
 | live2d/ | 844 | Yes | Yes | Enriched in run 2 |
 | ~~curated_diverse/~~ | ~~748~~ | | | **REMOVED — ArtStation, no AI training permission** |
-| humanrig/ | ~11,434 | Partial | Partial | ~4,800 done in run 2, rest in run 3 |
-| unirig/ | ~10,000 | Pending | Pending | Front views, enriched in run 3 |
-| **Total with labels** | **~14K+** | | | Conditional loss skips missing labels |
+| humanrig/ | ~11,434 | Yes | Yes | Fully enriched in run 3 (Marigold) |
+| unirig/ | ~10,000 | Pending | Pending | Front views, planned for enrichment |
+| **Total with labels** | **~24K+** | | | Conditional loss skips missing labels |
 
 Legacy `draw_order.png` still exists in some datasets but is no longer used for training.
 
@@ -208,12 +216,9 @@ Legacy `draw_order.png` still exists in some datasets but is no longer used for 
 
 ~40K ortho views ingested + uploaded. RTMPose joints enriched. Depth enrichment partial (~9.6K of ~40K — Mac OOM). Remaining depth can run on A100.
 
-### UniRig (PP-5) — Weight conversion complete, pending upload
+### UniRig (PP-5) — Complete
 
-66,030 files already in bucket. Weight conversion finished: 14,950 converted, 1,691 failed (non-humanoid meshes with <5 mapped bones). Upload with:
-```
-rclone copy ./output/unirig_weights/ hetzner:strata-training-data/unirig/ --transfers 32 --fast-list --size-only -P
-```
+80,980 files in bucket (52.7 GiB). Weight conversion done: 14,950 weight.json uploaded. 1,691 failed (non-humanoid meshes with <5 mapped bones). No further action needed.
 
 ### Datasets not pursued
 
@@ -248,21 +253,22 @@ rclone copy ./output/unirig_weights/ hetzner:strata-training-data/unirig/ --tran
 
 ## Completed Datasets (in bucket, no further action)
 
-| Dataset | Bucket Prefix | Files | Size |
-|---------|--------------|------:|-----:|
-| Mixamo renders | `segmentation/` | 12,216 | 599 MiB |
-| Live2D composites | `live2d/` | 3,587 | 212 MiB |
-| FBAnimeHQ | `fbanimehq/` | 304,889 | 11.4 GiB |
-| anime-seg v1+v2 | `anime_seg/` | ~65K | ~3.5 GiB |
-| anime_instance_seg | `anime_instance_seg/` | ~135K | ~15 GiB |
-| AnimeRun (all types) | `animerun*/` | 63K+ | ~15 GiB |
-| CMU + 100STYLE | `animation/` | 18,628 | 66.7 GiB |
-| HumanRig | `humanrig/` | 148K+ | 5.6+ GiB |
-| UniRig | `unirig/` | 66K+ | 42.6+ GiB |
-| VRoid Lite | `ingest/vroid_lite/` | 9,302 | 771 MiB |
-| CoNR | `conr/` | ~7,269 | ~580 MiB |
-| InstaOrder (val) | `instaorder/` | ~11,868 | ~1.5 GiB |
-| NOVA-Human | `nova_human/` | ~40K | ~2.5 GiB |
+| Dataset | Bucket Location | Files | Size | Notes |
+|---------|----------------|------:|-----:|-------|
+| CMU + 100STYLE | `animation/` (loose) | 18,628 | 66.7 GiB | |
+| anime-seg v1+v2 | `anime_seg/` (loose) + `tars/anime_seg.tar` | 64,984 | 2.6 GiB | |
+| FBAnimeHQ | `fbanimehq/` (loose) + `tars/fbanimehq.tar` | 304,889 | 11.4 GiB | |
+| HumanRig | `humanrig/` (loose) + `tars/humanrig.tar` | 262,983 | 16.2 GiB | Marigold normals enriched (run 3) |
+| UniRig | `unirig/` (loose) | 80,980 | 52.7 GiB | 14,950 weight.json uploaded |
+| Encoder features | `encoder_features/` (loose) | 11,434 | 41.9 GiB | float16, for diffusion weight training |
+| Gemini diverse | `gemini_diverse/` (loose) | 1,164 | 55 MiB | 221 pseudo-labeled examples |
+| Meshy CC0 (rigged) | `tars/meshy_cc0.tar` only | — | 1.5 GiB | Loose files purged |
+| Meshy CC0 (textured) | `tars/meshy_cc0_textured.tar` only | — | 4.3 GiB | Loose files purged |
+| Meshy CC0 (unrigged) | `tars/meshy_cc0_unrigged.tar` only | — | 4.0 GiB | Loose files purged |
+| Mixamo renders | `tars/segmentation.tar` only | — | 426 MiB | **PROHIBITED** (Adobe ToS) |
+| ONNX models | `models/onnx/` | 10 | 186 MiB | Run 3 exports |
+
+**Purged from bucket (only in tars or HD):** anime_instance_seg, animerun*, conr, ingest/vroid_lite, instaorder, nova_human, segmentation (loose)
 
 ---
 
@@ -295,7 +301,7 @@ All implemented: dataset loaders, DeepLabV3+ multi-head model (seg + depth + nor
 
 ### Cloud Storage
 
-Hetzner Object Storage: `s3://strata-training-data` (Falkenstein). ~870K+ files, ~166+ GiB. Use **rclone** (remote: `hetzner`), never `aws s3 sync`.
+Hetzner Object Storage: `s3://strata-training-data` (Falkenstein). ~755K files, ~248 GiB. Use **rclone** (remote: `hetzner`), never `aws s3 sync`.
 
 ---
 
