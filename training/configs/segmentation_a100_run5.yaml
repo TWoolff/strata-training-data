@@ -1,0 +1,58 @@
+# Run 5 — segmentation config
+# Strategy: Resume from run 4 checkpoint, add VRoid CC0 + expanded Gemini data
+# Key changes from run 4:
+#   - Resume from run 4 best.pt (not run 1)
+#   - Add vroid_cc0 (ground-truth 22-class from VRoid Hub CC0 characters)
+#   - Expanded gemini_diverse (600+ pseudo-labeled 2D illustrations, up from ~300)
+#   - Better pseudo-labels from run 4's improved seg model
+#   - Same LR (5e-5) and label smoothing (0.05) — proven in run 4
+#
+# Expected: mIoU 0.65-0.72 (more 2D domain data + VRoid diversity)
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: false             # Will resume from run 4 checkpoint
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"            # HumanRig: 11,434, ground-truth 22-class + joints + weights
+    - "./data_cloud/unirig"              # UniRig: ~10K, 22-class seg masks
+    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: ~7,700, quality-filtered 22-class
+    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: ~8,200, quality-filtered 22-class
+    - "./data_cloud/anime_seg"           # anime_seg: 14K, binary fg → confidence only
+    - "./data_cloud/fbanimehq"           # FBAnimeHQ: ~101K, binary fg + joints
+    - "./data_cloud/gemini_diverse"      # AI-generated 2D illustrations: 600+, pseudo-labeled 22-class
+    - "./data_cloud/vroid_cc0"           # VRoid CC0: ground-truth 22-class + joints + weights
+  quality_filter: true                   # Skip examples listed in quality_filter.json reject list
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 32
+  num_workers: 8
+  epochs: 50                             # Fine-tuning from run 4
+  optimizer: "adamw"
+  learning_rate: 5.0e-5                  # Same as run 4 — proven fine-tuning LR
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 2
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.5
+  normals_weight: 0.5
+  confidence_weight: 0.1
+  label_smoothing: 0.05                  # Reduce impact of noisy pseudo-labels
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/miou"

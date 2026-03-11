@@ -50,6 +50,64 @@ _MISSING_ANNOTATIONS = [
 
 
 # ---------------------------------------------------------------------------
+# Source detection from filename
+# ---------------------------------------------------------------------------
+
+_GENERATOR_MAP = {
+    "gemini": "Google Gemini",
+    "chatgpt": "OpenAI ChatGPT",
+    "sora": "OpenAI Sora",
+}
+
+
+def _detect_source(filename: str) -> tuple[str, str]:
+    """Detect generator source from filename pattern.
+
+    Returns (source_tag, generator_name) where source_tag is used in IDs
+    and generator_name is the human-readable generator.
+    """
+    name_lower = filename.lower()
+    if name_lower.startswith("chatgpt"):
+        return "chatgpt", _GENERATOR_MAP["chatgpt"]
+    if name_lower.startswith("sora"):
+        return "sora", _GENERATOR_MAP["sora"]
+    # Default: Gemini (covers "Gemini_Generated_Image_*" and others)
+    return "gemini", _GENERATOR_MAP["gemini"]
+
+
+def _clean_image_id(source_tag: str, filename_stem: str) -> str:
+    """Generate a clean image_id from the source tag and filename.
+
+    Sanitizes spaces, commas, and other problematic characters.
+    """
+    import re
+
+    # Strip known prefixes to get the unique part
+    stem = filename_stem
+    if source_tag == "chatgpt":
+        # "ChatGPT Image Mar 11, 2026, 08_15_45 AM" -> "mar11_2026_081545am"
+        stem = stem.lower()
+        stem = stem.removeprefix("chatgpt image ")
+        # Remove commas, collapse spaces/underscores
+        stem = stem.replace(",", "").replace(" ", "_")
+        # Collapse multiple underscores
+        stem = re.sub(r"_+", "_", stem).strip("_")
+    elif source_tag == "sora":
+        # "sora_0915_Image Generation_simple_compose_01kkdzdcxpfh79f9s39zev6brn"
+        # Strip the "sora_" prefix since source_tag already provides it
+        stem = stem.removeprefix("sora_")
+        stem = stem.replace(" ", "_")
+        stem = re.sub(r"_+", "_", stem).strip("_")
+    elif source_tag == "gemini":
+        # "Gemini_Generated_Image_108cyi108cyi108c" -> "108cyi108cyi108c"
+        stem = stem.removeprefix("Gemini_Generated_Image_")
+        stem = stem.replace(" ", "_")
+        stem = re.sub(r"_+", "_", stem).strip("_")
+
+    return f"{GEMINI_DIVERSE_SOURCE}_{source_tag}_{stem}"
+
+
+# ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
 
@@ -199,6 +257,7 @@ def _build_metadata(
     resolution: int,
     *,
     original_size: tuple[int, int],
+    generator: str = "Google Gemini",
     prompt: str = "",
     tags: dict[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -219,7 +278,7 @@ def _build_metadata(
         "has_normals": False,
         "missing_annotations": list(_MISSING_ANNOTATIONS),
         "license": "AI-generated (no copyright holder)",
-        "generator": "Google Gemini",
+        "generator": generator,
     }
     if prompt:
         meta["prompt"] = prompt
@@ -270,6 +329,7 @@ def convert_image(
     output_dir: Path,
     *,
     image_id: str,
+    generator: str = "Google Gemini",
     resolution: int = STRATA_RESOLUTION,
     only_new: bool = False,
     manifest_entry: dict | None = None,
@@ -323,6 +383,7 @@ def convert_image(
         image_path.name,
         resolution,
         original_size=original_size,
+        generator=generator,
         prompt=prompt,
         tags=tags or None,
     )
@@ -386,7 +447,8 @@ def convert_directory(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for i, image_path in enumerate(image_paths):
-        image_id = f"{GEMINI_DIVERSE_SOURCE}_{image_path.stem}"
+        source_tag, generator_name = _detect_source(image_path.name)
+        image_id = _clean_image_id(source_tag, image_path.stem)
         manifest_entry = manifest.get(image_path.name)
 
         try:
@@ -394,6 +456,7 @@ def convert_directory(
                 image_path,
                 output_dir,
                 image_id=image_id,
+                generator=generator_name,
                 resolution=resolution,
                 only_new=only_new,
                 manifest_entry=manifest_entry,
