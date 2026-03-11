@@ -262,7 +262,7 @@ def main() -> None:
     perceptual_loss: PerceptualLoss | None = None
     if perceptual_weight > 0:
         try:
-            perceptual_loss = PerceptualLoss(device)
+            perceptual_loss = PerceptualLoss(device).to(device)
             logger.info("Perceptual loss enabled (weight=%.3f)", perceptual_weight)
         except Exception as e:
             logger.warning("Could not load VGG for perceptual loss: %s", e)
