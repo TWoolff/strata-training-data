@@ -5,7 +5,8 @@
 # Goal: Add 15,281 meshy_cc0_textured examples to seg training
 #   - Resume from seg-only checkpoint (CC0-only clean baseline, NOT run 1)
 #   - meshy_cc0_textured: restructured from flat dirs to per-example subdirs
-#   - All other datasets same as seg-only run
+#   - gemini_diverse EXCLUDED (SAM2 pseudo-labels failed — only 13/698 usable)
+#   - Datasets: humanrig + vroid_cc0 + meshy_cc0_textured + anime_seg
 #
 # Estimated: ~5-6 hrs on A100, ~$2
 #
@@ -132,25 +133,8 @@ else
         echo "  WARNING: Could not download meshy_cc0_textured_restructured.tar"
     fi
 fi
-# Gemini: prefer enriched loose files (from seg-only upload) over original tar
-GEMINI_DIR="./data_cloud/gemini_diverse"
-if [ -d "$GEMINI_DIR" ] && [ "$(ls -A "$GEMINI_DIR" 2>/dev/null | head -1)" ]; then
-    echo "  gemini_diverse already exists."
-else
-    echo "  Downloading enriched gemini_diverse (loose files from seg-only run)..."
-    mkdir -p "$GEMINI_DIR"
-    rclone copy "hetzner:strata-training-data/gemini_diverse/" "$GEMINI_DIR/" \
-        --transfers 32 --checkers 64 --fast-list --size-only -P
-    # Verify it has seg masks (enriched), fall back to tar if not
-    MASK_COUNT=$(find "$GEMINI_DIR" -name "segmentation.png" 2>/dev/null | head -10 | wc -l | tr -d ' ')
-    if [ "$MASK_COUNT" -eq 0 ]; then
-        echo "  WARNING: No seg masks in loose files. Trying tar..."
-        rm -rf "$GEMINI_DIR"
-        download_tar "gemini_diverse"
-    else
-        echo "  gemini_diverse has enriched data ($MASK_COUNT+ masks found)."
-    fi
-fi
+# gemini_diverse EXCLUDED — SAM2 pseudo-labels failed (13/698 passed quality filter)
+# Joints model outputs all-center predictions on illustrated characters
 download_tar "anime_seg"
 
 # Show disk usage
@@ -166,7 +150,7 @@ echo ""
 echo "[2/5] Quality filter + Marigold normals..."
 echo ""
 
-for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_diverse anime_seg; do
+for ds in humanrig vroid_cc0 meshy_cc0_textured anime_seg; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         rm -f "$ds_dir/quality_filter.json"
@@ -182,7 +166,7 @@ for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_diverse anime_seg; do
 done
 
 # Marigold normals on meshy (the new dataset)
-for ds in meshy_cc0_textured vroid_cc0 gemini_diverse; do
+for ds in meshy_cc0_textured vroid_cc0; do
     if [ -d "./data_cloud/$ds" ]; then
         echo "  Enriching $ds with Marigold normals..."
         python run_normals_enrich.py \

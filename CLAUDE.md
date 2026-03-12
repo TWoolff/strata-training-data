@@ -190,12 +190,14 @@ Many datasets that were previously loose files have been consolidated into `tars
 | ~~`curated_diverse/`~~ | — | — | **DELETED** (ArtStation, prohibited) |
 | `encoder_features/` | 11,434 | 41.9 GiB | Precomputed seg encoder features for weight training (float16) |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
-| `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples (seg + normals + draw_order). 698 total in tar. |
+| `checkpoints_run5_seg/` | 4 | ~600 MiB | Seg-only run checkpoints (best.pt, latest.pt, run1_best.pt, tensorboard) |
+| `gemini_diverse/` | 8,147 | 274 MiB | Gemini diverse enriched (seg + normals + joints from seg-only run) |
 | `humanrig/` | 262,983 | 16.2 GiB | HumanRig rendered chars + joints + weights + Marigold normals (run 3) |
 | ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
-| `logs/` | — | — | Training logs (runs 1-4) |
+| `logs/` | — | — | Training logs (runs 1-4, run 5 seg-only) |
 | `models/` | 10 | 186 MiB | ONNX exports — run 3 (seg, joints, weights, diffusion_weights, inpainting) |
 | `models/onnx_run4/` | 4 | — | ONNX exports — run 4 (segmentation, joint_refinement, weight_prediction, inpainting) |
+| `models/onnx_run5_seg/` | 1 | 67.8 MiB | ONNX export — run 5 seg-only (segmentation only) |
 | `tars/` | 12 | 44.9 GiB | Tar-packed datasets for fast A100 setup (see below) |
 | `unirig/` | 80,980 | 52.7 GiB | UniRig rigged meshes + 14,950 weight.json uploaded |
 
@@ -292,6 +294,7 @@ What it does: Takes a 512×512 character image → outputs 22-class body region 
 Score (run 1): **0.5453 mIoU** (epoch 94/100, March 6 2026). Run 2 regressed to 0.38 (killed early). Run 3 regressed to 0.3728 (noisy Meshy CC0 data).
 Score (run 4): **0.4389 mIoU** (epoch 139/143, March 11 2026). Resumed from run 1 checkpoint, fine-tuned 50 epochs at 5e-5 LR with label smoothing 0.05. 30,086 train / 3,717 val examples. Did not recover run 1 quality — quality filter helped but dataset composition changed (no Mixamo/live2d, added Gemini diverse).
 Score (run 4.5): **0.3929 mIoU** (epoch 142, killed, March 12 2026). Loss weighting + SAM2 spatial pseudo-labels failed. Only ~23K examples trained (meshy_cc0 had 0 masks, gemini_diverse 50% rejected). Epoch counter didn't reset from run 4 checkpoint.
+Score (run 5 seg-only): **0.3491 mIoU** (epoch 62/80, March 12 2026). CC0-only baseline — resumed from run 1 weights with epoch reset. 24,391 train / 2,966 val examples (humanrig + vroid_cc0 + anime_seg + gemini_diverse). SAM2 pseudo-labeling mostly failed (only 13/698 Gemini passed quality filter). Converged ~epoch 55, plateaued 0.34-0.35. This is the clean CC0 baseline — run 1's 0.545 used prohibited Mixamo/Live2D data.
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
@@ -451,66 +454,46 @@ Loss weighting + SAM2 spatial pseudo-labels were not enough to compensate for th
 - `run_vroid_cc0.py` — CLI entry point
 - `pipeline/config.py` — COMMON_BONE_ALIASES includes J_Bip_* VRM bones
 
-## Run 5 Seg-Only — RUNNING (March 12 2026, A100 40GB)
+## Run 5 Seg-Only — COMPLETE (March 12 2026, A100 40GB)
 
-**Goal: Validate if VRoid CC0 GT + joint-conditioned SAM2 can break past 0.545 mIoU.** Script: `training/run_seg_only.sh`
+**Result: 0.3491 mIoU** (epoch 62/80). CC0-only baseline. Did not beat run 1's 0.545 (which used prohibited data).
 
-Focused seg-only run (~6 hrs, ~$2 on A100). Does NOT retrain joints, weights, or inpainting. If mIoU improves, proceed with full run 5. If not, diagnose before investing more GPU time.
+Script: `training/run_seg_only.sh`. Cost: ~$2. Duration: ~7 hrs total.
 
-### Strategy
-- Resume from run 1 checkpoint (0.545 mIoU — best seg result)
-- Add VRoid CC0 (1,386 GT 22-class) + expanded Gemini (698, SAM2 joint-conditioned)
-- Exclude meshy_cc0 (flat dir, 0 masks) and fbanimehq (binary fg/bg)
-- Per-dataset loss weighting: humanrig 3.0, vroid_cc0 3.0, gemini_diverse 2.5, anime_seg 1.0
-- Joint-conditioned SAM2 on Gemini (not spatial fallback — fixes 50% rejection rate)
+### What Happened
+- Resumed from run 1 weights with epoch counter properly reset to 0
+- SAM2 joint-conditioned pseudo-labeling mostly failed: only 25/698 Gemini images processed, only 13 passed quality filter (98.1% rejection rate)
+- Quality filter results: humanrig 11,402/11,434 (0.3%), vroid_cc0 1,378/1,386 (0.6%), anime_seg 11,384/16,802 (32.2%), gemini_diverse 13/698 (98.1% rejected)
+- Final training data: 24,391 train / 2,966 val (3,004 with depth, 3,004 with normals)
+- Converged ~epoch 55, plateaued in 0.34-0.35 range through epoch 80
+- ONNX exported: 67.8 MB segmentation.onnx → `models/onnx_run5_seg/`
+- Checkpoints uploaded to `checkpoints_run5_seg/` (best.pt + latest.pt + run1_best.pt + tensorboard logs)
+- Enriched gemini_diverse (normals + seg) uploaded to `gemini_diverse/` loose prefix
 
-### Data Downloaded (~21.5 GiB)
-| Source | Size | Purpose |
-|--------|------|---------|
-| `tars/humanrig.tar` | 16.8 GiB | GT 22-class seg + joints + weights |
-| `tars/anime_seg.tar` | 3.0 GiB | Existing fg/bg masks |
-| `tars/vroid_cc0.tar` | 203 MiB | NEW GT 22-class seg (11 VRoid chars) |
-| `tars/gemini_diverse.tar` | 131 MiB | 698 images, pseudo-labeled on A100 |
-| `checkpoints_run1/segmentation/best.pt` | 203 MiB | Resume point (0.545 mIoU) |
-| `checkpoints_run3/joints/best.pt` | 40 MiB | For Gemini joints inference |
-| SAM2 checkpoint (wget from Meta) | ~900 MiB | For pseudo-labeling |
-
-### Steps
-| Step | Task | Est. Time | Status |
-|------|------|-----------|--------|
-| 0 | Download checkpoints + SAM2 | ~5 min | DONE |
-| 1 | Download datasets (4 tars, extract, delete tars) | ~10 min | DONE |
-| 2 | Joints inference on gemini_diverse (698 images) | ~7 min | DONE |
-| 3 | SAM2 pseudo-labeling on gemini_diverse (joint-conditioned) | ~30 min | RUNNING |
-| 4 | Quality filter + Marigold normals | ~30 min | — |
-| 5 | **Train segmentation** (80 epochs, cosine LR, warmup 5) | ~4-5 hrs | — |
-| 6 | ONNX export | ~5 min | — |
-| 7 | Upload to bucket | ~5 min | — |
-
-### Issues Encountered
-- **Disk full (52 GiB)**: Tars not deleted after extraction. Fixed by `rm -f *.tar` + re-downloading anime_seg.
-- **Joints checkpoint wrong path**: Script had `checkpoints_run3/joint_refinement/best.pt`, actual path is `checkpoints_run3/joints/best.pt`. Fixed in commit `565907e`.
-- **JointModel API mismatch**: `run_joints_inference.py` unpacked forward() as tuple, but model returns dict. Fixed in commit `85aaaa5`.
-- **Lesson**: `cloud_setup.sh` no longer downloads data — each run script handles its own downloads, so only needed data hits disk.
+### Analysis
+- **0.3491 is the true CC0-only baseline.** Run 1's 0.545 was inflated by prohibited Mixamo/Live2D ground truth.
+- SAM2 joint-conditioned mode barely worked — only 25 images got joints inference results (most Gemini images had no joints.json). The 98.1% rejection rate means Gemini contributed almost nothing.
+- The model is data-starved for diverse 22-class ground truth. HumanRig (11K, all 3D renders) + VRoid (1.4K, 11 characters) is too homogeneous.
+- Next run (seg+meshy) adds 15,281 meshy_cc0_textured examples — diverse CC0 characters with GT 22-class masks.
 
 ### Key Files
 - `training/run_seg_only.sh` — A100 orchestration (7 steps)
 - `training/configs/segmentation_a100_run5_seg.yaml` — seg config
-- Target: mIoU > 0.55
+- Bucket: `checkpoints_run5_seg/`, `models/onnx_run5_seg/`, `logs/run5_seg_20260312_093843/`
 
 ### Iterative Short-Run Plan (get models 1-4 ship-ready → unblock models 5-6)
 
 **Goal: Get seg to best possible mIoU, then one combined run to ship all 4 models.**
 
-| Run | What | Data Added | Est. Time | Cost |
-|-----|------|-----------|-----------|------|
-| **Seg-only (running)** | Baseline: VRoid CC0 + SAM2 Gemini | +1,386 VRoid GT + 698 Gemini pseudo | ~6 hrs | ~$2 |
-| **Seg+Meshy (next)** | Add 15K diverse GT textured chars | +15,281 meshy_cc0_textured GT | ~6 hrs | ~$2 |
-| **Ship run (final)** | Retrain joints + weights + inpainting with best seg | +81K humanrig_posed (joints GT) | ~8-10 hrs | ~$3 |
+| Run | What | Data Added | Est. Time | Cost | Result |
+|-----|------|-----------|-----------|------|--------|
+| **Seg-only (DONE)** | CC0-only baseline | +1,386 VRoid GT + 13 Gemini pseudo | ~7 hrs | ~$2 | **0.3491 mIoU** |
+| **Seg+Meshy (next)** | Add 15K diverse GT textured chars | +15,281 meshy_cc0_textured GT | ~6 hrs | ~$2 | — |
+| **Ship run (final)** | Retrain joints + weights + inpainting with best seg | +81K humanrig_posed (joints GT) | ~8-10 hrs | ~$3 | — |
 
-- Steps 1-2 are cheap validation runs — test one variable each
-- Step 3 is the investment that ships models 1-4 and unblocks models 5-6 synthetic data generation
-- Resume from best checkpoint each time (run 1's 0.545 or whatever beats it)
+- Seg-only established the clean CC0 baseline (0.3491). Seg+meshy should improve this significantly (+15K diverse examples).
+- Resume from seg-only checkpoint each time (NOT run 1 — run 1 used prohibited data)
+- Ship run is the investment that ships models 1-4 and unblocks models 5-6 synthetic data generation
 
 ### Meshy CC0 Textured Restructured (ready for Seg+Meshy run)
 
@@ -546,7 +529,7 @@ Note: VRoid CC0 is maxed at 11 characters (only 11 CC0 on VRoid Hub). Meshy CC0 
 6. [x] **Create `training/configs/joints_a100_run5.yaml`** — joints config with humanrig_posed dataset.
 7. [x] **Render VRoid CC0 dataset** — 11 VRoid Hub CC0 chars × 14 poses × 3 angles = **1,386 GT 22-class examples**. Uploaded as `tars/vroid_cc0.tar`.
 8. [x] **Create seg-only run** — `training/run_seg_only.sh` + `training/configs/segmentation_a100_run5_seg.yaml`. Quick validation before full run 5.
-9. [x] **Run seg-only on A100** — Running March 12. Fixes: tars deleted after extraction, joints checkpoint path, JointModel dict API.
+9. [x] **Run seg-only on A100** — COMPLETE March 12. 0.3491 mIoU (CC0 baseline). Fixes: tars deleted after extraction, joints checkpoint path, JointModel dict API.
 
 ### Run 5 Strategy
 

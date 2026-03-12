@@ -6,7 +6,8 @@
 #
 # Key changes from seg-only:
 #   - meshy_cc0_textured added (was excluded due to flat dir structure — now restructured)
-#   - More training data: ~42K total (vs ~27K in seg-only)
+#   - gemini_diverse removed (SAM2 pseudo-labels failed — 13/698 usable)
+#   - More training data: ~40K total (vs ~24K in seg-only)
 #   - Meshy data weighted 2.0 (auto-rigged, lower quality than HumanRig/VRoid)
 #
 # Target: mIoU > 0.45 (on clean CC0-only data)
@@ -21,8 +22,8 @@ data:
     - "./data_cloud/humanrig"                  # HumanRig T-pose: 11,434 GT 22-class
     - "./data_cloud/vroid_cc0"                 # VRoid CC0: 1,386 GT 22-class
     - "./data_cloud/meshy_cc0_textured"        # Meshy CC0 textured: 15,281 GT 22-class (NEW)
-    - "./data_cloud/gemini_diverse"            # Gemini: ~698, SAM2 joint-conditioned
     - "./data_cloud/anime_seg"                 # anime_seg: ~14K, existing masks
+    # gemini_diverse EXCLUDED — SAM2 pseudo-labels failed (13/698 passed quality filter)
   quality_filter: true
   resolution: 512
   split_seed: 42
@@ -31,7 +32,6 @@ data:
     humanrig: 3.0
     vroid_cc0: 3.0
     meshy_cc0_textured: 2.0                    # Auto-rigged, textured — medium quality
-    gemini_diverse: 2.5
     anime_seg: 1.0
 
 augmentation:
