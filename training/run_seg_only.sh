@@ -197,7 +197,7 @@ if [ -f "$JOINTS_CKPT" ]; then
 
     if [ "$MISSING" -gt 0 ]; then
         echo "  $MISSING examples missing joints.json — running inference..."
-        python scripts/run_joints_inference.py \
+        PYTHONPATH="$(pwd)" python scripts/run_joints_inference.py \
             --input-dir "$GEMINI_DIR" \
             --checkpoint "$JOINTS_CKPT" \
             --device cuda \
