@@ -6,9 +6,10 @@ renders orthographic views, and extracts 2D joint positions via raycasting.
 Produces one output example per (sample × pose × angle) combination:
 
     humanrig_{sample_id:05d}_{pose_name}_{angle}/
-        image.png       ← 512×512 RGBA render
-        joints.json     ← 2D joint positions with occlusion
-        metadata.json   ← Source info, pose, camera angle
+        image.png           ← 512×512 RGBA render
+        segmentation.png    ← 8-bit grayscale region IDs (0-21) [--seg_only or full]
+        joints.json         ← 2D joint positions with occlusion
+        metadata.json       ← Source info, pose, camera angle
 
 Run via::
 
@@ -17,6 +18,13 @@ Run via::
         --pose_dir /path/to/poses \\
         --output_dir /path/to/output \\
         --max_samples 100
+
+Seg-only mode (add seg masks to existing examples)::
+
+    blender --background --python run_humanrig_posed.py -- \\
+        --input_dir /path/to/humanrig_opensource_final \\
+        --output_dir /path/to/output \\
+        --seg_only
 """
 
 from __future__ import annotations
@@ -67,6 +75,42 @@ def _setup_scene() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.view_settings.view_transform = "Standard"
+
+
+def _setup_eevee_scene() -> None:
+    """Set up EEVEE for fast seg-only rendering (no Cycles needed)."""
+    import bpy
+
+    scene = bpy.context.scene
+    try:
+        scene.render.engine = "BLENDER_EEVEE_NEXT"
+    except TypeError:
+        scene.render.engine = "BLENDER_EEVEE"
+    scene.render.resolution_x = RENDER_RESOLUTION
+    scene.render.resolution_y = RENDER_RESOLUTION
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.render.image_settings.color_depth = "8"
+
+
+def _setup_segmentation_render() -> None:
+    """Configure scene for clean segmentation mask pass."""
+    import bpy
+
+    scene = bpy.context.scene
+    scene.render.filter_size = 0.0  # No AA
+    scene.view_settings.view_transform = "Raw"
+    scene.view_settings.look = "None"
+    scene.render.image_settings.compression = 0
+    scene.render.use_compositing = False
+    scene.render.use_sequencer = False
+
+    if hasattr(scene.eevee, "use_gtao"):
+        scene.eevee.use_gtao = False
+    if hasattr(scene.eevee, "use_bloom"):
+        scene.eevee.use_bloom = False
 
 
 def _setup_lights() -> None:
@@ -291,6 +335,147 @@ def render_posed_sample(
 
 
 # ---------------------------------------------------------------------------
+# Seg-only rendering (adds segmentation.png to existing examples)
+# ---------------------------------------------------------------------------
+
+
+def render_seg_only_sample(
+    glb_path: Path,
+    sample_id: int,
+    all_poses: list,
+    pose_dir: Path,
+    output_dir: Path,
+) -> tuple[int, int]:
+    """Add segmentation.png to all existing examples for one HumanRig sample.
+
+    Re-imports the GLB, re-applies each pose, and renders only the seg mask
+    using EEVEE (much faster than Cycles).
+
+    Returns:
+        (rendered_count, skipped_count)
+    """
+    import bpy
+
+    from pipeline.bone_mapper import map_bones
+    from pipeline.pose_applicator import apply_pose, reset_pose
+    from pipeline.renderer import (
+        assign_region_materials,
+        convert_rgb_to_grayscale_mask,
+        create_region_materials,
+    )
+
+    # Reset scene, use EEVEE for fast seg rendering
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    _setup_eevee_scene()
+
+    armature, meshes = _import_glb(glb_path)
+    if armature is None:
+        logger.warning("No armature in %s — skipping", glb_path)
+        return 0, 0
+
+    # Map bones
+    character_id = f"humanrig_{sample_id}"
+    mapping = map_bones(armature, meshes, character_id)
+    vertex_to_region = mapping.vertex_to_region
+
+    # Create region materials and assign permanently (seg-only, no color pass)
+    region_materials = create_region_materials()
+    for mesh_idx, mesh_obj in enumerate(meshes):
+        assign_region_materials(mesh_obj, mesh_idx, vertex_to_region, region_materials)
+    _setup_segmentation_render()
+
+    cam_obj = _make_camera()
+    scene = bpy.context.scene
+
+    rendered = 0
+    skipped = 0
+    prefix = f"humanrig_{sample_id:05d}_"
+
+    # Build set of existing example dirs that need seg masks
+    needs_seg: dict[str, Path] = {}
+    for d in output_dir.iterdir():
+        if (
+            d.is_dir()
+            and d.name.startswith(prefix)
+            and (d / "image.png").exists()
+            and not (d / "segmentation.png").exists()
+        ):
+            needs_seg[d.name] = d
+
+    if not needs_seg:
+        return 0, 0
+
+    # Include A-pose (no pose application needed)
+    for label, azimuth in ANGLE_AZIMUTHS.items():
+        example_id = f"humanrig_{sample_id:05d}_a_pose_{label}"
+        if example_id not in needs_seg:
+            continue
+
+        example_dir = needs_seg[example_id]
+        _set_camera_orbit(cam_obj, azimuth)
+        bpy.context.view_layer.update()
+
+        seg_rgb_path = example_dir / "segmentation_rgb.png"
+        scene.render.filepath = str(seg_rgb_path)
+        try:
+            bpy.ops.render.render(write_still=True)
+        except Exception as exc:
+            logger.warning("Seg render failed for %s: %s", example_id, exc)
+            skipped += 1
+            continue
+
+        seg_path = example_dir / "segmentation.png"
+        convert_rgb_to_grayscale_mask(seg_rgb_path, seg_path)
+        if seg_rgb_path.exists():
+            seg_rgb_path.unlink()
+        rendered += 1
+
+    # Apply each pose and render seg for matching angles
+    for pose in all_poses:
+        # Check if any angles for this pose need seg
+        angles_needed = []
+        for label in ANGLE_AZIMUTHS:
+            eid = f"humanrig_{sample_id:05d}_{pose.name}_{label}"
+            if eid in needs_seg:
+                angles_needed.append((label, needs_seg[eid]))
+
+        if not angles_needed:
+            continue
+
+        ok = apply_pose(armature, pose, pose_dir)
+        if not ok:
+            skipped += len(angles_needed)
+            reset_pose(armature)
+            continue
+
+        bpy.context.view_layer.update()
+
+        for label, example_dir in angles_needed:
+            azimuth = ANGLE_AZIMUTHS[label]
+            _set_camera_orbit(cam_obj, azimuth)
+            bpy.context.view_layer.update()
+
+            seg_rgb_path = example_dir / "segmentation_rgb.png"
+            scene.render.filepath = str(seg_rgb_path)
+            try:
+                bpy.ops.render.render(write_still=True)
+            except Exception as exc:
+                logger.warning("Seg render failed for %s: %s", example_dir.name, exc)
+                skipped += 1
+                continue
+
+            seg_path = example_dir / "segmentation.png"
+            convert_rgb_to_grayscale_mask(seg_rgb_path, seg_path)
+            if seg_rgb_path.exists():
+                seg_rgb_path.unlink()
+            rendered += 1
+
+        reset_pose(armature)
+
+    return rendered, skipped
+
+
+# ---------------------------------------------------------------------------
 # Batch runner
 # ---------------------------------------------------------------------------
 
@@ -304,6 +489,7 @@ def render_directory(
     only_new: bool = False,
     max_samples: int = 0,
     poses_per_clip: int = 3,
+    seg_only: bool = False,
 ) -> tuple[int, int, int]:
     """Render posed HumanRig samples in batch.
 
@@ -315,10 +501,14 @@ def render_directory(
         only_new: Skip examples that already have image.png.
         max_samples: Max samples to process (0 = all).
         poses_per_clip: Keyframes to sample per animation clip.
+        seg_only: Only render segmentation masks for existing examples.
 
     Returns:
         (rendered_total, skipped_total, error_count)
     """
+    if seg_only:
+        return _render_directory_seg_only(input_dir, output_dir, pose_dir, max_samples=max_samples)
+
     from pipeline.pose_applicator import list_poses
 
     if angles is None:
@@ -383,6 +573,94 @@ def render_directory(
                 "Progress: %d/%d samples (%.1f%%) — %d rendered, %d skipped, "
                 "%d errors, %.1f img/s",
                 i + 1, total, pct, rendered_total, skipped_total, errors, rate,
+            )
+
+    return rendered_total, skipped_total, errors
+
+
+def _render_directory_seg_only(
+    input_dir: Path,
+    output_dir: Path,
+    pose_dir: Path,
+    *,
+    max_samples: int = 0,
+    poses_per_clip: int = 3,
+) -> tuple[int, int, int]:
+    """Add segmentation.png to existing examples that are missing it."""
+    from pipeline.pose_applicator import list_poses
+
+    # Discover poses (needed to re-apply for seg rendering)
+    logger.info("Scanning poses from %s ...", pose_dir)
+    all_poses = list_poses(pose_dir, keyframes_per_clip=poses_per_clip)
+    logger.info("Found %d poses (%d clips)", len(all_poses), len(set(p.source for p in all_poses)))
+
+    # Discover samples
+    sample_dirs = sorted(
+        [d for d in input_dir.iterdir() if d.is_dir() and d.name.isdigit()],
+        key=lambda d: int(d.name),
+    )
+    if max_samples > 0:
+        sample_dirs = sample_dirs[:max_samples]
+
+    # Count how many examples need seg masks
+    prefix_counts: dict[int, int] = {}
+    for d in output_dir.iterdir():
+        if not d.is_dir() or not d.name.startswith("humanrig_"):
+            continue
+        if (d / "image.png").exists() and not (d / "segmentation.png").exists():
+            try:
+                sid = int(d.name.split("_")[1])
+                prefix_counts[sid] = prefix_counts.get(sid, 0) + 1
+            except (IndexError, ValueError):
+                pass
+
+    total_needed = sum(prefix_counts.values())
+    total_samples = len(sample_dirs)
+    logger.info(
+        "Seg-only mode: %d examples need segmentation.png across %d samples",
+        total_needed, len(prefix_counts),
+    )
+
+    rendered_total = 0
+    skipped_total = 0
+    errors = 0
+    start_time = time.monotonic()
+    samples_processed = 0
+
+    for i, sample_dir in enumerate(sample_dirs):
+        sample_id = int(sample_dir.name)
+
+        # Skip samples that don't need seg masks
+        if sample_id not in prefix_counts:
+            continue
+
+        glb_path = sample_dir / "rigged.glb"
+        if not glb_path.is_file():
+            logger.warning("No rigged.glb in %s — skipping", sample_dir)
+            errors += 1
+            continue
+
+        try:
+            rendered, skipped = render_seg_only_sample(
+                glb_path, sample_id, all_poses, pose_dir, output_dir
+            )
+        except Exception as exc:
+            logger.warning("Error on sample %d: %s", sample_id, exc)
+            errors += 1
+            continue
+
+        rendered_total += rendered
+        skipped_total += skipped
+        samples_processed += 1
+
+        if samples_processed % 10 == 0 or samples_processed == len(prefix_counts):
+            elapsed = time.monotonic() - start_time
+            rate = rendered_total / elapsed if elapsed > 0 else 0
+            logger.info(
+                "Seg-only progress: %d/%d samples — %d rendered, %d skipped, "
+                "%d errors, %.1f img/s",
+                samples_processed, len(prefix_counts),
+                rendered_total, skipped_total, errors, rate,
             )
 
     return rendered_total, skipped_total, errors

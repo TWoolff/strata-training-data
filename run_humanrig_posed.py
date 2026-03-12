@@ -54,8 +54,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--pose_dir",
         type=Path,
-        required=True,
-        help="Directory containing Mixamo FBX/BVH animation files.",
+        default=None,
+        help="Directory containing Mixamo FBX/BVH animation files (not needed for --seg_only).",
     )
     parser.add_argument(
         "--output_dir",
@@ -87,6 +87,12 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="Keyframes to sample per animation clip (default: 3).",
     )
+    parser.add_argument(
+        "--seg_only",
+        action="store_true",
+        default=False,
+        help="Only render segmentation masks for existing examples (skip image/joints).",
+    )
     return parser.parse_args(argv)
 
 
@@ -95,28 +101,38 @@ def main() -> None:
 
     args = parse_args()
 
+    if not args.input_dir.is_dir():
+        logger.error("Input directory not found: %s", args.input_dir)
+        sys.exit(1)
+
+    if not args.seg_only and args.pose_dir is None:
+        logger.error("--pose_dir is required unless using --seg_only")
+        sys.exit(1)
+
+    if args.pose_dir and not args.pose_dir.is_dir():
+        logger.error("Pose directory not found: %s", args.pose_dir)
+        sys.exit(1)
+
     angles = [a.strip() for a in args.angles.split(",") if a.strip()]
     invalid = [a for a in angles if a not in VALID_ANGLES]
     if invalid:
         logger.error("Invalid angle(s): %s. Valid: %s", invalid, sorted(VALID_ANGLES))
         sys.exit(1)
 
-    if not args.input_dir.is_dir():
-        logger.error("Input directory not found: %s", args.input_dir)
-        sys.exit(1)
-
-    if not args.pose_dir.is_dir():
-        logger.error("Pose directory not found: %s", args.pose_dir)
-        sys.exit(1)
-
-    logger.info("HumanRig posed render starting")
-    logger.info("  input_dir:      %s", args.input_dir)
-    logger.info("  pose_dir:       %s", args.pose_dir)
-    logger.info("  output_dir:     %s", args.output_dir)
-    logger.info("  angles:         %s", angles)
-    logger.info("  only_new:       %s", args.only_new)
-    logger.info("  max_samples:    %s", args.max_samples or "unlimited")
-    logger.info("  poses_per_clip: %s", args.poses_per_clip)
+    if args.seg_only:
+        logger.info("HumanRig seg-only render starting")
+        logger.info("  input_dir:  %s", args.input_dir)
+        logger.info("  output_dir: %s", args.output_dir)
+        logger.info("  max_samples: %s", args.max_samples or "unlimited")
+    else:
+        logger.info("HumanRig posed render starting")
+        logger.info("  input_dir:      %s", args.input_dir)
+        logger.info("  pose_dir:       %s", args.pose_dir)
+        logger.info("  output_dir:     %s", args.output_dir)
+        logger.info("  angles:         %s", angles)
+        logger.info("  only_new:       %s", args.only_new)
+        logger.info("  max_samples:    %s", args.max_samples or "unlimited")
+        logger.info("  poses_per_clip: %s", args.poses_per_clip)
 
     start = time.monotonic()
 
@@ -128,6 +144,7 @@ def main() -> None:
         only_new=args.only_new,
         max_samples=args.max_samples,
         poses_per_clip=args.poses_per_clip,
+        seg_only=args.seg_only,
     )
 
     elapsed = time.monotonic() - start

@@ -1,0 +1,63 @@
+# Run 5 seg-only — focused segmentation fix
+# Strategy: Add VRoid CC0 ground-truth (1,386 examples) + expanded Gemini (698)
+#   + joint-conditioned SAM2 pseudo-labels on Gemini (not spatial fallback)
+#   + per-dataset loss weighting (upweight GT sources)
+# Resume from run 1 checkpoint (0.545 mIoU) — best seg result so far
+#
+# Key changes from run 4.5:
+#   - VRoid CC0: 1,386 new GT 22-class examples (11 characters, diverse poses)
+#   - Gemini: joint-conditioned SAM2 (not spatial), expect <10% rejection
+#   - Resume from run 1 (not run 4 — run 1 had better mIoU)
+#   - meshy_cc0 excluded (flat dir structure, 0 masks found in run 4.5)
+#   - fbanimehq excluded (binary fg/bg only, dilutes 22-class signal)
+#
+# Target: mIoU > 0.55
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: false             # Will resume from checkpoint
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"            # HumanRig T-pose: 11,434 GT 22-class
+    - "./data_cloud/vroid_cc0"           # VRoid CC0: 1,386 GT 22-class (NEW)
+    - "./data_cloud/gemini_diverse"      # Gemini: ~698, SAM2 joint-conditioned 22-class
+    - "./data_cloud/anime_seg"           # anime_seg: ~14K, existing masks
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    humanrig: 3.0                        # Ground-truth 22-class — highest quality
+    vroid_cc0: 3.0                       # Ground-truth 22-class — VRoid characters
+    gemini_diverse: 2.5                  # SAM2 joint-conditioned — domain diversity
+    anime_seg: 1.0                       # Existing masks — lower quality
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 32
+  num_workers: 8
+  epochs: 80                             # More epochs — new GT data may need time
+  optimizer: "adamw"
+  learning_rate: 5.0e-5                  # Same as run 4
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.5
+  normals_weight: 0.5
+  confidence_weight: 0.1
+  label_smoothing: 0.03
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/miou"
