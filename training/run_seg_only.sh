@@ -128,6 +128,7 @@ else
     if [ -f "$VROID_TAR" ]; then
         echo "  Extracting vroid_cc0..."
         tar xf "$VROID_TAR" -C ./data_cloud/
+        rm -f "$VROID_TAR"
     else
         echo "  No tar found, downloading loose files..."
         rclone copy "hetzner:strata-training-data/vroid_cc0/" "$VROID_DIR/" \
@@ -144,6 +145,7 @@ for ds in humanrig anime_seg; do
     elif [ -f "$tar_file" ]; then
         echo "  Extracting $ds from tar..."
         tar xf "$tar_file" -C ./data_cloud/
+        rm -f "$tar_file"
     else
         echo "  Downloading $ds tar..."
         mkdir -p ./data_cloud/tars
@@ -151,6 +153,7 @@ for ds in humanrig anime_seg; do
             --transfers 32 --fast-list -P
         if [ -f "$tar_file" ]; then
             tar xf "$tar_file" -C ./data_cloud/
+            rm -f "$tar_file"
         else
             echo "  WARNING: Could not download $ds."
         fi
@@ -170,6 +173,7 @@ else
     if [ -f "$GEMINI_TAR" ]; then
         echo "  Extracting gemini_diverse..."
         tar xf "$GEMINI_TAR" -C ./data_cloud/
+        rm -f "$GEMINI_TAR"
     else
         echo "  No tar found, downloading loose files..."
         rclone copy "hetzner:strata-training-data/gemini_diverse/" "$GEMINI_DIR/" \
