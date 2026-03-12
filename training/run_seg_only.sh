@@ -84,7 +84,7 @@ if [ -f "$JOINTS_CKPT" ]; then
     echo "  Joints checkpoint already exists."
 else
     echo "  Downloading run 3 joints checkpoint..."
-    rclone copy hetzner:strata-training-data/checkpoints_run3/joint_refinement/best.pt \
+    rclone copy hetzner:strata-training-data/checkpoints_run3/joints/best.pt \
         ./checkpoints/joint_refinement/ --transfers 32 --fast-list -P
     if [ -f "checkpoints/joint_refinement/best.pt" ]; then
         cp checkpoints/joint_refinement/best.pt "$JOINTS_CKPT"
