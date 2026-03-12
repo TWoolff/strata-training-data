@@ -289,6 +289,7 @@ What it does: Takes a 512×512 character image → outputs 22-class body region 
 
 Score (run 1): **0.5453 mIoU** (epoch 94/100, March 6 2026). Run 2 regressed to 0.38 (killed early). Run 3 regressed to 0.3728 (noisy Meshy CC0 data).
 Score (run 4): **0.4389 mIoU** (epoch 139/143, March 11 2026). Resumed from run 1 checkpoint, fine-tuned 50 epochs at 5e-5 LR with label smoothing 0.05. 30,086 train / 3,717 val examples. Did not recover run 1 quality — quality filter helped but dataset composition changed (no Mixamo/live2d, added Gemini diverse).
+Score (run 4.5): **0.3929 mIoU** (epoch 142, killed, March 12 2026). Loss weighting + SAM2 spatial pseudo-labels failed. Only ~23K examples trained (meshy_cc0 had 0 masks, gemini_diverse 50% rejected). Epoch counter didn't reset from run 4 checkpoint.
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
@@ -379,66 +380,50 @@ Resumed from run 1's 0.545 mIoU checkpoint but regressed to 0.4389. The dataset 
 ### Run 4 Inpainting Analysis
 First successful inpainting training — the fixed data loader found 44,668 valid pairs (vs ~3 in run 1). Training was progressing well (val/l1 dropped from 0.0087 → 0.0028 over 33 epochs) but was cut short when the instance was destroyed. The model was still improving — run 5 should continue training from this checkpoint.
 
-## Run 4.5 — Seg Fix (IN PROGRESS, March 12 2026, A100 $0.312/hr)
+## Run 4.5 — Seg Fix (FAILED, March 12 2026, A100 $0.312/hr)
 
 **Goal: Break past 0.545 mIoU with SAM2 pseudo-labels + per-dataset loss weighting.** Script: `training/run_four_five.sh`
 
 Focused seg-only run on A100. Joints, weights, inpainting NOT retrained.
 
-### Why Seg Keeps Regressing
-Run 1 hit 0.545 with Mixamo (1,598 GT masks) + live2d (844) — small but high-quality ground-truth. Those datasets were removed (prohibited licenses). Runs 2-4 replaced them with noisier auto-rigged + pseudo-labeled data, and seg regressed to 0.4389.
+### Result: 0.3929 mIoU (WORSE than run 4's 0.4389)
 
-### Three Fixes
+Loss weighting + SAM2 spatial pseudo-labels were not enough to compensate for the ground-truth data gap. Killed at epoch 142 — trajectory was flat/declining.
 
-**1. SAM2 + pseudo-labeling** (`scripts/run_sam2_pseudolabel.py`):
-- SAM2 produces precise segment boundaries (sharper than our 0.545 model)
-- Two region assignment modes: joint-conditioned (if joints.json exists) or spatial heuristic fallback (vertical/horizontal position → body region)
-- Applied to gemini_diverse (~700 examples, ~30 min on A100) — spatial mode since no joints.json
-- anime_seg SAM2 labeling skipped (14K × 2.7s/img = 11 hrs, too slow for a quick fix run)
-- SAM2 installed from source: `pip install git+https://github.com/facebookresearch/sam2.git` (pip `segment-anything-2` package doesn't provide `sam2` module)
-- Config must use full path: `configs/sam2.1/sam2.1_hiera_l.yaml` (not just `sam2.1_hiera_l`)
+### Why It Failed
 
-**2. Per-dataset loss weighting** (code change in `train_segmentation.py` + `segmentation_dataset.py`):
-- Each dataset directory gets a configurable weight multiplier in the YAML config
-- Ground-truth data (humanrig: 3.0) weighted higher than noisy data
-- SAM2-labeled data gets intermediate weight (gemini_diverse: 2.5, anime_seg: 1.5)
-- Implementation: `F.cross_entropy` with `reduction="none"` → per-sample mean → multiply by dataset weight → batch mean
+1. **SAM2 spatial fallback produced noisy labels** — gemini_diverse had no joints.json, so region assignment used vertical/horizontal position heuristics. 49.6% of examples were rejected by quality filter (352/698 passed). The spatial heuristic is too crude for diverse character poses.
+2. **meshy_cc0 had 0 seg masks** — flat directory structure (`images/`, `depth/`, `joints/`) not per-example subdirs. Quality filter found 0 masks. Training data was only ~23K examples (11,402 humanrig + 11,394 anime_seg + 352 gemini_diverse) instead of planned 42K.
+3. **Epoch counter didn't reset** — resumed from run 4 checkpoint at epoch 140/199 instead of 0/60, so cosine LR schedule was wrong. LR was flat at 3e-5 instead of warming up.
+4. **Loss weighting alone doesn't fix data quality** — upweighting humanrig 3x helps but can't overcome the lack of diverse ground-truth 22-class data.
 
-**3. Drop fbanimehq** — 101K binary fg/bg examples excluded entirely. They can't teach 22-class regions and were drowning the signal even at low weight.
+### What Worked (keep for run 5)
+- Per-dataset loss weighting code is solid and ready to use
+- SAM2 joint-conditioned mode (not tested — needs joints.json)
+- SAM2 install/config gotchas documented
 
-### Run 4.5 Strategy
+### What Needs Fixing for Run 5
+- **Joint-conditioned SAM2**: run joints inference on gemini_diverse first, then SAM2 with proper region assignment
+- **Fix epoch counter**: reset to 0 when resuming checkpoint for a new run
+- **Fix meshy_cc0 loader**: adapt for flat directory structure, or re-render in per-example format
+- **More ground-truth data**: VRoid CC0, humanrig_posed (45K with joints)
 
-| Step | Task | Status |
-|------|------|--------|
-| 0 | Download run 4 seg checkpoint + SAM2 model (900MB) | Done |
-| 1 | Download datasets (from tars, ~20 min) | Done |
-| 2 | SAM2 pseudo-label gemini_diverse (~700 examples, spatial mode) | In progress |
-| 3 | Quality filter (re-run with SAM2 masks) | Pending |
-| 4 | Marigold normals/depth enrichment on gemini_diverse | Pending |
-| 5 | Train seg (60 epochs, 3e-5 LR, loss weighting) | Pending |
-| 6 | ONNX export (seg only) | Pending |
-| 7 | Upload to bucket | Pending |
+### Actual Training Data (not what was planned)
+- humanrig: 11,402 passed quality filter (GT 22-class, weight 3.0)
+- anime_seg: 11,394 passed (existing masks, weight 1.5)
+- gemini_diverse: 352 passed (SAM2 spatial, weight 2.5) — 49.6% rejection rate
+- meshy_cc0 + meshy_cc0_textured: **0 masks found** (flat dir structure incompatible)
+- fbanimehq: EXCLUDED
+- **Actual total: ~23K examples** (planned 42K)
 
-### Run 4.5 Training Data
-- humanrig: ~11,400 (GT 22-class, weight 3.0)
-- meshy_cc0 + meshy_cc0_textured: ~15,900 (quality-filtered, weight 1.0)
-- anime_seg: ~14,000 (existing binary/pseudo-labeled, weight 1.5 — NOT re-labeled with SAM2)
-- gemini_diverse: ~700 (SAM2 pseudo-labeled 22-class with spatial fallback, weight 2.5)
-- fbanimehq: EXCLUDED (binary fg/bg only, no 22-class signal)
-- **Total: ~42K examples** (was ~140K with fbanimehq — smaller but cleaner)
-
-### Run 4.5 Config Differences from Run 4
-- `dataset_weights`: humanrig 3.0, gemini_diverse 2.5, anime_seg 1.5
-- fbanimehq excluded entirely
-- `learning_rate`: 3e-5 (lower than run 4's 5e-5 for stability with weighted loss)
-- `label_smoothing`: 0.03 (lower than run 4's 0.05 — SAM2 labels are cleaner)
-- `epochs`: 60 (more patience for weighted loss convergence)
-- `early_stopping_patience`: 20
-
-### Lessons Learned During Setup
+### Lessons Learned
 - SAM2 at `points_per_side=32` takes ~2.7s/image on A100 — 14K anime_seg would take 11 hrs
-- `gemini_diverse` examples from bucket have no `joints.json` — needed spatial fallback in SAM2 script
-- `cloud_setup.sh lean` downloads fbanimehq (14 GB) even though run 4.5 doesn't use it — kill after other downloads finish
+- `gemini_diverse` in bucket has no `joints.json` — spatial fallback produces ~50% rejection rate
+- `meshy_cc0` uses flat dir structure (`images/`, `joints/`), not per-example subdirs — quality filter and dataset loader can't find masks
+- `cloud_setup.sh lean` downloads fbanimehq (14 GB) even though run 4.5 doesn't use it — kill setup early
+- SAM2 installed from source: `pip install git+https://github.com/facebookresearch/sam2.git`
+- SAM2 config must use full path: `configs/sam2.1/sam2.1_hiera_l.yaml`
+- Resuming a checkpoint doesn't reset epoch counter — need explicit reset in training script
 
 ### Key Files
 - `scripts/run_sam2_pseudolabel.py` — SAM2 + joint-conditioned or spatial region assignment
