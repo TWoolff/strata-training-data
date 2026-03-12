@@ -74,14 +74,15 @@ def run_inference(
     tensor = transform(img).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        offsets, confidence, presence = model(tensor)
+        out = model(tensor)
 
+    # Model returns dict with "offsets", "confidence", "present"
     # offsets: [1, 2, 20] — normalized (dx, dy) offsets from center
     # confidence: [1, 20]
-    # presence: [1, 20]
-    offsets = offsets.squeeze(0).cpu().numpy()  # [2, 20]
-    confidence = torch.sigmoid(confidence).squeeze(0).cpu().numpy()  # [20]
-    presence = torch.sigmoid(presence).squeeze(0).cpu().numpy()  # [20]
+    # present: [1, 20]
+    offsets = out["offsets"].squeeze(0).cpu().numpy()  # [2, 20]
+    confidence = torch.sigmoid(out["confidence"]).squeeze(0).cpu().numpy()  # [20]
+    presence = torch.sigmoid(out["present"]).squeeze(0).cpu().numpy()  # [20]
 
     joints = {}
     for i, name in enumerate(BONE_ORDER):
