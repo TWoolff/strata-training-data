@@ -256,6 +256,7 @@ echo ""
 python -m training.train_segmentation \
     --config training/configs/segmentation_a100_run4_5.yaml \
     --resume "$RUN4_CKPT" \
+    --reset-epochs \
     2>&1 | tee "$LOG_DIR/segmentation.log"
 
 echo ""

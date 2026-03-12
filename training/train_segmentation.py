@@ -370,12 +370,13 @@ def select_device() -> torch.device:
 # ---------------------------------------------------------------------------
 
 
-def train(config: dict, resume_path: str | None = None) -> None:
+def train(config: dict, resume_path: str | None = None, args: argparse.Namespace | None = None) -> None:
     """Run the full training loop.
 
     Args:
         config: Parsed YAML config dict.
         resume_path: Optional path to checkpoint for resuming training.
+        args: Parsed CLI args (for --reset-epochs flag).
     """
     device = select_device()
     logger.info("Using device: %s", device)
@@ -450,15 +451,20 @@ def train(config: dict, resume_path: str | None = None) -> None:
     if resume_path is not None:
         # Load model weights and optimizer state (skip scheduler — we'll create a fresh one)
         info = load_checkpoint(resume_path, model, optimizer, scheduler=None)
-        start_epoch = info["epoch"] + 1
-        global_step = start_epoch * len(train_loader)
-        if start_epoch >= epochs:
-            # Treat configured epochs as "additional epochs from resume point"
-            total_new_epochs = epochs
-            epochs = start_epoch + total_new_epochs
-            logger.info("Resuming from epoch %d — training %d more epochs (to %d)", start_epoch, total_new_epochs, epochs)
+        if getattr(args, "reset_epochs", False):
+            # Fresh training run from checkpoint weights — reset epoch counter
+            start_epoch = 0
+            logger.info("Loaded weights from %s (epoch %d) — resetting epoch counter to 0", resume_path, info["epoch"])
         else:
-            logger.info("Resuming from epoch %d", start_epoch)
+            start_epoch = info["epoch"] + 1
+            global_step = start_epoch * len(train_loader)
+            if start_epoch >= epochs:
+                # Treat configured epochs as "additional epochs from resume point"
+                total_new_epochs = epochs
+                epochs = start_epoch + total_new_epochs
+                logger.info("Resuming from epoch %d — training %d more epochs (to %d)", start_epoch, total_new_epochs, epochs)
+            else:
+                logger.info("Resuming from epoch %d", start_epoch)
         # Reset optimizer LR to configured value (checkpoint may have decayed LR)
         for pg in optimizer.param_groups:
             pg["lr"] = lr
@@ -566,6 +572,11 @@ def main() -> None:
         default=None,
         help="Path to checkpoint to resume from",
     )
+    parser.add_argument(
+        "--reset-epochs",
+        action="store_true",
+        help="Reset epoch counter to 0 when resuming (treat as fresh run with pretrained weights)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -581,7 +592,7 @@ def main() -> None:
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    train(config, resume_path=args.resume)
+    train(config, resume_path=args.resume, args=args)
 
 
 if __name__ == "__main__":

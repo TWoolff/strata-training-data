@@ -215,9 +215,101 @@ fi
 echo ""
 
 # =============================================================================
-# STEP 2: Quality filter + Marigold enrichment
+# STEP 1.5: Restructure flat-layout datasets into per-example subdirs
 # =============================================================================
-echo "[2/8] Running quality filter + Marigold enrichment..."
+echo "[1.5/8] Restructuring flat-layout datasets..."
+echo ""
+
+for ds in meshy_cc0 meshy_cc0_textured; do
+    ds_dir="./data_cloud/$ds"
+    if [ -d "$ds_dir/images" ]; then
+        echo "  Restructuring $ds (flat → per-example subdirs)..."
+        python scripts/restructure_flat_dataset.py --input-dir "$ds_dir" \
+            2>&1 | tee -a "$LOG_DIR/restructure.log"
+    else
+        echo "  $ds: already restructured or not present, skipping."
+    fi
+done
+echo ""
+
+# =============================================================================
+# STEP 2: Joints inference + SAM2 pseudo-labeling on gemini_diverse
+# =============================================================================
+echo "[2/8] Joints inference + SAM2 pseudo-labeling on gemini_diverse..."
+echo ""
+
+# 2a. Run joints inference on gemini_diverse (needs run 3 joints checkpoint)
+GEMINI_DIR="./data_cloud/gemini_diverse"
+if [ -d "$GEMINI_DIR" ]; then
+    # Check if joints already exist
+    JOINTS_COUNT=$(find "$GEMINI_DIR" -name "joints.json" -maxdepth 2 2>/dev/null | head -10 | wc -l)
+    if [ "$JOINTS_COUNT" -ge 5 ]; then
+        echo "  gemini_diverse already has joints ($JOINTS_COUNT+ found), skipping inference."
+    else
+        echo "  Running joints inference on gemini_diverse..."
+        # Download run 3 joints checkpoint for inference
+        RUN3_JOINTS_CKPT="checkpoints/joints/run3_best.pt"
+        if [ ! -f "$RUN3_JOINTS_CKPT" ]; then
+            mkdir -p checkpoints/joints
+            rclone copy hetzner:strata-training-data/checkpoints_run3/joints/best.pt \
+                ./checkpoints/joints/ --transfers 32 --fast-list -P
+            if [ -f "checkpoints/joints/best.pt" ]; then
+                cp checkpoints/joints/best.pt "$RUN3_JOINTS_CKPT"
+            fi
+        fi
+        if [ -f "$RUN3_JOINTS_CKPT" ]; then
+            python scripts/run_joints_inference.py \
+                --checkpoint "$RUN3_JOINTS_CKPT" \
+                --input-dir "$GEMINI_DIR" \
+                --only-missing \
+                --device cuda \
+                2>&1 | tee "$LOG_DIR/joints_inference_gemini.log" || \
+            echo "  WARNING: Joints inference failed. SAM2 will use spatial fallback."
+        else
+            echo "  WARNING: No joints checkpoint found. SAM2 will use spatial fallback."
+        fi
+    fi
+    echo ""
+
+    # 2b. SAM2 pseudo-labeling (joint-conditioned if joints exist, spatial fallback otherwise)
+    SAM2_CKPT="./models/sam2.1_hiera_large.pt"
+    SAM2_CONFIG="configs/sam2.1/sam2.1_hiera_l.yaml"
+    if [ ! -f "$SAM2_CKPT" ]; then
+        echo "  Downloading SAM2 checkpoint..."
+        mkdir -p ./models
+        wget -q -O "$SAM2_CKPT" \
+            "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt" \
+            || echo "  WARNING: Failed to download SAM2 checkpoint."
+    fi
+    # Install SAM2 from source
+    if ! python -c "import sam2" 2>/dev/null; then
+        echo "  Installing SAM2 from source..."
+        pip install -q git+https://github.com/facebookresearch/sam2.git
+    fi
+    if [ -f "$SAM2_CKPT" ]; then
+        stats_file="$GEMINI_DIR/sam2_pseudolabel_stats.json"
+        if [ -f "$stats_file" ]; then
+            echo "  gemini_diverse already has SAM2 labels, skipping."
+        else
+            echo "  Running SAM2 pseudo-labeling on gemini_diverse..."
+            python scripts/run_sam2_pseudolabel.py \
+                --input-dir "$GEMINI_DIR" \
+                --sam2-checkpoint "$SAM2_CKPT" \
+                --sam2-config "$SAM2_CONFIG" \
+                --device cuda \
+                --points-per-side 32 \
+                2>&1 | tee "$LOG_DIR/sam2_gemini.log"
+        fi
+    else
+        echo "  No SAM2 checkpoint — skipping pseudo-labeling."
+    fi
+fi
+echo ""
+
+# =============================================================================
+# STEP 2.5: Quality filter + Marigold enrichment
+# =============================================================================
+echo "[2.5/8] Running quality filter + Marigold enrichment..."
 echo ""
 
 for ds in humanrig humanrig_posed meshy_cc0 meshy_cc0_textured gemini_diverse; do
@@ -286,6 +378,7 @@ echo ""
 python -m training.train_segmentation \
     --config "$SEG_CONFIG" \
     --resume "$RUN4_SEG_CKPT" \
+    --reset-epochs \
     2>&1 | tee "$LOG_DIR/segmentation.log"
 
 if [ ! -f "checkpoints/segmentation/best.pt" ]; then
