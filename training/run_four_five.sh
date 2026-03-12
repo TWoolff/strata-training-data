@@ -90,7 +90,7 @@ fi
 
 # Download SAM2 checkpoint
 SAM2_CKPT="./models/sam2.1_hiera_large.pt"
-SAM2_CONFIG="sam2.1_hiera_l"
+SAM2_CONFIG="configs/sam2.1/sam2.1_hiera_l.yaml"
 if [ -f "$SAM2_CKPT" ]; then
     echo "  SAM2 checkpoint already exists."
 else
