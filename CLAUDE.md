@@ -234,7 +234,7 @@ Each training run follows this automated pattern:
 
 | Script | Purpose |
 |--------|---------|
-| `training/cloud_setup.sh lean` | Set up A100: install deps, configure rclone, download data |
+| `training/cloud_setup.sh` | Set up A100: install deps, configure rclone (no data download — each run script downloads only what it needs) |
 | `training/run_second.sh` | Second run (abandoned): enrich → train → upload |
 | `training/run_third.sh` | Third run: Marigold enrich → train → upload → tar |
 | `training/run_fourth.sh` | Fourth run: quality filter → seg fine-tune → inpainting → ONNX → upload |
@@ -451,7 +451,7 @@ Loss weighting + SAM2 spatial pseudo-labels were not enough to compensate for th
 - `run_vroid_cc0.py` — CLI entry point
 - `pipeline/config.py` — COMMON_BONE_ALIASES includes J_Bip_* VRM bones
 
-## Run 5 Seg-Only — READY TO RUN
+## Run 5 Seg-Only — RUNNING (March 12 2026, A100 40GB)
 
 **Goal: Validate if VRoid CC0 GT + joint-conditioned SAM2 can break past 0.545 mIoU.** Script: `training/run_seg_only.sh`
 
@@ -464,22 +464,74 @@ Focused seg-only run (~6 hrs, ~$2 on A100). Does NOT retrain joints, weights, or
 - Per-dataset loss weighting: humanrig 3.0, vroid_cc0 3.0, gemini_diverse 2.5, anime_seg 1.0
 - Joint-conditioned SAM2 on Gemini (not spatial fallback — fixes 50% rejection rate)
 
+### Data Downloaded (~21.5 GiB)
+| Source | Size | Purpose |
+|--------|------|---------|
+| `tars/humanrig.tar` | 16.8 GiB | GT 22-class seg + joints + weights |
+| `tars/anime_seg.tar` | 3.0 GiB | Existing fg/bg masks |
+| `tars/vroid_cc0.tar` | 203 MiB | NEW GT 22-class seg (11 VRoid chars) |
+| `tars/gemini_diverse.tar` | 131 MiB | 698 images, pseudo-labeled on A100 |
+| `checkpoints_run1/segmentation/best.pt` | 203 MiB | Resume point (0.545 mIoU) |
+| `checkpoints_run3/joints/best.pt` | 40 MiB | For Gemini joints inference |
+| SAM2 checkpoint (wget from Meta) | ~900 MiB | For pseudo-labeling |
+
 ### Steps
-| Step | Task | Est. Time |
-|------|------|-----------|
-| 0 | Download run 1 seg + run 3 joints checkpoints + SAM2 | ~5 min |
-| 1 | Download datasets (vroid_cc0, humanrig, anime_seg, gemini_diverse) | ~10 min |
-| 2 | Joints inference on gemini_diverse | ~10 min |
-| 3 | SAM2 pseudo-labeling on gemini_diverse (joint-conditioned) | ~30 min |
-| 4 | Quality filter + Marigold normals | ~30 min |
-| 5 | **Train segmentation** (80 epochs, cosine LR, warmup 5) | ~4-5 hrs |
-| 6 | ONNX export | ~5 min |
-| 7 | Upload to bucket | ~5 min |
+| Step | Task | Est. Time | Status |
+|------|------|-----------|--------|
+| 0 | Download checkpoints + SAM2 | ~5 min | DONE |
+| 1 | Download datasets (4 tars, extract, delete tars) | ~10 min | DONE |
+| 2 | Joints inference on gemini_diverse (698 images) | ~7 min | DONE |
+| 3 | SAM2 pseudo-labeling on gemini_diverse (joint-conditioned) | ~30 min | RUNNING |
+| 4 | Quality filter + Marigold normals | ~30 min | — |
+| 5 | **Train segmentation** (80 epochs, cosine LR, warmup 5) | ~4-5 hrs | — |
+| 6 | ONNX export | ~5 min | — |
+| 7 | Upload to bucket | ~5 min | — |
+
+### Issues Encountered
+- **Disk full (52 GiB)**: Tars not deleted after extraction. Fixed by `rm -f *.tar` + re-downloading anime_seg.
+- **Joints checkpoint wrong path**: Script had `checkpoints_run3/joint_refinement/best.pt`, actual path is `checkpoints_run3/joints/best.pt`. Fixed in commit `565907e`.
+- **JointModel API mismatch**: `run_joints_inference.py` unpacked forward() as tuple, but model returns dict. Fixed in commit `85aaaa5`.
+- **Lesson**: `cloud_setup.sh` no longer downloads data — each run script handles its own downloads, so only needed data hits disk.
 
 ### Key Files
 - `training/run_seg_only.sh` — A100 orchestration (7 steps)
 - `training/configs/segmentation_a100_run5_seg.yaml` — seg config
 - Target: mIoU > 0.55
+
+### Iterative Short-Run Plan (get models 1-4 ship-ready → unblock models 5-6)
+
+**Goal: Get seg to best possible mIoU, then one combined run to ship all 4 models.**
+
+| Run | What | Data Added | Est. Time | Cost |
+|-----|------|-----------|-----------|------|
+| **Seg-only (running)** | Baseline: VRoid CC0 + SAM2 Gemini | +1,386 VRoid GT + 698 Gemini pseudo | ~6 hrs | ~$2 |
+| **Seg+Meshy (next)** | Add 15K diverse GT textured chars | +15,281 meshy_cc0_textured GT | ~6 hrs | ~$2 |
+| **Ship run (final)** | Retrain joints + weights + inpainting with best seg | +81K humanrig_posed (joints GT) | ~8-10 hrs | ~$3 |
+
+- Steps 1-2 are cheap validation runs — test one variable each
+- Step 3 is the investment that ships models 1-4 and unblocks models 5-6 synthetic data generation
+- Resume from best checkpoint each time (run 1's 0.545 or whatever beats it)
+
+### Meshy CC0 Textured Restructured (ready for Seg+Meshy run)
+
+15,281 textured examples restructured from flat dirs to per-example subdirs. 248 unique characters × ~31 camera angles × default pose (no posing — Meshy models distort when posed).
+
+| Metric | Value |
+|--------|-------|
+| Examples | 15,281 (image + seg + joints + metadata) |
+| Characters | 248 rigged (of 599 total CC0) |
+| Angles | ~31 per character (front, back, side, three_quarter, iso, topdown, etc.) |
+| Location (local) | `/Volumes/TAMWoolff/data/preprocessed/meshy_cc0_restructured/` |
+| Location (bucket) | `tars/meshy_cc0_textured_restructured.tar` (2.8 GiB) |
+
+### If Seg Still Fails After Meshy Run
+
+Options if mIoU doesn't improve with 28K GT examples (humanrig + vroid + meshy):
+1. **Architecture change** — MobileNetV3 may be too small for 22-class + depth + normals. Try EfficientNet-B3 or ResNet-50 backbone.
+2. **Curriculum learning** — Train first on GT-only, then gradually add pseudo-labeled data.
+3. **Label studio manual annotation** — Manually annotate ~50 diverse Gemini characters as high-quality anchor data.
+
+Note: VRoid CC0 is maxed at 11 characters (only 11 CC0 on VRoid Hub). Meshy CC0 characters distort when posed — default pose only.
 
 ## Fifth Training Run — ON HOLD (pending seg-only results)
 
@@ -489,11 +541,12 @@ Focused seg-only run (~6 hrs, ~$2 on A100). Does NOT retrain joints, weights, or
 1. [x] **Render HumanRig posed dataset** — 81,865 examples rendered (image + joints, no seg). Output: `/Volumes/TAMWoolff/data/preprocessed/humanrig_posed/`.
 2. [ ] **Upload humanrig_posed to bucket** — `rclone copy` to `humanrig_posed/` prefix. Tar-pack for fast A100 setup. (ON HOLD — waiting for seg-only results)
 3. [x] **Generate more Gemini characters** — expanded from 221 → **698 training images** (target was 600). 698 raw images ingested via `scripts/ingest_gemini.py --only-new --no-seg`. Uploaded to bucket as `tars/gemini_diverse.tar`.
-4. [ ] **Generate ~200 Gemini validation images** — held-out characters (never trained on). Can double as novel view benchmark for run 6+.
+4. [x] **Generate ~200 Gemini validation images** — held-out characters (never trained on). DONE.
 5. [x] **Create `training/run_fifth.sh`** — orchestration script with pre-flight checks, 8 steps.
 6. [x] **Create `training/configs/joints_a100_run5.yaml`** — joints config with humanrig_posed dataset.
 7. [x] **Render VRoid CC0 dataset** — 11 VRoid Hub CC0 chars × 14 poses × 3 angles = **1,386 GT 22-class examples**. Uploaded as `tars/vroid_cc0.tar`.
 8. [x] **Create seg-only run** — `training/run_seg_only.sh` + `training/configs/segmentation_a100_run5_seg.yaml`. Quick validation before full run 5.
+9. [x] **Run seg-only on A100** — Running March 12. Fixes: tars deleted after extraction, joints checkpoint path, JointModel dict API.
 
 ### Run 5 Strategy
 
