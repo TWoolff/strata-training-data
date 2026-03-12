@@ -11,7 +11,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 1 | **Segmentation** | `segmentation.onnx` | DeepLabV3+ MobileNetV3 (multi-head: seg + depth + normals) | `training/train_segmentation.py` | Has pipeline + data |
 | 2 | **Joint Refinement** | `joint_refinement.onnx` | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
 | 3 | **Weight Prediction** | `weight_prediction.onnx` | Per-vertex MLP with optional encoder features (31→128→256→128→20, +encoder branch) | `training/train_weights.py` | Has pipeline + data |
-| 4 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline, broken data loader |
+| 4 | **Inpainting** | `inpainting.onnx` | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
 | 5 | **Texture Inpainting** | `texture_inpainting.onnx` | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
 | 6 | **Novel View Synthesis** | `novel_view.onnx` | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
 
@@ -31,7 +31,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 
 ### Training Coverage
 
-Models 1-3 have complete training pipelines with configs for local (4070 Ti), lean A100, and full A100 runs. Models 4-6 still need training pipelines built in this repo. All models are bundled in `../strata/src-tauri/models/` (~55MB total) and loaded lazily via the `ort` ONNX runtime crate.
+Models 1-4 have complete training pipelines with configs for local (4070 Ti), lean A100, and full A100 runs. Models 5-6 still need training pipelines built in this repo. All models are bundled in `../strata/src-tauri/models/` (~55MB total) and loaded lazily via the `ort` ONNX runtime crate.
 
 ## What This Project Does
 
@@ -173,7 +173,7 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
 
-### Bucket Contents (as of March 10 2026, post-run 3)
+### Bucket Contents (as of March 11 2026, post-run 4)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~755K files, ~248 GiB total.
 
@@ -186,14 +186,16 @@ Many datasets that were previously loose files have been consolidated into `tars
 | `checkpoints/` | 16 | 708 MiB | Run 1 checkpoints (all models) |
 | `checkpoints_run1/` | 1 | 203 MiB | Run 1 seg best.pt (for run 4 resume) |
 | `checkpoints_run3/` | 21 | 808 MiB | Run 3 checkpoints (seg, joints, weights, diffusion_weights, inpainting) |
+| `checkpoints_run4/` | — | — | Run 4 checkpoints (seg, inpainting) |
 | ~~`curated_diverse/`~~ | — | — | **DELETED** (ArtStation, prohibited) |
 | `encoder_features/` | 11,434 | 41.9 GiB | Precomputed seg encoder features for weight training (float16) |
 | `fbanimehq/` | 304,889 | 11.4 GiB | FBAnimeHQ face/body crops |
 | `gemini_diverse/` | 1,164 | 55 MiB | 221 Gemini pseudo-labeled examples (seg + normals + draw_order). 698 training images ingested locally, pending upload. |
 | `humanrig/` | 262,983 | 16.2 GiB | HumanRig rendered chars + joints + weights + Marigold normals (run 3) |
 | ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
-| `logs/` | 61 | 10.8 MiB | Training logs (runs 1-3) |
-| `models/` | 10 | 186 MiB | ONNX exports (seg, joints, weights, diffusion_weights, inpainting) |
+| `logs/` | — | — | Training logs (runs 1-4) |
+| `models/` | 10 | 186 MiB | ONNX exports — run 3 (seg, joints, weights, diffusion_weights, inpainting) |
+| `models/onnx_run4/` | 4 | — | ONNX exports — run 4 (segmentation, joint_refinement, weight_prediction, inpainting) |
 | `tars/` | 12 | 44.9 GiB | Tar-packed datasets for fast A100 setup (see below) |
 | `unirig/` | 80,980 | 52.7 GiB | UniRig rigged meshes + 14,950 weight.json uploaded |
 
@@ -234,6 +236,7 @@ Each training run follows this automated pattern:
 | `training/run_second.sh` | Second run (abandoned): enrich → train → upload |
 | `training/run_third.sh` | Third run: Marigold enrich → train → upload → tar |
 | `training/run_fourth.sh` | Fourth run: quality filter → seg fine-tune → inpainting → ONNX → upload |
+| `training/run_four_five.sh` | Run 4.5: SAM2 pseudo-labels → loss weighting → seg fix → ONNX → upload |
 | `training/run_fifth.sh` | Fifth run: joints retrain (posed GT) → seg fine-tune → weights refresh → ONNX → upload |
 | `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
@@ -284,15 +287,8 @@ Fixes deployed during run 2 (available for run 3):
 ## Model 1: Segmentation (multi-head: seg + depth + normals)
 What it does: Takes a 512×512 character image → outputs 22-class body region map (head, chest, arms, legs, etc.), pixel-level depth map, 3-channel surface normals, and confidence mask. This is the foundation — it tells Strata which pixels belong to which body part, how deep they are, and which direction they face. The depth and normals heads are distilled from Marigold LCM (knowledge distillation: big diffusion model labels → small MobileNetV3 student). One forward pass, three outputs.
 
-Score: **0.5453 mIoU** (run 1, epoch 94/100, March 6 2026). Run 2 regressed to 0.38 (killed early).
-
-### Run 3 changes (code ready, not yet trained):
-- Depth head: retrained with Marigold depth labels (replaces draw_order)
-- Normals head: new 3-channel output (tanh), L1 loss against Marigold normals labels
-- ~14K+ examples with depth.png + normals.png (segmentation, live2d, humanrig, unirig)
-- ONNX outputs: segmentation, depth, normals, confidence, encoder_features (5 heads)
-- PRD for Strata Rust runtime changes: `docs/prd-segmentation-model-v2.md`
-- Goal: mIoU 0.55+ (recover from run 2), depth + normals quality approaching Marigold
+Score (run 1): **0.5453 mIoU** (epoch 94/100, March 6 2026). Run 2 regressed to 0.38 (killed early). Run 3 regressed to 0.3728 (noisy Meshy CC0 data).
+Score (run 4): **0.4389 mIoU** (epoch 139/143, March 11 2026). Resumed from run 1 checkpoint, fine-tuned 50 epochs at 5e-5 LR with label smoothing 0.05. 30,086 train / 3,717 val examples. Did not recover run 1 quality — quality filter helped but dataset composition changed (no Mixamo/live2d, added Gemini diverse).
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
@@ -312,7 +308,8 @@ Score (run 3, geometry-only): **0.023137 MAE** (epoch 18/100, early stopped at 3
 ## Model 4: Inpainting
 U-Net that takes a character image with occluded/missing body regions (e.g., arm hidden behind body) and fills in the missing pixels. Currently Strata falls back to "EdgeExtend" (dilates visible edge pixels outward), which looks rough. A trained inpainting model would produce much cleaner fills.
 
-Score: **BROKEN** — run 1 failed. Root cause: `discover_images()` used `rglob("*.png")` which grabbed segmentation masks and depth maps as source images, producing almost no valid pairs. Fixed in commit `011c3ba` — now uses `glob("*/image.png")`. Also capped at 15K source images (~45K pairs). Not retrained in run 3 — scheduled for run 4.
+Score (run 1): **BROKEN** — data loader bug (`rglob("*.png")` grabbed masks as source images). Fixed in commit `011c3ba`.
+Score (run 4): **0.0028 val/l1** (epoch 33/50, March 11 2026). 35,769 train / 4,542 val examples (from 44,668 total pairs). Perceptual loss enabled (weight=0.100). Training cut short at epoch 33 when instance was destroyed — still improving. Best val/l1 was 0.0028 at epoch 33.
 
 ## Model 5: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
@@ -344,50 +341,101 @@ Seg and joints trained from scratch. Weights trained with split_loader fix (UniR
 - **precompute_encoder_features.py**: Added float16 saving + MAX_VERTICES=2048 cap to prevent disk exhaustion
 - **Disk space**: Original float32 uncapped encoder features filled 200GB; capped float16 uses ~42GB for 11K examples
 
-## Fourth Training Run — PLAN
+## Fourth Training Run (March 11 2026, A100 Lean) — COMPLETE
 
 **Goal: Ship-ready models 1-4.** Script: `training/run_fourth.sh`
 
-### Pre-Run 4 Checklist
-1. [x] **Save run 1 seg checkpoint** — saved to bucket as `checkpoints_run1/segmentation/best.pt`. Run 3's seg (0.3728) is worse — run 4 resumes from run 1.
-2. [x] **Finish run 3** — encoder features (11,434) + diffusion weights (0.0216 MAE) trained. All checkpoints uploaded as `checkpoints_run3/`.
-3. [x] **Ingest Gemini images** — 221 examples pseudo-labeled with run 1's seg checkpoint. Uploaded to bucket as `gemini_diverse/`.
-4. [x] **Quality filter** — `scripts/filter_seg_quality.py` integrated into seg dataset loader. Runs on A100 during training.
-5. [x] **Push all code fixes** — split_loader, weight_dataset, precompute, filter script, gemini adapter, seg enrich depth key fix all pushed to main.
+Seg resumed from run 1 checkpoint (0.545 mIoU) and fine-tuned 50 epochs. Inpainting trained for the first time with fixed data loader (35K pairs). ONNX models exported to `models/onnx_run4/`. All checkpoints uploaded to bucket as `checkpoints_run4/`. Instance destroyed.
 
-### Pseudo-Labeling Strategy (self-training loop)
-Run 1's seg model (0.545 mIoU) pseudo-labels Gemini images → run 4 trains on them → run 4's improved model re-labels Gemini data at the end of the run (step 7 of `run_fourth.sh`), bootstrapping better labels for future runs.
+### Run 4 Results
 
-### Run 4 Strategy
+| Model | Score | vs Previous | Notes |
+|-------|-------|-------------|-------|
+| Segmentation | 0.4389 mIoU (epoch 139/143) | Regressed from run 1's 0.545 | Resumed from run 1, but different dataset composition |
+| Joints | Not retrained | Keeps run 3 (0.001206) | Good enough |
+| Weights | Not retrained | Keeps run 3 (0.023 MAE) | 3.6x better than run 1 |
+| Inpainting | 0.0028 val/l1 (epoch 33/50) | **First successful training** | Cut short — instance destroyed while still improving |
 
-| Step | Task | Est. Time |
-|------|------|-----------|
-| 0 | Download run 1 seg + run 3 joints/weights checkpoints | ~2 min |
-| 1 | Download Gemini diverse dataset | ~2 min |
-| 2 | Run quality filter on seg masks | ~10 min |
-| 3 | Marigold normals/depth enrichment on new data | ~30 min |
-| 4 | **Train segmentation** — resume from run 1 (0.545 mIoU), fine-tune 50 epochs at 5e-5 LR, label smoothing 0.05 | ~5 hrs (6 min/epoch × 50) |
-| 5 | Generate inpainting pairs + train inpainting | ~1 hr |
-| 6 | ONNX export (all 4 models) | ~5 min |
-| 7 | Re-enrich Gemini data with new seg model (bootstrap for run 5) | ~5 min |
-| 8 | Upload to bucket | ~5 min |
+### Run 4 Quality Filter Results
+- humanrig: 11,434 total → 11,402 passed, 32 rejected (0.3%)
+- unirig: 10,095 total → 9,286 passed, 809 rejected (8.0%)
+- meshy_cc0: 0 masks found (no seg masks in lean download)
+- meshy_cc0_textured: 0 masks found
+- gemini_diverse: 221 total → 220 passed, 1 rejected (0.5%)
 
-**NOT retraining in run 4**: Joints (0.001206 is good enough), Weights (0.023 MAE is 3.6x better than run 1).
+### Run 4 Enrichment
+- Gemini diverse: 163 normals + 221 depth maps enriched via Marigold LCM (~4 img/s on A100)
 
 ### Run 4 Training Data
-- 30,021 train / 3,711 val (loaded on A100)
-- Datasets: humanrig, meshy_cc0, meshy_cc0_textured, meshy_cc0_unrigged, anime_seg, fbanimehq, gemini_diverse
+- Segmentation: 30,086 train / 3,717 val (from 47,654 before split filter), 1,471 with depth, 1,471 with normals
+- Inpainting: 35,769 train / 4,542 val (from 44,668 total pairs)
+- Datasets: humanrig, meshy_cc0, meshy_cc0_textured, anime_seg, fbanimehq, gemini_diverse
 - Note: unirig not downloaded (42GB too large for lean mode)
 - Note: live2d removed (prohibited license)
 
-### Run 4 Seg Data Strategy
-- **Quality filter** per-example masks: reject <4 regions, >70% single region, missing head/torso
-- **Keep**: humanrig (11K, ground-truth), anime_seg (14K binary), fbanimehq (~101K), gemini_diverse (221 pseudo-labeled)
-- **Filter**: meshy_cc0 + meshy_cc0_textured — keep only examples that pass quality filter
-- **New**: meshy_cc0_unrigged (~20K, image+depth+normals only, no seg masks)
-- **Remove**: live2d (prohibited license)
-- **Label smoothing**: 0.05 to reduce impact of remaining noisy labels
-- **Expected**: mIoU 0.55-0.65 (recover run 1 quality + gain from cleaner data + Gemini domain diversity)
+### Run 4 Seg Analysis
+Resumed from run 1's 0.545 mIoU checkpoint but regressed to 0.4389. The dataset composition changed significantly from run 1 (no Mixamo/live2d ground truth, replaced with quality-filtered auto-rigged data + pseudo-labeled Gemini). The seg model needs higher-quality ground-truth data to improve — run 5's expanded Gemini dataset (698 images) and humanrig_posed (45K GT examples) should help.
+
+### Run 4 Inpainting Analysis
+First successful inpainting training — the fixed data loader found 44,668 valid pairs (vs ~3 in run 1). Training was progressing well (val/l1 dropped from 0.0087 → 0.0028 over 33 epochs) but was cut short when the instance was destroyed. The model was still improving — run 5 should continue training from this checkpoint.
+
+## Run 4.5 — Seg Fix (PLANNED)
+
+**Goal: Break past 0.545 mIoU with SAM2 pseudo-labels + per-dataset loss weighting.** Script: `training/run_four_five.sh`
+
+Focused seg-only run (~3-4 hrs on A100). Joints, weights, inpainting NOT retrained.
+
+### Why Seg Keeps Regressing
+Run 1 hit 0.545 with Mixamo (1,598 GT masks) + live2d (844) — small but high-quality ground-truth. Those datasets were removed (prohibited licenses). Runs 2-4 replaced them with noisier auto-rigged + pseudo-labeled data, and seg regressed to 0.4389.
+
+### Two Fixes
+
+**1. SAM2 + joint-conditioned pseudo-labeling** (`scripts/run_sam2_pseudolabel.py`):
+- SAM2 produces precise segment boundaries (sharper than our 0.545 model)
+- Joint positions from joints.json assign each segment to a body region
+- Applied to anime_seg (~14K) and gemini_diverse (~700) — replacing binary fg/bg and noisy model pseudo-labels
+- Result: 22-class masks with SAM2-quality boundaries and joint-based region semantics
+
+**2. Per-dataset loss weighting** (code change in `train_segmentation.py` + `segmentation_dataset.py`):
+- Each dataset directory gets a configurable weight multiplier in the YAML config
+- Ground-truth data (humanrig: 3.0) weighted higher than noisy data
+- SAM2-labeled data gets intermediate weight (gemini_diverse: 2.5, anime_seg: 1.5)
+
+**3. Drop fbanimehq** — 101K binary fg/bg examples excluded entirely. They can't teach 22-class regions and were drowning the signal even at low weight.
+
+### Run 4.5 Strategy
+
+| Step | Task | Est. Time |
+|------|------|-----------|
+| 0 | Download run 4 seg checkpoint + SAM2 model | ~5 min |
+| 1 | Download datasets | ~10 min |
+| 2 | SAM2 pseudo-label anime_seg + gemini_diverse | ~1-2 hrs |
+| 3 | Quality filter (re-run with SAM2 masks) | ~5 min |
+| 4 | Marigold normals/depth enrichment | ~10 min |
+| 5 | Train seg (60 epochs, 3e-5 LR, loss weighting) | ~2-3 hrs |
+| 6 | ONNX export (seg only) | ~2 min |
+| 7 | Upload to bucket | ~5 min |
+
+### Run 4.5 Training Data
+- humanrig: ~11,400 (GT 22-class, weight 3.0)
+- meshy_cc0 + meshy_cc0_textured: ~15,900 (quality-filtered, weight 1.0)
+- anime_seg: ~14,000 (SAM2 pseudo-labeled 22-class, weight 1.5)
+- gemini_diverse: ~700 (SAM2 pseudo-labeled 22-class, weight 2.5)
+- fbanimehq: EXCLUDED (binary fg/bg only, no 22-class signal)
+- **Total: ~42K examples** (was ~140K with fbanimehq — smaller but cleaner)
+
+### Run 4.5 Config Differences from Run 4
+- `dataset_weights`: humanrig 3.0, gemini_diverse 2.5, anime_seg 1.5
+- fbanimehq excluded entirely
+- `learning_rate`: 3e-5 (lower than run 4's 5e-5 for stability with weighted loss)
+- `label_smoothing`: 0.03 (lower than run 4's 0.05 — SAM2 labels are cleaner)
+- `epochs`: 60 (more patience for weighted loss convergence)
+- `early_stopping_patience`: 20
+
+### Key Files
+- `scripts/run_sam2_pseudolabel.py` — SAM2 + joint-conditioned region assignment
+- `training/configs/segmentation_a100_run4_5.yaml` — run 4.5 seg config
+- `training/run_four_five.sh` — A100 orchestration (7 steps)
 
 ## Fifth Training Run — IN PROGRESS
 

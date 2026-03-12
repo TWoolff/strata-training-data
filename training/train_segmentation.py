@@ -118,16 +118,21 @@ def compute_loss(
         names to their scalar values (for logging).
     """
     device = outputs["segmentation"].device
+    sample_weights = targets["dataset_weight"].to(device)  # [B]
 
     # Segmentation: CrossEntropyLoss with class weights + optional label smoothing
+    # Use reduction="none" for per-sample weighting, then weighted mean
     label_smoothing = loss_weights.get("label_smoothing", 0.0)
-    seg_loss = F.cross_entropy(
+    seg_loss_per_pixel = F.cross_entropy(
         outputs["segmentation"],
         targets["segmentation"],
         weight=class_weights.to(device),
         ignore_index=-1,
         label_smoothing=label_smoothing,
-    )
+        reduction="none",
+    )  # [B, H, W]
+    per_sample_seg = seg_loss_per_pixel.mean(dim=(1, 2))  # [B]
+    seg_loss = (per_sample_seg * sample_weights).mean()
 
     # Depth: L1 loss, only for examples that have Marigold depth labels
     has_depth = targets["has_depth"]  # [B] bool
@@ -147,11 +152,14 @@ def compute_loss(
     else:
         normals_loss = torch.tensor(0.0, device=device)
 
-    # Confidence: BCE loss
-    conf_loss = F.binary_cross_entropy(
+    # Confidence: BCE loss with per-sample weighting
+    conf_loss_per_pixel = F.binary_cross_entropy(
         outputs["confidence"],
         targets["confidence_target"],
-    )
+        reduction="none",
+    )  # [B, 1, H, W]
+    per_sample_conf = conf_loss_per_pixel.mean(dim=(1, 2, 3))  # [B]
+    conf_loss = (per_sample_conf * sample_weights).mean()
 
     # Weighted sum
     w_seg = loss_weights.get("segmentation_weight", 1.0)
@@ -212,6 +220,7 @@ def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
         "normals": torch.stack([b["normals"] for b in batch]),
         "has_normals": torch.tensor([b["has_normals"] for b in batch], dtype=torch.bool),
         "confidence_target": torch.stack([b["confidence_target"] for b in batch]),
+        "dataset_weight": torch.tensor([b["dataset_weight"] for b in batch], dtype=torch.float32),
     }
 
 

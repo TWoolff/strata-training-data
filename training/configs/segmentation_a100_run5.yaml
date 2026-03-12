@@ -28,6 +28,15 @@ data:
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    humanrig: 3.0                        # Ground-truth 22-class — highest quality
+    unirig: 2.0                          # Ground-truth 22-class from auto-rig
+    vroid_cc0: 3.0                       # Ground-truth 22-class from VRoid
+    meshy_cc0: 1.0                       # Quality-filtered auto-rig
+    meshy_cc0_textured: 1.0              # Quality-filtered auto-rig
+    gemini_diverse: 2.0                  # SAM2 pseudo-labeled 2D illustrations
+    anime_seg: 0.3                       # Binary fg/bg only — low signal for 22-class
+    fbanimehq: 0.3                       # Binary fg/bg + joints — low signal for 22-class
 
 augmentation:
   horizontal_flip: true

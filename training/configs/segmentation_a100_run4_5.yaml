@@ -1,0 +1,61 @@
+# Run 4.5 — segmentation fix config
+# Strategy: SAM2 pseudo-labels + per-dataset loss weighting to break past 0.545 mIoU
+# Key changes from run 4:
+#   - Per-dataset loss weighting (upweight GT, downweight noisy binary-only data)
+#   - SAM2 pseudo-labels on anime_seg + gemini_diverse (sharper boundaries than model pseudo-labels)
+#   - Resume from run 4 best.pt (0.4389 mIoU)
+#   - 60 epochs (longer — loss weighting changes convergence dynamics)
+#
+# Target: mIoU > 0.55
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: false             # Will resume from run 4 checkpoint
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"            # HumanRig: 11,434, ground-truth 22-class
+    - "./data_cloud/meshy_cc0"           # Meshy CC0 flat: quality-filtered 22-class
+    - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: quality-filtered 22-class
+    - "./data_cloud/anime_seg"           # anime_seg: 14K, SAM2 pseudo-labeled 22-class
+    - "./data_cloud/gemini_diverse"      # Gemini: ~700, SAM2 pseudo-labeled 22-class
+    # fbanimehq EXCLUDED — 101K binary fg/bg examples dilute 22-class signal
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    humanrig: 3.0                        # Ground-truth 22-class — highest quality
+    meshy_cc0: 1.0                       # Quality-filtered auto-rig
+    meshy_cc0_textured: 1.0              # Quality-filtered auto-rig
+    gemini_diverse: 2.5                  # SAM2 pseudo-labeled — good boundaries + domain diversity
+    anime_seg: 1.5                       # SAM2 pseudo-labeled — was binary, now has 22-class
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 32
+  num_workers: 8
+  epochs: 60                             # Longer — loss weighting changes convergence
+  optimizer: "adamw"
+  learning_rate: 3.0e-5                  # Slightly lower than run 4 (5e-5) for stability
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.5
+  normals_weight: 0.5
+  confidence_weight: 0.1
+  label_smoothing: 0.03                  # Lower than run 4 (0.05) — SAM2 labels are cleaner
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 20            # More patience — weighted loss may plateau then improve
+  early_stopping_metric: "val/miou"

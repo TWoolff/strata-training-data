@@ -76,6 +76,8 @@ class DatasetConfig:
     split_seed: int = 42
     split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
+    dataset_weights: dict[str, float] = field(default_factory=dict)
+
     @classmethod
     def from_dict(cls, d: dict) -> DatasetConfig:
         """Build config from a flat or nested dict (e.g. parsed YAML)."""
@@ -98,6 +100,7 @@ class DatasetConfig:
                 ratios.get("val", 0.1),
                 ratios.get("test", 0.1),
             ),
+            dataset_weights=data.get("dataset_weights", {}),
         )
 
 
@@ -116,6 +119,7 @@ class _Example:
     normals_path: Path | None
     metadata_path: Path | None
     example_id: str
+    dataset_weight: float = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -300,9 +304,21 @@ class SegmentationDataset:
                 continue
             layout = _detect_layout(dataset_dir)
             if layout == "flat":
-                all_examples.extend(_discover_flat(dataset_dir))
+                dir_examples = _discover_flat(dataset_dir)
             else:
-                all_examples.extend(_discover_per_example(dataset_dir))
+                dir_examples = _discover_per_example(dataset_dir)
+
+            # Assign per-dataset loss weight
+            weight = self.config.dataset_weights.get(dataset_dir.name, 1.0)
+            for ex in dir_examples:
+                ex.dataset_weight = weight
+            if weight != 1.0 and dir_examples:
+                logger.info(
+                    "  %s: %d examples, dataset_weight=%.2f",
+                    dataset_dir.name, len(dir_examples), weight,
+                )
+
+            all_examples.extend(dir_examples)
 
         # Filter by split
         self.examples = [
@@ -421,6 +437,7 @@ class SegmentationDataset:
             "normals": normals_tensor,
             "has_normals": has_normals,
             "confidence_target": confidence_tensor,
+            "dataset_weight": ex.dataset_weight,
         }
 
     # -----------------------------------------------------------------------
