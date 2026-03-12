@@ -162,6 +162,110 @@ def generate_sam2_masks(
 # ---------------------------------------------------------------------------
 
 
+def assign_regions_spatial(
+    sam2_masks: list[dict],
+    image_shape: tuple[int, int],
+    alpha: np.ndarray | None = None,
+) -> np.ndarray:
+    """Assign SAM2 segments to body regions using spatial heuristics (no joints).
+
+    Uses vertical position of each segment's centroid to assign regions:
+    - Top ~15%: head (1)
+    - 15-20%: neck (2)
+    - 20-40%: chest (3) or shoulders/arms based on horizontal position
+    - 40-50%: spine (4)
+    - 50-55%: hips (5)
+    - 55-75%: upper legs (14/17) based on left/right
+    - 75-90%: lower legs (15/18)
+    - 90-100%: feet (16/19)
+    Arms are assigned based on horizontal position (left third / right third).
+
+    Args:
+        sam2_masks: SAM2 masks sorted by quality (best first).
+        image_shape: (H, W) of the image.
+        alpha: Optional alpha channel [H, W] uint8.
+
+    Returns:
+        Segmentation mask [H, W] uint8 with region IDs (0-21).
+    """
+    h, w = image_shape
+    result = np.zeros((h, w), dtype=np.uint8)
+    assigned = np.zeros((h, w), dtype=bool)
+
+    # Find foreground bounding box from alpha
+    if alpha is not None:
+        fg_mask = alpha > 0
+        if fg_mask.any():
+            fg_ys, fg_xs = np.where(fg_mask)
+            bbox_top, bbox_bot = fg_ys.min(), fg_ys.max()
+            bbox_left, bbox_right = fg_xs.min(), fg_xs.max()
+        else:
+            bbox_top, bbox_bot, bbox_left, bbox_right = 0, h - 1, 0, w - 1
+    else:
+        bbox_top, bbox_bot, bbox_left, bbox_right = 0, h - 1, 0, w - 1
+
+    fg_h = max(bbox_bot - bbox_top, 1)
+    fg_w = max(bbox_right - bbox_left, 1)
+    mid_x = bbox_left + fg_w / 2
+
+    for mask_info in sam2_masks:
+        seg_mask = mask_info["segmentation"]
+        available = seg_mask & ~assigned
+        if available.sum() < 10:
+            continue
+
+        ys, xs = np.where(available)
+        centroid_y = ys.mean()
+        centroid_x = xs.mean()
+
+        # Normalize position relative to foreground bounding box
+        rel_y = (centroid_y - bbox_top) / fg_h  # 0=top, 1=bottom
+        rel_x = (centroid_x - mid_x) / (fg_w / 2)  # -1=left, 0=center, 1=right
+        is_left = rel_x < -0.15
+        is_right = rel_x > 0.15
+
+        # Assign region based on vertical position
+        if rel_y < 0.15:
+            region_id = 1  # head
+        elif rel_y < 0.20:
+            region_id = 2  # neck
+        elif rel_y < 0.40:
+            if is_left:
+                region_id = 7  # upper_arm_l
+            elif is_right:
+                region_id = 11  # upper_arm_r
+            else:
+                region_id = 3  # chest
+        elif rel_y < 0.50:
+            if is_left:
+                region_id = 8  # forearm_l
+            elif is_right:
+                region_id = 12  # forearm_r
+            else:
+                region_id = 4  # spine
+        elif rel_y < 0.55:
+            if is_left:
+                region_id = 9  # hand_l
+            elif is_right:
+                region_id = 13  # hand_r
+            else:
+                region_id = 5  # hips
+        elif rel_y < 0.75:
+            region_id = 14 if rel_x < 0 else 17  # upper_leg_l/r
+        elif rel_y < 0.90:
+            region_id = 15 if rel_x < 0 else 18  # lower_leg_l/r
+        else:
+            region_id = 16 if rel_x < 0 else 19  # foot_l/r
+
+        result[available] = region_id
+        assigned[available] = True
+
+    if alpha is not None:
+        result[alpha == 0] = 0
+
+    return result
+
+
 def assign_regions(
     sam2_masks: list[dict],
     joints: dict[str, tuple[int, int, float]],
@@ -194,8 +298,8 @@ def assign_regions(
     assigned = np.zeros((h, w), dtype=bool)  # track which pixels are assigned
 
     if not joints:
-        logger.warning("No valid joints — returning empty mask")
-        return result
+        logger.warning("No valid joints — falling back to spatial assignment")
+        return assign_regions_spatial(sam2_masks, image_shape, alpha)
 
     # Precompute joint positions as arrays for distance calculations
     joint_names = list(joints.keys())
@@ -378,14 +482,13 @@ def process_directory(
     )
     logger.info("SAM2 loaded, points_per_side=%d", points_per_side)
 
-    # Discover examples
+    # Discover examples (joints.json is optional — spatial fallback used if missing)
     examples: list[Path] = []
     for child in sorted(input_dir.iterdir()):
         if not child.is_dir():
             continue
         image_path = child / "image.png"
-        joints_path = child / "joints.json"
-        if not image_path.exists() or not joints_path.exists():
+        if not image_path.exists():
             continue
         if only_missing and (child / "segmentation.png").exists():
             continue
@@ -406,33 +509,61 @@ def process_directory(
             alpha = np.array(img_pil)[:, :, 3]
             img_rgb = np.array(img_pil.convert("RGB"))
 
-            # Load joints
-            joints = load_joints(example_dir / "joints.json")
-            if len(joints) < 3:
-                logger.debug("Too few joints (%d) for %s — skipping", len(joints), example_dir.name)
-                stats["skipped"] += 1
-                continue
+            # Load joints (optional — spatial fallback if missing)
+            joints_path = example_dir / "joints.json"
+            has_joints = joints_path.exists()
+            if has_joints:
+                joints = load_joints(joints_path)
+                if len(joints) < 3:
+                    joints = {}
+                    has_joints = False
+            else:
+                joints = {}
 
             # Generate SAM2 masks
             sam2_masks = generate_sam2_masks(img_rgb, mask_generator)
 
-            # Assign regions
+            # Assign regions (joint-based or spatial fallback)
             seg_mask = assign_regions(sam2_masks, joints, img_rgb.shape[:2], alpha=alpha)
 
             # Cleanup small regions
             seg_mask = cleanup_mask(seg_mask, min_region_size=min_region_size)
 
             # Quality metrics
-            metrics = compute_quality_metrics(seg_mask, joints, alpha=alpha)
+            seg_source = "sam2_joint" if has_joints else "sam2_spatial"
+            unique_regions = set(np.unique(seg_mask)) - {0}
+            num_regions = len(unique_regions)
+
+            if has_joints:
+                metrics = compute_quality_metrics(seg_mask, joints, alpha=alpha)
+            else:
+                # Spatial mode: no joints to match against
+                fg_pixels = (seg_mask > 0).sum() if alpha is None else ((seg_mask > 0) & (alpha > 0)).sum()
+                total_fg = (alpha > 0).sum() if alpha is not None else (seg_mask > 0).sum()
+                metrics = {
+                    "num_regions": num_regions,
+                    "fg_coverage": float(fg_pixels / max(total_fg, 1)),
+                    "joints_matched": 0,
+                    "joints_total": 0,
+                    "joints_match_rate": 1.0,  # no joints to fail
+                }
             metrics["example_id"] = example_dir.name
+            metrics["source"] = seg_source
             all_metrics.append(metrics)
 
-            # Skip low-quality results
-            if metrics["num_regions"] < 3 or metrics["joints_match_rate"] < 0.3:
+            # Skip low-quality results (spatial mode: only check region count)
+            min_regions = 3 if has_joints else 2
+            if num_regions < min_regions:
                 logger.debug(
-                    "Low quality for %s (regions=%d, match=%.1f%%) — skipping",
-                    example_dir.name, metrics["num_regions"],
-                    metrics["joints_match_rate"] * 100,
+                    "Low quality for %s (regions=%d) — skipping",
+                    example_dir.name, num_regions,
+                )
+                stats["skipped"] += 1
+                continue
+            if has_joints and metrics["joints_match_rate"] < 0.3:
+                logger.debug(
+                    "Low joint match for %s (%.1f%%) — skipping",
+                    example_dir.name, metrics["joints_match_rate"] * 100,
                 )
                 stats["skipped"] += 1
                 continue
@@ -447,9 +578,9 @@ def process_directory(
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
             else:
                 meta = {}
-            meta["segmentation_source"] = "sam2_joint"
+            meta["segmentation_source"] = seg_source
             meta["sam2_quality"] = {
-                "num_regions": metrics["num_regions"],
+                "num_regions": num_regions,
                 "joints_match_rate": round(metrics["joints_match_rate"], 3),
             }
             meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")

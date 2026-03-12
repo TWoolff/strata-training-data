@@ -165,12 +165,12 @@ done
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2. SAM2 pseudo-labeling on anime_seg + gemini_diverse
+# 2. SAM2 pseudo-labeling on gemini_diverse (spatial fallback — no joints needed)
 # ---------------------------------------------------------------------------
 echo "[2/7] Running SAM2 pseudo-labeling..."
 echo ""
 
-for ds in gemini_diverse anime_seg; do
+for ds in gemini_diverse; do
     ds_dir="./data_cloud/$ds"
     stats_file="$ds_dir/sam2_pseudolabel_stats.json"
     if [ -f "$stats_file" ]; then
