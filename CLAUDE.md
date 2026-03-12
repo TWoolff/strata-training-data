@@ -379,48 +379,51 @@ Resumed from run 1's 0.545 mIoU checkpoint but regressed to 0.4389. The dataset 
 ### Run 4 Inpainting Analysis
 First successful inpainting training — the fixed data loader found 44,668 valid pairs (vs ~3 in run 1). Training was progressing well (val/l1 dropped from 0.0087 → 0.0028 over 33 epochs) but was cut short when the instance was destroyed. The model was still improving — run 5 should continue training from this checkpoint.
 
-## Run 4.5 — Seg Fix (PLANNED)
+## Run 4.5 — Seg Fix (IN PROGRESS, March 12 2026, A100 $0.312/hr)
 
 **Goal: Break past 0.545 mIoU with SAM2 pseudo-labels + per-dataset loss weighting.** Script: `training/run_four_five.sh`
 
-Focused seg-only run (~3-4 hrs on A100). Joints, weights, inpainting NOT retrained.
+Focused seg-only run on A100. Joints, weights, inpainting NOT retrained.
 
 ### Why Seg Keeps Regressing
 Run 1 hit 0.545 with Mixamo (1,598 GT masks) + live2d (844) — small but high-quality ground-truth. Those datasets were removed (prohibited licenses). Runs 2-4 replaced them with noisier auto-rigged + pseudo-labeled data, and seg regressed to 0.4389.
 
-### Two Fixes
+### Three Fixes
 
-**1. SAM2 + joint-conditioned pseudo-labeling** (`scripts/run_sam2_pseudolabel.py`):
+**1. SAM2 + pseudo-labeling** (`scripts/run_sam2_pseudolabel.py`):
 - SAM2 produces precise segment boundaries (sharper than our 0.545 model)
-- Joint positions from joints.json assign each segment to a body region
-- Applied to anime_seg (~14K) and gemini_diverse (~700) — replacing binary fg/bg and noisy model pseudo-labels
-- Result: 22-class masks with SAM2-quality boundaries and joint-based region semantics
+- Two region assignment modes: joint-conditioned (if joints.json exists) or spatial heuristic fallback (vertical/horizontal position → body region)
+- Applied to gemini_diverse (~700 examples, ~30 min on A100) — spatial mode since no joints.json
+- anime_seg SAM2 labeling skipped (14K × 2.7s/img = 11 hrs, too slow for a quick fix run)
+- SAM2 installed from source: `pip install git+https://github.com/facebookresearch/sam2.git` (pip `segment-anything-2` package doesn't provide `sam2` module)
+- Config must use full path: `configs/sam2.1/sam2.1_hiera_l.yaml` (not just `sam2.1_hiera_l`)
 
 **2. Per-dataset loss weighting** (code change in `train_segmentation.py` + `segmentation_dataset.py`):
 - Each dataset directory gets a configurable weight multiplier in the YAML config
 - Ground-truth data (humanrig: 3.0) weighted higher than noisy data
 - SAM2-labeled data gets intermediate weight (gemini_diverse: 2.5, anime_seg: 1.5)
+- Implementation: `F.cross_entropy` with `reduction="none"` → per-sample mean → multiply by dataset weight → batch mean
 
 **3. Drop fbanimehq** — 101K binary fg/bg examples excluded entirely. They can't teach 22-class regions and were drowning the signal even at low weight.
 
 ### Run 4.5 Strategy
 
-| Step | Task | Est. Time |
-|------|------|-----------|
-| 0 | Download run 4 seg checkpoint + SAM2 model | ~5 min |
-| 1 | Download datasets | ~10 min |
-| 2 | SAM2 pseudo-label anime_seg + gemini_diverse | ~1-2 hrs |
-| 3 | Quality filter (re-run with SAM2 masks) | ~5 min |
-| 4 | Marigold normals/depth enrichment | ~10 min |
-| 5 | Train seg (60 epochs, 3e-5 LR, loss weighting) | ~2-3 hrs |
-| 6 | ONNX export (seg only) | ~2 min |
-| 7 | Upload to bucket | ~5 min |
+| Step | Task | Status |
+|------|------|--------|
+| 0 | Download run 4 seg checkpoint + SAM2 model (900MB) | Done |
+| 1 | Download datasets (from tars, ~20 min) | Done |
+| 2 | SAM2 pseudo-label gemini_diverse (~700 examples, spatial mode) | In progress |
+| 3 | Quality filter (re-run with SAM2 masks) | Pending |
+| 4 | Marigold normals/depth enrichment on gemini_diverse | Pending |
+| 5 | Train seg (60 epochs, 3e-5 LR, loss weighting) | Pending |
+| 6 | ONNX export (seg only) | Pending |
+| 7 | Upload to bucket | Pending |
 
 ### Run 4.5 Training Data
 - humanrig: ~11,400 (GT 22-class, weight 3.0)
 - meshy_cc0 + meshy_cc0_textured: ~15,900 (quality-filtered, weight 1.0)
-- anime_seg: ~14,000 (SAM2 pseudo-labeled 22-class, weight 1.5)
-- gemini_diverse: ~700 (SAM2 pseudo-labeled 22-class, weight 2.5)
+- anime_seg: ~14,000 (existing binary/pseudo-labeled, weight 1.5 — NOT re-labeled with SAM2)
+- gemini_diverse: ~700 (SAM2 pseudo-labeled 22-class with spatial fallback, weight 2.5)
 - fbanimehq: EXCLUDED (binary fg/bg only, no 22-class signal)
 - **Total: ~42K examples** (was ~140K with fbanimehq — smaller but cleaner)
 
@@ -432,8 +435,13 @@ Run 1 hit 0.545 with Mixamo (1,598 GT masks) + live2d (844) — small but high-q
 - `epochs`: 60 (more patience for weighted loss convergence)
 - `early_stopping_patience`: 20
 
+### Lessons Learned During Setup
+- SAM2 at `points_per_side=32` takes ~2.7s/image on A100 — 14K anime_seg would take 11 hrs
+- `gemini_diverse` examples from bucket have no `joints.json` — needed spatial fallback in SAM2 script
+- `cloud_setup.sh lean` downloads fbanimehq (14 GB) even though run 4.5 doesn't use it — kill after other downloads finish
+
 ### Key Files
-- `scripts/run_sam2_pseudolabel.py` — SAM2 + joint-conditioned region assignment
+- `scripts/run_sam2_pseudolabel.py` — SAM2 + joint-conditioned or spatial region assignment
 - `training/configs/segmentation_a100_run4_5.yaml` — run 4.5 seg config
 - `training/run_four_five.sh` — A100 orchestration (7 steps)
 
