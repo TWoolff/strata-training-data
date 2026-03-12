@@ -47,7 +47,12 @@ if [ -z "${BUCKET_ACCESS_KEY:-}" ] || [ -z "${BUCKET_SECRET:-}" ]; then
 fi
 
 # Check for pip packages
-pip install -q segment-anything-2 scipy diffusers transformers accelerate 2>/dev/null || true
+pip install -q scipy diffusers transformers accelerate 2>/dev/null || true
+# SAM2 must be installed from source (pip package doesn't provide 'sam2' module)
+if ! python -c "import sam2" 2>/dev/null; then
+    echo "  Installing SAM2 from source..."
+    pip install -q git+https://github.com/facebookresearch/sam2.git
+fi
 echo "  Dependencies checked."
 echo ""
 
