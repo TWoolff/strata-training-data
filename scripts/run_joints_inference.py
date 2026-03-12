@@ -42,7 +42,7 @@ def load_model(checkpoint_path: Path, device: str) -> torch.nn.Module:
     """Load the joints model from checkpoint."""
     from training.models.joint_model import JointModel
 
-    model = JointModel(num_joints=20, backbone="mobilenet_v3_large", pretrained_backbone=False)
+    model = JointModel(num_joints=20, pretrained_backbone=False)
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     state_dict = ckpt.get("model_state_dict", ckpt)
     model.load_state_dict(state_dict)
