@@ -426,7 +426,8 @@ def train(config: dict, resume_path: str | None = None, args: argparse.Namespace
     # ---- Model ----
     num_classes = model_cfg.get("num_classes", 22)
     pretrained = model_cfg.get("pretrained_backbone", True)
-    model = SegmentationModel(num_classes=num_classes, pretrained_backbone=pretrained)
+    backbone = model_cfg.get("backbone", "mobilenet_v3_large")
+    model = SegmentationModel(num_classes=num_classes, pretrained_backbone=pretrained, backbone=backbone)
     model = model.to(device)
 
     # ---- Class weights ----

@@ -1,16 +1,21 @@
 """Multi-head DeepLabV3+ segmentation model for Strata.
 
-Five output heads sharing a MobileNetV3-Large backbone:
+Five output heads sharing a configurable backbone:
 - **segmentation**: 22-class raw logits ``[B, 22, H, W]``
 - **depth**: monocular depth in [0, 1] via sigmoid ``[B, 1, H, W]``
 - **normals**: surface normals in [-1, 1] via tanh ``[B, 3, H, W]``
 - **confidence**: foreground confidence via sigmoid ``[B, 1, H, W]``
 - **encoder_features**: backbone activations for weight prediction ``[B, C, H/8, W/8]``
 
+Supported backbones:
+- ``mobilenet_v3_large`` (default, ~5M params) — via torchvision DeepLabV3
+- ``resnet50`` (~24M params) — via torchvision DeepLabV3
+- ``resnet101`` (~43M params) — via torchvision DeepLabV3
+- ``efficientnet_b3`` (~12M params) — custom DeepLabV3-style with ASPP
+
 The depth head is trained with Marigold LCM depth labels. The normals head is
 trained with Marigold LCM normal labels. Both are knowledge-distilled from the
-Marigold diffusion model into this lightweight MobileNetV3 student — one forward
-pass produces segmentation + depth + normals.
+Marigold diffusion model — one forward pass produces segmentation + depth + normals.
 
 ONNX contract:
 - Input ``"input"``: ``[1, 3, 512, 512]`` float32
@@ -24,16 +29,24 @@ ONNX contract:
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large
+from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large, deeplabv3_resnet50, deeplabv3_resnet101
 
 logger = logging.getLogger(__name__)
 
 NUM_CLASSES: int = 22  # 20 body regions + background + accessory
 ENCODER_FEATURE_SIZE: int = 64  # Downsampled feature map resolution
+
+SUPPORTED_BACKBONES = {
+    "mobilenet_v3_large",
+    "resnet50",
+    "resnet101",
+    "efficientnet_b3",
+}
 
 
 def _make_aux_head(in_channels: int, out_channels: int = 1) -> nn.Sequential:
@@ -46,28 +59,140 @@ def _make_aux_head(in_channels: int, out_channels: int = 1) -> nn.Sequential:
     )
 
 
+class _ASPPConv(nn.Sequential):
+    def __init__(self, in_ch: int, out_ch: int, dilation: int) -> None:
+        super().__init__(
+            nn.Conv2d(in_ch, out_ch, 3, padding=dilation, dilation=dilation, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+
+
+class _ASPPPooling(nn.Sequential):
+    def __init__(self, in_ch: int, out_ch: int) -> None:
+        super().__init__(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_ch, out_ch, 1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        size = x.shape[-2:]
+        for mod in self:
+            x = mod(x)
+        return F.interpolate(x, size=size, mode="bilinear", align_corners=False)
+
+
+class _ASPP(nn.Module):
+    """Atrous Spatial Pyramid Pooling (same design as torchvision DeepLabV3)."""
+
+    def __init__(self, in_ch: int, atrous_rates: tuple[int, ...] = (12, 24, 36), out_ch: int = 256) -> None:
+        super().__init__()
+        modules: list[nn.Module] = [
+            nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, 1, bias=False),
+                nn.BatchNorm2d(out_ch),
+                nn.ReLU(inplace=True),
+            )
+        ]
+        for rate in atrous_rates:
+            modules.append(_ASPPConv(in_ch, out_ch, rate))
+        modules.append(_ASPPPooling(in_ch, out_ch))
+        self.convs = nn.ModuleList(modules)
+        self.project = nn.Sequential(
+            nn.Conv2d(out_ch * (len(atrous_rates) + 2), out_ch, 1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        res = [conv(x) for conv in self.convs]
+        return self.project(torch.cat(res, dim=1))
+
+
+class _EfficientNetBackbone(nn.Module):
+    """Wrap an EfficientNet as a backbone returning dict with 'out' key."""
+
+    def __init__(self, pretrained: bool = True) -> None:
+        super().__init__()
+        from torchvision.models import efficientnet_b3, EfficientNet_B3_Weights
+
+        weights = EfficientNet_B3_Weights.IMAGENET1K_V1 if pretrained else None
+        eff = efficientnet_b3(weights=weights)
+        self.features = eff.features  # Sequential of blocks
+
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+        out = self.features(x)
+        return {"out": out}
+
+
+def _build_backbone_and_classifier(
+    backbone_name: str, num_classes: int, pretrained_backbone: bool,
+) -> tuple[nn.Module, nn.Module]:
+    """Build backbone + segmentation classifier for the given backbone name."""
+    weights_backbone = "IMAGENET1K_V1" if pretrained_backbone else None
+
+    if backbone_name == "mobilenet_v3_large":
+        base = deeplabv3_mobilenet_v3_large(
+            weights=None, weights_backbone=weights_backbone, num_classes=num_classes,
+        )
+        return base.backbone, base.classifier
+
+    if backbone_name == "resnet50":
+        base = deeplabv3_resnet50(
+            weights=None, weights_backbone=weights_backbone, num_classes=num_classes,
+        )
+        return base.backbone, base.classifier
+
+    if backbone_name == "resnet101":
+        base = deeplabv3_resnet101(
+            weights=None, weights_backbone=weights_backbone, num_classes=num_classes,
+        )
+        return base.backbone, base.classifier
+
+    if backbone_name == "efficientnet_b3":
+        backbone = _EfficientNetBackbone(pretrained=pretrained_backbone)
+        # Detect output channels
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, 64, 64)
+            ch = backbone(dummy)["out"].shape[1]
+        # Build ASPP classifier
+        classifier = nn.Sequential(
+            OrderedDict([
+                ("aspp", _ASPP(ch, atrous_rates=(12, 24, 36), out_ch=256)),
+                ("conv", nn.Conv2d(256, num_classes, 1)),
+            ])
+        )
+        return backbone, classifier
+
+    raise ValueError(f"Unsupported backbone: {backbone_name!r}. Choose from {SUPPORTED_BACKBONES}")
+
+
 class SegmentationModel(nn.Module):
-    """Multi-head DeepLabV3+ with MobileNetV3-Large backbone.
+    """Multi-head DeepLabV3+ with configurable backbone.
 
     Args:
         num_classes: Number of segmentation classes (default 22).
-        pretrained_backbone: Use ImageNet-pretrained MobileNetV3-Large weights.
+        pretrained_backbone: Use ImageNet-pretrained backbone weights.
+        backbone: Backbone architecture name. One of:
+            ``mobilenet_v3_large``, ``resnet50``, ``resnet101``, ``efficientnet_b3``.
     """
 
-    def __init__(self, num_classes: int = NUM_CLASSES, pretrained_backbone: bool = True) -> None:
+    def __init__(
+        self,
+        num_classes: int = NUM_CLASSES,
+        pretrained_backbone: bool = True,
+        backbone: str = "mobilenet_v3_large",
+    ) -> None:
         super().__init__()
         self.num_classes = num_classes
+        self.backbone_name = backbone
 
-        # Load the torchvision DeepLabV3 model to extract its components
-        weights_backbone = "IMAGENET1K_V1" if pretrained_backbone else None
-        base = deeplabv3_mobilenet_v3_large(
-            weights=None,
-            weights_backbone=weights_backbone,
-            num_classes=num_classes,
+        self.backbone, self.classifier = _build_backbone_and_classifier(
+            backbone, num_classes, pretrained_backbone,
         )
-
-        self.backbone = base.backbone
-        self.classifier = base.classifier  # ASPP → segmentation logits
 
         # Determine backbone output channels via dry run
         backbone_channels = self._detect_backbone_channels()
@@ -84,14 +209,7 @@ class SegmentationModel(nn.Module):
             dummy = torch.zeros(1, 3, 64, 64)
             features = self.backbone(dummy)
             out = features["out"]
-        channels = out.shape[1]
-        if channels != 960:
-            logger.warning(
-                "Expected 960 backbone channels (MobileNetV3-Large), got %d. "
-                "Auxiliary heads will adapt automatically.",
-                channels,
-            )
-        return channels
+        return out.shape[1]
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass producing all output heads.

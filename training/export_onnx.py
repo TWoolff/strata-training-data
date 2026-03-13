@@ -17,7 +17,7 @@ ONNX contracts (must match Rust runtime exactly):
 - ``segmentation.onnx``: input ``[1,3,512,512]`` →
   ``segmentation[1,22,512,512]``, ``depth[1,1,512,512]``,
   ``normals[1,3,512,512]``, ``confidence[1,1,512,512]``,
-  ``encoder_features[1,960,64,64]``
+  ``encoder_features[1,C,64,64]`` (C=960 MobileNetV3, 1536 EfficientNet-B3, 2048 ResNet-50)
 - ``joint_refinement.onnx``: input ``[1,3,512,512]`` →
   ``offsets[40]``, ``confidence[20]``, ``present[20]``
 - ``weight_prediction.onnx`` (weights model): input ``[1,3,512,512]`` →
@@ -315,6 +315,7 @@ def export_model(
     output_path: Path,
     *,
     validate: bool = True,
+    extra_kwargs: dict | None = None,
 ) -> Path:
     """Export a single model to ONNX format.
 
@@ -323,6 +324,8 @@ def export_model(
         checkpoint_path: Path to ``.pt`` checkpoint, or ``None`` for random weights.
         output_path: Path for the output ``.onnx`` file.
         validate: Run onnxruntime validation after export.
+        extra_kwargs: Additional keyword arguments to pass to the model constructor
+            (e.g. ``{"backbone": "efficientnet_b3"}`` for segmentation).
 
     Returns:
         Path to the exported ONNX file.
@@ -330,7 +333,10 @@ def export_model(
     config = MODEL_CONFIGS[model_name]
 
     # Build model
-    model = config["model_class"](**config["model_kwargs"])
+    kwargs = {**config["model_kwargs"]}
+    if extra_kwargs:
+        kwargs.update(extra_kwargs)
+    model = config["model_class"](**kwargs)
 
     # Load checkpoint if provided
     if checkpoint_path is not None:
@@ -631,6 +637,12 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Skip post-export onnxruntime validation.",
     )
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default=None,
+        help="Backbone for segmentation model (mobilenet_v3_large, resnet50, resnet101, efficientnet_b3).",
+    )
 
     args = parser.parse_args(argv)
 
@@ -639,6 +651,11 @@ def main(argv: list[str] | None = None) -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    # Build extra kwargs for model constructor (e.g. backbone for segmentation)
+    extra_kwargs = {}
+    if args.backbone:
+        extra_kwargs["backbone"] = args.backbone
+
     if args.export_all:
         if args.output_dir is None:
             parser.error("--output-dir is required when using --all")
@@ -646,13 +663,14 @@ def main(argv: list[str] | None = None) -> None:
         for name, config in MODEL_CONFIGS.items():
             checkpoint = _find_checkpoint(name) if args.checkpoint is None else args.checkpoint
             out_path = output_dir / config["default_filename"]
-            export_model(name, checkpoint, out_path, validate=not args.no_validate)
+            kw = extra_kwargs if name == "segmentation" else {}
+            export_model(name, checkpoint, out_path, validate=not args.no_validate, extra_kwargs=kw or None)
     else:
         if args.model is None:
             parser.error("--model is required (or use --all)")
         if args.output is None:
             args.output = Path(MODEL_CONFIGS[args.model]["default_filename"])
-        export_model(args.model, args.checkpoint, args.output, validate=not args.no_validate)
+        export_model(args.model, args.checkpoint, args.output, validate=not args.no_validate, extra_kwargs=extra_kwargs or None)
 
 
 def _find_checkpoint(model_name: str) -> Path | None:
