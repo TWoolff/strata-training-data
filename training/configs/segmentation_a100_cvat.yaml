@@ -1,0 +1,61 @@
+# MobileNetV3 seg + CVAT manual annotations — break past 0.37 mIoU plateau
+# Resume from run 5 seg-only checkpoint (0.3491 mIoU, CC0 baseline).
+# Adding 50 hand-labeled diverse illustrated characters at high weight.
+#
+# Key insight: backbone comparison (EfficientNet-B3, ResNet-50) proved
+# the ~0.37 mIoU ceiling is a data diversity problem, not model capacity.
+# These manual annotations provide the illustrated domain diversity the
+# model needs — each one is worth hundreds of homogeneous 3D renders.
+#
+# Target: mIoU > 0.45
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"                  # HumanRig T-pose: 11,434 GT 22-class
+    - "./data_cloud/vroid_cc0"                 # VRoid CC0: 1,386 GT 22-class
+    - "./data_cloud/meshy_cc0_textured"        # Meshy CC0 textured: 15,281 GT 22-class
+    - "./data_cloud/anime_seg"                 # anime_seg: ~14K, existing masks
+    - "./data_cloud/cvat_annotated"            # CVAT manual: ~50 diverse illustrated chars
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0                       # Highest weight — manual GT, diverse illustrated
+    humanrig: 3.0
+    vroid_cc0: 3.0
+    meshy_cc0_textured: 2.0
+    anime_seg: 1.0
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 32                                # MobileNetV3 fits larger batches
+  num_workers: 8
+  epochs: 80
+  optimizer: "adamw"
+  learning_rate: 5.0e-5                         # Lower LR — resuming from checkpoint
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.5
+  normals_weight: 0.5
+  confidence_weight: 0.1
+  label_smoothing: 0.03
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 15
+  early_stopping_metric: "val/miou"

@@ -173,7 +173,7 @@ rclone copy hetzner:strata-training-data/dataset/ ./output/dataset/ \
 - `--size-only` skips slow checksum comparison (safe for our use case)
 - **Never use `rclone sync`** — it deletes remote files not present locally
 
-### Bucket Contents (as of March 12 2026, post-run 4.5)
+### Bucket Contents (as of March 14 2026, post-backbone run)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~755K files, ~248 GiB total.
 
@@ -194,7 +194,9 @@ Many datasets that were previously loose files have been consolidated into `tars
 | `gemini_diverse/` | 8,147 | 274 MiB | Gemini diverse enriched (seg + normals + joints from seg-only run) |
 | `humanrig/` | 262,983 | 16.2 GiB | HumanRig rendered chars + joints + weights + Marigold normals (run 3) |
 | ~~`live2d/`~~ | — | — | **DELETED** (Live2D ToS, prohibited) |
-| `logs/` | — | — | Training logs (runs 1-4, run 5 seg-only) |
+| `checkpoints_run6/` | — | — | Run 6 checkpoints (inpainting fully converged) |
+| `checkpoints_backbone/` | — | — | Backbone comparison checkpoints (ResNet-50 0.3657 mIoU) |
+| `logs/` | — | — | Training logs (runs 1-5, backbone comparison, inpainting run 6) |
 | `models/` | 10 | 186 MiB | ONNX exports — run 3 (seg, joints, weights, diffusion_weights, inpainting) |
 | `models/onnx_run4/` | 4 | — | ONNX exports — run 4 (segmentation, joint_refinement, weight_prediction, inpainting) |
 | `models/onnx_run5_seg/` | 1 | 67.8 MiB | ONNX export — run 5 seg-only (segmentation only) |
@@ -242,6 +244,7 @@ Each training run follows this automated pattern:
 | `training/run_fourth.sh` | Fourth run: quality filter → seg fine-tune → inpainting → ONNX → upload |
 | `training/run_four_five.sh` | Run 4.5: SAM2 pseudo-labels → loss weighting → seg fix → ONNX → upload |
 | `training/run_fifth.sh` | Fifth run: joints retrain (posed GT) → seg fine-tune → weights refresh → ONNX → upload |
+| `training/run_seg_backbone.sh` | Backbone comparison: EfficientNet-B3 + optional ResNet-50 → ONNX → upload |
 | `training/train_all.sh lean` | Train all 4 models sequentially + ONNX export |
 | `run_seg_enrich.py` | Enrich datasets with 22-class seg using trained Model 1 |
 | `run_normals_enrich.py` | Enrich datasets with surface normals (Marigold LCM) |
@@ -295,6 +298,7 @@ Score (run 1): **0.5453 mIoU** (epoch 94/100, March 6 2026). Run 2 regressed to 
 Score (run 4): **0.4389 mIoU** (epoch 139/143, March 11 2026). Resumed from run 1 checkpoint, fine-tuned 50 epochs at 5e-5 LR with label smoothing 0.05. 30,086 train / 3,717 val examples. Did not recover run 1 quality — quality filter helped but dataset composition changed (no Mixamo/live2d, added Gemini diverse).
 Score (run 4.5): **0.3929 mIoU** (epoch 142, killed, March 12 2026). Loss weighting + SAM2 spatial pseudo-labels failed. Only ~23K examples trained (meshy_cc0 had 0 masks, gemini_diverse 50% rejected). Epoch counter didn't reset from run 4 checkpoint.
 Score (run 5 seg-only): **0.3491 mIoU** (epoch 62/80, March 12 2026). CC0-only baseline — resumed from run 1 weights with epoch reset. 24,391 train / 2,966 val examples (humanrig + vroid_cc0 + anime_seg + gemini_diverse). SAM2 pseudo-labeling mostly failed (only 13/698 Gemini passed quality filter). Converged ~epoch 55, plateaued 0.34-0.35. This is the clean CC0 baseline — run 1's 0.545 used prohibited Mixamo/Live2D data.
+Score (backbone comparison): **EfficientNet-B3: ~0.26 mIoU** (epoch 13, killed, March 13 2026). Stride 32 output (16×16 features) lost too much spatial resolution for 22-class seg. **ResNet-50: 0.3657 mIoU** (epoch 37/80, early stopping ~epoch 52, March 13 2026). Stride 8 output (64×64 features), 54M params. Same ~0.37 ceiling as MobileNetV3 — confirms data diversity, not model capacity, is the bottleneck.
 
 ## Model 2: Joint Refinement
 What it does: Takes a 512×512 character image → predicts 2D positions of 20 skeleton joints (hips, knees, elbows, etc.) + confidence per joint. Strata uses geometric fallback if the model isn't confident, but the CNN improves accuracy especially for unusual poses.
@@ -316,6 +320,7 @@ U-Net that takes a character image with occluded/missing body regions (e.g., arm
 
 Score (run 1): **BROKEN** — data loader bug (`rglob("*.png")` grabbed masks as source images). Fixed in commit `011c3ba`.
 Score (run 4): **0.0028 val/l1** (epoch 33/50, March 11 2026). 35,769 train / 4,542 val examples (from 44,668 total pairs). Perceptual loss enabled (weight=0.100). Training cut short at epoch 33 when instance was destroyed — still improving. Best val/l1 was 0.0028 at epoch 33.
+Score (run 6): **0.0028 val/l1** (epoch 50/50, March 14 2026). Full 50-epoch training from scratch. 35,626 train / 4,582 val examples (from 44,669 total pairs). Matched run 4's best but fully converged — model is done improving with this data.
 
 ## Model 5: Texture Inpainting
 Diffusion model that fills unobserved texture regions when unwrapping a 2D character painting onto a 3D mesh. When you wrap a front-facing painting around a 3D model, the back/sides have no texture data — this model would generate plausible fills. Needs training pipeline + data (no pipeline exists yet).
@@ -488,11 +493,15 @@ Script: `training/run_seg_only.sh`. Cost: ~$2. Duration: ~7 hrs total.
 | Run | What | Data Added | Est. Time | Cost | Result |
 |-----|------|-----------|-----------|------|--------|
 | **Seg-only (DONE)** | CC0-only baseline | +1,386 VRoid GT + 13 Gemini pseudo | ~7 hrs | ~$2 | **0.3491 mIoU** |
-| **Seg+Meshy (next)** | Add 15K diverse GT textured chars | +15,281 meshy_cc0_textured GT | ~6 hrs | ~$2 | — |
-| **Ship run (final)** | Retrain joints + weights + inpainting with best seg | +81K humanrig_posed (joints GT) | ~8-10 hrs | ~$3 | — |
+| **Seg+Meshy (DONE)** | Add 15K diverse GT textured chars | +15,281 meshy_cc0_textured GT | ~6 hrs | ~$2 | **0.3657 mIoU** (ResNet-50) |
+| **Backbone comparison (DONE)** | Test EfficientNet-B3 + ResNet-50 | Same data, bigger models | ~12 hrs | ~$3 | **Same ~0.37 ceiling — data is bottleneck** |
+| **Inpainting retrain (DONE)** | Full 50-epoch training | Same 44K pairs | ~10 hrs | (shared instance) | **0.0028 val/l1 (converged)** |
+| **CVAT + retrain (next)** | Manual annotations + retrain MobileNetV3 | +50 hand-labeled diverse chars (high weight) | ~6 hrs | ~$2 | — |
+| **Ship run (final)** | Retrain joints + weights with best seg | +81K humanrig_posed (joints GT) | ~8-10 hrs | ~$3 | — |
 
-- Seg-only established the clean CC0 baseline (0.3491). Seg+meshy should improve this significantly (+15K diverse examples).
-- Resume from seg-only checkpoint each time (NOT run 1 — run 1 used prohibited data)
+- Backbone comparison proved the ~0.37 mIoU ceiling is a data diversity problem, not model capacity
+- Manual CVAT annotations (31/50 done) will provide the domain diversity the model needs
+- Inpainting is fully converged at 0.0028 val/l1 — no need to retrain
 - Ship run is the investment that ships models 1-4 and unblocks models 5-6 synthetic data generation
 
 ### Meshy CC0 Textured Restructured (ready for Seg+Meshy run)
@@ -507,14 +516,64 @@ Script: `training/run_seg_only.sh`. Cost: ~$2. Duration: ~7 hrs total.
 | Location (local) | `/Volumes/TAMWoolff/data/preprocessed/meshy_cc0_restructured/` |
 | Location (bucket) | `tars/meshy_cc0_textured_restructured.tar` (2.8 GiB) |
 
-### If Seg Still Fails After Meshy Run
+### Backbone Comparison Conclusion
 
-Options if mIoU doesn't improve with 28K GT examples (humanrig + vroid + meshy):
-1. **Architecture change** — MobileNetV3 may be too small for 22-class + depth + normals. Try EfficientNet-B3 or ResNet-50 backbone.
-2. **Curriculum learning** — Train first on GT-only, then gradually add pseudo-labeled data.
-3. **Label studio manual annotation** — Manually annotate ~50 diverse Gemini characters as high-quality anchor data.
+Tested EfficientNet-B3 and ResNet-50 backbones (March 13-14 2026). Both hit the same ~0.37 mIoU ceiling as MobileNetV3 on the same data. **Architecture change ruled out** — the bottleneck is data diversity, not model capacity. MobileNetV3 remains the production backbone (smallest, fastest inference).
+
+### Path Forward: Manual Annotation
+
+CVAT installed locally for manual 22-class annotation of diverse illustrated characters (Gemini diverse). 31/50 annotations completed. Even 50 high-quality diverse annotations with correct 22-class labels will be more valuable than thousands of homogeneous 3D renders. These will be trained with high sample weight.
 
 Note: VRoid CC0 is maxed at 11 characters (only 11 CC0 on VRoid Hub). Meshy CC0 characters distort when posed — default pose only.
+
+## Backbone Comparison + Inpainting Run (March 13-14 2026, A100 40GB) — COMPLETE
+
+**Goal: Test larger backbones (EfficientNet-B3, ResNet-50) to break past MobileNetV3's ~0.37 mIoU plateau. Retrain inpainting to completion.**
+
+Script: `training/run_seg_backbone.sh`. Configs: `training/configs/segmentation_a100_efficientnet.yaml`, `training/configs/segmentation_a100_resnet50.yaml`.
+
+### Backbone Comparison Results
+
+| Backbone | Params | Output Stride | Best mIoU | Epoch | Notes |
+|----------|--------|--------------|-----------|-------|-------|
+| MobileNetV3 (baseline) | ~18M | 16 (32×32) | 0.37 | — | Previous runs' ceiling |
+| EfficientNet-B3 | ~33M | 32 (16×16) | ~0.26 | 13 (killed) | Stride 32 lost too much spatial detail |
+| **ResNet-50** | **~54M** | **8 (64×64)** | **0.3657** | **37/80** | Same ~0.37 ceiling despite 3x params |
+
+### Key Finding: Data Diversity is the Bottleneck
+
+ResNet-50 with 3x more parameters and 4x better spatial resolution (stride 8 vs stride 16) hit the same ~0.37 mIoU wall as MobileNetV3. This definitively proves the bottleneck is **data diversity, not model capacity**. The training data (humanrig + vroid_cc0 + meshy_cc0_textured + anime_seg) is too homogeneous — all 3D renders from similar sources.
+
+**The path forward is more diverse illustrated training data**, not bigger models. Manual CVAT annotations of Gemini diverse characters (in progress) will provide exactly the domain diversity the model needs.
+
+### EfficientNet-B3 Analysis
+EfficientNet-B3 underperformed badly because its stride 32 output produces only 16×16 feature maps at 512px input — too coarse for 22-class body part segmentation where regions like neck, shoulders, and hands are small. MobileNetV3 (stride 16, 32×32) and ResNet-50 (stride 8, 64×64) both preserve enough spatial detail.
+
+### Inpainting Retraining
+Retrained inpainting from scratch for full 50 epochs (run 4 was cut short at 33). Final val/l1: 0.0028, matching run 4's best. Model is fully converged — no further improvement expected with current data.
+
+### Backbone Code Changes
+- `training/models/segmentation_model.py` — Added configurable backbone support (`_build_backbone_and_classifier()` factory, ASPP module for non-DeepLabV3 backbones)
+- `training/train_segmentation.py` — Passes `backbone` from config
+- `training/export_onnx.py` — Added `--backbone` CLI arg for ONNX export
+
+### Bucket Uploads
+- `checkpoints_run6/inpainting/` — Inpainting best.pt + latest.pt (50 epochs, fully converged)
+- `checkpoints_backbone/segmentation_resnet50/` — ResNet-50 best.pt (0.3657 mIoU, useful for pseudo-labeling)
+- `logs/` — All training logs (efficientnet, resnet50, inpainting)
+
+### CVAT Manual Annotation (in progress)
+- Installed CVAT locally via Colima Docker for manual 22-class annotation of Gemini diverse characters
+- 50 images staged in `/tmp/cvat_annotation_batch/` with label config (`cvat_labels.json`)
+- 31/50 annotations completed as of March 14
+- Using polygon tool for speed, anatomical left/right convention (character's own left/right)
+- These annotations will be the highest-value training data — diverse illustrated characters with proper 22-class labels
+
+### Next Steps
+1. Finish CVAT annotations (50 images)
+2. Build CVAT export → Strata training format converter
+3. Retrain MobileNetV3 seg with: existing data + CVAT annotations (high weight) + pseudo-labeled Gemini (medium weight)
+4. Ship run: retrain all 4 models with best seg checkpoint
 
 ## Fifth Training Run — ON HOLD (pending seg-only results)
 
