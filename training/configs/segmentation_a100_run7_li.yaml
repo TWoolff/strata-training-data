@@ -34,7 +34,7 @@ data:
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   dataset_weights:
-    cvat_annotated: 4.0                  # Highest weight — hand-annotated diverse illustrated
+    cvat_annotated: 10.0                 # Highest weight — hand-annotated diverse illustrated
     gemini_li_converted: 3.0             # Expert annotations — diverse illustrated chars
     humanrig: 2.0                        # Ground-truth 22-class, but homogeneous 3D
     vroid_cc0: 2.5                       # Ground-truth 22-class, VRoid chars
