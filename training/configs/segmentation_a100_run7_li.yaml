@@ -7,6 +7,7 @@
 # provide exactly the domain diversity the model needs.
 #
 # Data composition:
+#   - cvat_annotated: 44 hand-annotated diverse illustrated characters (weight 4.0)
 #   - gemini_li_converted: 694 expert-labeled diverse illustrated characters (weight 3.0)
 #   - humanrig: 11,434 GT 22-class T-pose 3D renders
 #   - vroid_cc0: 1,386 GT 22-class VRoid characters
@@ -27,11 +28,13 @@ data:
     - "./data_cloud/meshy_cc0_textured"  # Meshy CC0 textured: 15,281 GT 22-class
     - "./data_cloud/anime_seg"           # anime_seg: ~14K, existing masks
     - "./data_cloud/gemini_li_converted" # Dr. Li: 694 expert-labeled diverse illustrated
+    - "./data_cloud/cvat_annotated"      # CVAT manual: 44 hand-annotated diverse illustrated
   quality_filter: true
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   dataset_weights:
+    cvat_annotated: 4.0                  # Highest weight — hand-annotated diverse illustrated
     gemini_li_converted: 3.0             # Expert annotations — diverse illustrated chars
     humanrig: 2.0                        # Ground-truth 22-class, but homogeneous 3D
     vroid_cc0: 2.5                       # Ground-truth 22-class, VRoid chars

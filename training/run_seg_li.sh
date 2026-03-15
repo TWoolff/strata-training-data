@@ -3,6 +3,7 @@
 # Strata Training — Run 7 Seg with Dr. Li's Expert Annotations (A100)
 #
 # Goal: Break past 0.37 mIoU plateau with diverse illustrated annotations
+#   - cvat_annotated: 44 hand-annotated illustrated chars (weight 4.0)
 #   - gemini_li_converted: 694 expert-labeled illustrated chars (Dr. Li, weight 3.0)
 #   - HumanRig T-pose: 11,434 GT 22-class
 #   - VRoid CC0: 1,386 GT 22-class
@@ -96,6 +97,25 @@ else
     else
         echo "  FATAL: gemini_li_converted tar not found."
         exit 1
+    fi
+fi
+
+# CVAT hand-annotated (44 diverse illustrated chars)
+CVAT_DIR="./data_cloud/cvat_annotated"
+CVAT_TAR="./data_cloud/tars/cvat_annotated.tar"
+if [ -d "$CVAT_DIR" ] && [ "$(ls -A "$CVAT_DIR" 2>/dev/null | head -1)" ]; then
+    echo "  cvat_annotated already exists."
+else
+    mkdir -p ./data_cloud/tars
+    echo "  Downloading cvat_annotated tar..."
+    rclone copy "hetzner:strata-training-data/tars/cvat_annotated.tar" ./data_cloud/tars/ \
+        --transfers 32 --fast-list -P
+    if [ -f "$CVAT_TAR" ]; then
+        echo "  Extracting cvat_annotated..."
+        tar xf "$CVAT_TAR" -C ./data_cloud/
+        rm -f "$CVAT_TAR"
+    else
+        echo "  WARNING: cvat_annotated tar not found."
     fi
 fi
 
@@ -196,7 +216,7 @@ echo ""
 echo "[3/5] Quality filter..."
 echo ""
 
-for ds in humanrig vroid_cc0 meshy_cc0_textured anime_seg gemini_li_converted; do
+for ds in humanrig vroid_cc0 meshy_cc0_textured anime_seg gemini_li_converted cvat_annotated; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         rm -f "$ds_dir/quality_filter.json"
@@ -230,7 +250,7 @@ if [ -n "$RESUME_CKPT" ]; then
     echo "  Resuming from: $RESUME_CKPT (run 5, 0.3491 mIoU)"
 fi
 echo "  Config: training/configs/segmentation_a100_run7_li.yaml"
-echo "  New data: gemini_li_converted (694 expert-labeled, weight 3.0)"
+echo "  New data: gemini_li_converted (694 expert, wt 3.0) + cvat_annotated (44 manual, wt 4.0)"
 echo ""
 
 TRAIN_CMD="python -m training.train_segmentation \
