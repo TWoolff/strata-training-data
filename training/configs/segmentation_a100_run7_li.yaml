@@ -19,7 +19,7 @@
 model:
   backbone: "mobilenet_v3_large"
   num_classes: 22
-  pretrained_backbone: false             # Will resume from checkpoint
+  pretrained_backbone: true              # ImageNet weights (fallback when no checkpoint)
 
 data:
   dataset_dirs:
