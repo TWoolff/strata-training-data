@@ -52,7 +52,7 @@ from pipeline.config import REGION_COLORS, REGION_NAMES
 logger = logging.getLogger(__name__)
 
 # Display settings
-CANVAS_SIZE = 512
+CANVAS_SIZE = 768
 BRUSH_SIZES = [3, 5, 10, 20, 40, 80]
 DEFAULT_BRUSH_IDX = 3  # 20px
 OVERLAY_ALPHA = 0.5
@@ -254,8 +254,13 @@ class ReviewApp:
         for rid in range(22):
             name = REGION_NAMES.get(rid, f"region_{rid}")
             r, g, b = REGION_COLORS.get(rid, (128, 128, 128))
+            # Brighten dark colors for button visibility (min 100 per channel if any > 0)
+            if rid > 0:
+                max_c = max(r, g, b)
+                if max_c > 0 and max_c < 128:
+                    scale = 160 / max_c
+                    r, g, b = min(255, int(r * scale)), min(255, int(g * scale)), min(255, int(b * scale))
             hex_color = f"#{r:02x}{g:02x}{b:02x}"
-            # Determine text color for readability
             brightness = 0.299 * r + 0.587 * g + 0.114 * b
             fg_color = "#000" if brightness > 128 else "#fff"
 
@@ -312,6 +317,10 @@ class ReviewApp:
         self.root.bind("<space>", lambda e: self._toggle_mode())
         self.root.bind("<bracketleft>", lambda e: self._brush_smaller())
         self.root.bind("<bracketright>", lambda e: self._brush_larger())
+        self.root.bind("[", lambda e: self._brush_smaller())
+        self.root.bind("]", lambda e: self._brush_larger())
+        self.root.bind("-", lambda e: self._brush_smaller())
+        self.root.bind("=", lambda e: self._brush_larger())
         self.root.bind("<Control-z>", lambda e: self._undo())
 
         # Region shortcuts: 1-9, 0 → regions 1-10

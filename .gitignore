@@ -63,3 +63,4 @@ checkpoints/
 logs/
 models/onnx/
 validation_report.json
+*.tar

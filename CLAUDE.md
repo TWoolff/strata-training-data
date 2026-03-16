@@ -30,12 +30,12 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.3657 mIoU | Backbone (ResNet-50) | CC0-only. MobileNetV3 baseline: 0.3491. ~0.37 ceiling = data diversity bottleneck, not model capacity |
+| Segmentation | 0.3573 mIoU (MobileNetV3) | Run 7 (Li + CVAT) | Up from 0.3491 baseline. ResNet-50 ref: 0.3657. Bootstrapping more diverse data for run 8 |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
 
-**Key insight:** Backbone comparison (EfficientNet-B3, ResNet-50) proved the seg ceiling is data diversity, not model capacity. MobileNetV3 stays as production backbone.
+**Key insight:** Run 7 confirmed data diversity is the bottleneck. Li + CVAT annotations improved MobileNetV3 from 0.3491 → 0.3573 mIoU but plateaued at epoch 64. Next step: bootstrap hundreds of corrected pseudo-labels from the model itself.
 
 ## Project Layout
 
@@ -118,7 +118,7 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 15, 2026)
+### Bucket Contents (March 16, 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~248 GiB total.
 
@@ -129,11 +129,11 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~248 GiB total.
 | `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ face/body crops |
 | `meshy_cc0_textured.tar` | 4.3 GiB | Meshy CC0 textured (flat structure) |
 | `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (per-example subdirs, 15,281 examples) |
-| `anime_seg.tar` | 3.0 GiB | anime-segmentation v1+v2 (~14K) |
+| `anime_seg.tar` | 3.0 GiB | anime-segmentation v1+v2 (~14K) — 32% rejection rate, candidate for removal |
 | `vroid_cc0.tar` | 203 MiB | VRoid CC0 GT 22-class (11 chars, 1,386 examples) |
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
-| `gemini_diverse.tar` | 131 MiB | Gemini diverse (698 images, SAM2 pseudo-labels) |
-| `cvat_annotated.tar` | 7.9 MiB | 44 hand-annotated diverse illustrated chars |
+| `gemini_diverse.tar` | 131 MiB | Gemini diverse (698 images, SAM2 pseudo-labels) — needs re-upload with 885 corrected |
+| `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 
 **Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `encoder_features/` (42 GiB), `unirig/` (53 GiB), `checkpoints*/`, `models/`, `logs/`.
 
@@ -151,33 +151,90 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~248 GiB total.
 | Script | Purpose |
 |--------|---------|
 | `training/cloud_setup.sh` | A100 setup (deps + rclone, no data) |
-| `training/run_seg_li.sh` | **Next run**: seg with Dr. Li + CVAT annotations |
+| `training/run_seg_li.sh` | Run 7: seg with Dr. Li + CVAT annotations |
+| `training/run_seg_bootstrap.sh` | **Run 8**: bootstrapped pseudo-labels + drop anime_seg |
 | `training/run_seg_backbone.sh` | Backbone comparison (EfficientNet-B3, ResNet-50) |
 | `run_normals_enrich.py` | Marigold normals + depth enrichment |
 | `run_benchmark.py` | Benchmark on 7 Gemini test characters |
 | `scripts/convert_li_labels.py` | Convert Dr. Li's 19-class → Strata 22-class |
 | `scripts/convert_cvat_export.py` | Convert CVAT export → Strata format |
+| `scripts/batch_pseudo_label.py` | Batch seg inference + review manifest |
+| `scripts/review_masks.py` | Tkinter UI for correcting pseudo-labeled masks |
+| `scripts/filter_reviewed.py` | Extract reviewed-only examples for training |
+| `scripts/ingest_gemini.py` | Preprocess Gemini images (rembg + resize + pseudo-label) |
 
-## Current Plan: Run 7 Seg (Dr. Li + CVAT)
+## Run 7 Results (March 16, 2026)
 
-**Goal: Break past 0.37 mIoU with diverse illustrated annotations.**
+**0.3573 mIoU** (epoch 64/80, manually stopped — plateau). Up from 0.3491 MobileNetV3 baseline.
 
-Script: `training/run_seg_li.sh`. Config: `training/configs/segmentation_a100_run7_li.yaml`.
+Config: `training/configs/segmentation_a100_run7_li.yaml`. Script: `training/run_seg_li.sh`.
 
 | Dataset | Examples | Weight | Source |
 |---------|----------|--------|--------|
-| cvat_annotated | 44 | 4.0 | Hand-annotated diverse illustrated |
+| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
 | gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels (19-class → 22-class converted) |
 | vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
 | humanrig | 11,434 | 2.0 | GT 22-class 3D renders |
 | meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
-| anime_seg | ~14K | 1.0 | Existing masks |
+| anime_seg | ~14K | 1.0 | Existing masks (32% rejection rate) |
 
-Steps: download tars → Marigold depth on Li data → quality filter → train (resume from run 5, 80 epochs) → ONNX export → upload. Est. ~6-8 hrs, ~$2-3.
+**Learnings:**
+- CVAT weight bumped 4.0 → 10.0 mid-run (49 examples were only 0.4% effective volume at 4.0)
+- Li + CVAT annotations helped but insufficient alone to break 0.37 ceiling
+- anime_seg has 32% rejection rate — noisy labels may be hurting
 
-## After Run 7: Ship Run
+## Mask Correction Workflow (Bootstrapping Loop)
 
-Once seg improves, one combined run to ship all 4 models:
+Use the trained model to pseudo-label new images, then correct mistakes manually. Turns 10-min CVAT annotation into ~1-2 min correction.
+
+```bash
+# 1. Preprocess new Gemini images (rembg + resize)
+python scripts/ingest_gemini.py --no-seg --only-new
+
+# 2. Pseudo-label with current best checkpoint
+python scripts/batch_pseudo_label.py \
+    --input-dir /Volumes/TAMWoolff/data/preprocessed/gemini/ \
+    --output-dir ./output/gemini_corrected \
+    --checkpoint checkpoints/segmentation/run7_best.pt
+
+# 3. Review & correct masks in Tkinter UI
+python scripts/review_masks.py --data-dir ./output/gemini_corrected
+
+# 4. Filter reviewed-only examples
+python scripts/filter_reviewed.py \
+    --input-dir ./output/gemini_corrected \
+    --output-dir ./output/gemini_corrected_clean
+
+# 5. Tar and upload
+tar cf gemini_corrected.tar -C ./output gemini_corrected_clean
+rclone copy gemini_corrected.tar hetzner:strata-training-data/tars/ -P
+```
+
+885 images pseudo-labeled with run 7 checkpoint. Correction in progress.
+
+## Current Plan: Run 8 Seg (Corrected Gemini + Cleanup)
+
+**Goal: Break 0.45 mIoU with bootstrapped diverse data.**
+
+| Dataset | Examples | Weight | Strategy |
+|---------|----------|--------|----------|
+| gemini_corrected | ~500-800 (TBD) | 4.0 | Human-corrected pseudo-labels from 885 Gemini images |
+| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
+| gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels |
+| vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
+| humanrig | 11,434 | 2.0 | GT 22-class 3D renders |
+| meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
+| anime_seg | ~14K or DROP | 0.5 or 0 | 32% rejection rate — test with/without |
+
+**Key changes from run 7:**
+- Add corrected Gemini diverse masks at high weight (4.0) — largest illustrated dataset
+- Consider dropping or downweighting anime_seg (noisy labels, 32% rejected)
+- Resume from run 7 checkpoint (0.3573 mIoU)
+- If plateau persists: try curriculum learning (illustrated-only warmup → full mix)
+
+## After Seg Converges: Ship Run
+
+Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
 - Retrain joints with 45K humanrig_posed GT examples (rendered, not yet uploaded)
 - Retrain weights with new seg encoder features
 - Inpainting already converged — keep run 6 checkpoint
