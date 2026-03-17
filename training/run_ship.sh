@@ -247,7 +247,7 @@ echo ""
 
 for ds in humanrig vroid_cc0 meshy_cc0_textured fbanimehq gemini_diverse gemini_li_converted cvat_annotated; do
     if [ -d "./data_cloud/$ds" ]; then
-        count=$(find "./data_cloud/$ds" -type f | head -200000 | wc -l)
+        count=$(find "./data_cloud/$ds" -type f 2>/dev/null | wc -l || echo "?")
         size=$(du -sh "./data_cloud/$ds" 2>/dev/null | cut -f1)
         echo "  $ds: $count files ($size)"
     else
