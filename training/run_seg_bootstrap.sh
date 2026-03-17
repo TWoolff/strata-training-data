@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Strata Training — Run 8 Seg Bootstrapped Pseudo-Labels (A100)
+# Strata Training — Run 9 Seg Bootstrapped Pseudo-Labels (A100)
 #
 # Goal: Break past 0.36 mIoU with bootstrapped diverse illustrated data
 #   - NEW: gemini_diverse: 874 pseudo-labeled + auto-triaged illustrated chars (weight 4.0)
@@ -10,8 +10,8 @@
 #   - HumanRig T-pose: 11,434 GT 22-class
 #   - VRoid CC0: 1,386 GT 22-class
 #   - Meshy CC0 textured: 15,281 GT 22-class
-#   - Resume from run 7 checkpoint (0.3573 mIoU)
-#   - Target: mIoU > 0.42
+#   - Resume from run 8 checkpoint (0.4721 mIoU)
+#   - Target: mIoU > 0.52
 #
 # Estimated: ~5-7 hrs on A100, ~$2-3
 #
@@ -28,11 +28,11 @@
 set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="./logs/run8_seg_bootstrap_${TIMESTAMP}"
+LOG_DIR="./logs/run9_seg_bootstrap_${TIMESTAMP}"
 mkdir -p "$LOG_DIR"
 
 echo "============================================"
-echo "  Strata Training — Run 8 Seg (Bootstrap)"
+echo "  Strata Training — Run 9 Seg (Bootstrap)"
 echo "  Started: $(date)"
 echo "  Logs: $LOG_DIR"
 echo "============================================"
@@ -58,19 +58,19 @@ echo ""
 echo "[0/5] Downloading checkpoints..."
 echo ""
 
-# Download run 7 checkpoint (0.3573 mIoU)
-RUN7_CKPT="checkpoints/segmentation/run7_best.pt"
-if [ -f "$RUN7_CKPT" ]; then
-    echo "  run7_best.pt already exists."
+# Download run 8 checkpoint (0.4721 mIoU)
+RUN8_CKPT="checkpoints/segmentation/run8_best.pt"
+if [ -f "$RUN8_CKPT" ]; then
+    echo "  run8_best.pt already exists."
 else
-    echo "  Downloading run 7 checkpoint..."
-    rclone copy hetzner:strata-training-data/checkpoints_run7_li/segmentation/best.pt \
+    echo "  Downloading run 8 checkpoint..."
+    rclone copy hetzner:strata-training-data/checkpoints_run9_bootstrap/segmentation/best.pt \
         ./checkpoints/segmentation/ --transfers 32 --fast-list -P
     if [ -f "checkpoints/segmentation/best.pt" ]; then
-        cp checkpoints/segmentation/best.pt "$RUN7_CKPT"
-        echo "  Saved as $RUN7_CKPT"
+        cp checkpoints/segmentation/best.pt "$RUN8_CKPT"
+        echo "  Saved as $RUN8_CKPT"
     else
-        echo "  WARNING: No run 7 checkpoint found. Will train from scratch."
+        echo "  WARNING: No run 8 checkpoint found. Will train from scratch."
     fi
 fi
 echo ""
@@ -278,14 +278,14 @@ echo ""
 echo "[4/5] Training SEGMENTATION model..."
 echo ""
 
-RESUME_CKPT="$RUN7_CKPT"
+RESUME_CKPT="$RUN8_CKPT"
 if [ ! -f "$RESUME_CKPT" ]; then
     RESUME_CKPT=""
     echo "  No resume checkpoint — training from scratch (pretrained backbone)."
 fi
 
 if [ -n "$RESUME_CKPT" ]; then
-    echo "  Resuming from: $RESUME_CKPT (run 7, 0.3573 mIoU)"
+    echo "  Resuming from: $RESUME_CKPT (run 8, 0.4721 mIoU)"
 fi
 echo "  Config: training/configs/segmentation_a100_run8_bootstrap.yaml"
 echo "  New data: gemini_diverse (874, wt 4.0). Dropped: anime_seg."
@@ -328,24 +328,24 @@ fi
 echo ""
 echo "  Uploading checkpoints, logs, ONNX..."
 
-rclone copy ./checkpoints/segmentation/ hetzner:strata-training-data/checkpoints_run8_bootstrap/segmentation/ \
+rclone copy ./checkpoints/segmentation/ hetzner:strata-training-data/checkpoints_run9_bootstrap/segmentation/ \
     --transfers 32 --fast-list -P
 rclone copy ./logs/ hetzner:strata-training-data/logs/ \
     --transfers 32 --fast-list -P
 if [ -f "$ONNX_DIR/segmentation.onnx" ]; then
-    rclone copy "$ONNX_DIR/segmentation.onnx" hetzner:strata-training-data/models/onnx_run8_bootstrap/ \
+    rclone copy "$ONNX_DIR/segmentation.onnx" hetzner:strata-training-data/models/onnx_run9_bootstrap/ \
         --transfers 32 --fast-list -P
 fi
 
 echo ""
 echo "============================================"
-echo "  Run 8 Seg (Bootstrap) complete!"
+echo "  Run 9 Seg (Bootstrap) complete!"
 echo "  Finished: $(date)"
 echo ""
 echo "  Results:"
 grep -E "Best mIoU|New best|miou" "$LOG_DIR/segmentation.log" 2>/dev/null | tail -5 || echo "  (check logs)"
 echo ""
 echo "  To download results to Mac:"
-echo "    rclone copy hetzner:strata-training-data/checkpoints_run8_bootstrap/ ./checkpoints_run8_bootstrap/ --transfers 32 --fast-list -P"
-echo "    rclone copy hetzner:strata-training-data/models/onnx_run8_bootstrap/ ./models/onnx_run8_bootstrap/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/checkpoints_run9_bootstrap/ ./checkpoints_run9_bootstrap/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/models/onnx_run9_bootstrap/ ./models/onnx_run9_bootstrap/ --transfers 32 --fast-list -P"
 echo "============================================"

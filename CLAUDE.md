@@ -30,12 +30,12 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.3573 mIoU (MobileNetV3) | Run 7 (Li + CVAT) | Up from 0.3491 baseline. ResNet-50 ref: 0.3657. Bootstrapping more diverse data for run 8 |
+| Segmentation | 0.4721 mIoU (MobileNetV3) | Run 8 (Bootstrap) | Up from 0.3573 (run 7). Bootstrapped 874 pseudo-labels + dropped anime_seg |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
 
-**Key insight:** Run 7 confirmed data diversity is the bottleneck. Li + CVAT annotations improved MobileNetV3 from 0.3491 → 0.3573 mIoU but plateaued at epoch 64. Next step: bootstrap hundreds of corrected pseudo-labels from the model itself.
+**Key insight:** Bootstrapping works. Run 8 proved that pseudo-labeling with the model, auto-triaging, and retraining jumps mIoU dramatically (0.3573 → 0.4721). Dropping noisy anime_seg data also helped. Next: another bootstrap round with the better model, or ship run.
 
 ## Project Layout
 
@@ -118,24 +118,24 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 16, 2026)
+### Bucket Contents (March 17, 2026)
 
-Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~248 GiB total.
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~141 GiB total.
 
 **Tars (for A100 setup):**
 | Tar | Size | Contents |
 |-----|-----:|---------|
 | `humanrig.tar` | 16.8 GiB | 11,434 GT 22-class T-pose renders |
 | `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ face/body crops |
-| `meshy_cc0_textured.tar` | 4.3 GiB | Meshy CC0 textured (flat structure) |
 | `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (per-example subdirs, 15,281 examples) |
-| `anime_seg.tar` | 3.0 GiB | anime-segmentation v1+v2 (~14K) — 32% rejection rate, candidate for removal |
 | `vroid_cc0.tar` | 203 MiB | VRoid CC0 GT 22-class (11 chars, 1,386 examples) |
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
-| `gemini_diverse.tar` | 131 MiB | Gemini diverse (698 images, SAM2 pseudo-labels) — needs re-upload with 885 corrected |
+| `gemini_diverse.tar` | 197 MiB | Gemini diverse (874 auto-triaged pseudo-labels) |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `encoder_features/` (42 GiB), `unirig/` (53 GiB), `checkpoints*/`, `models/`, `logs/`.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/`, `models/`, `logs/`.
+
+**Deleted (March 17):** `unirig/` (53 GiB, prohibited license), `encoder_features/` (42 GiB, stale), `anime_seg/` (2.6 GiB, dropped from training), old checkpoints (runs 1/3/4/seg_meshy), obsolete tars.
 
 ## A100 Training Run Workflow
 
@@ -158,6 +158,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~248 GiB total.
 | `run_benchmark.py` | Benchmark on 7 Gemini test characters |
 | `scripts/convert_li_labels.py` | Convert Dr. Li's 19-class → Strata 22-class |
 | `scripts/convert_cvat_export.py` | Convert CVAT export → Strata format |
+| `scripts/auto_triage.py` | Auto-accept/reject pseudo-labels by mask heuristics |
 | `scripts/batch_pseudo_label.py` | Batch seg inference + review manifest |
 | `scripts/review_masks.py` | Tkinter UI for correcting pseudo-labeled masks |
 | `scripts/filter_reviewed.py` | Extract reviewed-only examples for training |
@@ -210,27 +211,41 @@ tar cf gemini_corrected.tar -C ./output gemini_corrected_clean
 rclone copy gemini_corrected.tar hetzner:strata-training-data/tars/ -P
 ```
 
-885 images pseudo-labeled with run 7 checkpoint. Correction in progress.
+885 images pseudo-labeled with run 7 checkpoint. Auto-triaged with `scripts/auto_triage.py`: 874 auto-accepted, 11 rejected (anatomically implausible), 0 manual review needed.
 
-## Current Plan: Run 8 Seg (Corrected Gemini + Cleanup)
+## Run 8 Results (March 17, 2026)
 
-**Goal: Break 0.45 mIoU with bootstrapped diverse data.**
+**0.4721 mIoU** (epoch 5/80, early stopped at epoch 25). Up from 0.3573 (run 7) — **32% improvement**.
 
-| Dataset | Examples | Weight | Strategy |
-|---------|----------|--------|----------|
-| gemini_corrected | ~500-800 (TBD) | 4.0 | Human-corrected pseudo-labels from 885 Gemini images |
+Config: `training/configs/segmentation_a100_run8_bootstrap.yaml`. Script: `training/run_seg_bootstrap.sh`.
+
+| Dataset | Examples | Weight | Source |
+|---------|----------|--------|--------|
 | cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
+| gemini_diverse | 874 | 4.0 | Auto-triaged pseudo-labels from run 7 model |
 | gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels |
 | vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
 | humanrig | 11,434 | 2.0 | GT 22-class 3D renders |
 | meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
-| anime_seg | ~14K or DROP | 0.5 or 0 | 32% rejection rate — test with/without |
 
-**Key changes from run 7:**
-- Add corrected Gemini diverse masks at high weight (4.0) — largest illustrated dataset
-- Consider dropping or downweighting anime_seg (noisy labels, 32% rejected)
-- Resume from run 7 checkpoint (0.3573 mIoU)
-- If plateau persists: try curriculum learning (illustrated-only warmup → full mix)
+**Learnings:**
+- Dropping anime_seg (~14K noisy labels) and adding 874 diverse pseudo-labels → massive jump
+- Model peaked very early (epoch 5) then slowly overfit — early stopping triggered at 25
+- Auto-triage (`scripts/auto_triage.py`) eliminated manual review: 874/885 auto-accepted via anatomical heuristics
+- Bootstrapping loop validated: model → pseudo-label → triage → retrain works
+
+## Current Plan: Run 9 or Ship
+
+**Option A: Another bootstrap round (target >0.52 mIoU)**
+- Re-pseudo-label the 874 Gemini images with the run 8 model (0.47 produces better masks than 0.36)
+- Generate more Gemini images (prompts 1001+) for additional diversity
+- Auto-triage and retrain — each round should compound
+
+**Option B: Ship run (if 0.47 is good enough)**
+- Retrain joints with 45K humanrig_posed GT examples
+- Retrain weights with new seg encoder features
+- Inpainting already converged (run 6)
+- ONNX export all 4 → ship to `../strata/src-tauri/models/`
 
 ## After Seg Converges: Ship Run
 
