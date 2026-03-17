@@ -1743,6 +1743,632 @@ These prompts target the characters Strata users most commonly bring to the app:
 
 ---
 
+## Batch 5: Pose & View Diversity (1001-1300)
+
+Focus: back views, three-quarter back, sitting, kneeling, arms raised, dynamic action, crouching, leaning. The model needs pose diversity more than style diversity at this point.
+
+### Back Views (1001-1040)
+
+1001. Full-body illustration of a fantasy knight in plate armor and a flowing cape, viewed from directly behind. The character is masculine-presenting, broad-shouldered, with short dark hair visible above the collar. The character is standing facing away from the viewer in a neutral pose. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1002. Full-body anime illustration of a schoolgirl in a sailor uniform with a backpack, viewed from directly behind. The character is feminine-presenting, petite, with long black hair in twin tails. The character is standing facing away from the viewer with arms at sides. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1003. Full-body watercolor illustration of a samurai in layered armor with two swords on the back, viewed from behind. The character is masculine-presenting, athletic build, with hair in a topknot. The character is standing facing away with hands resting on sword hilts. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1004. Full-body cel-shaded illustration of a sci-fi astronaut in a bulky spacesuit with a jetpack, viewed from behind. The character is androgynous, medium build, with a tinted visor helmet. The character is standing facing away from the viewer in an A-pose. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1005. Full-body digital painting of a ballerina in a tutu and pointe shoes, viewed from directly behind. The character is feminine-presenting, tall and slender, with dark skin and hair in a high bun. The character is standing facing away in first position. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1006. Full-body flat vector illustration of a firefighter in full turnout gear with an oxygen tank on the back, viewed from behind. The character is masculine-presenting, stocky and strong, with a helmet. The character is standing facing away with arms slightly away from body. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1007. Full-body gouache painting of a witch in a long cloak and pointed hat, carrying a broomstick, viewed from behind. The character is feminine-presenting, elderly, with long grey hair. The character is standing facing away from the viewer. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1008. Full-body comic book style illustration of a superhero in a full bodysuit with a cape billowing, viewed from behind. The character is masculine-presenting, extremely muscular, with dark skin. The character is standing facing away in a heroic wide stance. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1009. Full-body ink wash illustration of a monk in simple robes with a shaved head, viewed from behind. The character is androgynous, lean, with warm brown skin. The character is standing facing away with hands clasped behind the back. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1010. Full-body pixel art illustration of a ranger in a hooded cloak with a quiver of arrows on the back, viewed from behind. The character is feminine-presenting, athletic, with pale skin and a braid. The character is standing facing away in an A-pose. Retro RPG sprite style. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1011. Full-body illustration of a modern hiker in cargo pants, a fleece jacket, and a large backpack, viewed from behind. The character is masculine-presenting, average build, with medium skin and a baseball cap. The character is standing facing away. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1012. Full-body painterly illustration of a Victorian lady in a bustle dress with an elaborate updo, viewed from behind. The character is feminine-presenting, hourglass figure, with light skin. The character is standing facing away with a parasol held to one side. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1013. Full-body cartoon illustration of a ninja in a dark bodysuit with a katana strapped to the back, viewed from behind. The character is masculine-presenting, lean and wiry, with only eyes visible. The character is standing facing away in a ready stance. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1014. Full-body anime illustration of a magical girl in a frilly costume with wings, viewed from behind. The character is feminine-presenting, young, with pink hair in pigtails. The character is standing facing away with arms slightly away. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1015. Full-body digital art of a cyberpunk hacker in a long trenchcoat with glowing circuit patterns, viewed from behind. The character is androgynous, thin, with neon-streaked hair and augmented limbs. The character is standing facing away. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1016. Full-body watercolor of a tribal warrior in leather and bone armor with a shield on the back, viewed from behind. The character is masculine-presenting, muscular, with dark skin and ritual scarring. The character is standing facing away with feet shoulder-width apart. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1017. Full-body flat illustration of a chef in a white coat, apron tied at the back, and tall toque, viewed from behind. The character is feminine-presenting, plump, with tan skin and dark hair tucked under the hat. The character is standing facing away. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1018. Full-body cel-shaded illustration of a dragon-born warrior in scaled armor with a tail, viewed from behind. The character is masculine-presenting, large and imposing, with green scaly skin and horns. The character is standing facing away in a wide stance. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1019. Full-body sketch-style illustration of a college student in a hoodie, jeans, and sneakers with a messenger bag, viewed from behind. The character is androgynous, average build, with curly hair. The character is standing facing away with hands in pockets. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1020. Full-body oil painting style of a pirate in a long coat, boots, and a tricorn hat, viewed from behind. The character is feminine-presenting, athletic, with dark skin and dreadlocks. The character is standing facing away with one hand on hip. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Three-Quarter Back Views (1021-1040)
+
+1021. Full-body illustration of a medieval archer in leather armor, viewed from three-quarter back (turned about 135 degrees from the viewer). The character is masculine-presenting, lean, with light skin and a short beard. The character is standing with a bow held to one side. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1022. Full-body anime illustration of a maid in a classic black and white uniform, viewed from three-quarter back. The character is feminine-presenting, petite, with light skin and short brown hair. The character is standing with one hand holding a tray. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1023. Full-body digital painting of an elven mage in flowing robes with a staff, viewed from three-quarter back. The character is androgynous, tall and willowy, with pale blue skin and silver hair. The character is standing with the staff in one hand. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1024. Full-body comic style illustration of a wrestler in spandex tights and boots, viewed from three-quarter back. The character is masculine-presenting, extremely muscular, with tan skin. The character is standing with fists clenched at sides. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1025. Full-body watercolor illustration of a flamenco dancer in a ruffled dress and heeled shoes, viewed from three-quarter back. The character is feminine-presenting, curvy, with warm brown skin and dark hair in a bun with a flower. The character is standing with one arm raised gracefully. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1026. Full-body flat vector illustration of a construction worker in a hard hat, high-vis vest, and work boots, viewed from three-quarter back. The character is masculine-presenting, stocky, with dark skin. The character is standing with a tool belt visible. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1027. Full-body ink illustration of a geisha in a full kimono with an obi sash and geta sandals, viewed from three-quarter back. The character is feminine-presenting, graceful, with pale skin and an elaborate updo. The character is standing with a fan held to one side. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1028. Full-body cel-shaded illustration of a post-apocalyptic survivor in patched leather and a gas mask hanging at the neck, viewed from three-quarter back. The character is androgynous, wiry, with pale skin and a mohawk. The character is standing with a pipe wrench over one shoulder. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1029. Full-body gouache painting of a luchador in an ornate mask, wrestling tights, and boots, viewed from three-quarter back. The character is masculine-presenting, muscular, with brown skin. The character is standing with arms crossed. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1030. Full-body digital illustration of a fairy in a petal dress with translucent wings, viewed from three-quarter back. The character is feminine-presenting, tiny proportions, with pale green skin and flower-adorned hair. The character is standing with wings spread. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1031. Full-body painterly illustration of a Roman legionnaire in full armor with a rectangular shield on the back, viewed from three-quarter back. The character is masculine-presenting, fit, with olive skin and a crested helmet. The character is standing at attention. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1032. Full-body anime illustration of a J-pop idol in a flashy stage outfit with platform boots, viewed from three-quarter back. The character is feminine-presenting, slim, with light skin and colorful streaked hair. The character is standing with one hand on hip. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1033. Full-body sketch illustration of a park ranger in a wide-brimmed hat, khaki uniform, and hiking boots, viewed from three-quarter back. The character is androgynous, tall, with dark skin. The character is standing with binoculars hanging from the neck. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1034. Full-body flat illustration of a deep sea diver in a vintage brass diving suit with a round helmet, viewed from three-quarter back. The character is masculine-presenting, bulky in the suit. The character is standing with air hoses visible on the back. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1035. Full-body watercolor of a ballet dancer in a practice leotard, leg warmers, and ballet slippers, viewed from three-quarter back. The character is feminine-presenting, long-limbed, with brown skin and hair in a tight bun. The character is standing in fourth position. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1036. Full-body comic illustration of a dwarf blacksmith in a leather apron and heavy gauntlets, viewed from three-quarter back. The character is masculine-presenting, very short and stocky, with pale skin and a long braided beard. The character is standing with a hammer resting on one shoulder. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1037. Full-body digital art of a vampire in a high-collared cape, vest, and tall boots, viewed from three-quarter back. The character is androgynous, tall and pale, with slicked-back dark hair. The character is standing with the cape partially draped. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1038. Full-body cel-shaded illustration of a tennis player in a polo shirt, skirt, and sneakers with a racket, viewed from three-quarter back. The character is feminine-presenting, athletic, with tan skin and a ponytail through a visor. The character is standing with the racket resting on one shoulder. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1039. Full-body painted illustration of an orc barbarian in fur and bone armor with tusks, viewed from three-quarter back. The character is masculine-presenting, massive, with green skin and a shaved head with war paint. The character is standing with a great axe on the back. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1040. Full-body illustration of a K-pop star in a designer streetwear outfit with platform sneakers, viewed from three-quarter back. The character is androgynous, slim, with pale skin and pastel-dyed hair. The character is standing with one hand raised in a peace sign. All limbs clearly separated. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Dynamic Action Poses (1041-1080)
+
+1041. Full-body illustration of a martial artist in a gi performing a high kick. The character is masculine-presenting, lean and muscular, with tan skin and a black belt. One leg is extended high, the other planted firmly. Arms in guard position. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1042. Full-body anime illustration of a magical girl mid-transformation with arms raised above her head and sparkles around her. The character is feminine-presenting, young, with bright pink hair flowing upward. Standing on tiptoes with body arched. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1043. Full-body digital painting of a berserker warrior in mid-swing with a two-handed axe. The character is masculine-presenting, huge and muscular, with pale skin covered in war paint. Body twisted with the swing, both feet on the ground. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1044. Full-body watercolor of a figure skater mid-spin with one leg extended behind and arms outstretched. The character is feminine-presenting, graceful, with dark skin and a sparkly costume. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1045. Full-body comic illustration of a boxer in shorts and gloves throwing a punch with the right fist extended forward. The character is masculine-presenting, muscular, with dark skin and a shaved head. Left arm guarding the face. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1046. Full-body cel-shaded illustration of a ninja throwing shuriken with one arm extended forward and body twisted. The character is androgynous, lean, with dark clothing and a mask. Body in a dynamic forward lean. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1047. Full-body flat vector illustration of a basketball player in mid-jump shot, body elevated with the ball above the head in one hand. The character is masculine-presenting, tall and athletic, with dark skin and a jersey. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1048. Full-body digital art of an archer drawing a bow with the string pulled back to the cheek, aiming to the side. The character is feminine-presenting, athletic, with light skin and braided red hair. Feet planted in a wide stance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1049. Full-body painted illustration of a fencer in a lunge position with one arm extended holding a foil and the other arm raised behind. The character is androgynous, slim, with pale skin and a white fencing outfit. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1050. Full-body anime illustration of a mecha pilot in a flight suit doing a victory fist pump with one arm raised and the other at the side. The character is masculine-presenting, young, with spiky brown hair and goggles. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1051. Full-body illustration of a dancer in a flowing dress performing a spin with arms extended horizontally. The character is feminine-presenting, graceful, with warm brown skin and natural hair. Dress flowing outward from the spin. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1052. Full-body comic book illustration of a superhero landing in a three-point pose — one knee down, one fist on the ground, other arm back. The character is masculine-presenting, muscular, with a bodysuit and cape. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1053. Full-body digital painting of a wizard casting a spell with both arms raised and energy swirling around the hands. The character is androgynous, elderly, with a long beard, pointed hat, and flowing robes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1054. Full-body watercolor of a soccer player kicking a ball with one leg swung high and the other planted. The character is feminine-presenting, athletic, with dark skin and a ponytail. Arms out for balance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1055. Full-body cel-shaded illustration of a rock guitarist in mid-performance with one leg forward and a guitar held at an angle. The character is masculine-presenting, lanky, with pale skin and wild long hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1056. Full-body flat illustration of a track sprinter at the start of a race, body leaned far forward with one foot back on a starting block. The character is feminine-presenting, muscular legs, with dark skin and a racing singlet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1057. Full-body painted illustration of a samurai performing an overhead sword slash, katana raised above the head with both hands. The character is masculine-presenting, athletic, with East Asian features and traditional hakama. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1058. Full-body anime illustration of a cheerleader doing a high jump with pom-poms, legs split in the air, arms raised in a V. The character is feminine-presenting, petite, with light skin and a bouncy ponytail. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1059. Full-body digital illustration of a breakdancer in a freeze pose — balanced on one hand with legs in the air at angles. The character is masculine-presenting, lean, with medium skin and baggy pants. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1060. Full-body gouache painting of a javelin thrower mid-throw, body stretched long with one arm extended back holding the javelin. The character is androgynous, tall and athletic, with brown skin. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1061. Full-body illustration of a sword fighter in a parry stance, blade held diagonally across the body with one foot forward. The character is feminine-presenting, fit, with pale skin and short hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1062. Full-body comic illustration of a villain in a dramatic cape throw, one arm flung wide sending the cape billowing. The character is androgynous, tall and imposing, with sharp features and dark clothing. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1063. Full-body watercolor of a tai chi practitioner in a wide horse stance with both arms extended forward, palms out. The character is masculine-presenting, elderly, with East Asian features and a white silk outfit. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1064. Full-body cel-shaded illustration of a volleyball player spiking with one arm swung high and body airborne. The character is feminine-presenting, tall, with tan skin and a sports uniform. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1065. Full-body flat vector of a pitcher in a baseball windup with one leg raised high and arm cocked back. The character is masculine-presenting, average build, with medium skin and a team uniform. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1066. Full-body digital painting of a dragoon knight leaping upward with a lance pointed down, both legs tucked. The character is androgynous, armored, with a plumed helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1067. Full-body painted illustration of a flamenco dancer with one arm raised high and the other extended to the side, one foot stamping. The character is feminine-presenting, curvy, with olive skin and a ruffled red dress. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1068. Full-body anime illustration of a gunslinger drawing from a hip holster, body turned sideways with one arm reaching across. The character is masculine-presenting, rugged, with stubble and a cowboy hat. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1069. Full-body illustration of a gymnast on a balance beam in an arabesque — one leg extended straight behind, arms out to the sides. The character is feminine-presenting, petite and muscular, with dark skin and a leotard. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1070. Full-body digital art of a spear fighter thrusting forward with one arm extended and the body in a deep lunge. The character is masculine-presenting, tall and lean, with dark skin and tribal markings. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1071. Full-body cel-shaded illustration of a witch riding a broomstick sideways — sitting with legs to one side, one hand gripping the broom. The character is feminine-presenting, with a pointed hat and flowing robes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1072. Full-body watercolor of a capoeira fighter in a cartwheel-like ginga stance with one hand on the ground and legs apart. The character is masculine-presenting, lean and flexible, with dark brown skin. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1073. Full-body flat illustration of a conductor with arms raised, one hand holding a baton high and the other extended to the side. The character is androgynous, slim, with pale skin and a formal tailcoat. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1074. Full-body comic illustration of an acrobat in mid-backflip, body arched with arms and legs tucked. The character is feminine-presenting, compact and muscular, with a sparkly leotard. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1075. Full-body digital painting of a dual-wielding rogue in a spinning attack, both daggers extended outward and body twisted. The character is androgynous, lithe, with dark clothing and a hood. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1076. Full-body gouache painting of a discus thrower mid-spin, body coiled with the discus arm extended behind. The character is masculine-presenting, powerfully built, with olive skin. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1077. Full-body anime illustration of a magical boy releasing a beam of light from both palms, arms thrust forward. The character is masculine-presenting, young, with spiky blue hair and a flowing scarf. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1078. Full-body painted illustration of a yoga practitioner in warrior II pose — legs wide, arms extended to the sides, looking over the front hand. The character is feminine-presenting, flexible, with brown skin and yoga attire. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1079. Full-body illustration of a hockey player in a slapshot follow-through, stick swung across the body and one knee dropped. The character is masculine-presenting, padded in hockey gear, with a helmet and visor. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1080. Full-body digital illustration of a valkyrie descending with wings spread, spear in one hand and shield in the other, legs trailing below. The character is feminine-presenting, armored, with braided blonde hair and a winged helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Sitting & Kneeling Poses (1081-1120)
+
+1081. Full-body illustration of a medieval king sitting on a simple throne, one hand on the armrest, the other holding a scepter. The character is masculine-presenting, regal, with grey hair and a crown. Both feet flat on the floor. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1082. Full-body anime illustration of a student sitting cross-legged on the ground reading a book. The character is feminine-presenting, young, with glasses and a school uniform. Book held in both hands. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1083. Full-body digital painting of a samurai kneeling in seiza position with a katana laid across the lap. The character is masculine-presenting, disciplined, with traditional hakama and a topknot. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1084. Full-body watercolor of a grandmother sitting in a rocking chair knitting, wearing a cardigan, long skirt, and slippers. The character is feminine-presenting, elderly, with silver hair in a bun and warm brown skin. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1085. Full-body cel-shaded illustration of a gamer sitting on the floor with legs stretched out, holding a game controller. The character is androgynous, young, with casual clothes, messy hair, and headphones around the neck. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1086. Full-body flat vector of a knight kneeling on one knee with sword planted point-down in front, both hands on the pommel. The character is masculine-presenting, armored, with a lowered head. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1087. Full-body painted illustration of a fortune teller sitting cross-legged with cards spread on the lap. The character is feminine-presenting, with a headscarf, layered shawls, and many bracelets. Dark olive skin. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1088. Full-body comic illustration of a mechanic sitting on the ground with legs apart, working on a machine part. The character is masculine-presenting, grease-stained overalls, with dark skin and a backwards cap. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1089. Full-body anime illustration of a shrine maiden kneeling in a prayer position, hands together at the chest. The character is feminine-presenting, with a white haori and red hakama. Long black hair. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1090. Full-body digital art of a cyberpunk hacker sitting in an office chair with legs crossed, typing on a floating holographic keyboard. The character is androgynous, with neon-accented clothing and augmented eyes. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1091. Full-body watercolor of a musician sitting on a stool playing an acoustic guitar. The character is masculine-presenting, casual clothes, with medium skin and curly hair. Guitar resting on one thigh. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1092. Full-body illustration of a fairy sitting on a mushroom with legs dangling. The character is feminine-presenting, tiny, with translucent wings, a petal dress, and pointed ears. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1093. Full-body cel-shaded illustration of a soldier kneeling with a rifle held upright, one knee on the ground. The character is masculine-presenting, in combat fatigues, with a helmet and tactical vest. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1094. Full-body gouache painting of a tea ceremony host kneeling and preparing tea with precise hand movements. The character is feminine-presenting, in a formal kimono, with an updo. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1095. Full-body flat illustration of a skateboarder sitting on the ground with one leg bent and one straight, skateboard beside them. The character is androgynous, teenage, with baggy clothes and a beanie. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1096. Full-body digital painting of an orc shaman sitting cross-legged with hands on knees in a meditative pose, surrounded by a faint aura. The character is masculine-presenting, large, with green skin and tribal tattoos. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1097. Full-body painted illustration of a child sitting on the ground hugging their knees. The character is androgynous, small, with curly brown hair and overalls. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1098. Full-body anime illustration of a cat-girl maid kneeling with a tray, ears perked up. The character is feminine-presenting, with a maid uniform, cat ears, and a tail. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1099. Full-body comic illustration of a king's guard kneeling and presenting a sword on open palms. The character is masculine-presenting, in ceremonial armor with a tabard. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1100. Full-body watercolor of a potter sitting at a low wheel shaping clay, legs folded to one side. The character is feminine-presenting, with an apron and rolled sleeves, grey streaked hair. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1101. Full-body digital art of a sniper in prone-like crouch, one knee down and one up, holding a rifle with scope. The character is androgynous, in ghillie-pattern fatigues. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1102. Full-body painted illustration of an artist sitting on a stool painting at an easel, palette in one hand and brush in the other. The character is masculine-presenting, with a beret and paint-stained smock. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1103. Full-body cel-shaded illustration of a mermaid sitting on a rock with the tail curled to one side (humanoid upper body, fish tail from waist down). The character is feminine-presenting, with long flowing hair and shell jewelry. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1104. Full-body flat illustration of a DJ sitting behind a turntable setup with headphones on, one hand on a vinyl record. The character is androgynous, stylish, with dark skin and neon accessories. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1105. Full-body anime illustration of a warrior monk kneeling in prayer before battle, staff laid on the ground beside them. The character is masculine-presenting, shaved head, with simple robes and prayer beads. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1106. Full-body digital painting of an elf ranger crouching low, one hand touching the ground as if tracking, the other resting on a sheathed dagger. The character is feminine-presenting, with pointed ears and forest-green clothing. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1107. Full-body watercolor of a fisherman sitting on a dock with legs hanging over the edge, holding a fishing rod. The character is masculine-presenting, elderly, with a wide-brimmed hat and overalls. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1108. Full-body illustration of a witch sitting on the ground with a cauldron, stirring with one hand and reading a spell book in the other. The character is feminine-presenting, with a pointed hat and dark robes. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1109. Full-body cel-shaded illustration of a racing driver kneeling by a tire, one hand on the tire and the other holding a wrench. The character is androgynous, in a racing suit with sponsor patches. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1110. Full-body painted illustration of a pirate captain sitting in a chair with one leg crossed over the other, a parrot on the shoulder. The character is masculine-presenting, with an eyepatch, tricorn hat, and a long coat. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1111. Full-body flat vector of a programmer sitting cross-legged with a laptop on the lap, typing. The character is feminine-presenting, casual clothes, with glasses and a messy bun. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1112. Full-body gouache painting of a blacksmith kneeling at an anvil, one arm raised with a hammer and the other holding tongs. The character is masculine-presenting, very muscular, with dark skin and a leather apron. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1113. Full-body anime illustration of a princess sitting on a cushion with hands folded in the lap, wearing an elaborate gown. The character is feminine-presenting, with a tiara and long flowing hair. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1114. Full-body digital art of a survivalist crouching and starting a campfire with a flint. The character is androgynous, in rugged outdoor clothing. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1115. Full-body illustration of a drummer sitting behind a drum kit, sticks in both hands mid-beat. The character is masculine-presenting, with a tank top, tattooed arms, and spiky hair. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1116. Full-body watercolor of a garden fairy kneeling among flowers, tending a tiny plant. The character is feminine-presenting, miniature, with gossamer wings and a leaf dress. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1117. Full-body comic illustration of a wrestler in a crouching ready stance, low to the ground with arms wide. The character is masculine-presenting, massive, with a singlet and knee pads. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1118. Full-body cel-shaded illustration of an astronaut kneeling on one knee, planting a flag. The character is androgynous, in a full spacesuit with a tinted visor. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1119. Full-body painted illustration of a scholar sitting at a desk reading a scroll, one hand holding it open and the other resting on the desk. The character is feminine-presenting, elderly, with spectacles and a scholarly robe. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+1120. Full-body flat illustration of a paramedic kneeling beside an invisible patient, hands positioned as if performing first aid. The character is masculine-presenting, in a high-vis uniform with medical equipment on a belt. All limbs clearly visible. Single character only, centered in the frame. Solid plain white background. No text, no watermark, no UI elements.
+
+### Arms Raised / Overhead Poses (1121-1160)
+
+1121. Full-body illustration of a weightlifter performing an overhead press, both arms straight up holding an invisible barbell. The character is masculine-presenting, extremely muscular, with dark skin and a singlet. Legs wide and planted. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1122. Full-body anime illustration of an idol singer with both arms raised in a star pose, one leg slightly lifted. The character is feminine-presenting, with a frilly stage costume, thigh-high boots, and colorful streaked hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1123. Full-body watercolor of a surfer carrying a surfboard overhead with both arms. The character is masculine-presenting, lean and tanned, with board shorts and bare feet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1124. Full-body digital painting of a sorcerer channeling energy through raised hands, palms glowing with arcane light. The character is androgynous, with flowing robes and white eyes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1125. Full-body cel-shaded illustration of a cheerleader with arms in a high V and one leg bent behind. The character is feminine-presenting, athletic, with a uniform and ponytail. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1126. Full-body flat illustration of a traffic cop with one arm raised straight up signaling stop and the other extended to the side. The character is masculine-presenting, in a uniform with a whistle. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1127. Full-body painted illustration of a dancer in a dramatic pose with both arms extended upward and back arched. The character is feminine-presenting, in a flowing dress, with dark skin and natural hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1128. Full-body comic illustration of a villain with one arm raised summoning dark energy overhead. The character is androgynous, in a dark cape and dramatic armor. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1129. Full-body digital art of a climber reaching overhead with one arm, the other gripping at chest height, legs spread on the wall. The character is masculine-presenting, lean, with climbing shoes and chalk-dusted hands. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1130. Full-body anime illustration of a magical girl with a wand raised above her head, sparkles cascading down. The character is feminine-presenting, in a sailor-style magical outfit with ribbons. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1131. Full-body watercolor of a harvest festival dancer with garlands in both raised hands. The character is feminine-presenting, in a traditional folk dress with an embroidered apron. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1132. Full-body flat illustration of a referee with both arms raised straight up signaling a touchdown. The character is masculine-presenting, in a striped referee shirt and black pants. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1133. Full-body cel-shaded illustration of a robot butler carrying a tray with one arm raised and extended, the other arm at the side. The character has a humanoid metal body with visible joints. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1134. Full-body digital painting of an angel with both arms spread wide and wings fully extended. The character is androgynous, with flowing white robes, a halo, and bare feet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1135. Full-body painted illustration of a volleyball setter with both arms raised overhead preparing to set a ball. The character is feminine-presenting, tall, with a sports uniform and knee pads. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1136. Full-body comic illustration of a stretching athlete with both arms raised overhead and body leaning to one side. The character is masculine-presenting, in athletic wear, with medium skin. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1137. Full-body anime illustration of a sun goddess with arms outstretched to the sides at shoulder height, palms up, with a radiant aura. The character is feminine-presenting, with golden skin, a white draped garment, and a sun crown. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1138. Full-body watercolor of a scarecrow with both arms extended straight out to the sides at shoulder height. The character has a burlap sack head, patched clothes, and straw poking out. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1139. Full-body digital illustration of a gladiator with one arm raised holding a trident and the other arm extended with a net. The character is masculine-presenting, muscular, with minimal armor and a helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1140. Full-body flat illustration of a crossing guard with one arm raised holding a stop sign and the other arm beckoning forward. The character is feminine-presenting, elderly, in a high-vis vest and comfortable shoes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1141. Full-body cel-shaded illustration of a tree spirit with branch-like arms extended upward and outward, leaf-covered body. The character is androgynous, with bark-textured skin and glowing green eyes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1142. Full-body anime illustration of a school boy being surprised, both arms thrown up in shock, leaning back slightly. The character is masculine-presenting, in a school uniform, with messy brown hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1143. Full-body painted illustration of a drum major leading a parade with a baton raised high in one hand and the other arm extended. The character is androgynous, in an ornate marching band uniform with a tall shako hat. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1144. Full-body illustration of a swimmer on the starting block, arms back and body bent forward, about to dive. The character is feminine-presenting, in a swimsuit and cap, with goggles. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1145. Full-body watercolor of a shepherd with one arm raised holding a crook and the other shielding eyes from the sun. The character is masculine-presenting, in simple rustic clothing and sandals. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1146. Full-body digital art of a spirit medium with arms raised and hair floating upward as if channeling energy. The character is feminine-presenting, with a white ceremonial robe and closed eyes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1147. Full-body flat illustration of a window washer with one arm raised holding a squeegee and the other holding a bucket. The character is androgynous, in work coveralls and rubber gloves. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1148. Full-body comic illustration of a rock star with a guitar, one arm raised in a devil horns gesture and the other on the guitar neck. The character is masculine-presenting, lanky, with long hair and a leather jacket. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1149. Full-body cel-shaded illustration of a phoenix knight with a flaming sword raised overhead in both hands. The character is androgynous, in fiery orange and gold armor with wing motifs. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1150. Full-body anime illustration of a catgirl stretching with both arms raised above the head and back arched. The character is feminine-presenting, with cat ears, a tail, casual clothes, and a sleepy expression. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1151. Full-body painted illustration of a flag bearer with one arm raised holding a banner and the other at the side. The character is masculine-presenting, in medieval tabard and chainmail. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1152. Full-body watercolor of a lifeguard with one arm raised blowing a whistle and the other arm extended pointing. The character is feminine-presenting, athletic, in a red swimsuit with a rescue tube across the body. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1153. Full-body digital illustration of a robot with both arms transformed into different tools — one a drill raised overhead, the other a clamp at the side. Humanoid body with visible mechanical joints. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1154. Full-body flat vector of a tennis player serving — one arm tossing the ball up and the other cocked back with the racket. The character is masculine-presenting, tall, in tennis whites. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1155. Full-body cel-shaded illustration of a necromancer with both arms raised, summoning undead with swirling dark energy. The character is androgynous, skeletal-thin, in tattered dark robes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1156. Full-body anime illustration of a festival dancer with one arm raised holding a paper fan and the other holding the hem of a yukata. The character is feminine-presenting, with a flower in the hair and traditional wooden sandals. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1157. Full-body painted illustration of a lumberjack with an axe raised overhead in both hands, about to swing. The character is masculine-presenting, burly, with a flannel shirt, suspenders, and boots. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1158. Full-body illustration of a goddess of justice with one arm raised holding scales and the other arm extended holding a sword. The character is feminine-presenting, statuesque, in draped Greco-Roman robes with a blindfold. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1159. Full-body comic illustration of a yawning teenager stretching with both arms raised and one foot lifted off the ground. The character is androgynous, in pajamas and slippers. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1160. Full-body digital art of a storm mage with one arm raised summoning lightning and the other arm down crackling with electricity. The character is masculine-presenting, with wind-blown robes and white-blue glowing eyes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Side Views & Profiles (1161-1200)
+
+1161. Full-body side-view illustration of a medieval knight walking to the right, in full plate armor with a sword at the hip. The character is masculine-presenting, broad. Both arms visible, legs in mid-stride. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1162. Full-body side-view anime illustration of a schoolgirl running to the right, with a bag bouncing on the back. The character is feminine-presenting, with flowing hair trailing behind. Arms and legs in running pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1163. Full-body side-view digital painting of a cowboy standing in profile facing left, with a hat, duster coat, and holstered pistol. The character is masculine-presenting, rugged, with stubble. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1164. Full-body side-view watercolor of a ballerina in profile, standing on pointe with one leg extended behind in an arabesque. The character is feminine-presenting, graceful, with a tutu and bun. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1165. Full-body side-view cel-shaded illustration of a futuristic soldier walking to the right in heavy powered armor. The character is androgynous, bulky in the armor. Mid-stride. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1166. Full-body side-view flat illustration of a jogger running to the left in athletic wear, arms pumping. The character is masculine-presenting, lean, with dark skin and a headband. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1167. Full-body side-view painted illustration of an Egyptian pharaoh standing in the classic hieroglyphic pose — body in profile with shoulders facing forward. The character is androgynous, with a nemes headdress and golden collar. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1168. Full-body side-view anime illustration of a ninja leaping to the right in a horizontal flying kick. The character is masculine-presenting, lean, in a dark bodysuit with a mask. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1169. Full-body side-view digital art of an elderly wizard walking to the left with a staff, robes flowing behind. The character is masculine-presenting, with a long white beard and pointed hat. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1170. Full-body side-view watercolor of a fashion model walking a runway to the right in a designer outfit and high heels. The character is feminine-presenting, tall and slender. Mid-stride with one foot crossing in front of the other. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1171. Full-body side-view illustration of a gladiator in combat stance facing right, shield forward and sword raised. The character is masculine-presenting, muscular, with a helmet and minimal armor. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1172. Full-body side-view cel-shaded illustration of a delivery person on foot, carrying a stack of boxes, walking to the left. The character is androgynous, in a company uniform and sneakers. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1173. Full-body side-view flat illustration of an archer aiming a bow to the right, body in full draw. The character is feminine-presenting, in leather armor, with a quiver on the back. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1174. Full-body side-view painted illustration of a sumo wrestler in a crouching stance facing left, with a mawashi. The character is masculine-presenting, very large and heavy, with a topknot. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1175. Full-body side-view anime illustration of a magical girl leaping to the right, wand extended forward, hair and skirt flowing back. The character is feminine-presenting, in a colorful transformation outfit. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1176. Full-body side-view digital painting of a Roman centurion marching to the right with a pilum over one shoulder. The character is masculine-presenting, in full lorica segmentata and a crested helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1177. Full-body side-view watercolor of a geisha walking gracefully to the left in a formal kimono with small steps. The character is feminine-presenting, with an elaborate hairstyle and white-painted face. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1178. Full-body side-view comic illustration of a superhero flying to the right with one fist extended forward and cape streaming behind. The character is masculine-presenting, in a tight bodysuit. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1179. Full-body side-view cel-shaded illustration of a punk rocker walking to the left, hands in jacket pockets, with a mohawk, combat boots, and a studded jacket. The character is androgynous, lean. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1180. Full-body side-view painted illustration of a monk walking to the right in simple robes, one hand holding prayer beads and the other behind the back. The character is masculine-presenting, bald, with a serene expression. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1181. Full-body side-view digital illustration of an ice skater gliding to the left with one leg extended behind and arms gracefully positioned. The character is feminine-presenting, in a sparkly skating costume. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1182. Full-body side-view flat vector of a soldier on patrol walking to the right with a rifle held across the chest. The character is masculine-presenting, in combat fatigues with a helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1183. Full-body side-view anime illustration of a cat-boy servant bowing deeply to the left. The character is androgynous, with cat ears, a tail, and a butler uniform. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1184. Full-body side-view watercolor of a hula dancer in mid-dance facing right, with a grass skirt and lei, arms extended in flowing motions. The character is feminine-presenting, with flowers in long dark hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1185. Full-body side-view painted illustration of a chain-mail clad dwarf striding to the right with a battle axe over one shoulder. The character is masculine-presenting, very short and broad, with a massive beard. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1186. Full-body side-view digital art of a cyberpunk courier on foot sprinting to the left with a package under one arm. The character is androgynous, with neon-streaked hair, augmented legs, and a leather jacket. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1187. Full-body side-view cel-shaded illustration of a palace guard standing at attention facing right with a halberd held upright. The character is masculine-presenting, in ornate ceremonial armor with a plumed helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1188. Full-body side-view illustration of a speed skater in a racing crouch leaning forward to the right. The character is feminine-presenting, in a sleek bodysuit, with one arm swinging forward and the other back. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1189. Full-body side-view flat illustration of an office worker walking to the left carrying a briefcase, in a suit and tie. The character is masculine-presenting, average build, with glasses. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1190. Full-body side-view anime illustration of a demon lord floating slightly off the ground facing right, with a dramatic cape and horns. The character is androgynous, with red-tinged skin and glowing yellow eyes. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1191. Full-body side-view watercolor of a chef walking to the right carrying a large pot with both hands. The character is feminine-presenting, in a white chef coat and tall hat. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1192. Full-body side-view painted illustration of a Viking warrior charging to the right with a round shield and a one-handed axe. The character is masculine-presenting, bearded, in chainmail and a horned helmet. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1193. Full-body side-view digital illustration of a witch on a broomstick flying to the left. The character is feminine-presenting, with a pointed hat, flowing cloak, and one hand steering the broom. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1194. Full-body side-view cel-shaded illustration of a basketball player dribbling to the right in a low stance. The character is masculine-presenting, tall and athletic, with a team jersey. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1195. Full-body side-view flat illustration of an elderly woman walking to the left with a walking cane, in a long dress and shawl. The character is feminine-presenting, stooped, with white hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1196. Full-body side-view comic illustration of a werewolf in mid-transformation — hunched, claws out, muzzle forming, facing right. The character is masculine-presenting, with torn clothes and fur emerging. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1197. Full-body side-view anime illustration of a shrine maiden sweeping with a bamboo broom, facing left. The character is feminine-presenting, in a white haori and red hakama, long black hair. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1198. Full-body side-view painted illustration of a centaur archer (human upper body, horse lower body) aiming a bow to the right. The character is masculine-presenting, muscular upper body, with a leather bracer. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1199. Full-body side-view digital art of a modern soldier in a kneeling firing position facing right, rifle shouldered. The character is androgynous, in tactical gear with a plate carrier and helmet. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1200. Full-body side-view illustration of a steampunk adventurer striding to the left with a top hat, goggles, and a mechanical arm. The character is feminine-presenting, with a corset, layered skirt, and boots. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Crouching, Leaning & Bending Poses (1201-1240)
+
+1201. Full-body illustration of a cat burglar crouching low in a sneaking pose, body compact with one hand on the ground. The character is feminine-presenting, in a sleek black bodysuit with a mask. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1202. Full-body digital painting of a farmer bending forward picking something from the ground, one hand reaching down and the other on the knee. The character is masculine-presenting, in overalls, a straw hat, and boots. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1203. Full-body anime illustration of a detective in a trenchcoat leaning against an invisible wall, arms crossed and one foot flat against it. The character is masculine-presenting, with a fedora and a cigarette. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1204. Full-body watercolor of a child crouching down to look at something on the ground, knees bent, arms resting on thighs. The character is androgynous, in shorts and a striped shirt. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1205. Full-body cel-shaded illustration of a ninja in a deep crouch, one leg extended to the side in a wide stance. The character is androgynous, in a dark bodysuit. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1206. Full-body flat illustration of a mechanic leaning into an engine bay, upper body tilted forward at the waist, arms reaching downward. The character is masculine-presenting, in coveralls with a backwards cap. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1207. Full-body painted illustration of a gardener on hands and knees planting seedlings. The character is feminine-presenting, elderly, in gardening gloves, an apron, and a sun hat. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1208. Full-body comic illustration of a baseball catcher in a deep squat behind an invisible plate, mitt extended and other hand behind the back. The character is masculine-presenting, in full catcher's gear. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1209. Full-body anime illustration of a maid bowing deeply at the waist with arms pressed to sides. The character is feminine-presenting, in a classic maid outfit. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1210. Full-body digital art of a soldier in a tactical crouch, weapon held close, body low and compact. The character is androgynous, in camouflage fatigues with a helmet. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1211. Full-body watercolor of a yoga practitioner in a deep forward fold, hands touching the floor with legs straight. The character is feminine-presenting, flexible, in yoga clothes. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1212. Full-body cel-shaded illustration of a cool teen leaning back casually with hands in pockets, weight on one leg. The character is masculine-presenting, in jeans, sneakers, and a varsity jacket. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1213. Full-body flat illustration of a plumber crouching and reaching under a sink, one arm extended. The character is masculine-presenting, stocky, in work pants and a tool belt. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1214. Full-body painted illustration of a fortune teller leaning forward over a crystal ball, hands hovering on either side. The character is feminine-presenting, with a headscarf and dramatic jewelry. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1215. Full-body anime illustration of a wolf-boy in a feral crouch on all fours, ears flat and tail raised. The character is masculine-presenting, with wolf ears, a tail, and torn casual clothes. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1216. Full-body digital illustration of a photographer crouching with a camera, one knee up and one down, camera held to the eye. The character is androgynous, in casual clothes with a camera bag. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1217. Full-body watercolor of a smith bent over an anvil hammering, body leaned forward with one arm swinging down. The character is masculine-presenting, muscular, with a leather apron and rolled sleeves. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1218. Full-body cel-shaded illustration of a thief picking a lock, crouching by an invisible door with tools in both hands. The character is feminine-presenting, in dark leather with a hood up. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1219. Full-body flat illustration of a scientist bending over a microscope, one eye to the eyepiece and one hand adjusting the focus. The character is androgynous, in a lab coat and glasses. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1220. Full-body painted illustration of a goblin crouching with a sack of loot, hunched over with a mischievous grin. The character is small, green-skinned, with pointed ears and ragged clothes. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+### Unusual Body Types & Non-Standard Proportions (1221-1260)
+
+1221. Full-body illustration of an extremely tall, thin character — a stilt-walker in a harlequin costume with stilts visible beneath the pants. The character is androgynous, over 8 heads tall in proportion. Standing in an A-pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements.
+
+1222. Full-body chibi illustration (2.5 heads tall) of a tiny knight in oversized armor with a huge sword. The character is masculine-presenting, with a round face and stubby limbs. Standing with arms away from body. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1223. Full-body illustration of an extremely muscular bodybuilder in a posing trunks. The character is masculine-presenting, with exaggerated muscle mass, particularly in the arms, chest, and legs. Standing in a front double biceps pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1224. Full-body illustration of a very short and stout dwarf warrior, about 3.5 heads tall, with a massive barrel chest and short thick legs. The character is masculine-presenting, heavily bearded, with plate armor. Standing with arms away from body. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1225. Full-body anime illustration with exaggerated proportions — a magical girl with very long legs (6:4 leg-to-torso ratio), a tiny waist, and large eyes. The character is feminine-presenting, in a frilly outfit and platform boots. Standing in a pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1226. Full-body illustration of an elderly hunched-over wizard, spine curved forward, about 5 heads tall with shortened torso. The character is masculine-presenting, with a long beard reaching the ground and a massive gnarled staff. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1227. Full-body illustration of a large ogre-like character, about 4 heads tall but very wide — shoulders twice the width of a normal person. The character is androgynous, with thick green skin, a loincloth, and massive arms. Standing with arms away from body. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1228. Full-body cartoon illustration of a rubber-hose style character with noodle-like limbs, no joints visible, wearing gloves and shoes. The character is androgynous, with a round head and pie-cut eyes. Standing in a classic 1930s cartoon pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1229. Full-body illustration of a very young child character, about 3 heads tall, in a onesie and tiny shoes. The character is androgynous, toddler proportions with a large head and short limbs. Standing with arms out for balance. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1230. Full-body illustration of a centaur — human upper body and horse lower body. The character is feminine-presenting, with long hair and a leather vest on top, and a painted brown horse body below. Standing with all four legs visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1231. Full-body illustration of a four-armed alien warrior in light armor. The character is androgynous, with blue skin, four muscular arms each holding a different weapon, and two legs. Standing in a wide stance. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1232. Full-body chibi illustration (2 heads tall) of a tiny dragon girl with wings, horns, and a tail, in a school uniform. The character is feminine-presenting, with an oversized head and stubby limbs. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1233. Full-body illustration of a very obese fantasy tavern keeper in an apron and rolled sleeves. The character is masculine-presenting, with a round belly, thick limbs, and a jovial expression. Standing with hands on hips. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1234. Full-body illustration of a spider-person with a human upper body and eight spider legs from the waist down. The character is feminine-presenting, with dark hair, pale skin, and multiple red eyes. All limbs clearly visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1235. Full-body illustration of a very lanky alien with extremely long arms that reach past the knees and a small head on a long neck. The character is androgynous, with grey skin and a simple tunic. Standing in an A-pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1236. Full-body super-deformed illustration (3 heads tall) of a chibi samurai with an oversized katana. The character is masculine-presenting, with a big round head, tiny body, and simplified features. Standing in a ready stance. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1237. Full-body illustration of a pregnant woman in a flowing maternity dress and sandals. The character is feminine-presenting, with one hand on the belly and the other at her side. Standing in a natural pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1238. Full-body illustration of a snake-person (naga) with a human upper body and a long serpentine lower body instead of legs. The character is masculine-presenting, with scales transitioning from skin, and a cobra hood. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1239. Full-body illustration of a tiny fairy, about 1.5 heads tall in super-deformed style, with enormous butterfly wings relative to body size. The character is feminine-presenting, with a flower petal dress. Standing on tiptoes. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1240. Full-body illustration of a massive golem made of stone with a humanoid shape but very blocky proportions — square hands, cylindrical legs, and a flat rectangular head. About 3 heads tall but very wide. Standing with arms away from body. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+### Varied Clothing & Cultural Dress (1241-1280)
+
+1241. Full-body illustration of a Scottish Highland warrior in a kilt, sporran, boots, and a tartan plaid draped over one shoulder. The character is masculine-presenting, muscular, with red hair and a claymore on the back. Standing in an A-pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1242. Full-body digital painting of a Maasai warrior in a shuka (red draped cloth), beaded jewelry, and sandals. The character is masculine-presenting, tall and lean, with dark skin and a shaved head. Standing with a spear held upright. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1243. Full-body watercolor of a hanbok-wearing Korean nobleman in a full-length robe, wide-brimmed gat hat, and silk shoes. The character is masculine-presenting, dignified, with a long beard. Standing with hands clasped in front. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1244. Full-body illustration of a sari-wearing woman in an elegantly draped six-yard sari with a blouse and jewelry. The character is feminine-presenting, with dark skin, a bindi, and long black hair with flowers. Standing with one hand on hip. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1245. Full-body cel-shaded illustration of a mariachi musician in a charro suit with embroidery, a wide sombrero, and pointed boots. The character is masculine-presenting, with a guitar held to one side. Standing with arms away from body. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1246. Full-body flat illustration of a First Nations dancer in a traditional jingle dress with cone-shaped metal jingles, moccasins, and a feathered hair ornament. The character is feminine-presenting, with long dark hair and brown skin. Standing with arms slightly raised. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1247. Full-body digital painting of a Berber nomad in layered desert robes with a blue tagelmust (face wrap), leather sandals, and a curved dagger at the belt. The character is masculine-presenting, with only eyes visible. Standing in a neutral pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1248. Full-body watercolor of a Bavarian woman in a traditional dirndl with an apron, blouse, and braided hair. The character is feminine-presenting, with light skin and rosy cheeks. Standing with hands on the apron. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1249. Full-body painted illustration of a Shaolin monk in orange robes and cloth shoes, with a shaved head and a prayer bead necklace. The character is masculine-presenting, lean and muscular, with East Asian features. Standing in a kung fu stance. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1250. Full-body anime illustration of a gothic lolita in an elaborate black and white dress with lace, petticoats, platform boots, a bonnet, and a parasol. The character is feminine-presenting, with pale skin and dark twin tails. Standing in a dainty pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1251. Full-body illustration of a Russian Cossack in a long cherkesska coat, papakha fur hat, and high boots with a saber at the belt. The character is masculine-presenting, with a large mustache and a bandolier. Standing with arms away from body. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1252. Full-body digital art of an Inuit hunter in a fur parka with a hood, thick mittens, fur-lined boots, and snow pants. The character is androgynous, with East Asian features and a harpoon held to one side. Standing in a neutral pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1253. Full-body cel-shaded illustration of a Thai classical dancer in a traditional costume with a golden headdress, embroidered top, wrapped lower garment, and bare feet. The character is feminine-presenting, with hands in a classic dance mudra. Standing in a dance pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1254. Full-body watercolor of a Turkish janissary in a distinctive tall bork hat, a long caftan, and pointed shoes with a yatagan sword. The character is masculine-presenting, with a mustache. Standing at attention. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1255. Full-body flat illustration of an astronaut in a modern EVA suit with all panels, tubes, and a large backpack life support system visible. The character is androgynous, with the visor up showing a face. Standing in an A-pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1256. Full-body painted illustration of a flapper from the 1920s in a fringed drop-waist dress, headband with a feather, T-strap heels, and long pearl necklace. The character is feminine-presenting, slim, with a bob haircut. Standing with one hand on hip. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1257. Full-body digital illustration of a hazmat worker in a full bright yellow hazmat suit with a hood, face shield, rubber gloves, and rubber boots. The character is androgynous, fully covered. Standing with arms slightly away from body. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1258. Full-body anime illustration of a cyberpunk street samurai in a long coat over a bodysuit, with neon-lit visor, mechanical arm, combat boots, and a katana on the back. The character is masculine-presenting, with cybernetic enhancements visible. Standing in a cool pose. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1259. Full-body watercolor of a Hawaiian hula dancer in a grass skirt, flower lei, and bare feet with a plumeria in the hair. The character is feminine-presenting, with warm brown skin and long wavy dark hair. Standing with arms in a hula position. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+1260. Full-body illustration of a deep sea fish-person in bioluminescent armor made of shells and coral, with webbed hands and feet, gills, and fin-like ears. The character is androgynous, with blue-green skin. Standing in an A-pose with all limbs clearly visible. Single character only, centered in the frame, full body visible from head to feet. Solid plain white background. No text, no watermark, no UI elements, no props on the ground.
+
+### Mixed Style Sampler (1261-1300)
+
+1261. Full-body art nouveau illustration of an elven enchantress in a flowing gown with organic vine patterns and a moonstone circlet. The character is feminine-presenting, ethereal, with silvery hair. Standing in a graceful pose with one arm extended. Decorative linework in the Alphonse Mucha style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1262. Full-body ukiyo-e woodblock print style illustration of a ronin in a tattered kimono with a straw hat and sandals, katana at the hip. The character is masculine-presenting, weathered, with a stern expression. Standing in a three-quarter view. Bold outlines and flat color areas. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1263. Full-body paper cut-out collage style illustration of a circus ringmaster in a red tailcoat, top hat, and boots. The character is androgynous, flamboyant, with a twirled mustache. Standing with arms spread wide. Layered paper texture visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1264. Full-body stained glass style illustration of a paladin in gleaming armor with a shield bearing a sun emblem. The character is masculine-presenting, noble, with a halo of light. Standing with sword planted point-down. Bold black outlines with jewel-tone color fills. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1265. Full-body pop art illustration of a retro superhero in a bright primary-colored costume with halftone dot shading. The character is feminine-presenting, athletic, with a cape and mask. Standing in a heroic pose with fists on hips. Roy Lichtenstein-inspired style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1266. Full-body crayon drawing style illustration of a fairy tale princess in a simple gown and crown. The character is feminine-presenting, with rosy cheeks and a wide smile. Childlike drawing style with visible crayon texture. Standing with arms slightly out. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1267. Full-body linocut print style illustration of a lumberjack in a flannel shirt, jeans, and boots with an axe over the shoulder. The character is masculine-presenting, bearded and strong. Bold carved lines with limited colors. Standing in a three-quarter view. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1268. Full-body low-poly 3D render style illustration of a space marine in angular geometric armor, like a video game model with visible polygon edges. The character is androgynous, faceted features. Standing in an A-pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1269. Full-body traditional Chinese ink wash painting of a scholar in hanfu robes carrying a scroll, with flowing brush strokes and minimal color. The character is masculine-presenting, serene, with a topknot and a wispy beard. Standing in a contemplative pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1270. Full-body neon sign style illustration of a nightclub bouncer in a tight black shirt, pants, and boots, with a neon glow outline. The character is masculine-presenting, very muscular, with a shaved head and sunglasses. Standing with arms crossed. Glowing neon line art on dark-tinted form. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1271. Full-body botanical illustration style of a dryad with bark-textured skin and leaf hair, wearing a dress of woven vines and flowers. The character is feminine-presenting, with a graceful pose. Detailed scientific illustration style with fine linework. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1272. Full-body silhouette illustration of an action hero mid-leap, entirely in black silhouette with just enough detail in the outline to show clothing, hair, and weapon. The character is masculine-presenting, with a gun in one hand. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1273. Full-body mosaic tile style illustration of a Roman senator in a toga and laurel wreath, composed of small square color tiles. The character is masculine-presenting, dignified. Standing with one arm extended in an oratory gesture. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1274. Full-body minimalist geometric illustration of a runner in motion, composed of simple circles, triangles, and rectangles in bright colors. The character is androgynous, abstracted but clearly humanoid with all limbs visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1275. Full-body sumi-e (Japanese ink painting) illustration of a kendo practitioner in full bogu armor with a shinai raised overhead. The character is androgynous, with bold confident brush strokes and ink splatter. Standing in a striking pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1276. Full-body retro 1950s advertisement style illustration of a housewife in a polka-dot dress, apron, and heels, with a perfectly styled hairdo. The character is feminine-presenting, with a bright smile and rosy cheeks. Standing holding a mixing bowl. Vintage commercial art style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1277. Full-body graffiti wildstyle illustration of a breakdancer in baggy pants, a hoodie, and sneakers, with stylized letter-like shapes in the clothing design. The character is masculine-presenting, with a beanie and headphones. Standing in a b-boy stance. Spray paint texture. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1278. Full-body Persian miniature painting style of a warrior prince on foot in ornate armor and a plumed turban, holding a curved sword. The character is masculine-presenting, with a fine mustache. Flat perspective with intricate patterning. Standing in a regal pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1279. Full-body vaporwave/synthwave aesthetic illustration of a cybernetic woman in a chrome bodysuit with holographic accents and neon pink/purple/cyan color scheme. The character is feminine-presenting, with mirrored visor sunglasses. Standing in a pose. Retro-futuristic 80s aesthetic. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1280. Full-body cross-stitch/embroidery style illustration of a medieval peasant in simple tunic and hose, as if rendered in stitches on fabric. The character is androgynous, with visible grid pattern and thread texture. Standing in a neutral pose with arms slightly out. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1281. Full-body illustration of a plague doctor in the iconic beaked mask, long black robe, wide-brimmed hat, and leather gloves, carrying a cane. The character is androgynous, fully covered, standing in a three-quarter view. Dark atmospheric style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1282. Full-body anime illustration of a demon butler in a tailored black suit with a red tie, horns, a pointed tail, and glowing red eyes. The character is masculine-presenting, tall and elegant, with slicked-back dark hair. Standing with one hand over the chest in a bow. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1283. Full-body watercolor of a forest spirit made of moss and wood, with antlers, glowing amber eyes, and roots for feet. The character is androgynous, humanoid but clearly not human. Standing with arms out. Soft ethereal watercolor style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1284. Full-body flat vector illustration of an airline pilot in a complete uniform — captain's hat, jacket with epaulettes, pressed pants, and polished shoes. The character is feminine-presenting, with a confident stance and hands clasped behind the back. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1285. Full-body digital painting of a minotaur in bronze Greek armor, with a bull's head, massive horns, hooves, and a human muscular body. The character is masculine-presenting, towering. Standing with a great axe in one hand. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1286. Full-body cel-shaded illustration of a roller derby player in a helmet, tank top, short shorts, knee pads, and quad skates. The character is feminine-presenting, athletic, with tattoos and a fierce expression. Standing in a ready crouch. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1287. Full-body ink sketch of a wandering bard in a feathered cap, doublet, puffed sleeves, tights, and pointed shoes, carrying a lute. The character is androgynous, with a charming smile and a jaunty stance. Loose pen-and-ink sketch style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1288. Full-body painted illustration of a frost giant — extremely tall with blue-white skin, wearing fur and ice-crystal armor, with icicles in the beard. The character is masculine-presenting, about 4 heads tall but massive. Standing with a frost-covered club. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1289. Full-body anime illustration of a shrine fox spirit (kitsune) in a white kimono with fox ears, multiple flowing tails, and spirit flames around the hands. The character is feminine-presenting, with amber eyes and white hair. Standing in a mystical pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1290. Full-body digital illustration of a steampunk automaton — a humanoid clockwork robot with visible gears, brass plating, and a monocle lens for one eye. The character has jointed mechanical limbs and a top hat. Standing in an A-pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1291. Full-body comic illustration of an ancient Greek athlete in nothing but a himation draped over one shoulder, with sandals and an olive wreath. The character is masculine-presenting, idealized muscular proportions. Standing in a classic contrapposto pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1292. Full-body gouache painting of a Día de los Muertos skeleton figure in a full suit with a sombrero, marigold garlands, and face paint (calaca). The character is androgynous, skeletal, in festive clothing. Standing with arms slightly away from body. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1293. Full-body anime illustration of a maid cafe waitress in an over-the-top maid outfit with cat-ear headband, frills, a short skirt, thigh-highs, and Mary Jane shoes. The character is feminine-presenting, cute, with pink hair in twin buns. Standing in a welcoming pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1294. Full-body watercolor of a Norse Valkyrie in winged helmet, chainmail over a tunic, fur-lined cloak, and leather boots, with a spear and round shield. The character is feminine-presenting, tall and strong, with braided blonde hair. Standing in a warrior pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1295. Full-body flat illustration of a deep space exploration android in a sleek white bodysuit with glowing blue panel lines, no hair, and smooth featureless face. The character is androgynous, humanoid robot. Standing in an A-pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1296. Full-body painted illustration of a Venetian carnival figure in an elaborate mask, a tricorn hat, and a long domino cloak with ornate patterns. The character is androgynous, mysterious, with a concealed face. Standing with one arm extended gracefully. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1297. Full-body digital art of a battle-worn mercenary in mismatched armor pieces — one pauldron, a chest plate over chainmail, leather pants, and heavy boots, with scars visible. The character is feminine-presenting, rugged, with short-cropped hair and a greatsword on the back. Standing in a tired but ready pose. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1298. Full-body cel-shaded illustration of a jester in a classic motley outfit with bells, pointed shoes, a three-pointed hat, and carrying a marotte. The character is androgynous, with a painted face in a grin. Standing in a playful pose with one foot kicked up. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1299. Full-body anime illustration of a dragon knight in scale mail with dragon-wing pauldrons, a draconic helmet with horns, and a long tail. The character is masculine-presenting, with reptilian features blending with human. Standing with a flaming greatsword. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+1300. Full-body illustration of a time traveler in a patchwork outfit mixing eras — a Victorian top hat, a cyberpunk arm, a Roman sandal on one foot and a sneaker on the other, with a pocket watch and a holographic display. The character is androgynous, with heterochromatic eyes. Standing in a neutral pose with all the mismatched details visible. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
+
+---
+
 ## Validation Set (701-900) — DO NOT TRAIN ON THESE
 
 <!-- > These 200 prompts are held out for validation/benchmarking only. Never include in training data.

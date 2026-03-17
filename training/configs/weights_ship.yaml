@@ -1,0 +1,36 @@
+# Ship run — weight prediction config
+# Retrain with humanrig only (unirig deleted — prohibited license)
+#
+# Data: humanrig 11,434 examples with skinning weights
+# Previous best: 0.023137 MAE (run 3, 12K examples)
+# Change: unirig removed, encoder features recomputed with run 9 seg model
+
+model:
+  num_features: 31
+  num_bones: 20
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"            # HumanRig: 11,434 with skinning weights
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  max_vertices: 2048
+
+training:
+  batch_size: 64
+  num_workers: 8
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  weight_loss_weight: 1.0
+  confidence_weight: 0.5
+
+checkpointing:
+  save_dir: "./checkpoints/weights"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/mae"
