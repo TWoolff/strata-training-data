@@ -64,7 +64,7 @@ if [ -f "$RUN8_CKPT" ]; then
     echo "  run8_best.pt already exists."
 else
     echo "  Downloading run 8 checkpoint..."
-    rclone copy hetzner:strata-training-data/checkpoints_run9_bootstrap/segmentation/best.pt \
+    rclone copy hetzner:strata-training-data/checkpoints_run8_bootstrap/segmentation/best.pt \
         ./checkpoints/segmentation/ --transfers 32 --fast-list -P
     if [ -f "checkpoints/segmentation/best.pt" ]; then
         cp checkpoints/segmentation/best.pt "$RUN8_CKPT"
