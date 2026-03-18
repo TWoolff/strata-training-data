@@ -5,13 +5,12 @@
 # Changes from run 10:
 #   - LR: 5e-5 → 1e-5 (flat, no warmup)
 #   - warmup_epochs: 5 → 0
-#   - scheduler: cosine → cosine with very low eta_min (effectively flat)
 #   - depth_weight: 0.5 → 0.2 (reduce auxiliary head interference)
 #   - normals_weight: 0.5 → 0.2 (same)
 #   - early_stopping_patience: 20 → 30
 #   - epochs: 80 → 60 (fine-tuning converges faster)
-#
-# Data: same as run 10 (flux_diverse added)
+#   - DROPPED flux_diverse: anatomically broken FLUX images + 6.8% no-torso
+#     pseudo-labels corrupt spatial body part relationships
 
 model:
   backbone: "mobilenet_v3_large"
@@ -26,14 +25,12 @@ data:
     - "./data_cloud/gemini_li_converted"
     - "./data_cloud/cvat_annotated"
     - "./data_cloud/gemini_diverse"
-    - "./data_cloud/flux_diverse"
   quality_filter: true
   resolution: 512
   split_seed: 42
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   dataset_weights:
     cvat_annotated: 10.0
-    flux_diverse: 4.0
     gemini_diverse: 4.0
     gemini_li_converted: 3.0
     vroid_cc0: 2.5
