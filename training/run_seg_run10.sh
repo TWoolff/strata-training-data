@@ -390,9 +390,10 @@ if [ ! -f "$UNRIGGED_MARKER" ]; then
     rclone copy hetzner:strata-training-data/tars/back_view_pairs_unrigged.tar ./data/tars/ \
         --transfers 16 --fast-list --size-only -P 2>&1 | tee -a "$LOG_DIR/bv_download.log"
     echo "  Extracting back_view_pairs_unrigged.tar..."
-    tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/back_view_pairs/ --strip-components=1 2>/dev/null || \
-        tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/
+    tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/back_view_pairs/ --strip-components=1
     rm -f ./data/tars/back_view_pairs_unrigged.tar
+    UNRIGGED_COUNT=$(ls -d ./data/training/back_view_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
+    echo "  After unrigged extraction: $UNRIGGED_COUNT total pairs"
     touch "$UNRIGGED_MARKER"
 else
     echo "  back_view_pairs_unrigged already extracted, skipping."
