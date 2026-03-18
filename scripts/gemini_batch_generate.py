@@ -55,6 +55,10 @@ ART_STYLES = [
     "ink sketch with clean lineart",
     "realistic digital art",
     "chibi / super-deformed",
+    "anime illustration",
+    "game concept art",
+    "comic book art with bold outlines",
+    "soft pastel illustration",
 ]
 
 GENRES = [
@@ -66,6 +70,10 @@ GENRES = [
     "superhero comic book",
     "dark gothic horror",
     "ancient mythology",
+    "post-apocalyptic survivor",
+    "pirate adventure",
+    "martial arts wuxia",
+    "fairy tale",
 ]
 
 BODY_TYPES = [
@@ -74,6 +82,8 @@ BODY_TYPES = [
     "stocky and sturdy",
     "tall and lanky",
     "short and compact",
+    "heavyset and powerful",
+    "petite and nimble",
 ]
 
 GENDER_PRESENTATIONS = [
@@ -96,6 +106,35 @@ POSES = [
     "in a dynamic action pose",
     "in a relaxed casual stance",
     "standing with arms slightly away from body (A-pose)",
+    "standing with one hand on hip",
+    "walking forward mid-stride",
+    "standing with arms crossed",
+]
+
+# Outfit/silhouette modifiers — these create varied shapes for segmentation training
+OUTFITS = [
+    "",  # no specific outfit (let genre determine it)
+    "wearing a long flowing cape",
+    "wearing heavy plate armor with pauldrons",
+    "wearing a hooded cloak",
+    "wearing a long dress or robe",
+    "wearing minimal clothing showing skin",
+    "wearing bulky winter gear with a fur collar",
+    "wearing a backpack and utility belt",
+    "carrying a large weapon on their back",
+    "wearing a hat or helmet with distinctive silhouette",
+]
+
+# Hair styles — important for hair_back segmentation class
+HAIR_STYLES = [
+    "",  # no specific hair
+    "with long flowing hair past their shoulders",
+    "with short cropped hair",
+    "with a large ponytail or braid",
+    "with big curly or afro hair",
+    "bald or shaved head",
+    "with twin tails or pigtails",
+    "with hair tied up in a bun",
 ]
 
 
@@ -106,41 +145,57 @@ def _build_prompt(
     gender: str,
     skin_tone: str,
     pose: str,
+    outfit: str = "",
+    hair: str = "",
 ) -> str:
     """Build a structured character generation prompt."""
-    return (
+    base = (
         f"Full-body {style} of a {genre} character. "
         f"The character is {gender}-presenting, {body_type}, with {skin_tone}. "
+    )
+    if hair:
+        base += f"The character is {hair}. "
+    if outfit:
+        base += f"The character is {outfit}. "
+    base += (
         f"The character is {pose}. "
         f"Single character only, centered in the frame, full body visible from head to feet. "
         f"Solid plain white background. No text, no watermark, no UI elements, no props on the ground."
     )
+    return base
 
 
 def _build_prompt_list(count: int, seed: int = 42) -> list[dict]:
     """Build a list of diverse prompts by sampling from all axes.
 
+    Samples randomly from all axes rather than full cartesian product
+    (which would be 12*12*7*3*5*8*10*8 = 9.7M combinations). This ensures
+    every image is a unique combination while keeping diversity high.
+
     Returns list of dicts with 'prompt' and 'tags' keys.
     """
     rng = random.Random(seed)
 
-    # Build all combinations
-    axes = list(
-        itertools.product(
-            ART_STYLES,
-            GENRES,
-            BODY_TYPES,
-            GENDER_PRESENTATIONS,
-            SKIN_TONES,
-            POSES,
-        )
-    )
-    # 8 * 8 * 5 * 3 * 5 * 5 = 24,000 combinations — plenty for 1000
-    rng.shuffle(axes)
-
     prompts = []
-    for style, genre, body_type, gender, skin_tone, pose in axes[:count]:
-        prompt = _build_prompt(style, genre, body_type, gender, skin_tone, pose)
+    seen: set[tuple] = set()
+
+    while len(prompts) < count:
+        combo = (
+            rng.choice(ART_STYLES),
+            rng.choice(GENRES),
+            rng.choice(BODY_TYPES),
+            rng.choice(GENDER_PRESENTATIONS),
+            rng.choice(SKIN_TONES),
+            rng.choice(POSES),
+            rng.choice(OUTFITS),
+            rng.choice(HAIR_STYLES),
+        )
+        if combo in seen:
+            continue
+        seen.add(combo)
+
+        style, genre, body_type, gender, skin_tone, pose, outfit, hair = combo
+        prompt = _build_prompt(style, genre, body_type, gender, skin_tone, pose, outfit, hair)
         tags = {
             "style": style,
             "genre": genre,
@@ -148,6 +203,8 @@ def _build_prompt_list(count: int, seed: int = 42) -> list[dict]:
             "gender": gender,
             "skin_tone": skin_tone,
             "pose": pose,
+            "outfit": outfit,
+            "hair": hair,
         }
         prompts.append({"prompt": prompt, "tags": tags})
 
@@ -169,13 +226,29 @@ class GenerationResult:
     errors: list[str] = field(default_factory=list)
 
 
-def _generate_single(
+def _load_env_key(key_names: list[str]) -> str:
+    """Load an API key from environment or .env file."""
+    for name in key_names:
+        val = os.environ.get(name, "")
+        if val:
+            return val
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            for name in key_names:
+                if line.startswith(f"{name}="):
+                    return line.split("=", 1)[1].strip().strip("'\"")
+    return ""
+
+
+def _generate_single_gemini(
     client,
     prompt: str,
     output_path: Path,
     model: str,
 ) -> bool:
-    """Generate a single image. Returns True on success."""
+    """Generate a single image via Gemini API. Returns True on success."""
     response = client.models.generate_content(
         model=model,
         contents=prompt,
@@ -193,52 +266,95 @@ def _generate_single(
     return False
 
 
+def _generate_single_hf(
+    hf_token: str,
+    prompt: str,
+    output_path: Path,
+    model: str,
+) -> bool:
+    """Generate a single image via HuggingFace Inference API. Returns True on success."""
+    import requests
+
+    headers = {"Authorization": f"Bearer {hf_token}"}
+    payload = {"inputs": prompt}
+
+    response = requests.post(
+        f"https://router.huggingface.co/hf-inference/models/{model}",
+        headers=headers,
+        json=payload,
+        timeout=180,
+    )
+
+    if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
+        output_path.write_bytes(response.content)
+        return True
+
+    if response.status_code == 429:
+        raise Exception(f"429 Rate limited: {response.text[:200]}")
+
+    logger.warning("  HF API returned %d: %s", response.status_code, response.text[:200])
+    return False
+
+
 def run_batch(
     output_dir: Path,
     count: int = 1000,
     seed: int = 42,
     model: str = "gemini-2.5-flash-image",
     delay: float = 1.1,
+    backend: str = "auto",
 ) -> GenerationResult:
-    """Generate a batch of character images via Gemini API.
+    """Generate a batch of character images.
 
     Args:
         output_dir: Directory to save raw PNG images + manifest.
         count: Number of images to generate.
         seed: Random seed for prompt diversity.
-        model: Gemini model ID for image generation.
+        model: Model ID (Gemini or HuggingFace model name).
         delay: Seconds between API calls (rate limiting).
+        backend: "gemini", "huggingface", or "auto" (try gemini, fall back to HF).
 
     Returns:
         GenerationResult with counts of generated/skipped/failed.
     """
-    try:
-        from google import genai
-    except ImportError as exc:
-        raise ImportError(
-            "google-genai SDK not installed. Run: pip install google-genai"
-        ) from exc
+    # Determine backend
+    use_hf = False
+    hf_token = ""
+    gemini_client = None
 
-    api_key = os.environ.get("GOOGLE_API_KEY", "") or os.environ.get(
-        "GEMINI_KEY", ""
-    )
-    if not api_key:
-        # Try .env file
-        env_path = Path(__file__).resolve().parent.parent / ".env"
-        if env_path.exists():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if line.startswith("GOOGLE_API_KEY=") or line.startswith(
-                    "GEMINI_KEY="
-                ):
-                    api_key = line.split("=", 1)[1].strip().strip("'\"")
-                    break
-    if not api_key:
-        raise ValueError(
-            "GOOGLE_API_KEY or GEMINI_KEY not set. Export it or add to .env file."
-        )
+    if backend in ("auto", "gemini"):
+        api_key = _load_env_key(["GOOGLE_API_KEY", "GEMINI_KEY"])
+        if api_key:
+            try:
+                from google import genai
+                gemini_client = genai.Client(api_key=api_key)
+                # Quick test
+                if backend == "auto":
+                    try:
+                        gemini_client.models.generate_content(
+                            model=model, contents="test",
+                        )
+                    except Exception as e:
+                        if "429" in str(e) or "not available" in str(e).lower():
+                            logger.info("Gemini unavailable (%s), falling back to HuggingFace", str(e)[:80])
+                            gemini_client = None
+            except ImportError:
+                gemini_client = None
 
-    client = genai.Client(api_key=api_key)
+    if gemini_client is None or backend == "huggingface":
+        hf_token = _load_env_key(["HF_TOKEN"])
+        if not hf_token:
+            raise ValueError(
+                "No working backend. Set GEMINI_KEY or HF_TOKEN in .env"
+            )
+        use_hf = True
+        if model == "gemini-2.5-flash-image":
+            model = "black-forest-labs/FLUX.1-schnell"
+        logger.info("Using HuggingFace backend with model: %s", model)
+
+    if not use_hf:
+        logger.info("Using Gemini backend with model: %s", model)
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Build prompts
@@ -278,7 +394,10 @@ def run_batch(
         )
 
         try:
-            success = _generate_single(client, prompt, image_path, model)
+            if use_hf:
+                success = _generate_single_hf(hf_token, prompt, image_path, model)
+            else:
+                success = _generate_single_gemini(gemini_client, prompt, image_path, model)
             if success:
                 result.generated += 1
                 manifest_entry = {
@@ -355,6 +474,13 @@ def main() -> None:
         default=1.1,
         help="Seconds between API calls for rate limiting (default: 1.1).",
     )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        choices=["auto", "gemini", "huggingface"],
+        default="auto",
+        help="Backend: 'gemini', 'huggingface' (FLUX.1-schnell), or 'auto' (default: auto).",
+    )
     args = parser.parse_args()
 
     result = run_batch(
@@ -363,6 +489,7 @@ def main() -> None:
         seed=args.seed,
         model=args.model,
         delay=args.delay,
+        backend=args.backend,
     )
 
     print("\nBatch generation complete:")
