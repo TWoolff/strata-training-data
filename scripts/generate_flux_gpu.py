@@ -130,19 +130,16 @@ def _build_prompt(
     style: str, genre: str, body_type: str, gender: str,
     skin_tone: str, pose: str, outfit: str = "", hair: str = "",
 ) -> str:
-    base = (
-        f"Full-body {style} of a {genre} character. "
-        f"The character is {gender}-presenting, {body_type}, with {skin_tone}. "
-    )
+    # Keep under 77 CLIP tokens — T5 sees full prompt but shorter is faster
+    parts = [f"Full-body {style} of a {genre} character,"]
+    parts.append(f"{gender}-presenting, {body_type}, {skin_tone},")
     if hair:
-        base += f"The character is {hair}. "
+        parts.append(f"{hair},")
     if outfit:
-        base += f"The character is {outfit}. "
-    base += (
-        f"The character is {pose}. "
-        f"Single character only, centered in the frame, full body visible from head to feet. "
-        f"Solid plain white background. No text, no watermark, no UI elements, no props on the ground."
-    )
+        parts.append(f"{outfit},")
+    parts.append(f"{pose}.")
+    parts.append("Single character, full body, white background.")
+    base = " ".join(parts)
     return base
 
 
@@ -193,13 +190,28 @@ def main() -> None:
     logger.info("Loading FLUX.1-schnell pipeline...")
     from diffusers import FluxPipeline
 
-    pipe = FluxPipeline.from_pretrained(
-        "black-forest-labs/FLUX.1-schnell",
-        torch_dtype=torch.bfloat16,
-    )
-    # Use CPU offload to keep only the active component on GPU — essential for ≤24GB VRAM
-    pipe.enable_model_cpu_offload()
-    logger.info("Pipeline loaded with CPU offload.")
+    # Try quantized loading first (fits on 24GB GPU, much faster than CPU offload)
+    try:
+        from diffusers import BitsAndBytesConfig as DiffusersBnBConfig
+        quantization_config = DiffusersBnBConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+        pipe = FluxPipeline.from_pretrained(
+            "black-forest-labs/FLUX.1-schnell",
+            torch_dtype=torch.bfloat16,
+            quantization_config=quantization_config,
+        )
+        pipe.to("cuda")
+        logger.info("Pipeline loaded with 4-bit quantization (full GPU).")
+    except Exception as e:
+        logger.info("4-bit quantization unavailable (%s), using CPU offload.", e)
+        pipe = FluxPipeline.from_pretrained(
+            "black-forest-labs/FLUX.1-schnell",
+            torch_dtype=torch.bfloat16,
+        )
+        pipe.enable_model_cpu_offload()
+        logger.info("Pipeline loaded with model-level CPU offload.")
 
     # Build prompts
     prompts = _build_prompt_list(args.count, args.seed)
