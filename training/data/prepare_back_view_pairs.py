@@ -78,7 +78,8 @@ _FLAT_PATTERN = re.compile(
 
 # Per-example layout: extract angle from directory name like
 #   Meshy_AI_xxx_texture_back → angle="back"
-_PER_EXAMPLE_PATTERN = re.compile(r"^(?P<char>.+?)_texture_(?P<angle>.+)$")
+#   Greedy .+ so "Meshy_AI_foo_texture_fbx_texture_front" splits correctly
+_PER_EXAMPLE_PATTERN = re.compile(r"^(?P<char>.+)_texture_(?P<angle>front|three_quarter|back|side|side_left|three_quarter_back|three_quarter_left)$")
 
 
 # ---------------------------------------------------------------------------
