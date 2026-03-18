@@ -49,7 +49,7 @@ if ! python3 -c "import torch; assert torch.cuda.is_available()" 2>/dev/null; th
     PREFLIGHT_FAIL=1
 else
     GPU_NAME=$(python3 -c "import torch; print(torch.cuda.get_device_name(0))")
-    GPU_MEM=$(python3 -c "import torch; print(f'{torch.cuda.get_device_properties(0).total_mem / 1e9:.0f}GB')")
+    GPU_MEM=$(python3 -c "import torch; p=torch.cuda.get_device_properties(0); m=getattr(p,'total_memory',getattr(p,'total_mem',0)); print(f'{m/1e9:.0f}GB')")
     echo "  OK: CUDA — $GPU_NAME ($GPU_MEM)"
 fi
 
