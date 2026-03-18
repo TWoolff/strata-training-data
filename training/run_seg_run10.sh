@@ -140,9 +140,10 @@ download_dataset vroid_cc0
 # flux_diverse (key new dataset for run 10)
 FD_DIR="./data_cloud/flux_diverse"
 FD_TAR="./data_cloud/tars/flux_diverse.tar"
-if [ -d "$FD_DIR" ] && [ "$(ls -A "$FD_DIR" 2>/dev/null | head -1)" ]; then
+if [ -d "$FD_DIR" ] && [ "$(find "$FD_DIR" -maxdepth 2 -name 'segmentation.png' | head -1)" ]; then
     echo "  flux_diverse already exists."
 else
+    rm -rf "$FD_DIR"
     echo "  Downloading flux_diverse (~11K FLUX-generated chars)..."
     rclone copy "hetzner:strata-training-data/tars/flux_diverse.tar" ./data_cloud/tars/ \
         --transfers 32 --fast-list -P
