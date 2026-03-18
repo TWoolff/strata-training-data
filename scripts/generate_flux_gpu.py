@@ -197,16 +197,9 @@ def main() -> None:
         "black-forest-labs/FLUX.1-schnell",
         torch_dtype=torch.bfloat16,
     )
-    pipe.to("cuda")
-
-    # Optional: enable memory optimizations for smaller GPUs
-    try:
-        pipe.enable_model_cpu_offload()
-        logger.info("CPU offload enabled")
-    except Exception:
-        pass
-
-    logger.info("Pipeline loaded. Device: %s", pipe.device)
+    # Use CPU offload to keep only the active component on GPU — essential for ≤24GB VRAM
+    pipe.enable_model_cpu_offload()
+    logger.info("Pipeline loaded with CPU offload.")
 
     # Build prompts
     prompts = _build_prompt_list(args.count, args.seed)
