@@ -34,7 +34,7 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
-| Back View | Not yet trained | — | 1,085 training pairs ready, pipeline complete |
+| Back View | 0.2982 val/l1 | Run 1 | 1,085 pairs, 200 epochs, overfitting gap (train 0.15 vs val 0.30) — needs more data |
 
 **Ship run status (March 18, 2026):** Models 1-4 ONNX exported locally in `models/onnx_ship/`. Model 6 data (1,085 back view pairs) generated and uploaded. Next: train model 6 on A100.
 
@@ -262,7 +262,9 @@ Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
 
 ## Model 6: Back View Generation
 
-**Status:** Pipeline complete, 1,085 training pairs ready, needs A100 training.
+**Status:** First model trained. 0.2982 val/l1 — functional but overfitting. Needs more data.
+
+**Run 1 results (March 18, 2026):** Best val/l1 0.2982 (epoch 120/200). Train L1 0.15 vs val 0.30 = clear overfitting with only 1,085 pairs. ONNX: 112 MB.
 
 **Data generation (March 18, 2026):** Rendered front+3/4+back triplets from 3D characters using `scripts/render_back_view_data.py`:
 - 475 Meshy FBX characters (unrigged, with textures)
@@ -276,9 +278,8 @@ Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
 **Training:** `training/run_back_view.sh` on A100, config `training/configs/back_view_a100.yaml`.
 
 **Next steps:**
-- Train on A100 (~2-3 hrs)
+- Download more Meshy CC0 characters + render to close the overfitting gap
 - Model 5 (Texture Inpainting) depends on model 6 output
-- More data: download additional Meshy CC0 characters for diversity
 
 ## Dr. Li's Label Schema Conversion
 
