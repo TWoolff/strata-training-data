@@ -190,28 +190,19 @@ def main() -> None:
     logger.info("Loading FLUX.1-schnell pipeline...")
     from diffusers import FluxPipeline
 
-    # Try quantized loading first (fits on 24GB GPU, much faster than CPU offload)
-    try:
-        from diffusers import BitsAndBytesConfig as DiffusersBnBConfig
-        quantization_config = DiffusersBnBConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-        )
-        pipe = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-schnell",
-            torch_dtype=torch.bfloat16,
-            quantization_config=quantization_config,
-        )
+    pipe = FluxPipeline.from_pretrained(
+        "black-forest-labs/FLUX.1-schnell",
+        torch_dtype=torch.bfloat16,
+    )
+
+    # Check VRAM — load directly to GPU if ≥40GB, otherwise use CPU offload
+    gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1e9
+    if gpu_mem >= 35:
         pipe.to("cuda")
-        logger.info("Pipeline loaded with 4-bit quantization (full GPU).")
-    except Exception as e:
-        logger.info("4-bit quantization unavailable (%s), using CPU offload.", e)
-        pipe = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-schnell",
-            torch_dtype=torch.bfloat16,
-        )
+        logger.info("Pipeline loaded on GPU (%.0f GB VRAM).", gpu_mem)
+    else:
         pipe.enable_model_cpu_offload()
-        logger.info("Pipeline loaded with model-level CPU offload.")
+        logger.info("Pipeline loaded with CPU offload (%.0f GB VRAM).", gpu_mem)
 
     # Build prompts
     prompts = _build_prompt_list(args.count, args.seed)
