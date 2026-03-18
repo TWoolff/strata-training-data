@@ -150,6 +150,11 @@ else
         echo "  Extracting flux_diverse..."
         tar xf "$FD_TAR" -C ./data_cloud/
         rm -f "$FD_TAR"
+        # Fix double-nesting if tar extracted as flux_diverse/flux_diverse/
+        if [ -d "./data_cloud/flux_diverse/flux_diverse" ]; then
+            mv ./data_cloud/flux_diverse/flux_diverse/* ./data_cloud/flux_diverse/
+            rmdir ./data_cloud/flux_diverse/flux_diverse
+        fi
         FD_COUNT=$(ls ./data_cloud/flux_diverse/ 2>/dev/null | wc -l | tr -d ' ')
         echo "  flux_diverse: $FD_COUNT examples"
     else
