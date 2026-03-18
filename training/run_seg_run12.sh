@@ -249,11 +249,98 @@ echo ""
 echo "============================================"
 echo "  Run 12 Seg complete!"
 echo "  Finished: $(date)"
-echo ""
 echo "  Results:"
 grep -E "New best mIoU|mIoU=" "$LOG_DIR/segmentation.log" 2>/dev/null | tail -5 || echo "  (check logs)"
+echo "============================================"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Back View Run 3
+# ---------------------------------------------------------------------------
+echo "============================================"
+echo "  Strata Training — Back View Run 3"
+echo "  Started: $(date)"
+echo "============================================"
+echo ""
+
+echo "[A/D] Downloading back view pairs..."
+mkdir -p ./data/training/back_view_pairs ./data/tars
+
+# Rigged pairs (1,085 triplets)
+if [ -z "$(ls -A ./data/training/back_view_pairs 2>/dev/null)" ]; then
+    rclone copy hetzner:strata-training-data/tars/back_view_pairs.tar ./data/tars/ \
+        --transfers 16 --fast-list --size-only -P 2>&1 | tee "$LOG_DIR/bv_download.log"
+    echo "  Extracting back_view_pairs.tar..."
+    tar xf ./data/tars/back_view_pairs.tar -C ./data/training/
+    if [ -d "./data/training/back_view_pairs_merged" ]; then
+        mv ./data/training/back_view_pairs_merged/pair_* ./data/training/back_view_pairs/ 2>/dev/null || true
+        rm -rf ./data/training/back_view_pairs_merged
+    fi
+    rm -f ./data/tars/back_view_pairs.tar
+else
+    echo "  back_view_pairs already exists, skipping."
+fi
+
+# Unrigged pairs (~960 additional triplets)
+UNRIGGED_MARKER="./data/training/.back_view_pairs_unrigged_done"
+if [ ! -f "$UNRIGGED_MARKER" ]; then
+    rclone copy hetzner:strata-training-data/tars/back_view_pairs_unrigged.tar ./data/tars/ \
+        --transfers 16 --fast-list --size-only -P 2>&1 | tee -a "$LOG_DIR/bv_download.log"
+    echo "  Extracting back_view_pairs_unrigged.tar..."
+    tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/back_view_pairs/ --strip-components=1
+    rm -f ./data/tars/back_view_pairs_unrigged.tar
+    UNRIGGED_COUNT=$(ls -d ./data/training/back_view_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
+    echo "  After unrigged extraction: $UNRIGGED_COUNT total pairs"
+    touch "$UNRIGGED_MARKER"
+else
+    echo "  back_view_pairs_unrigged already extracted, skipping."
+fi
+
+PAIR_COUNT=$(ls -d ./data/training/back_view_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
+echo "  Pairs: $PAIR_COUNT (target ~2045)"
+if [ "$PAIR_COUNT" -lt 1500 ]; then
+    echo "  WARN: Expected ~2000+ pairs, got $PAIR_COUNT"
+fi
+echo ""
+
+echo "[B/D] Training back view model..."
+python3 -m training.train_back_view \
+    --config training/configs/back_view_a100.yaml \
+    2>&1 | tee "$LOG_DIR/back_view_train.log"
+echo ""
+
+echo "[C/D] Exporting back view ONNX..."
+mkdir -p ./models/onnx_back_view
+python3 -m training.export_onnx \
+    --model back_view \
+    --checkpoint ./checkpoints/back_view/best.pt \
+    --output ./models/onnx_back_view/back_view.onnx \
+    2>&1 | tee "$LOG_DIR/bv_export.log"
+BV_ONNX_SIZE=$(du -h ./models/onnx_back_view/back_view.onnx 2>/dev/null | cut -f1 || echo "unknown")
+echo "  ONNX size: $BV_ONNX_SIZE"
+echo ""
+
+echo "[D/D] Uploading back view results..."
+rclone copy ./checkpoints/back_view/ hetzner:strata-training-data/checkpoints_back_view_run3/ \
+    --transfers 32 --fast-list -P
+rclone copy ./models/onnx_back_view/ hetzner:strata-training-data/models/back_view_run3/ \
+    --transfers 32 --fast-list -P
+rclone copy "$LOG_DIR/" hetzner:strata-training-data/logs/run12_${TIMESTAMP}/ \
+    --transfers 32 --fast-list -P
+
+echo ""
+echo "============================================"
+echo "  Run 12 complete!"
+echo "  Finished: $(date)"
+echo ""
+echo "  Seg best mIoU:"
+grep -E "New best mIoU" "$LOG_DIR/segmentation.log" 2>/dev/null | tail -3 || echo "  (check logs)"
+echo "  Back view best val/l1:"
+grep -E "New best val/l1" "$LOG_DIR/back_view_train.log" 2>/dev/null | tail -3 || echo "  (check logs)"
 echo ""
 echo "  To download to Mac:"
 echo "    rclone copy hetzner:strata-training-data/checkpoints_run12_seg/ ./checkpoints_run12_seg/ --transfers 32 --fast-list -P"
 echo "    rclone copy hetzner:strata-training-data/models/onnx_run12_seg/ ./models/onnx_run12_seg/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/checkpoints_back_view_run3/ ./checkpoints_back_view_run3/ --transfers 32 --fast-list -P"
+echo "    rclone copy hetzner:strata-training-data/models/back_view_run3/ ./models/back_view_run3/ --transfers 32 --fast-list -P"
 echo "============================================"
