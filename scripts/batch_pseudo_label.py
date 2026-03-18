@@ -92,8 +92,12 @@ def process_image(
     # Zero out background where alpha is transparent
     alpha = np.array(img_resized)[:, :, 3]
     seg_mask[alpha < 10] = 0
+    draw_order[alpha < 10] = 0
 
     Image.fromarray(seg_mask).save(example_dir / "segmentation.png")
+    Image.fromarray(draw_order).save(example_dir / "draw_order.png")
+    conf_uint8 = (confidence * 255).clip(0, 255).astype(np.uint8)
+    Image.fromarray(conf_uint8).save(example_dir / "confidence.png")
 
     # Metadata
     meta = {
