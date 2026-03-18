@@ -60,7 +60,9 @@ tools/live2d_renderer/node_modules
 # Training artifacts (cloud data, checkpoints, logs)
 data_cloud/
 checkpoints/
+checkpoints_ship/
 logs/
 models/onnx/
+models/onnx_ship/
 validation_report.json
 *.tar
