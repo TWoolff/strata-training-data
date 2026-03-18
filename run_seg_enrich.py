@@ -183,8 +183,10 @@ def process_flat_image(
         from rembg import remove
         img = remove(img, session=rembg_session)
 
-    # Resize and save as image.png (RGBA, 512x512)
-    img_resized = img.resize((resolution, resolution), Image.BILINEAR)
+    # Fit inside resolution×resolution preserving aspect ratio, pad to square
+    img.thumbnail((resolution, resolution), Image.BILINEAR)
+    img_resized = Image.new("RGBA", (resolution, resolution), (0, 0, 0, 0))
+    img_resized.paste(img, ((resolution - img.width) // 2, (resolution - img.height) // 2))
     img_resized.save(example_dir / "image.png")
 
     # Run segmentation on the bg-removed image

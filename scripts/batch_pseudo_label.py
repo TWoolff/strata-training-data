@@ -76,9 +76,12 @@ def process_image(
     """Run inference on one image and save to example_dir."""
     example_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy/resize source image
+    # Copy/resize source image — fit inside resolution×resolution, pad to square
     img = Image.open(image_path).convert("RGBA")
-    img_resized = img.resize((resolution, resolution), Image.LANCZOS)
+    img.thumbnail((resolution, resolution), Image.LANCZOS)
+    img_resized = Image.new("RGBA", (resolution, resolution), (0, 0, 0, 0))
+    offset = ((resolution - img.width) // 2, (resolution - img.height) // 2)
+    img_resized.paste(img, offset)
     img_resized.save(example_dir / "image.png")
 
     # Run segmentation
