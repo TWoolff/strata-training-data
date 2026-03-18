@@ -310,6 +310,53 @@ echo "============================================"
 echo ""
 
 # ---------------------------------------------------------------------------
+# Run 11: Fine-tune from run 10 best — low LR, no warmup
+# ---------------------------------------------------------------------------
+echo "============================================"
+echo "  Strata Training — Run 11 Seg (Fine-tune)"
+echo "  Resuming from run 10 best checkpoint"
+echo "  Config: training/configs/segmentation_a100_run11.yaml"
+echo "  Started: $(date)"
+echo "============================================"
+echo ""
+
+# Save run 10 best before run 11 overwrites it
+if [ -f "checkpoints/segmentation/best.pt" ]; then
+    cp checkpoints/segmentation/best.pt checkpoints/segmentation/run10_best.pt
+    echo "  Saved run 10 best as run10_best.pt"
+fi
+
+python -m training.train_segmentation \
+    --config training/configs/segmentation_a100_run11.yaml \
+    --reset-epochs \
+    --resume checkpoints/segmentation/run10_best.pt \
+    2>&1 | tee "$LOG_DIR/segmentation_run11.log"
+
+echo ""
+echo "  Run 11 complete."
+echo "  Results:"
+grep -E "New best mIoU|mIoU=" "$LOG_DIR/segmentation_run11.log" 2>/dev/null | tail -5 || echo "  (check logs)"
+echo ""
+
+# Upload run 11 checkpoint separately
+if [ -f "checkpoints/segmentation/best.pt" ]; then
+    cp checkpoints/segmentation/best.pt checkpoints/segmentation/run11_best.pt
+    rclone copy checkpoints/segmentation/run11_best.pt \
+        hetzner:strata-training-data/checkpoints_run11_seg/segmentation/ \
+        --transfers 32 --fast-list -P
+    python -m training.export_onnx \
+        --model segmentation \
+        --checkpoint checkpoints/segmentation/run11_best.pt \
+        --output ./models/onnx/segmentation_run11.onnx \
+        2>&1 | tee "$LOG_DIR/export_run11.log"
+    rclone copy ./models/onnx/segmentation_run11.onnx \
+        hetzner:strata-training-data/models/onnx_run11_seg/ \
+        --transfers 32 --fast-list -P
+    echo "  Run 11 checkpoint + ONNX uploaded."
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
 # Back View: Download data
 # ---------------------------------------------------------------------------
 echo "============================================"
