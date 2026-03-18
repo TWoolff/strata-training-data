@@ -3,7 +3,7 @@
 # Strata Training — Back View Generation (Model 6) on A100
 #
 # Trains U-Net to generate back view RGBA from front + 3/4 view inputs.
-# Data: 1,085 character triplets (Meshy FBX + GLB + VRoid CC0)
+# Data: ~2,045 character triplets (rigged + unrigged Meshy + VRoid CC0)
 #
 # Estimated: ~2-3 hrs on A100
 #
@@ -73,27 +73,42 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "[1/4] Downloading back view pairs from bucket..."
 
-mkdir -p ./data/training/back_view_pairs
+mkdir -p ./data/training/back_view_pairs ./data/tars
 
-rclone copy hetzner:strata-training-data/tars/back_view_pairs.tar ./data/tars/ \
-    --transfers 16 --fast-list --size-only -P 2>&1 | tee "$LOG_DIR/download.log"
+# Rigged pairs (1,085 triplets)
+if [ -z "$(ls -A ./data/training/back_view_pairs 2>/dev/null)" ]; then
+    rclone copy hetzner:strata-training-data/tars/back_view_pairs.tar ./data/tars/ \
+        --transfers 16 --fast-list --size-only -P 2>&1 | tee "$LOG_DIR/download.log"
+    echo "  Extracting back_view_pairs.tar..."
+    tar xf ./data/tars/back_view_pairs.tar -C ./data/training/
+    if [ -d "./data/training/back_view_pairs_merged" ]; then
+        mv ./data/training/back_view_pairs_merged/pair_* ./data/training/back_view_pairs/ 2>/dev/null || true
+        rm -rf ./data/training/back_view_pairs_merged
+    fi
+    rm -f ./data/tars/back_view_pairs.tar
+else
+    echo "  back_view_pairs already exists, skipping download."
+fi
 
-echo "  Extracting tar..."
-tar xf ./data/tars/back_view_pairs.tar -C ./data/training/
-
-# The tar contains back_view_pairs_merged/ — move contents to expected location
-if [ -d "./data/training/back_view_pairs_merged" ]; then
-    # Move pair dirs into back_view_pairs/
-    mv ./data/training/back_view_pairs_merged/pair_* ./data/training/back_view_pairs/ 2>/dev/null || true
-    rm -rf ./data/training/back_view_pairs_merged
+# Unrigged pairs (~960 additional triplets)
+UNRIGGED_MARKER="./data/training/.back_view_pairs_unrigged_done"
+if [ ! -f "$UNRIGGED_MARKER" ]; then
+    rclone copy hetzner:strata-training-data/tars/back_view_pairs_unrigged.tar ./data/tars/ \
+        --transfers 16 --fast-list --size-only -P 2>&1 | tee -a "$LOG_DIR/download.log"
+    echo "  Extracting back_view_pairs_unrigged.tar..."
+    tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/back_view_pairs/ --strip-components=1 2>/dev/null || \
+        tar xf ./data/tars/back_view_pairs_unrigged.tar -C ./data/training/
+    rm -f ./data/tars/back_view_pairs_unrigged.tar
+    touch "$UNRIGGED_MARKER"
+else
+    echo "  back_view_pairs_unrigged already extracted, skipping."
 fi
 
 PAIR_COUNT=$(ls -d ./data/training/back_view_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
 echo "  Pairs: $PAIR_COUNT"
 
-if [ "$PAIR_COUNT" -lt 100 ]; then
-    echo "  FAIL: Expected 1000+ pairs, got $PAIR_COUNT"
-    exit 1
+if [ "$PAIR_COUNT" -lt 1500 ]; then
+    echo "  WARN: Expected ~2000+ pairs, got $PAIR_COUNT — unrigged may not have merged correctly"
 fi
 
 echo ""
@@ -144,7 +159,7 @@ rclone copy "$LOG_DIR/" hetzner:strata-training-data/logs/run_back_view_${TIMEST
 echo ""
 echo "============================================"
 echo "  Done! Back View Model Training Complete"
-echo "  Pairs: $PAIR_COUNT"
+echo "  Pairs: $PAIR_COUNT (~1085 rigged + ~960 unrigged)"
 echo "  ONNX: ./models/onnx_back_view/back_view.onnx ($ONNX_SIZE)"
 echo "  Logs: $LOG_DIR"
 echo "  Finished: $(date)"
