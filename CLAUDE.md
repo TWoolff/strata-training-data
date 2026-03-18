@@ -13,7 +13,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
 | 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
-| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (1,085 pairs), needs training |
+| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~2,045 pairs), run 2 in progress |
 
 ### Model I/O
 
@@ -30,13 +30,13 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.4843 mIoU (MobileNetV3) | Run 9 | Up from 0.4721 (run 8). Second bootstrap round |
+| Segmentation | 0.4843 mIoU (MobileNetV3) | Run 9/10 | Run 9 aborted (epoch 1 only). Run 10 in progress: +flux_diverse 1,844 examples |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
 | Back View | 0.2982 val/l1 | Run 1 | 1,085 pairs, 200 epochs, overfitting gap (train 0.15 vs val 0.30) — needs more data |
 
-**Ship run status (March 18, 2026):** Models 1-4 ONNX exported locally in `models/onnx_ship/`. Model 6 data (1,085 back view pairs) generated and uploaded. Next: train model 6 on A100.
+**Run 10 status (March 18, 2026):** Seg run 10 + back view run 2 running on A100 via `run_seg_run10.sh`. Seg adds flux_diverse (1,844 examples, wt 4.0). Back view uses ~2,045 pairs (rigged + unrigged). Models 1-4 ONNX exported locally in `models/onnx_ship/`.
 
 ## Project Layout
 
@@ -134,6 +134,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `gemini_diverse.tar` | 197 MiB | Gemini diverse (874 auto-triaged pseudo-labels) |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (front+3/4+back, Meshy FBX+GLB+VRoid) |
+| `back_view_pairs_unrigged.tar` | 319 MiB | ~960 additional back view triplets (unrigged Meshy GLB) |
+| `flux_diverse.tar` | 363 MiB | 1,846 FLUX-generated pseudo-labeled chars (Strata format) |
 
 **Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/`, `models/`, `logs/`.
 
@@ -168,6 +170,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `scripts/render_back_view_data.py` | Render front+3/4+back triplets from FBX/GLB (no armature needed) |
 | `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
 | `training/run_back_view.sh` | Train model 6 (back view generation) on A100 |
+| `training/run_seg_run10.sh` | Run 10: seg bootstrap round 3 + back view run 2 (combined A100 session) |
 
 ## Run 7 Results (March 16, 2026)
 
@@ -239,18 +242,13 @@ Config: `training/configs/segmentation_a100_run8_bootstrap.yaml`. Script: `train
 - Auto-triage (`scripts/auto_triage.py`) eliminated manual review: 874/885 auto-accepted via anatomical heuristics
 - Bootstrapping loop validated: model → pseudo-label → triage → retrain works
 
-## Current Plan: Run 9 or Ship
+## Current Plan: Run 10 (in progress)
 
-**Option A: Another bootstrap round (target >0.52 mIoU)**
-- Re-pseudo-label the 874 Gemini images with the run 8 model (0.47 produces better masks than 0.36)
-- Generate more Gemini images (prompts 1001+) for additional diversity
-- Auto-triage and retrain — each round should compound
+**Seg run 10** — bootstrap round 3 with flux_diverse (1,844 FLUX-generated pseudo-labeled chars, wt 4.0). Resuming from run 8 (0.4721 mIoU). Target: >0.52 mIoU.
 
-**Option B: Ship run (if 0.47 is good enough)**
-- Retrain joints with 45K humanrig_posed GT examples
-- Retrain weights with new seg encoder features
-- Inpainting already converged (run 6)
-- ONNX export all 4 → ship to `../strata/src-tauri/models/`
+**Back view run 2** — runs after seg on same A100 session. ~2,045 pairs (1,085 rigged + ~960 unrigged). Target: reduce overfitting gap from run 1 (train 0.15 vs val 0.30).
+
+Script: `training/run_seg_run10.sh` (handles both models end-to-end).
 
 ## After Seg Converges: Ship Run
 
@@ -270,8 +268,9 @@ Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
 - 475 Meshy FBX characters (unrigged, with textures)
 - 599 Meshy GLB characters (original CC0, with textures)
 - 11 VRoid CC0 characters
-- Total: 1,085 triplets at 512×512 RGBA, merged in `/Volumes/TAMWoolff/data/output/back_view_pairs_merged/`
-- Uploaded as `tars/back_view_pairs.tar` (652 MB)
+- Total: 1,085 triplets → `tars/back_view_pairs.tar` (652 MB)
+- ~960 additional unrigged triplets → `tars/back_view_pairs_unrigged.tar` (319 MB)
+- Combined: ~2,045 pairs used for run 2
 
 **Architecture:** U-Net, input [B,8,512,512] (front RGBA + 3/4 RGBA), output [B,4,512,512] (back RGBA).
 **Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
