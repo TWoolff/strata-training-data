@@ -34,9 +34,9 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
-| Back View | 0.2982 val/l1 | Run 1 | 1,085 pairs, 200 epochs, overfitting gap (train 0.15 vs val 0.30) — needs more data |
+| Back View | 0.2354 val/l1 | Run 2 | ~2,045 pairs, early stopped epoch 148/200. Train 0.12 vs val 0.24 — gap reduced |
 
-**Run 10 status (March 18, 2026):** Seg run 10 + back view run 2 running on A100 via `run_seg_run10.sh`. Seg adds flux_diverse (1,844 examples, wt 4.0). Back view uses ~2,045 pairs (rigged + unrigged). Models 1-4 ONNX exported locally in `models/onnx_ship/`.
+**Run 10/11 status (March 18, 2026):** Seg run 10 best: 0.5038 mIoU (epoch 1). Run 11 fine-tune best: 0.4905. Back view run 2 complete: 0.2354 val/l1 (best). Models 1-4 ONNX exported locally in `models/onnx_ship/`. Back view ONNX in bucket at `models/back_view_run2/`.
 
 ## Project Layout
 
