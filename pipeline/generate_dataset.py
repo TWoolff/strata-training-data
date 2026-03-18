@@ -1041,12 +1041,12 @@ def main() -> None:
     if input_dir.is_dir():
         fbx_files = sorted(
             f for f in input_dir.glob("*.fbx")
-            if "withSkin" not in f.name
+            if "withSkin" not in f.name and not f.name.startswith("._")
         )
         if not fbx_files:
             fbx_files = sorted(
                 f for f in input_dir.rglob("*.fbx")
-                if "withSkin" not in f.name
+                if "withSkin" not in f.name and not f.name.startswith("._")
             )
 
     # Allow VRoid-only runs without FBX files

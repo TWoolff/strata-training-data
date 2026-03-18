@@ -12,8 +12,8 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 2 | **Joint Refinement** | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
 | 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
-| 5 | **Texture Inpainting** | Diffusion-based 3D texture fill | **Not yet built** | Needs pipeline + data |
-| 6 | **Novel View Synthesis** | Multi-view conditioned diffusion | **Not yet built** | Needs pipeline + data |
+| 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
+| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (1,085 pairs), needs training |
 
 ### Model I/O
 
@@ -21,8 +21,8 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 - **Joint Refinement** — Input: [1,3,512,512]. Outputs: [1,2,20] offsets + [1,20] confidence + [1,20] presence.
 - **Weight Prediction** — Input A: [1,31,2048,1] vertex features. Input B (optional): encoder features from model 1. Outputs: [1,20,2048,1] weights + [1,1,2048,1] confidence. Encoder branch uses dropout so model works with or without visual context.
 - **Inpainting** — U-Net fills occluded body regions. Fallback: EdgeExtend.
-- **Texture Inpainting** — Fills unobserved UV texture regions. **No pipeline yet.**
-- **Novel View Synthesis** — Generates unseen views from reference views. Fallback: PaletteFill. **No pipeline yet.**
+- **Texture Inpainting** — Input: [B,5,512,512] (RGBA + observation mask). Output: [B,4,512,512] completed RGBA. Depends on model 6.
+- **Back View Generation** — Input: [B,8,512,512] (front RGBA + 3/4 RGBA concatenated). Output: [B,4,512,512] back view RGBA.
 
 Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
 
@@ -30,12 +30,13 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.4721 mIoU (MobileNetV3) | Run 8 (Bootstrap) | Up from 0.3573 (run 7). Bootstrapped 874 pseudo-labels + dropped anime_seg |
+| Segmentation | 0.4843 mIoU (MobileNetV3) | Run 9 | Up from 0.4721 (run 8). Second bootstrap round |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
+| Back View | Not yet trained | — | 1,085 training pairs ready, pipeline complete |
 
-**Key insight:** Bootstrapping works. Run 8 proved that pseudo-labeling with the model, auto-triaging, and retraining jumps mIoU dramatically (0.3573 → 0.4721). Dropping noisy anime_seg data also helped. Next: another bootstrap round with the better model, or ship run.
+**Ship run status (March 18, 2026):** Models 1-4 ONNX exported locally in `models/onnx_ship/`. Model 6 data (1,085 back view pairs) generated and uploaded. Next: train model 6 on A100.
 
 ## Project Layout
 
@@ -118,9 +119,9 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 17, 2026)
+### Bucket Contents (March 18, 2026)
 
-Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~141 GiB total.
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 
 **Tars (for A100 setup):**
 | Tar | Size | Contents |
@@ -132,6 +133,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~141 GiB total.
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
 | `gemini_diverse.tar` | 197 MiB | Gemini diverse (874 auto-triaged pseudo-labels) |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
+| `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (front+3/4+back, Meshy FBX+GLB+VRoid) |
 
 **Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/`, `models/`, `logs/`.
 
@@ -163,6 +165,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~141 GiB total.
 | `scripts/review_masks.py` | Tkinter UI for correcting pseudo-labeled masks |
 | `scripts/filter_reviewed.py` | Extract reviewed-only examples for training |
 | `scripts/ingest_gemini.py` | Preprocess Gemini images (rembg + resize + pseudo-label) |
+| `scripts/render_back_view_data.py` | Render front+3/4+back triplets from FBX/GLB (no armature needed) |
+| `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
+| `training/run_back_view.sh` | Train model 6 (back view generation) on A100 |
 
 ## Run 7 Results (March 16, 2026)
 
@@ -255,12 +260,25 @@ Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
 - Inpainting already converged — keep run 6 checkpoint
 - ONNX export all 4 → ship to `../strata/src-tauri/models/`
 
-## Future: Models 5-6 (Self-Bootstrapping)
+## Model 6: Back View Generation
 
-Models 1-4 generate labeled data for models 5-6:
-- **Model 6 (Novel View)**: 3D multi-angle GT pairs (HumanRig, Meshy) → pretrain, then synthesize illustrated pairs
-- **Model 5 (Texture Inpainting)**: Partial→complete UV texture pairs from 3D models
-- Each run's models become data generators for the next
+**Status:** Pipeline complete, 1,085 training pairs ready, needs A100 training.
+
+**Data generation (March 18, 2026):** Rendered front+3/4+back triplets from 3D characters using `scripts/render_back_view_data.py`:
+- 475 Meshy FBX characters (unrigged, with textures)
+- 599 Meshy GLB characters (original CC0, with textures)
+- 11 VRoid CC0 characters
+- Total: 1,085 triplets at 512×512 RGBA, merged in `/Volumes/TAMWoolff/data/output/back_view_pairs_merged/`
+- Uploaded as `tars/back_view_pairs.tar` (652 MB)
+
+**Architecture:** U-Net, input [B,8,512,512] (front RGBA + 3/4 RGBA), output [B,4,512,512] (back RGBA).
+**Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
+**Training:** `training/run_back_view.sh` on A100, config `training/configs/back_view_a100.yaml`.
+
+**Next steps:**
+- Train on A100 (~2-3 hrs)
+- Model 5 (Texture Inpainting) depends on model 6 output
+- More data: download additional Meshy CC0 characters for diversity
 
 ## Dr. Li's Label Schema Conversion
 

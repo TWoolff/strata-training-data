@@ -1,0 +1,34 @@
+model:
+  type: "unet"
+  in_channels: 8     # front RGBA + 3/4 RGBA
+  out_channels: 4    # back RGBA
+
+data:
+  dataset_dirs: ["./data/training/back_view_pairs"]
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.15, contrast: 0.15, saturation: 0.15, hue: 0.03}
+
+training:
+  batch_size: 16              # A100 80GB can handle 16 at 512x512
+  num_workers: 8
+  epochs: 200
+  optimizer: "adam"
+  learning_rate: 2.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 10
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+  palette_weight: 0.05
+
+checkpointing:
+  save_dir: "./checkpoints/back_view"
+  early_stopping_patience: 30
+  early_stopping_metric: "val/l1"

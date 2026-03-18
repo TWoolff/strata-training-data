@@ -112,6 +112,8 @@ def _scan_flat_layout(
     groups: dict[str, dict[str, Path]] = defaultdict(dict)
 
     for img_path in sorted(images_dir.glob("*.png")):
+        if img_path.name.startswith("._"):
+            continue
         m = _FLAT_PATTERN.match(img_path.stem)
         if not m:
             continue
