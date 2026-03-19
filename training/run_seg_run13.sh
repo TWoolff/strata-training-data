@@ -158,7 +158,7 @@ echo ""
 echo "[1b/5] Pseudo-labeling (run 12 checkpoint)..."
 echo ""
 
-for ds in humanrig_posed toon_pseudo; do
+for ds in humanrig_posed toon_pseudo sora_diverse; do
     ds_dir="./data_cloud/$ds"
     if [ ! -d "$ds_dir" ]; then
         echo "  $ds: not found, skipping."
