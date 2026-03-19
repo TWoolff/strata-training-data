@@ -160,9 +160,11 @@ MIXAMO_BONE_MAP: dict[str, RegionId] = {
 # Add mixamorig#: prefix variants — used by Ch##_nonPBR characters (numbered 1-12)
 for _n in range(1, 13):
     MIXAMO_BONE_MAP.update(
-        {k.replace("mixamorig:", f"mixamorig{_n}:", 1): v
-         for k, v in list(MIXAMO_BONE_MAP.items())
-         if k.startswith("mixamorig:")}
+        {
+            k.replace("mixamorig:", f"mixamorig{_n}:", 1): v
+            for k, v in list(MIXAMO_BONE_MAP.items())
+            if k.startswith("mixamorig:")
+        }
     )
 
 # ---------------------------------------------------------------------------
@@ -246,11 +248,21 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "LeftHand": 9,
     "J_Bip_L_Hand": 9,
     # VRoid left finger bones → hand_l
-    "J_Bip_L_Index1": 9, "J_Bip_L_Index2": 9, "J_Bip_L_Index3": 9,
-    "J_Bip_L_Middle1": 9, "J_Bip_L_Middle2": 9, "J_Bip_L_Middle3": 9,
-    "J_Bip_L_Ring1": 9, "J_Bip_L_Ring2": 9, "J_Bip_L_Ring3": 9,
-    "J_Bip_L_Little1": 9, "J_Bip_L_Little2": 9, "J_Bip_L_Little3": 9,
-    "J_Bip_L_Thumb1": 9, "J_Bip_L_Thumb2": 9, "J_Bip_L_Thumb3": 9,
+    "J_Bip_L_Index1": 9,
+    "J_Bip_L_Index2": 9,
+    "J_Bip_L_Index3": 9,
+    "J_Bip_L_Middle1": 9,
+    "J_Bip_L_Middle2": 9,
+    "J_Bip_L_Middle3": 9,
+    "J_Bip_L_Ring1": 9,
+    "J_Bip_L_Ring2": 9,
+    "J_Bip_L_Ring3": 9,
+    "J_Bip_L_Little1": 9,
+    "J_Bip_L_Little2": 9,
+    "J_Bip_L_Little3": 9,
+    "J_Bip_L_Thumb1": 9,
+    "J_Bip_L_Thumb2": 9,
+    "J_Bip_L_Thumb3": 9,
     # --- Right shoulder ---
     "RightShoulder": 10,
     "shoulder.R": 10,
@@ -290,11 +302,21 @@ COMMON_BONE_ALIASES: dict[str, RegionId] = {
     "RightHand": 13,
     "J_Bip_R_Hand": 13,
     # VRoid right finger bones → hand_r
-    "J_Bip_R_Index1": 13, "J_Bip_R_Index2": 13, "J_Bip_R_Index3": 13,
-    "J_Bip_R_Middle1": 13, "J_Bip_R_Middle2": 13, "J_Bip_R_Middle3": 13,
-    "J_Bip_R_Ring1": 13, "J_Bip_R_Ring2": 13, "J_Bip_R_Ring3": 13,
-    "J_Bip_R_Little1": 13, "J_Bip_R_Little2": 13, "J_Bip_R_Little3": 13,
-    "J_Bip_R_Thumb1": 13, "J_Bip_R_Thumb2": 13, "J_Bip_R_Thumb3": 13,
+    "J_Bip_R_Index1": 13,
+    "J_Bip_R_Index2": 13,
+    "J_Bip_R_Index3": 13,
+    "J_Bip_R_Middle1": 13,
+    "J_Bip_R_Middle2": 13,
+    "J_Bip_R_Middle3": 13,
+    "J_Bip_R_Ring1": 13,
+    "J_Bip_R_Ring2": 13,
+    "J_Bip_R_Ring3": 13,
+    "J_Bip_R_Little1": 13,
+    "J_Bip_R_Little2": 13,
+    "J_Bip_R_Little3": 13,
+    "J_Bip_R_Thumb1": 13,
+    "J_Bip_R_Thumb2": 13,
+    "J_Bip_R_Thumb3": 13,
     # --- Left leg ---
     "thigh.L": 14,
     "Thigh.L": 14,
@@ -607,16 +629,16 @@ SUBSTRING_KEYWORDS: list[tuple[list[str], RegionId]] = [
     (["ball", "l"], 16),
     (["ball", "r"], 19),
     # VRoid/UniRig secondary/adjustment bones
-    (["hairjoint"], 21),   # HairJoint-* UUID bones → hair_back
-    (["hair"], 21),        # generic hair bones → hair_back
-    (["bust"], 3),         # J_Sec_*_Bust* → chest
-    (["breast"], 3),       # breast physics → chest
-    (["faceeye"], 1),      # J_Adj_*_FaceEye → head
-    (["facemoutha"], 1),   # face adjustment bones → head
+    (["hairjoint"], 21),  # HairJoint-* UUID bones → hair_back
+    (["hair"], 21),  # generic hair bones → hair_back
+    (["bust"], 3),  # J_Sec_*_Bust* → chest
+    (["breast"], 3),  # breast physics → chest
+    (["faceeye"], 1),  # J_Adj_*_FaceEye → head
+    (["facemoutha"], 1),  # face adjustment bones → head
     (["facemouthb"], 1),
-    (["skirt"], 5),        # skirt physics → hips
-    (["cloth"], 5),        # cloth sim → hips (best guess)
-    (["sleeve"], 9),       # sleeve tip → hand (closest body region)
+    (["skirt"], 5),  # skirt physics → hips
+    (["cloth"], 5),  # cloth sim → hips (best guess)
+    (["sleeve"], 9),  # sleeve tip → hand (closest body region)
     (["tipsleeve"], 9),
 ]
 
@@ -899,9 +921,20 @@ WEIGHT_THRESHOLD: float = 0.01  # Minimum bone weight to include (noise reductio
 # Render-time (Blender shaders): flat, cel, unlit
 # Post-render (Python/PIL/OpenCV): pixel, painterly, sketch
 
-ART_STYLES: list[str] = ["flat", "cel", "pixel", "painterly", "sketch", "unlit", "textured"]
-RENDER_TIME_STYLES: set[str] = {"flat", "cel", "unlit", "textured"}
-POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
+ART_STYLES: list[str] = [
+    "flat",
+    "cel",
+    "soft_cel",
+    "pixel",
+    "painterly",
+    "sketch",
+    "ink_wash",
+    "watercolor",
+    "unlit",
+    "textured",
+]
+RENDER_TIME_STYLES: set[str] = {"flat", "cel", "soft_cel", "unlit", "textured"}
+POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch", "ink_wash", "watercolor"}
 
 # Style routing registry: maps style name → type ("render" or "post")
 # Render-time styles modify Blender materials before bpy.ops.render.render()
@@ -909,11 +942,14 @@ POST_RENDER_STYLES: set[str] = {"pixel", "painterly", "sketch"}
 STYLE_REGISTRY: dict[str, str] = {
     "flat": "render",
     "cel": "render",
+    "soft_cel": "render",
     "unlit": "render",
     "textured": "render",
     "pixel": "post",
     "painterly": "post",
     "sketch": "post",
+    "ink_wash": "post",
+    "watercolor": "post",
 }
 
 # The base style used as input for all post-render transforms
@@ -954,6 +990,37 @@ CEL_RAMP_STOPS: list[tuple[float, float]] = [
     (0.7, 1.0),  # highlight tone
 ]
 CEL_OUTLINE_THICKNESS: float = 2.0  # Freestyle line thickness in pixels
+
+# Soft cel shading parameters (anime gradient look, no Freestyle outlines)
+SOFT_CEL_RAMP_STOPS: list[tuple[float, float]] = [
+    (0.0, 0.15),  # deep shadow
+    (0.25, 0.55),  # shadow
+    (0.5, 0.80),  # mid tone
+    (0.72, 0.95),  # highlight
+    (0.88, 1.0),  # rim highlight
+]
+
+# Ink wash style parameters (anime ink / sumi-e feel)
+INK_WASH_SATURATION: float = 0.25  # target saturation multiplier (0=grayscale, 1=full color)
+INK_WASH_BILATERAL_D: int = 11  # bilateral filter diameter
+INK_WASH_SIGMA_COLOR: int = 60  # bilateral filter sigma color
+INK_WASH_SIGMA_SPACE: int = 60  # bilateral filter sigma space
+INK_WASH_EDGE_THRESHOLD1: int = 30  # Canny lower threshold (softer than sketch)
+INK_WASH_EDGE_THRESHOLD2: int = 100  # Canny upper threshold
+INK_WASH_EDGE_THICKNESS: int = 2  # edge dilation kernel size
+INK_WASH_TINT: RGB = (230, 215, 195)  # warm paper tint for background blending
+
+# Watercolor style parameters
+WATERCOLOR_BILATERAL_D: int = 13  # bilateral filter diameter (stronger blur)
+WATERCOLOR_SIGMA_COLOR: int = 90  # bilateral filter sigma color
+WATERCOLOR_SIGMA_SPACE: int = 90  # bilateral filter sigma space
+WATERCOLOR_BILATERAL_PASSES: int = 3  # number of bilateral filter passes
+WATERCOLOR_SAT_BOOST: float = 1.15  # saturation multiplier (watercolors are vibrant)
+WATERCOLOR_GRAIN_SIGMA: float = 0.015  # paper grain Gaussian noise sigma
+WATERCOLOR_EDGE_THRESHOLD1: int = 40  # Canny lower for edge overlay
+WATERCOLOR_EDGE_THRESHOLD2: int = 120  # Canny upper for edge overlay
+WATERCOLOR_EDGE_THICKNESS: int = 1  # edge dilation (thin, soft lines)
+WATERCOLOR_EDGE_COLOR: RGB = (60, 40, 30)  # dark warm brown for watercolor outlines
 
 # Fallback base color when material has no Principled BSDF or texture
 DEFAULT_BASE_COLOR: tuple[float, float, float, float] = (0.6, 0.6, 0.6, 1.0)
@@ -1007,30 +1074,37 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
         r"|^[a-z]{1,2}[0-9]+$|^artmesh[0-9]+$)",
         "background",
     ),
-
     # =========================================================================
     # HAIR — very common, before head to avoid "head" swallowing hair meshes
     # =========================================================================
     # Hair back (most specific first)
-    (r"hair.*back|back.*hair|hairback|hair_b[^r]|houfa|houfal|houfar|mawei|ponytail"
-     r"|horsetail|twintail|braid|pigtail|ahoge|odango|ushirogami", "hair_back"),
+    (
+        r"hair.*back|back.*hair|hairback|hair_b[^r]|houfa|houfal|houfar|mawei|ponytail"
+        r"|horsetail|twintail|braid|pigtail|ahoge|odango|ushirogami",
+        "hair_back",
+    ),
     # Hair side
     (r"hair.*side|side.*hair|hairside|sidehair|mimi.*hair|templelock", "hair_back"),
     # Hair front (bangs/fringe)
-    (r"hair.*front|front.*hair|hairfront|liuhai|bangs|fringe|maegami|ahoge_f"
-     r"|forehair|前发|刘海", "head"),
+    (
+        r"hair.*front|front.*hair|hairfront|liuhai|bangs|fringe|maegami|ahoge_f"
+        r"|forehair|前发|刘海",
+        "head",
+    ),
     # General hair
     (r"hair|toufa|kami[^n]|wig|bun|chignon|tress|strand|lock", "head"),
-
     # =========================================================================
     # HEAD — face and facial features
     # =========================================================================
     # Eyes (most common — very specific patterns to avoid false positives)
-    (r"eye[_\s]|_eye|eyelash|eyeball|eyelid|eyebrow|^eye$|^eye[lr]$|eye[lr][_\d]"
-     r"|me_[lr]|jiemao|meimao"
-     r"|yanqiu|yanjing|tongkong|yanren|mabuta|hitomi|pupil|iris|sclera"
-     r"|shang.*yan$|xia.*yan$|yan$|^yan[0-9]|yanzhu|yanbai|yanjiao|yanxian"
-     r"|yanying_y|yanzhuGG|眼睛|五官", "head"),
+    (
+        r"eye[_\s]|_eye|eyelash|eyeball|eyelid|eyebrow|^eye$|^eye[lr]$|eye[lr][_\d]"
+        r"|me_[lr]|jiemao|meimao"
+        r"|yanqiu|yanjing|tongkong|yanren|mabuta|hitomi|pupil|iris|sclera"
+        r"|shang.*yan$|xia.*yan$|yan$|^yan[0-9]|yanzhu|yanbai|yanjiao|yanxian"
+        r"|yanying_y|yanzhuGG|眼睛|五官",
+        "head",
+    ),
     # Eyebrow
     (r"brow|mayu|meimao|mei[lr]$|^meil$|^meir$", "head"),
     # Nose
@@ -1043,9 +1117,11 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"blush|cheek|hongzui|hongkuai|jiahong|face.*color|lian_hong|腮红", "head"),
     # Face/head general
     (r"face|lian(?!j)|^lian\d*$|kao(?!s)|^kao\d*$|顔|脸|臉", "head"),
-    (r"\bhead\b|^head_|_head$|atama|tou(?![fp])|^tou\d*$|naodai|noggin|skull|cranium"
-     r"|颅|头部", "head"),
-
+    (
+        r"\bhead\b|^head_|_head$|atama|tou(?![fp])|^tou\d*$|naodai|noggin|skull|cranium"
+        r"|颅|头部",
+        "head",
+    ),
     # =========================================================================
     # NECK
     # =========================================================================
@@ -1055,7 +1131,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"bozi(?:hudiejie|hudie|dai|ribbon|bow|tie|knot|jie)", "background"),
     # Real neck
     (r"\bneck\b|neck[_\s\d]|_neck|^bozi\d*$|rebozi|jingbu|kubi(?!r)|nodo|喉|頸|脖|颈", "neck"),
-
     # =========================================================================
     # SHOULDERS — lateralized first (specific before general)
     # =========================================================================
@@ -1075,7 +1150,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     ),
     # Unlateralized shoulder → chest (fallback)
     (r"\bshoulder\b|jianbang|kata[^k]|肩", "chest"),
-
     # =========================================================================
     # ARMS — forearm before upper_arm (forearm is substring of upper_arm contexts)
     # =========================================================================
@@ -1135,7 +1209,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
         r"|ude_r|ude_migi",
         "upper_arm_r",
     ),
-
     # =========================================================================
     # HANDS — after arms, lateralized first
     # =========================================================================
@@ -1164,7 +1237,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
         r"|yubi|oyayubi|hitosashi|nakayubi|kusuri|koyubi|te\b",
         "chest",
     ),
-
     # =========================================================================
     # LEGS — lower_leg before upper_leg (xiaotui before tudui/tui)
     # =========================================================================
@@ -1214,7 +1286,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
         r"|腿.*右|右.*腿",
         "upper_leg_r",
     ),
-
     # =========================================================================
     # FEET — lateralized first
     # =========================================================================
@@ -1235,15 +1306,17 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
         "foot_r",
     ),
     # Generic foot/ankle/toe numbered (foot2, foot3, etc.) → hips fallback
-    (r"^foot\d+$|^jiao\d+$|\bfoot\b|\bfeet\b|\btoe\b|\bheel\b|\bankle\b"
-     r"|jiao\b|ashi\b|靴|足\b|脚\b", "hips"),
+    (
+        r"^foot\d+$|^jiao\d+$|\bfoot\b|\bfeet\b|\btoe\b|\bheel\b|\bankle\b"
+        r"|jiao\b|ashi\b|靴|足\b|脚\b",
+        "hips",
+    ),
     # Generic leg (no lateralization) → hips fallback
     (r"^\bleg\b$|^leg\d+$|\bleg\b", "hips"),
     # Generic arm (no lateralization, e.g. "ArmA", "ArmB", bare "arm") → chest fallback
     (r"^\barm[ab]$|^arm[ab]\d+$|\barm\b", "chest"),
     # Generic hand numbered (hand1, hand61, etc.) → chest fallback
     (r"\bhand\d+$|\bhand[a-z]+\d+$", "chest"),
-
     # =========================================================================
     # HIPS / WAIST / PELVIS
     # =========================================================================
@@ -1259,7 +1332,6 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"datui.*[lr]\b|[lr].*datui|\bdatui\d*$|datui_", "hips"),
     # Generic tui (leg) — r_tui, l_tui, qunxiaotui etc.
     (r"^[rl]_tui\d*$|^tui[lr]\d*$|qun.*tui|tui_[lr]", "hips"),
-
     # =========================================================================
     # CHEST / TORSO
     # =========================================================================
@@ -1271,12 +1343,10 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     ),
     (r"\bchest\b|\bxiong\b", "chest"),
     (r"\bbody\b|karada|upperbody|upper.*body|躯干|身体|上身", "chest"),
-
     # =========================================================================
     # SPINE / BACK
     # =========================================================================
     (r"spine|senaka|back(?!ground|hair|bone|pack|drop|ground)|後ろ|背中|背部|脊", "spine"),
-
     # =========================================================================
     # CHINESE unicode body part characters (catch-all for Chinese-labeled models)
     # =========================================================================
@@ -1302,9 +1372,9 @@ LIVE2D_FRAGMENT_PATTERNS: list[tuple[str, str]] = [
     (r"臂|腕", "chest"),
     # Chinese CDI Part name fragments (whole-word Chinese body terms)
     (r"^腿$", "hips"),
-    (r"^大臂$", "upper_arm_l"),   # ambiguous side but maps to some arm
-    (r"^小臂$", "forearm_l"),     # ambiguous side
-    (r"^手$", "chest"),           # bare "hand" → chest (unlateralized)
+    (r"^大臂$", "upper_arm_l"),  # ambiguous side but maps to some arm
+    (r"^小臂$", "forearm_l"),  # ambiguous side
+    (r"^手$", "chest"),  # bare "hand" → chest (unlateralized)
     (r"^身体$", "chest"),
     (r"^脸$", "head"),
     (r"^眼睛$", "head"),
