@@ -116,13 +116,13 @@ download_dataset() {
 }
 
 download_dataset humanrig humanrig "segmentation.png"
-download_dataset humanrig_posed humanrig_posed "segmentation.png"
+download_dataset humanrig_posed humanrig_posed "image.png"
 download_dataset vroid_cc0 vroid_cc0
 download_dataset gemini_li_converted gemini_li_converted
 download_dataset cvat_annotated cvat_annotated
 download_dataset sora_diverse sora_diverse "segmentation.png"
 download_dataset flux_diverse_clean flux_diverse_clean "segmentation.png"
-download_dataset toon_pseudo toon_pseudo "segmentation.png"
+download_dataset toon_pseudo toon_pseudo "image.png"
 
 # meshy_cc0_textured (restructured tar)
 MESHY_DIR="./data_cloud/meshy_cc0_textured"
@@ -153,12 +153,44 @@ done
 echo ""
 
 # ---------------------------------------------------------------------------
+# 1b. Pseudo-label datasets that have images but no seg masks
+# ---------------------------------------------------------------------------
+echo "[1b/5] Pseudo-labeling (run 12 checkpoint)..."
+echo ""
+
+for ds in humanrig_posed toon_pseudo; do
+    ds_dir="./data_cloud/$ds"
+    if [ ! -d "$ds_dir" ]; then
+        echo "  $ds: not found, skipping."
+        continue
+    fi
+    # Check if pseudo-labeling is needed (has image.png but no segmentation.png)
+    NEEDS_LABEL=$(find "$ds_dir" -maxdepth 2 -name "image.png" -exec sh -c '
+        dir=$(dirname "$1"); [ ! -f "$dir/segmentation.png" ] && echo m
+    ' _ {} \; | head -1)
+    if [ -n "$NEEDS_LABEL" ]; then
+        TOTAL=$(find "$ds_dir" -maxdepth 2 -name "image.png" | wc -l | tr -d ' ')
+        HAVE_SEG=$(find "$ds_dir" -maxdepth 2 -name "segmentation.png" | wc -l | tr -d ' ')
+        echo "  $ds: $TOTAL images, $HAVE_SEG already labeled — pseudo-labeling remainder..."
+        python scripts/batch_pseudo_label.py \
+            --input-dir "$ds_dir" \
+            --output-dir "$ds_dir" \
+            --checkpoint "$RUN12_CKPT" \
+            --only-missing \
+            2>&1 | tee "$LOG_DIR/pseudo_label_${ds}.log"
+    else
+        echo "  $ds: all examples have segmentation masks."
+    fi
+done
+echo ""
+
+# ---------------------------------------------------------------------------
 # 2. Marigold enrichment (only for illustrated datasets)
 # ---------------------------------------------------------------------------
 echo "[2/5] Marigold enrichment..."
 echo ""
 
-for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted" "./data_cloud/toon_pseudo"; do
+for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted" "./data_cloud/toon_pseudo" "./data_cloud/humanrig_posed"; do
     ds_name=$(basename "$ds_dir")
     if [ ! -d "$ds_dir" ]; then
         continue
