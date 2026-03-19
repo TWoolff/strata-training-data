@@ -13,7 +13,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
 | 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
-| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~2,045 pairs), run 2 in progress |
+| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~1,805 pairs), run 3 complete |
 
 ### Model I/O
 
@@ -30,13 +30,13 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.4843 mIoU (MobileNetV3) | Run 9/10 | Run 9 aborted (epoch 1 only). Run 10 in progress: +flux_diverse 1,844 examples |
+| Segmentation | 0.5068 mIoU (MobileNetV3) | Run 12 | +sora_diverse +flux_diverse_clean, lr=1e-5 flat, early stopped epoch 17 |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
-| Back View | 0.2354 val/l1 | Run 2 | ~2,045 pairs, early stopped epoch 148/200. Train 0.12 vs val 0.24 — gap reduced |
+| Back View | 0.2408 val/l1 | Run 3 | 1,805 pairs, early stopped epoch 127/200. Train 0.12 vs val 0.24 |
 
-**Run 10/11 status (March 18, 2026):** Seg run 10 best: 0.5038 mIoU (epoch 1). Run 11 fine-tune best: 0.4905. Back view run 2 complete: 0.2354 val/l1 (best). Models 1-4 ONNX exported locally in `models/onnx_ship/`. Back view ONNX in bucket at `models/back_view_run2/`.
+**Run 12 status (March 19, 2026):** Seg run 12 best: 0.5068 mIoU (epoch 17/60, manually stopped — plateaued). Back view run 3: 0.2408 val/l1 (1,805 pairs, up from 720 in run 2 after fixing unrigged merge). Checkpoints + ONNX in bucket.
 
 ## Project Layout
 
@@ -136,8 +136,10 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (front+3/4+back, Meshy FBX+GLB+VRoid) |
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~960 additional back view triplets (unrigged Meshy GLB) |
 | `flux_diverse.tar` | 363 MiB | 1,846 FLUX-generated pseudo-labeled chars (Strata format) |
+| `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
+| `sora_diverse.tar` | ~200 MiB | 1,056 Sora/Gemini chars (run 10 labels, fixed aspect ratio) |
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/`, `models/`, `logs/`.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/` (runs 10, 12), `checkpoints_back_view_run3/`, `models/` (incl. `back_view_run3/`, `onnx_run12_seg/`), `logs/`.
 
 **Deleted (March 17):** `unirig/` (53 GiB, prohibited license), `encoder_features/` (42 GiB, stale), `anime_seg/` (2.6 GiB, dropped from training), old checkpoints (runs 1/3/4/seg_meshy), obsolete tars.
 
@@ -171,6 +173,10 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
 | `training/run_back_view.sh` | Train model 6 (back view generation) on A100 |
 | `training/run_seg_run10.sh` | Run 10: seg bootstrap round 3 + back view run 2 (combined A100 session) |
+| `training/run_seg_run12.sh` | Run 12: +sora_diverse +flux_diverse_clean, lr=1e-5, + back view run 3 |
+| `training/run_seg_run13.sh` | Run 13: +humanrig_posed (35K) +toon_pseudo (10K), + back view run 3 |
+| `scripts/render_toon_styles.py` | Render FBX/GLB in toon styles (no armature needed, multi-angle) |
+| `scripts/filter_flux_diverse.py` | Remove anatomically broken FLUX images (no-torso filter) |
 
 ## Run 7 Results (March 16, 2026)
 
@@ -242,42 +248,83 @@ Config: `training/configs/segmentation_a100_run8_bootstrap.yaml`. Script: `train
 - Auto-triage (`scripts/auto_triage.py`) eliminated manual review: 874/885 auto-accepted via anatomical heuristics
 - Bootstrapping loop validated: model → pseudo-label → triage → retrain works
 
-## Current Plan: Run 10 (in progress)
+## Run 12 Results (March 19, 2026)
 
-**Seg run 10** — bootstrap round 3 with flux_diverse (1,844 FLUX-generated pseudo-labeled chars, wt 4.0). Resuming from run 8 (0.4721 mIoU). Target: >0.52 mIoU.
+**0.5068 mIoU** (epoch 17/60, manually stopped — plateau). Up from 0.5038 (run 10).
 
-**Back view run 2** — runs after seg on same A100 session. ~2,045 pairs (1,085 rigged + ~960 unrigged). Target: reduce overfitting gap from run 1 (train 0.15 vs val 0.30).
+Config: `training/configs/segmentation_a100_run12.yaml`. Script: `training/run_seg_run12.sh`.
 
-Script: `training/run_seg_run10.sh` (handles both models end-to-end).
+| Dataset | Examples | Weight | Source |
+|---------|----------|--------|--------|
+| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
+| sora_diverse | 1,056 | 4.0 | Sora/Gemini chars, run 10 labels, aspect-fixed |
+| gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels |
+| flux_diverse_clean | 1,569 | 2.5 | Cleaned FLUX chars (no-torso removed) |
+| vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
+| humanrig | 11,434 | 2.0 | GT 22-class T-pose 3D renders |
+| meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
+
+**Learnings:**
+- lr=1e-5 flat with no warmup confirmed correct for fine-tuning (no peak-at-epoch-1)
+- Val loss plateaued at ~0.472 — model needs more data diversity, not more epochs
+- sora_diverse + flux_diverse_clean added illustrated coverage but insufficient to break 0.51
+
+## Current Plan: Run 13
+
+**Seg run 13** — add humanrig_posed (~35K pseudo-labeled posed renders) + toon_pseudo (~10K pseudo-labeled toon-style renders). Resume from run 12 best (0.5068 mIoU). Target: >0.55 mIoU.
+
+**Prep steps (before A100):**
+1. Pseudo-label humanrig_posed (81K images, run 12 checkpoint) — images exist, no GT masks
+2. Pseudo-label toon renders (~10K, run 12 checkpoint) — rendering on Mac now
+3. Ingest new Sora/Gemini images being generated
+4. Tar + upload humanrig_posed, toon_pseudo, new sora images to bucket
+
+Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
+
+| Dataset | Examples | Weight | Change |
+|---------|----------|--------|--------|
+| cvat_annotated | 49 | 10.0 | Same |
+| sora_diverse | 1,056 | 4.0 | Same |
+| gemini_li_converted | 694 | 3.0 | Same |
+| flux_diverse_clean | 1,569 | 2.5 | Same |
+| vroid_cc0 | 1,386 | 2.5 | Same |
+| **humanrig_posed** | **~35,000** | **2.0** | **NEW — pseudo-labeled posed renders** |
+| **toon_pseudo** | **~10,800** | **2.0** | **NEW — pseudo-labeled toon-style renders** |
+| meshy_cc0_textured | 15,281 | 1.5 | Same |
+| humanrig | 11,434 | 1.0 | Weight reduced (posed version covers it) |
+
+**Back view run 3** — chains after seg on same A100 session.
 
 ## After Seg Converges: Ship Run
 
-Once seg hits target (>0.45 mIoU), one combined run to ship all 4 models:
-- Retrain joints with 45K humanrig_posed GT examples (rendered, not yet uploaded)
+Once seg hits target (>0.55 mIoU), one combined run to ship all 4 models:
+- Retrain joints with humanrig_posed GT examples (have joints.json)
 - Retrain weights with new seg encoder features
 - Inpainting already converged — keep run 6 checkpoint
 - ONNX export all 4 → ship to `../strata/src-tauri/models/`
 
 ## Model 6: Back View Generation
 
-**Status:** First model trained. 0.2982 val/l1 — functional but overfitting. Needs more data.
+**Status:** Run 3 complete. 0.2408 val/l1 — improving but still overfitting.
 
-**Run 1 results (March 18, 2026):** Best val/l1 0.2982 (epoch 120/200). Train L1 0.15 vs val 0.30 = clear overfitting with only 1,085 pairs. ONNX: 112 MB.
+**Run history:**
+| Run | val/l1 | Pairs | Notes |
+|-----|--------|-------|-------|
+| 1 | 0.2982 | 1,085 | First model, clear overfitting |
+| 2 | 0.2354 | 1,085 | Same data, longer training (unrigged merge bug) |
+| 3 | 0.2408 | 1,805 | Fixed unrigged merge (renumbered pair IDs), early stopped 127/200 |
 
-**Data generation (March 18, 2026):** Rendered front+3/4+back triplets from 3D characters using `scripts/render_back_view_data.py`:
-- 475 Meshy FBX characters (unrigged, with textures)
-- 599 Meshy GLB characters (original CC0, with textures)
-- 11 VRoid CC0 characters
-- Total: 1,085 triplets → `tars/back_view_pairs.tar` (652 MB)
-- ~960 additional unrigged triplets → `tars/back_view_pairs_unrigged.tar` (319 MB)
-- Combined: ~2,045 pairs used for run 2
+**Data:** front+3/4+back triplets from 3D characters (`scripts/render_back_view_data.py`):
+- `tars/back_view_pairs.tar` (652 MiB): 1,085 rigged triplets (Meshy FBX+GLB+VRoid)
+- `tars/back_view_pairs_unrigged.tar` (319 MiB): ~720 additional unrigged (Meshy GLB)
+- Combined: ~1,805 pairs (unrigged pairs start at pair_00000, must be renumbered before merging)
 
 **Architecture:** U-Net, input [B,8,512,512] (front RGBA + 3/4 RGBA), output [B,4,512,512] (back RGBA).
 **Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
 **Training:** `training/run_back_view.sh` on A100, config `training/configs/back_view_a100.yaml`.
 
 **Next steps:**
-- Download more Meshy CC0 characters + render to close the overfitting gap
+- Download more Meshy CC0 characters + render to increase pair count
 - Model 5 (Texture Inpainting) depends on model 6 output
 
 ## Dr. Li's Label Schema Conversion
