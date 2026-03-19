@@ -471,6 +471,13 @@ def process_character(
 
             original_glb = Path(texture_map[folder_name])
             transfer_materials_from_glb(body_meshes, original_glb)
+    else:
+        # Auto-detect GLB in the same directory as the FBX
+        glb_candidates = list(fbx_path.parent.glob("*.glb"))
+        if glb_candidates:
+            from .importer import transfer_materials_from_glb
+
+            transfer_materials_from_glb(body_meshes, glb_candidates[0])
 
     # --- Store original materials for color pass ---
     original_materials = _backup_materials(body_meshes)
