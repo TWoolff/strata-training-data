@@ -19,6 +19,7 @@ import numpy as np
 from mathutils import Vector  # type: ignore[import-untyped]
 from PIL import Image
 
+
 def _eevee_engine_name() -> str:
     """Return the correct EEVEE engine enum for this Blender version.
 
@@ -47,6 +48,7 @@ from .config import (
     NUM_REGIONS,
     REGION_COLORS,
     RENDER_RESOLUTION,
+    SOFT_CEL_RAMP_STOPS,
     SUN_ENERGY,
     SUN_POSITION,
     RegionId,
@@ -834,6 +836,88 @@ def apply_cel_style(
     )
 
 
+def apply_soft_cel_style(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+) -> None:
+    """Apply soft anime cel shading: gradient color ramp with no Freestyle outlines.
+
+    Similar to ``apply_cel_style`` but uses LINEAR interpolation on the ramp
+    (5 stops) for a smoother anime gradient look, and omits Freestyle outlines
+    for a cleaner illustrated feel.
+
+    Args:
+        scene: The Blender scene.
+        meshes: Character mesh objects whose materials to override.
+    """
+    # Ensure Freestyle is disabled (this style has no outlines)
+    scene.render.use_freestyle = False
+
+    for mesh_obj in meshes:
+        for slot in mesh_obj.material_slots:
+            original_mat = slot.material
+            base_color = _extract_base_color(original_mat)
+            tex_node = _get_image_texture_node(original_mat)
+
+            mat = bpy.data.materials.new(name=f"strata_soft_cel_{slot.name}")
+            mat.use_nodes = True
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+            nodes.clear()
+
+            output = nodes.new(type="ShaderNodeOutputMaterial")
+            output.location = (900, 0)
+
+            # Diffuse BSDF captures lighting response
+            diffuse = nodes.new(type="ShaderNodeBsdfDiffuse")
+            diffuse.location = (0, 0)
+            diffuse.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+
+            # Shader to RGB (EEVEE only) — converts lighting to color data
+            shader_to_rgb = nodes.new(type="ShaderNodeShaderToRGB")
+            shader_to_rgb.location = (200, 0)
+            links.new(diffuse.outputs["BSDF"], shader_to_rgb.inputs["Shader"])
+
+            # ColorRamp with LINEAR interpolation and more stops — smooth gradient
+            color_ramp = nodes.new(type="ShaderNodeValToRGB")
+            color_ramp.location = (400, 0)
+            color_ramp.color_ramp.interpolation = "LINEAR"
+
+            ramp = color_ramp.color_ramp
+            while len(ramp.elements) > len(SOFT_CEL_RAMP_STOPS):
+                ramp.elements.remove(ramp.elements[-1])
+            while len(ramp.elements) < len(SOFT_CEL_RAMP_STOPS):
+                ramp.elements.new(0.5)
+
+            for i, (position, brightness) in enumerate(SOFT_CEL_RAMP_STOPS):
+                ramp.elements[i].position = position
+                ramp.elements[i].color = (brightness, brightness, brightness, 1.0)
+
+            links.new(shader_to_rgb.outputs["Color"], color_ramp.inputs["Fac"])
+
+            # MixRGB (Multiply) — soft cel shading * base color
+            mix_rgb = nodes.new(type="ShaderNodeMixRGB")
+            mix_rgb.blend_type = "MULTIPLY"
+            mix_rgb.location = (600, 0)
+            mix_rgb.inputs["Fac"].default_value = 1.0
+
+            _wire_color_source(
+                nodes, links, mix_rgb.inputs["Color1"], tex_node, base_color, (-300, -200)
+            )
+
+            links.new(color_ramp.outputs["Color"], mix_rgb.inputs["Color2"])
+
+            emission = nodes.new(type="ShaderNodeEmission")
+            emission.location = (750, 0)
+            emission.inputs["Strength"].default_value = 1.0
+            links.new(mix_rgb.outputs["Color"], emission.inputs["Color"])
+            links.new(emission.outputs["Emission"], output.inputs["Surface"])
+
+            slot.material = mat
+
+    logger.info("Applied soft_cel style to %d meshes (no outlines)", len(meshes))
+
+
 def apply_unlit_style(
     scene: bpy.types.Scene,
     meshes: list[bpy.types.Object],
@@ -1155,8 +1239,10 @@ def apply_style(
         apply_flat_style(meshes)
     elif style == "cel":
         apply_cel_style(scene, meshes)
+    elif style == "soft_cel":
+        apply_soft_cel_style(scene, meshes)
     elif style == "unlit":
         apply_unlit_style(scene, meshes)
     elif style == "textured":
         pass  # Keep original materials as-is, render with scene lighting
-    # Post-render styles (pixel, painterly, sketch) are no-ops here
+    # Post-render styles (pixel, painterly, sketch, ink_wash, watercolor) are no-ops here

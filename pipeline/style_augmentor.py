@@ -19,6 +19,14 @@ import numpy as np
 from PIL import Image
 
 from .config import (
+    INK_WASH_BILATERAL_D,
+    INK_WASH_EDGE_THICKNESS,
+    INK_WASH_EDGE_THRESHOLD1,
+    INK_WASH_EDGE_THRESHOLD2,
+    INK_WASH_SATURATION,
+    INK_WASH_SIGMA_COLOR,
+    INK_WASH_SIGMA_SPACE,
+    INK_WASH_TINT,
     PAINTERLY_BILATERAL_D,
     PAINTERLY_DEFAULT_STRENGTH,
     PAINTERLY_HUE_JITTER,
@@ -37,6 +45,16 @@ from .config import (
     SKETCH_ENABLE_WOBBLE,
     SKETCH_LINE_THICKNESS,
     SKETCH_WOBBLE_RANGE,
+    WATERCOLOR_BILATERAL_D,
+    WATERCOLOR_BILATERAL_PASSES,
+    WATERCOLOR_EDGE_COLOR,
+    WATERCOLOR_EDGE_THICKNESS,
+    WATERCOLOR_EDGE_THRESHOLD1,
+    WATERCOLOR_EDGE_THRESHOLD2,
+    WATERCOLOR_GRAIN_SIGMA,
+    WATERCOLOR_SAT_BOOST,
+    WATERCOLOR_SIGMA_COLOR,
+    WATERCOLOR_SIGMA_SPACE,
 )
 
 logger = logging.getLogger(__name__)
@@ -211,12 +229,12 @@ def apply_sketch(
         rng = np.random.default_rng(seed)
         h, w = edges.shape
         # Create displacement maps for x and y
-        dx = rng.integers(
-            -SKETCH_WOBBLE_RANGE, SKETCH_WOBBLE_RANGE + 1, size=(h, w)
-        ).astype(np.float32)
-        dy = rng.integers(
-            -SKETCH_WOBBLE_RANGE, SKETCH_WOBBLE_RANGE + 1, size=(h, w)
-        ).astype(np.float32)
+        dx = rng.integers(-SKETCH_WOBBLE_RANGE, SKETCH_WOBBLE_RANGE + 1, size=(h, w)).astype(
+            np.float32
+        )
+        dy = rng.integers(-SKETCH_WOBBLE_RANGE, SKETCH_WOBBLE_RANGE + 1, size=(h, w)).astype(
+            np.float32
+        )
         # Build coordinate maps for remap
         map_x = (np.arange(w)[np.newaxis, :] + dx).astype(np.float32)
         map_y = (np.arange(h)[:, np.newaxis] + dy).astype(np.float32)
@@ -244,6 +262,151 @@ def apply_sketch(
     return result
 
 
+def apply_ink_wash(
+    image: Image.Image,
+    *,
+    seed: int = 0,
+) -> Image.Image:
+    """Transform a rendered image into an anime ink wash / sumi-e style.
+
+    Flow: separate alpha → bilateral filter → partial desaturation (warm wash)
+    → Canny edges overlaid in dark ink → restore alpha.
+
+    Args:
+        image: Input RGBA image (typically 512x512).
+        seed: Random seed (unused currently, reserved for future jitter).
+
+    Returns:
+        Transformed RGBA image at the same resolution as the input.
+    """
+    rgba = image.convert("RGBA")
+    r, g, b, a = rgba.split()
+    rgb = Image.merge("RGB", (r, g, b))
+
+    img_bgr = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
+
+    # Bilateral filter for ink-like edge preservation with soft fills
+    img_bgr = cv2.bilateralFilter(
+        img_bgr,
+        d=INK_WASH_BILATERAL_D,
+        sigmaColor=INK_WASH_SIGMA_COLOR,
+        sigmaSpace=INK_WASH_SIGMA_SPACE,
+    )
+
+    # Partial desaturation: reduce saturation to create ink wash feel
+    img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
+    img_hsv[:, :, 1] *= INK_WASH_SATURATION
+    img_hsv = np.clip(img_hsv, 0, 255).astype(np.uint8)
+    img_bgr = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+
+    # Blend with warm paper tint in shadow areas
+    tint_bgr = np.array([INK_WASH_TINT[2], INK_WASH_TINT[1], INK_WASH_TINT[0]], dtype=np.float32)
+    gray_mask = (255 - img_bgr[:, :, 0].astype(np.float32)) / 255.0  # dark areas get more tint
+    for c in range(3):
+        img_bgr[:, :, c] = np.clip(
+            img_bgr[:, :, c].astype(np.float32) * (1 - gray_mask * 0.3)
+            + tint_bgr[c] * gray_mask * 0.3,
+            0,
+            255,
+        ).astype(np.uint8)
+
+    # Canny edges overlaid as ink lines
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, INK_WASH_EDGE_THRESHOLD1, INK_WASH_EDGE_THRESHOLD2)
+    kernel = np.ones((INK_WASH_EDGE_THICKNESS, INK_WASH_EDGE_THICKNESS), np.uint8)
+    edges = cv2.dilate(edges, kernel, iterations=1)
+
+    # Darken pixels where edges detected (ink lines)
+    edge_mask = edges > 0
+    img_bgr[edge_mask] = np.clip(img_bgr[edge_mask].astype(np.int16) - 120, 0, 255).astype(np.uint8)
+
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    result_rgb = Image.fromarray(img_rgb)
+    result = Image.merge("RGBA", (*result_rgb.split(), a))
+
+    logger.info(
+        "Ink wash: saturation=%.2f, edge_threshold=(%d,%d)",
+        INK_WASH_SATURATION,
+        INK_WASH_EDGE_THRESHOLD1,
+        INK_WASH_EDGE_THRESHOLD2,
+    )
+    return result
+
+
+def apply_watercolor(
+    image: Image.Image,
+    *,
+    seed: int = 0,
+) -> Image.Image:
+    """Transform a rendered image into a soft watercolor illustration style.
+
+    Flow: separate alpha → multi-pass bilateral filter (paint-like blurring)
+    → saturation boost → paper grain noise → thin warm edge overlay → restore alpha.
+
+    Args:
+        image: Input RGBA image (typically 512x512).
+        seed: Random seed for deterministic grain and jitter.
+
+    Returns:
+        Transformed RGBA image at the same resolution as the input.
+    """
+    rgba = image.convert("RGBA")
+    r, g, b, a = rgba.split()
+    rgb = Image.merge("RGB", (r, g, b))
+
+    img_bgr = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
+
+    # Multi-pass bilateral filter — creates the paint-blended look
+    for _ in range(WATERCOLOR_BILATERAL_PASSES):
+        img_bgr = cv2.bilateralFilter(
+            img_bgr,
+            d=WATERCOLOR_BILATERAL_D,
+            sigmaColor=WATERCOLOR_SIGMA_COLOR,
+            sigmaSpace=WATERCOLOR_SIGMA_SPACE,
+        )
+
+    # Saturation boost (watercolors are vibrant)
+    img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
+    img_hsv[:, :, 1] = np.clip(img_hsv[:, :, 1] * WATERCOLOR_SAT_BOOST, 0, 255)
+    img_hsv = img_hsv.astype(np.uint8)
+    img_bgr = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+
+    # Paper grain: low-sigma Gaussian noise for texture
+    rng = np.random.default_rng(seed)
+    grain = rng.normal(0, WATERCOLOR_GRAIN_SIGMA * 255, img_bgr.shape)
+    img_bgr = np.clip(img_bgr.astype(np.float32) + grain, 0, 255).astype(np.uint8)
+
+    # Thin warm-colored edges (not harsh black — soft watercolor outline)
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, WATERCOLOR_EDGE_THRESHOLD1, WATERCOLOR_EDGE_THRESHOLD2)
+    kernel = np.ones((WATERCOLOR_EDGE_THICKNESS, WATERCOLOR_EDGE_THICKNESS), np.uint8)
+    edges = cv2.dilate(edges, kernel, iterations=1)
+
+    edge_mask = edges > 0
+    edge_bgr = np.array(
+        [WATERCOLOR_EDGE_COLOR[2], WATERCOLOR_EDGE_COLOR[1], WATERCOLOR_EDGE_COLOR[0]],
+        dtype=np.uint8,
+    )
+    # Blend edge color at 70% opacity over existing pixels
+    img_bgr[edge_mask] = np.clip(
+        img_bgr[edge_mask].astype(np.float32) * 0.3 + edge_bgr.astype(np.float32) * 0.7,
+        0,
+        255,
+    ).astype(np.uint8)
+
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    result_rgb = Image.fromarray(img_rgb)
+    result = Image.merge("RGBA", (*result_rgb.split(), a))
+
+    logger.info(
+        "Watercolor: passes=%d, sat_boost=%.2f, grain_sigma=%.3f",
+        WATERCOLOR_BILATERAL_PASSES,
+        WATERCOLOR_SAT_BOOST,
+        WATERCOLOR_GRAIN_SIGMA,
+    )
+    return result
+
+
 def apply_post_render_style(
     image: Image.Image,
     style: str,
@@ -256,7 +419,7 @@ def apply_post_render_style(
 
     Args:
         image: Input RGBA image.
-        style: Style name ("pixel", "painterly", "sketch").
+        style: Style name ("pixel", "painterly", "sketch", "ink_wash", "watercolor").
         seed: Random seed for deterministic transforms.
 
     Returns:
@@ -268,5 +431,9 @@ def apply_post_render_style(
         return apply_painterly(image, seed=seed)
     if style == "sketch":
         return apply_sketch(image, seed=seed)
+    if style == "ink_wash":
+        return apply_ink_wash(image, seed=seed)
+    if style == "watercolor":
+        return apply_watercolor(image, seed=seed)
     logger.warning("Post-render style '%s' not yet implemented, returning original", style)
     return image
