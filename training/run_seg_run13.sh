@@ -122,7 +122,27 @@ download_dataset gemini_li_converted gemini_li_converted
 download_dataset cvat_annotated cvat_annotated
 download_dataset sora_diverse sora_diverse "segmentation.png"
 download_dataset flux_diverse_clean flux_diverse_clean "segmentation.png"
-download_dataset toon_pseudo toon_pseudo "image.png"
+# toon_pseudo (tar contains "toon/" dir, rename after extraction)
+TOON_DIR="./data_cloud/toon_pseudo"
+TOON_TAR="./data_cloud/tars/toon_pseudo.tar"
+if [ -d "$TOON_DIR" ] && [ "$(find "$TOON_DIR" -maxdepth 2 -name 'image.png' | head -1)" ]; then
+    echo "  toon_pseudo already exists."
+else
+    echo "  Downloading toon_pseudo..."
+    rm -rf "$TOON_DIR" "./data_cloud/toon"
+    rclone copy "hetzner:strata-training-data/tars/toon_pseudo.tar" ./data_cloud/tars/ \
+        --transfers 32 --fast-list -P
+    if [ -f "$TOON_TAR" ]; then
+        tar xf "$TOON_TAR" -C ./data_cloud/
+        rm -f "$TOON_TAR"
+        [ -d "./data_cloud/toon" ] && mv ./data_cloud/toon "$TOON_DIR"
+        COUNT=$(ls "$TOON_DIR/" 2>/dev/null | wc -l | tr -d ' ')
+        echo "  toon_pseudo: $COUNT examples"
+    else
+        echo "  FATAL: toon_pseudo tar not found."
+        exit 1
+    fi
+fi
 
 # meshy_cc0_textured (restructured tar)
 MESHY_DIR="./data_cloud/meshy_cc0_textured"
