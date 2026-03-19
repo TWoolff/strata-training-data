@@ -271,25 +271,27 @@ Config: `training/configs/segmentation_a100_run12.yaml`. Script: `training/run_s
 
 ## Current Plan: Run 13
 
-**Seg run 13** — add humanrig_posed (~35K pseudo-labeled posed renders) + toon_pseudo (~10K pseudo-labeled toon-style renders). Resume from run 12 best (0.5068 mIoU). Target: >0.55 mIoU.
+**Seg run 13** — add humanrig_posed (~35K pseudo-labeled posed renders) + toon_pseudo (~14K pseudo-labeled toon-style renders) + new sora images. Resume from run 12 best (0.5068 mIoU). Target: >0.55 mIoU.
 
 **Prep steps (before A100):**
-1. Pseudo-label humanrig_posed (81K images, run 12 checkpoint) — images exist, no GT masks
-2. Pseudo-label toon renders (~10K, run 12 checkpoint) — rendering on Mac now
-3. Ingest new Sora/Gemini images being generated
-4. Tar + upload humanrig_posed, toon_pseudo, new sora images to bucket
+1. [x] Toon renders complete: ~14K images (916 Meshy chars × 5 styles × 3 angles)
+2. [x] 222 new Sora/Gemini images ingested (1,279 total in raw/gemini_diverse)
+3. [ ] Tar + upload humanrig_posed (raw images, no masks — tarring now)
+4. [ ] Tar + upload toon_pseudo (raw images, no masks)
+5. [ ] Re-tar + upload sora_diverse (include 222 new images)
+6. Pseudo-labeling happens on A100 (run 13 script handles it automatically)
 
 Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
 
 | Dataset | Examples | Weight | Change |
 |---------|----------|--------|--------|
 | cvat_annotated | 49 | 10.0 | Same |
-| sora_diverse | 1,056 | 4.0 | Same |
+| sora_diverse | ~1,279 | 4.0 | +222 new Sora/Gemini images |
 | gemini_li_converted | 694 | 3.0 | Same |
 | flux_diverse_clean | 1,569 | 2.5 | Same |
 | vroid_cc0 | 1,386 | 2.5 | Same |
 | **humanrig_posed** | **~35,000** | **2.0** | **NEW — pseudo-labeled posed renders** |
-| **toon_pseudo** | **~10,800** | **2.0** | **NEW — pseudo-labeled toon-style renders** |
+| **toon_pseudo** | **~14,000** | **2.0** | **NEW — pseudo-labeled toon-style renders (916 chars × 5 styles × 3 angles)** |
 | meshy_cc0_textured | 15,281 | 1.5 | Same |
 | humanrig | 11,434 | 1.0 | Weight reduced (posed version covers it) |
 
