@@ -185,12 +185,9 @@ for ds in humanrig_posed toon_pseudo sora_diverse; do
         continue
     fi
     # Check if pseudo-labeling is needed (has image.png but no segmentation.png)
-    NEEDS_LABEL=$(find "$ds_dir" -maxdepth 2 -name "image.png" -exec sh -c '
-        dir=$(dirname "$1"); [ ! -f "$dir/segmentation.png" ] && echo m
-    ' _ {} \; | head -1)
-    if [ -n "$NEEDS_LABEL" ]; then
-        TOTAL=$(find "$ds_dir" -maxdepth 2 -name "image.png" | wc -l | tr -d ' ')
-        HAVE_SEG=$(find "$ds_dir" -maxdepth 2 -name "segmentation.png" | wc -l | tr -d ' ')
+    TOTAL=$(find "$ds_dir" -maxdepth 2 -name "image.png" 2>/dev/null | wc -l | tr -d ' ')
+    HAVE_SEG=$(find "$ds_dir" -maxdepth 2 -name "segmentation.png" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$TOTAL" -gt 0 ] && [ "$HAVE_SEG" -lt "$TOTAL" ]; then
         echo "  $ds: $TOTAL images, $HAVE_SEG already labeled — pseudo-labeling remainder..."
         python scripts/batch_pseudo_label.py \
             --input-dir "$ds_dir" \
