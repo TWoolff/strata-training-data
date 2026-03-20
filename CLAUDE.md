@@ -30,13 +30,13 @@ Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri
 
 | Model | Best Score | Run | Notes |
 |-------|-----------|-----|-------|
-| Segmentation | 0.5068 mIoU (MobileNetV3) | Run 12 | +sora_diverse +flux_diverse_clean, lr=1e-5 flat, early stopped epoch 17 |
+| Segmentation | 0.5116 mIoU (MobileNetV3) | Run 13a (in progress) | Run 12 mix + toon_pseudo, epoch 2/20, still climbing |
 | Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
 | Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
 | Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
 | Back View | 0.2408 val/l1 | Run 3 | 1,805 pairs, early stopped epoch 127/200. Train 0.12 vs val 0.24 |
 
-**Run 12 status (March 19, 2026):** Seg run 12 best: 0.5068 mIoU (epoch 17/60, manually stopped — plateaued). Back view run 3: 0.2408 val/l1 (1,805 pairs, up from 720 in run 2 after fixing unrigged merge). Checkpoints + ONNX in bucket.
+**Run 13a status (March 20, 2026):** Seg run 13a in progress on A100 — 0.5116 mIoU at epoch 2/20 (new record, still climbing). Run 12 mix + toon_pseudo at weight 1.0. Back view run 3 chains after seg completes.
 
 ## Project Layout
 
@@ -119,14 +119,16 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 18, 2026)
+### Bucket Contents (March 20, 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 
 **Tars (for A100 setup):**
 | Tar | Size | Contents |
 |-----|-----:|---------|
-| `humanrig.tar` | 16.8 GiB | 11,434 GT 22-class T-pose renders |
+| `humanrig.tar` | 16.8 GiB | 45,738 GT 22-class T-pose renders |
+| `humanrig_posed.tar` | ~20 GiB | 81,864 posed renders (images+seg+joints, no depth/normals) |
+| `toon_pseudo.tar` | ~5 GiB | 13,740 toon-style renders (5 styles × 3 angles, pseudo-labeled) |
 | `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ face/body crops |
 | `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (per-example subdirs, 15,281 examples) |
 | `vroid_cc0.tar` | 203 MiB | VRoid CC0 GT 22-class (11 chars, 1,386 examples) |
@@ -137,9 +139,12 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~960 additional back view triplets (unrigged Meshy GLB) |
 | `flux_diverse.tar` | 363 MiB | 1,846 FLUX-generated pseudo-labeled chars (Strata format) |
 | `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
-| `sora_diverse.tar` | ~200 MiB | 1,056 Sora/Gemini chars (run 10 labels, fixed aspect ratio) |
+| `sora_diverse.tar` | ~200 MiB | 1,279 Sora/Gemini chars (run 10 labels, fixed aspect ratio) |
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/` (runs 10, 12), `checkpoints_back_view_run3/`, `models/` (incl. `back_view_run3/`, `onnx_run12_seg/`), `logs/`.
+**Enriched tars** (include depth+normals, skip Marigold on A100):
+After run 13, enriched versions will be uploaded as `{name}_enriched.tar`. The run script tries enriched tars first, falls back to regular.
+
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/` (runs 10, 12, 13), `checkpoints_back_view_run3/`, `models/` (incl. `back_view_run3/`, `onnx_run12_seg/`), `logs/`.
 
 **Deleted (March 17):** `unirig/` (53 GiB, prohibited license), `encoder_features/` (42 GiB, stale), `anime_seg/` (2.6 GiB, dropped from training), old checkpoints (runs 1/3/4/seg_meshy), obsolete tars.
 
@@ -174,7 +179,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | `training/run_back_view.sh` | Train model 6 (back view generation) on A100 |
 | `training/run_seg_run10.sh` | Run 10: seg bootstrap round 3 + back view run 2 (combined A100 session) |
 | `training/run_seg_run12.sh` | Run 12: +sora_diverse +flux_diverse_clean, lr=1e-5, + back view run 3 |
-| `training/run_seg_run13.sh` | Run 13: +humanrig_posed (35K) +toon_pseudo (10K), + back view run 3 |
+| `training/run_seg_run13.sh` | Run 13a: run 12 mix + toon_pseudo, enriched tar upload, + back view run 3 |
+| `scripts/filter_seg_quality.py` | Quality filter: min-regions, max-single-region, min-foreground checks |
 | `scripts/render_toon_styles.py` | Render FBX/GLB in toon styles (no armature needed, multi-angle) |
 | `scripts/filter_flux_diverse.py` | Remove anatomically broken FLUX images (no-torso filter) |
 
@@ -269,33 +275,42 @@ Config: `training/configs/segmentation_a100_run12.yaml`. Script: `training/run_s
 - Val loss plateaued at ~0.472 — model needs more data diversity, not more epochs
 - sora_diverse + flux_diverse_clean added illustrated coverage but insufficient to break 0.51
 
-## Current Plan: Run 13
+## Run 13a (March 20, 2026) — IN PROGRESS
 
-**Seg run 13** — add humanrig_posed (~35K pseudo-labeled posed renders) + toon_pseudo (~14K pseudo-labeled toon-style renders) + new sora images. Resume from run 12 best (0.5068 mIoU). Target: >0.55 mIoU.
-
-**Prep steps (before A100):**
-1. [x] Toon renders complete: ~14K images (916 Meshy chars × 5 styles × 3 angles)
-2. [x] 222 new Sora/Gemini images ingested (1,279 total in raw/gemini_diverse)
-3. [x] Tar + upload humanrig_posed (raw images, no masks — tarring now)
-4. [x] Tar + upload toon_pseudo (raw images, no masks)
-5. [x] Re-tar + upload sora_diverse (include 222 new images)
-6. Pseudo-labeling happens on A100 (run 13 script handles it automatically)
+**0.5116 mIoU at epoch 2/20** — new record, still climbing. Run 12 mix + toon_pseudo only.
 
 Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
 
-| Dataset | Examples | Weight | Change |
+| Dataset | Examples (passed) | Weight | Change from run 12 |
 |---------|----------|--------|--------|
 | cvat_annotated | 49 | 10.0 | Same |
-| sora_diverse | ~1,279 | 4.0 | +222 new Sora/Gemini images |
+| sora_diverse | 1,279 | 4.0 | +223 new Sora/Gemini images |
 | gemini_li_converted | 694 | 3.0 | Same |
 | flux_diverse_clean | 1,569 | 2.5 | Same |
 | vroid_cc0 | 1,386 | 2.5 | Same |
-| **humanrig_posed** | **~35,000** | **2.0** | **NEW — pseudo-labeled posed renders** |
-| **toon_pseudo** | **~14,000** | **2.0** | **NEW — pseudo-labeled toon-style renders (916 chars × 5 styles × 3 angles)** |
+| **toon_pseudo** | **6,317** | **1.0** | **NEW — pseudo-labeled toon-style renders (of 13,740 total, 7,423 rejected by quality filter)** |
+| humanrig | 11,434 | 0.5 | Weight reduced (tar now has 45K, 0.5 matches effective volume) |
 | meshy_cc0_textured | 15,281 | 1.5 | Same |
-| humanrig | 11,434 | 1.0 | Weight reduced (posed version covers it) |
 
 **Back view run 3** — chains after seg on same A100 session.
+
+### Run 13 Learnings (failed attempts before 13a)
+
+- **humanrig_posed at weight 2.0**: mIoU dropped 0.51→0.37 at epoch 1. 27K pseudo-labeled 3D posed renders drowned illustrated data.
+- **humanrig_posed at weight 0.5**: Still dropped to 0.34. Pseudo-labels were too noisy (66% rejected by quality filter — 40K missing_head, 30K missing_torso).
+- **Root cause**: Run 12 model produces bad pseudo-labels on posed 3D renders (domain gap). The 27K that passed quality filter still had noisy labels.
+- **Solution**: Dropped humanrig_posed entirely for 13a. Will re-pseudo-label after run 13a produces a better model (bootstrapping loop).
+- **humanrig tar expanded**: Now 45K examples (was 11K). Weight reduced to 0.5 to maintain same effective volume.
+- **Enriched tar strategy**: After training, enriched datasets (with depth+normals) are tarred and uploaded to bucket. Future runs download enriched tars and skip Marigold entirely (~10 hrs saved per A100 session).
+- **Key principle**: Change one dataset at a time. Throwing humanrig_posed + toon_pseudo + expanded humanrig all at once made it impossible to diagnose what was helping vs hurting.
+
+## Future: Run 13b
+
+If run 13a improves, cautiously add humanrig_posed:
+- Re-pseudo-label 81K humanrig_posed with run 13a's better model
+- Expect higher pass rate on quality filter (better head/torso detection)
+- Add at low weight (0.5) to avoid drowning illustrated data
+- More Sora/Gemini illustrated images = highest-leverage data to add
 
 ## After Seg Converges: Ship Run
 
@@ -326,8 +341,28 @@ Once seg hits target (>0.55 mIoU), one combined run to ship all 4 models:
 **Training:** `training/run_back_view.sh` on A100, config `training/configs/back_view_a100.yaml`.
 
 **Next steps:**
+- 328 new Meshy CC0 characters extracted on external HD (March 20) — available for rendering
 - Download more Meshy CC0 characters + render to increase pair count
 - Model 5 (Texture Inpainting) depends on model 6 output
+
+## Quality Filter (`scripts/filter_seg_quality.py`)
+
+Rejects pseudo-labeled examples with implausible segmentation masks:
+- `--min-regions 4` — at least 4 distinct body regions
+- `--max-single-region 0.70` — no single region > 70% of foreground
+- `--min-foreground 0.05` — at least 5% foreground pixels
+- Also checks for `missing_head` and `missing_torso`
+
+Outputs `quality_filter.json` per dataset with passed/rejected lists and reasons. Rejection rates vary:
+- GT datasets (humanrig, vroid, meshy): <1% rejected
+- Pseudo-labeled datasets: depends on model quality. humanrig_posed had 66% rejection with run 12 labels.
+
+## Marigold Enrichment Timing
+
+- **A100 (batch_size=16)**: ~5.1 img/s → 81K images = ~4.5 hrs per pass (depth or normals), ~9 hrs total
+- **Mac MPS**: ~4.5s/image → 81K images = ~100 hrs (impractical for large datasets)
+- **Strategy**: Enrich once on A100, upload `{name}_enriched.tar` to bucket. Future runs download pre-enriched data.
+- GT 3D datasets (humanrig, humanrig_posed) could compute exact depth/normals in Blender instead of Marigold — TODO for future pipeline improvement.
 
 ## Dr. Li's Label Schema Conversion
 
