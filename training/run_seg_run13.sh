@@ -223,7 +223,7 @@ echo ""
 echo "[2/5] Marigold enrichment..."
 echo ""
 
-for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted" "./data_cloud/toon_pseudo" "./data_cloud/humanrig_posed"; do
+for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted" "./data_cloud/toon_pseudo"; do
     ds_name=$(basename "$ds_dir")
     if [ ! -d "$ds_dir" ]; then
         continue
