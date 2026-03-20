@@ -1,26 +1,19 @@
-# Run 13 seg — Add humanrig_posed GT data + toon pseudo-labels
+# Run 13a seg — Run 12 mix + toon_pseudo only
 #
-# Key changes from run 12:
-#   - ADD humanrig_posed: ~35,000 GT posed renders (13 poses × 3 angles × ~900 chars)
-#     Massive boost to pose diversity — run 12 only had T-pose/A-pose GT data
-#   - ADD toon_pseudo: ~10,800 pseudo-labeled toon-style renders (5 styles × 3 angles)
-#     Closes illustrated style gap with diverse cel/ink/watercolor renders
-#   - humanrig weight reduced to 1.0 (posed version covers it with more variety)
-#   - Resume from run 12 best checkpoint
-#   - lr=1e-5 flat, no warmup (confirmed correct for fine-tuning)
+# Strategy: minimal change from run 12 (0.5068 mIoU) to isolate toon_pseudo impact.
+# humanrig_posed deferred to 13b pending better pseudo-labels.
 #
-# Data composition:
+# Data composition (run 12 unchanged):
 #   - cvat_annotated:       49   hand-annotated diverse illustrated chars    (wt 10.0)
-#   - sora_diverse:      1,056   Sora/Gemini, run 10 labels, aspect-fixed   (wt 4.0)
+#   - sora_diverse:      1,279   Sora/Gemini, run 10 labels, aspect-fixed   (wt 4.0)
 #   - gemini_li_converted:  694  Dr. Li expert labels                        (wt 3.0)
 #   - flux_diverse_clean: 1,569  cleaned FLUX, run 10 labels, aspect-fixed   (wt 2.5)
 #   - vroid_cc0:          1,386  GT 22-class VRoid chars                     (wt 2.5)
-#   - humanrig_posed:   ~35,000  GT 22-class posed renders (13 poses × 3 angles) (wt 2.0)
-#   - toon_pseudo:      ~10,800  pseudo-labeled toon renders (5 styles × 3 angles) (wt 2.0)
+#   - humanrig:          11,434  GT 22-class T-pose 3D renders               (wt 2.0)
+#   - toon_pseudo:       ~13,740 pseudo-labeled toon-style renders           (wt 1.0) NEW
 #   - meshy_cc0_textured: 15,281 GT 22-class diverse 3D chars               (wt 1.5)
-#   - humanrig:          11,434  GT 22-class T-pose 3D renders               (wt 1.0)
 #
-# Target: mIoU > 0.55
+# Target: mIoU > 0.52
 
 model:
   backbone: "mobilenet_v3_large"
@@ -30,7 +23,6 @@ model:
 data:
   dataset_dirs:
     - "./data_cloud/humanrig"
-    - "./data_cloud/humanrig_posed"
     - "./data_cloud/vroid_cc0"
     - "./data_cloud/meshy_cc0_textured"
     - "./data_cloud/gemini_li_converted"
@@ -48,10 +40,9 @@ data:
     gemini_li_converted: 3.0
     flux_diverse_clean: 2.5
     vroid_cc0: 2.5
-    humanrig_posed: 0.5
-    toon_pseudo: 2.0
+    humanrig: 0.5
+    toon_pseudo: 1.0
     meshy_cc0_textured: 1.5
-    humanrig: 1.0
 
 augmentation:
   horizontal_flip: true
@@ -62,7 +53,7 @@ augmentation:
 training:
   batch_size: 32
   num_workers: 8
-  epochs: 60
+  epochs: 20
   optimizer: "adamw"
   learning_rate: 1.0e-5
   weight_decay: 1.0e-4
@@ -78,5 +69,5 @@ loss:
 
 checkpointing:
   save_dir: "./checkpoints/segmentation"
-  early_stopping_patience: 30
+  early_stopping_patience: 10
   early_stopping_metric: "val/miou"
