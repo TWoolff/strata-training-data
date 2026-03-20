@@ -276,9 +276,9 @@ Config: `training/configs/segmentation_a100_run12.yaml`. Script: `training/run_s
 **Prep steps (before A100):**
 1. [x] Toon renders complete: ~14K images (916 Meshy chars × 5 styles × 3 angles)
 2. [x] 222 new Sora/Gemini images ingested (1,279 total in raw/gemini_diverse)
-3. [ ] Tar + upload humanrig_posed (raw images, no masks — tarring now)
-4. [ ] Tar + upload toon_pseudo (raw images, no masks)
-5. [ ] Re-tar + upload sora_diverse (include 222 new images)
+3. [x] Tar + upload humanrig_posed (raw images, no masks — tarring now)
+4. [x] Tar + upload toon_pseudo (raw images, no masks)
+5. [x] Re-tar + upload sora_diverse (include 222 new images)
 6. Pseudo-labeling happens on A100 (run 13 script handles it automatically)
 
 Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
