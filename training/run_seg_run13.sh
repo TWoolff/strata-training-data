@@ -86,7 +86,6 @@ download_dataset() {
     local name="$1"
     local tar_name="${2:-$name}"
     local dir="./data_cloud/$name"
-    local tar="./data_cloud/tars/${tar_name}.tar"
     local check="${3:-}"
 
     if [ -n "$check" ]; then
@@ -100,6 +99,23 @@ download_dataset() {
     fi
 
     rm -rf "$dir"
+
+    # Try enriched tar first (has depth+normals, skips Marigold)
+    local enriched_tar="./data_cloud/tars/${name}_enriched.tar"
+    echo "  Checking for ${name}_enriched.tar..."
+    rclone copy "hetzner:strata-training-data/tars/${name}_enriched.tar" ./data_cloud/tars/ \
+        --transfers 32 --fast-list -P 2>/dev/null || true
+    if [ -f "$enriched_tar" ]; then
+        echo "  Found enriched tar — extracting $name..."
+        tar xf "$enriched_tar" -C ./data_cloud/
+        rm -f "$enriched_tar"
+        COUNT=$(ls "./data_cloud/$name/" 2>/dev/null | wc -l | tr -d ' ')
+        echo "  $name (enriched): $COUNT examples"
+        return 0
+    fi
+
+    # Fall back to regular tar
+    local tar="./data_cloud/tars/${tar_name}.tar"
     echo "  Downloading $name..."
     rclone copy "hetzner:strata-training-data/tars/${tar_name}.tar" ./data_cloud/tars/ \
         --transfers 32 --fast-list -P
@@ -229,7 +245,7 @@ done
 echo ""
 
 # ---------------------------------------------------------------------------
-# 3. Quality filter
+# 3. Quality filter (skip if already done)
 # ---------------------------------------------------------------------------
 echo "[3/5] Quality filter..."
 echo ""
@@ -237,15 +253,18 @@ echo ""
 for ds in humanrig humanrig_posed vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
-        rm -f "$ds_dir/quality_filter.json"
-        echo "  Filtering $ds..."
-        python scripts/filter_seg_quality.py \
-            --data-dirs "$ds_dir" \
-            --output-dir "$ds_dir" \
-            --min-regions 4 \
-            --max-single-region 0.70 \
-            --min-foreground 0.05 \
-            2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+        if [ -f "$ds_dir/quality_filter.json" ]; then
+            echo "  $ds: quality_filter.json exists, skipping."
+        else
+            echo "  Filtering $ds..."
+            python scripts/filter_seg_quality.py \
+                --data-dirs "$ds_dir" \
+                --output-dir "$ds_dir" \
+                --min-regions 4 \
+                --max-single-region 0.70 \
+                --min-foreground 0.05 \
+                2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+        fi
     fi
 done
 echo "  Quality filter complete."
@@ -305,6 +324,25 @@ echo "  Finished: $(date)"
 echo "  Results:"
 grep -E "New best mIoU|mIoU=" "$LOG_DIR/segmentation.log" 2>/dev/null | tail -5 || echo "  (check logs)"
 echo "============================================"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Upload enriched datasets to bucket (so future runs skip Marigold)
+# ---------------------------------------------------------------------------
+echo "  Uploading enriched datasets to bucket..."
+for ds in sora_diverse flux_diverse_clean gemini_li_converted toon_pseudo humanrig_posed; do
+    ds_dir="./data_cloud/$ds"
+    if [ -d "$ds_dir" ]; then
+        echo "  Tarring $ds (enriched)..."
+        tar cf "./data_cloud/tars/${ds}_enriched.tar" -C ./data_cloud/ "$ds"
+        echo "  Uploading ${ds}_enriched.tar..."
+        rclone copy "./data_cloud/tars/${ds}_enriched.tar" \
+            hetzner:strata-training-data/tars/ \
+            --transfers 32 --fast-list -P
+        rm -f "./data_cloud/tars/${ds}_enriched.tar"
+        echo "  $ds: enriched tar uploaded."
+    fi
+done
 echo ""
 
 # ---------------------------------------------------------------------------

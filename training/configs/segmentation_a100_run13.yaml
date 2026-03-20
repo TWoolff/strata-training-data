@@ -48,7 +48,7 @@ data:
     gemini_li_converted: 3.0
     flux_diverse_clean: 2.5
     vroid_cc0: 2.5
-    humanrig_posed: 2.0
+    humanrig_posed: 0.5
     toon_pseudo: 2.0
     meshy_cc0_textured: 1.5
     humanrig: 1.0
