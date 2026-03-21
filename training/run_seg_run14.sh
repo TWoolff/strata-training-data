@@ -134,13 +134,37 @@ download_dataset() {
 }
 
 download_dataset humanrig humanrig "segmentation.png"
-download_dataset humanrig_posed humanrig_posed "image.png"
 download_dataset vroid_cc0 vroid_cc0
 download_dataset gemini_li_converted gemini_li_converted
 download_dataset cvat_annotated cvat_annotated
-download_dataset sora_diverse sora_diverse "image.png"
 download_dataset flux_diverse_clean flux_diverse_clean "image.png"
 download_dataset toon_pseudo toon_pseudo "image.png"
+
+# sora_diverse — force regular tar (enriched tar has old 1,279 images, new tar has 1,574)
+SORA_DIR="./data_cloud/sora_diverse"
+if [ -d "$SORA_DIR" ] && [ "$(find "$SORA_DIR" -maxdepth 2 -name 'image.png' | head -1)" ]; then
+    SORA_COUNT=$(ls "$SORA_DIR/" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$SORA_COUNT" -lt 1500 ]; then
+        echo "  sora_diverse has $SORA_COUNT examples (stale enriched tar) — re-downloading..."
+        rm -rf "$SORA_DIR"
+    else
+        echo "  sora_diverse already exists ($SORA_COUNT examples)."
+    fi
+fi
+if [ ! -d "$SORA_DIR" ] || [ -z "$(ls -A "$SORA_DIR" 2>/dev/null)" ]; then
+    echo "  Downloading sora_diverse (regular tar, 1,574 images)..."
+    rclone copy "hetzner:strata-training-data/tars/sora_diverse.tar" ./data_cloud/tars/ \
+        --transfers 32 --fast-list -P
+    if [ -f "./data_cloud/tars/sora_diverse.tar" ]; then
+        tar xf "./data_cloud/tars/sora_diverse.tar" -C ./data_cloud/
+        rm -f "./data_cloud/tars/sora_diverse.tar"
+        SORA_COUNT=$(ls "$SORA_DIR/" 2>/dev/null | wc -l | tr -d ' ')
+        echo "  sora_diverse: $SORA_COUNT examples"
+    else
+        echo "  FATAL: sora_diverse tar not found."
+        exit 1
+    fi
+fi
 
 # meshy_cc0_textured (restructured tar, special naming)
 MESHY_DIR="./data_cloud/meshy_cc0_textured"
@@ -164,32 +188,18 @@ fi
 
 echo ""
 echo "  Dataset summary:"
-for ds in humanrig humanrig_posed vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
+for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
     count=$(ls "./data_cloud/$ds/" 2>/dev/null | wc -l | tr -d ' ')
     echo "    $ds: $count examples"
 done
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1b. Re-pseudo-label humanrig_posed with run 13a checkpoint
+# 1b. Pseudo-label new sora_diverse images
 # ---------------------------------------------------------------------------
-echo "[1b/5] Re-pseudo-labeling humanrig_posed with run 13a checkpoint..."
+echo "[1b/5] Pseudo-labeling new images..."
 echo ""
 
-# Delete old pseudo-labels and quality filter (from run 12 model — bad labels)
-echo "  Removing old pseudo-labels from humanrig_posed..."
-find ./data_cloud/humanrig_posed -name "segmentation.png" -delete 2>/dev/null || true
-rm -f ./data_cloud/humanrig_posed/quality_filter.json
-
-echo "  Pseudo-labeling with run 13a checkpoint..."
-python scripts/batch_pseudo_label.py \
-    --input-dir "./data_cloud/humanrig_posed" \
-    --output-dir "./data_cloud/humanrig_posed" \
-    --checkpoint "$RUN13_CKPT" \
-    --only-missing \
-    2>&1 | tee "$LOG_DIR/pseudo_label_humanrig_posed.log"
-
-# Also pseudo-label sora_diverse new images (if any missing)
 for ds in sora_diverse toon_pseudo; do
     ds_dir="./data_cloud/$ds"
     if [ ! -d "$ds_dir" ]; then continue; fi
@@ -240,7 +250,7 @@ echo ""
 echo "[3/5] Quality filter..."
 echo ""
 
-for ds in humanrig humanrig_posed vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
+for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         if [ -f "$ds_dir/quality_filter.json" ]; then
