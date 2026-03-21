@@ -13,30 +13,38 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
 | 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
-| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~1,805 pairs), run 3 complete |
+| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~1,805 pairs) |
 
 ### Model I/O
 
 - **Segmentation** — Input: [1,3,512,512]. Outputs: 22-class logits + depth (Marigold-distilled) + normals [3ch] + confidence + encoder_features (→ model 3).
 - **Joint Refinement** — Input: [1,3,512,512]. Outputs: [1,2,20] offsets + [1,20] confidence + [1,20] presence.
-- **Weight Prediction** — Input A: [1,31,2048,1] vertex features. Input B (optional): encoder features from model 1. Outputs: [1,20,2048,1] weights + [1,1,2048,1] confidence. Encoder branch uses dropout so model works with or without visual context.
+- **Weight Prediction** — Input A: [1,31,2048,1] vertex features. Input B (optional): encoder features from model 1. Outputs: [1,20,2048,1] weights + [1,1,2048,1] confidence.
 - **Inpainting** — U-Net fills occluded body regions. Fallback: EdgeExtend.
 - **Texture Inpainting** — Input: [B,5,512,512] (RGBA + observation mask). Output: [B,4,512,512] completed RGBA. Depends on model 6.
 - **Back View Generation** — Input: [B,8,512,512] (front RGBA + 3/4 RGBA concatenated). Output: [B,4,512,512] back view RGBA.
 
 Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
 
-## Current Model Scores (best per model)
+## Model Targets & Current Scores
 
-| Model | Best Score | Run | Notes |
-|-------|-----------|-----|-------|
-| Segmentation | 0.5116 mIoU (MobileNetV3) | Run 13a (in progress) | Run 12 mix + toon_pseudo, epoch 2/20, still climbing |
-| Joints | 0.001206 mean_offset_error | Run 3 | 110K examples, early stopped epoch 36 |
-| Weights | 0.023137 MAE | Run 3 | 12K examples (3.6x better than run 1) |
-| Inpainting | 0.0028 val/l1 | Run 6 | Fully converged (50/50 epochs). No further improvement expected |
-| Back View | 0.2408 val/l1 | Run 3 | 1,805 pairs, early stopped epoch 127/200. Train 0.12 vs val 0.24 |
+Goal: uploaded 2D character illustrations look natural from all generated angles when rigged and posed.
 
-**Run 13a status (March 20, 2026):** Seg run 13a in progress on A100 — 0.5116 mIoU at epoch 2/20 (new record, still climbing). Run 12 mix + toon_pseudo at weight 1.0. Back view run 3 chains after seg completes.
+| # | Model | Current Best | Target | What moves the needle |
+|---|-------|-------------|--------|----------------------|
+| 1 | **Segmentation** | 0.5561 mIoU (run 14) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). GT humanrig_posed masks. |
+| 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
+| 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
+| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
+| 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
+| 6 | **Back View** | 0.2368 val/l1 (run 13a) | **<0.15 val/l1** | More training pairs from new Meshy characters. |
+
+**Priority order:**
+1. Seg to 0.65 — keep adding illustrated data + bootstrapping loop
+2. Back view to 0.15 — render more pairs from 328 new Meshy characters
+3. Ship run — retrain joints + weights with better seg encoder
+4. Texture inpainting — depends on back view
+5. Inpainting — may need architecture work
 
 ## Project Layout
 
@@ -128,31 +136,26 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 |-----|-----:|---------|
 | `humanrig.tar` | 16.8 GiB | 45,738 GT 22-class T-pose renders |
 | `humanrig_posed.tar` | ~20 GiB | 81,864 posed renders (images+seg+joints, no depth/normals) |
-| `toon_pseudo.tar` | ~5 GiB | 13,740 toon-style renders (5 styles × 3 angles, pseudo-labeled) |
-| `fbanimehq.tar` | 14.2 GiB | FBAnimeHQ face/body crops |
-| `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (per-example subdirs, 15,281 examples) |
+| `toon_pseudo.tar` | ~5 GiB | 13,740 toon-style renders (pseudo-labeled, 6,317 pass quality filter) |
+| `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (15,281 examples) |
 | `vroid_cc0.tar` | 203 MiB | VRoid CC0 GT 22-class (11 chars, 1,386 examples) |
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
-| `gemini_diverse.tar` | 197 MiB | Gemini diverse (874 auto-triaged pseudo-labels) |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
-| `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (front+3/4+back, Meshy FBX+GLB+VRoid) |
-| `back_view_pairs_unrigged.tar` | 319 MiB | ~960 additional back view triplets (unrigged Meshy GLB) |
-| `flux_diverse.tar` | 363 MiB | 1,846 FLUX-generated pseudo-labeled chars (Strata format) |
 | `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
-| `sora_diverse.tar` | ~200 MiB | 1,279 Sora/Gemini chars (run 10 labels, fixed aspect ratio) |
+| `sora_diverse.tar` | ~200 MiB | 1,279 Sora/Gemini chars (run 10 labels) |
+| `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (Meshy FBX+GLB+VRoid) |
+| `back_view_pairs_unrigged.tar` | 319 MiB | ~720 additional back view triplets (unrigged Meshy GLB) |
 
 **Enriched tars** (include depth+normals, skip Marigold on A100):
-After run 13, enriched versions will be uploaded as `{name}_enriched.tar`. The run script tries enriched tars first, falls back to regular.
+`{name}_enriched.tar` uploaded after run 13a for: sora_diverse, flux_diverse_clean, gemini_li_converted, toon_pseudo, humanrig_posed. The run script tries enriched tars first, falls back to regular. Saves ~10 hrs Marigold per A100 session.
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `humanrig/` (16 GiB), `fbanimehq/` (11 GiB), `checkpoints_run*/` (runs 10, 12, 13), `checkpoints_back_view_run3/`, `models/` (incl. `back_view_run3/`, `onnx_run12_seg/`), `logs/`.
-
-**Deleted (March 17):** `unirig/` (53 GiB, prohibited license), `encoder_features/` (42 GiB, stale), `anime_seg/` (2.6 GiB, dropped from training), old checkpoints (runs 1/3/4/seg_meshy), obsolete tars.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10, 12, 13), `models/` (ONNX exports), `logs/`.
 
 ## A100 Training Run Workflow
 
-1. **Prep locally** — enrich data, upload to bucket, push code
-2. **Spin up A100** — `cloud_setup.sh lean` (installs deps + configures rclone, no data download)
-3. **Run script** — e.g. `./training/run_seg_li.sh` (downloads only needed data, trains, exports ONNX, uploads)
+1. **Prep locally** — ingest new images, upload to bucket, push code
+2. **Spin up A100** — `cloud_setup.sh lean` (installs deps + configures rclone)
+3. **Run script** — e.g. `./training/run_seg_run13.sh` (downloads data, trains, exports ONNX, uploads)
 4. **Destroy instance** — everything safe in bucket
 5. **Download to Mac** — `rclone copy` checkpoints + ONNX
 6. **Benchmark** — `python3 run_benchmark.py` (7 Gemini test characters)
@@ -161,214 +164,114 @@ After run 13, enriched versions will be uploaded as `{name}_enriched.tar`. The r
 
 | Script | Purpose |
 |--------|---------|
-| `training/cloud_setup.sh` | A100 setup (deps + rclone, no data) |
-| `training/run_seg_li.sh` | Run 7: seg with Dr. Li + CVAT annotations |
-| `training/run_seg_bootstrap.sh` | **Run 8**: bootstrapped pseudo-labels + drop anime_seg |
-| `training/run_seg_backbone.sh` | Backbone comparison (EfficientNet-B3, ResNet-50) |
+| `training/cloud_setup.sh` | A100 setup (deps + rclone) |
+| `training/run_seg_run13.sh` | Run 13a: run 12 mix + toon_pseudo, enriched tar upload, + back view |
+| `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
 | `run_normals_enrich.py` | Marigold normals + depth enrichment |
 | `run_benchmark.py` | Benchmark on 7 Gemini test characters |
-| `scripts/convert_li_labels.py` | Convert Dr. Li's 19-class → Strata 22-class |
-| `scripts/convert_cvat_export.py` | Convert CVAT export → Strata format |
+| `scripts/ingest_gemini.py` | Preprocess Gemini/Sora/ChatGPT images (rembg + resize) |
+| `scripts/batch_pseudo_label.py` | Batch seg inference for pseudo-labeling |
 | `scripts/auto_triage.py` | Auto-accept/reject pseudo-labels by mask heuristics |
-| `scripts/batch_pseudo_label.py` | Batch seg inference + review manifest |
-| `scripts/review_masks.py` | Tkinter UI for correcting pseudo-labeled masks |
-| `scripts/filter_reviewed.py` | Extract reviewed-only examples for training |
-| `scripts/ingest_gemini.py` | Preprocess Gemini images (rembg + resize + pseudo-label) |
-| `scripts/render_back_view_data.py` | Render front+3/4+back triplets from FBX/GLB (no armature needed) |
-| `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
-| `training/run_back_view.sh` | Train model 6 (back view generation) on A100 |
-| `training/run_seg_run10.sh` | Run 10: seg bootstrap round 3 + back view run 2 (combined A100 session) |
-| `training/run_seg_run12.sh` | Run 12: +sora_diverse +flux_diverse_clean, lr=1e-5, + back view run 3 |
-| `training/run_seg_run13.sh` | Run 13a: run 12 mix + toon_pseudo, enriched tar upload, + back view run 3 |
-| `scripts/filter_seg_quality.py` | Quality filter: min-regions, max-single-region, min-foreground checks |
-| `scripts/render_toon_styles.py` | Render FBX/GLB in toon styles (no armature needed, multi-angle) |
-| `scripts/filter_flux_diverse.py` | Remove anatomically broken FLUX images (no-torso filter) |
+| `scripts/filter_seg_quality.py` | Quality filter: min-regions, max-single-region, min-foreground |
+| `scripts/render_back_view_data.py` | Render front+3/4+back triplets from FBX/GLB |
+| `scripts/render_toon_styles.py` | Render FBX/GLB in toon styles (multi-angle) |
+| `scripts/convert_li_labels.py` | Convert Dr. Li's 19-class → Strata 22-class |
 
-## Run 7 Results (March 16, 2026)
+## Segmentation Run History
 
-**0.3573 mIoU** (epoch 64/80, manually stopped — plateau). Up from 0.3491 MobileNetV3 baseline.
+| Run | mIoU | Key change | Learnings |
+|-----|------|-----------|-----------|
+| 7 | 0.3573 | +Dr. Li labels, +CVAT | Li + CVAT insufficient alone to break 0.37 |
+| 8 | 0.4721 | Drop anime_seg, +gemini_diverse pseudo-labels | Bootstrapping loop validated. 32% jump |
+| 10 | 0.5038 | Bootstrap round 3 | Incremental gains |
+| 12 | 0.5068 | +sora_diverse, +flux_diverse_clean, lr=1e-5 flat | Val plateau — needs more data diversity |
+| 13a | 0.5425 | +toon_pseudo (wt 1.0), run 12 mix unchanged | +7% from toon data alone. Change one thing at a time. |
+| **14** | **0.5561** | +295 illustrated chars, no humanrig_posed | **+2.5% from illustrated data. Pseudo-labeled humanrig_posed confirmed unusable.** |
 
-Config: `training/configs/segmentation_a100_run7_li.yaml`. Script: `training/run_seg_li.sh`.
+### Run 13/14 Learnings
 
-| Dataset | Examples | Weight | Source |
-|---------|----------|--------|--------|
-| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
-| gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels (19-class → 22-class converted) |
-| vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
-| humanrig | 11,434 | 2.0 | GT 22-class 3D renders |
-| meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
-| anime_seg | ~14K | 1.0 | Existing masks (32% rejection rate) |
+- **humanrig_posed pseudo-labels are unusable**: Tried with run 12 labels (66% rejected), run 13a labels (94% rejected), at weights 2.0/0.5/0.3 — always causes mIoU regression. Even quality-filtered examples are too noisy.
+- **GT masks needed**: humanrig_posed needs GT seg masks rendered in Blender (seg-only mode), not pseudo-labels. Rendering in progress on Mac (~81K examples).
+- **Key principle**: Change one dataset at a time. Isolate what helps vs hurts.
+- **Enriched tars**: Upload depth+normals-enriched datasets after training. Saves ~10 hrs Marigold per future run.
+- **More illustrated data = best lever**: 295 new chars gave +2.5% mIoU (run 14). Keep generating.
 
-**Learnings:**
-- CVAT weight bumped 4.0 → 10.0 mid-run (49 examples were only 0.4% effective volume at 4.0)
-- Li + CVAT annotations helped but insufficient alone to break 0.37 ceiling
-- anime_seg has 32% rejection rate — noisy labels may be hurting
+## Bootstrapping Loop
 
-## Mask Correction Workflow (Bootstrapping Loop)
-
-Use the trained model to pseudo-label new images, then correct mistakes manually. Turns 10-min CVAT annotation into ~1-2 min correction.
+Model → pseudo-label new data → quality filter → retrain. Each cycle improves both the model and the pseudo-labels.
 
 ```bash
-# 1. Preprocess new Gemini images (rembg + resize)
-python scripts/ingest_gemini.py --no-seg --only-new
+# 1. Ingest new images (rembg + resize, no seg)
+python scripts/ingest_gemini.py --input-dir /Volumes/TAMWoolff/data/raw/gemini_diverse \
+    --output-dir /Volumes/TAMWoolff/data/preprocessed/gemini_diverse --no-seg --only-new
 
-# 2. Pseudo-label with current best checkpoint
-python scripts/batch_pseudo_label.py \
-    --input-dir /Volumes/TAMWoolff/data/preprocessed/gemini/ \
-    --output-dir ./output/gemini_corrected \
-    --checkpoint checkpoints/segmentation/run7_best.pt
+# 2. Pseudo-label on A100 with best checkpoint (handled by run script)
 
-# 3. Review & correct masks in Tkinter UI
-python scripts/review_masks.py --data-dir ./output/gemini_corrected
+# 3. Quality filter auto-rejects bad masks (handled by run script)
 
-# 4. Filter reviewed-only examples
-python scripts/filter_reviewed.py \
-    --input-dir ./output/gemini_corrected \
-    --output-dir ./output/gemini_corrected_clean
-
-# 5. Tar and upload
-tar cf gemini_corrected.tar -C ./output gemini_corrected_clean
-rclone copy gemini_corrected.tar hetzner:strata-training-data/tars/ -P
+# 4. Train with filtered pseudo-labels
 ```
 
-885 images pseudo-labeled with run 7 checkpoint. Auto-triaged with `scripts/auto_triage.py`: 874 auto-accepted, 11 rejected (anatomically implausible), 0 manual review needed.
+## Run 13a Results (March 20, 2026)
 
-## Run 8 Results (March 17, 2026)
-
-**0.4721 mIoU** (epoch 5/80, early stopped at epoch 25). Up from 0.3573 (run 7) — **32% improvement**.
-
-Config: `training/configs/segmentation_a100_run8_bootstrap.yaml`. Script: `training/run_seg_bootstrap.sh`.
-
-| Dataset | Examples | Weight | Source |
-|---------|----------|--------|--------|
-| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
-| gemini_diverse | 874 | 4.0 | Auto-triaged pseudo-labels from run 7 model |
-| gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels |
-| vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
-| humanrig | 11,434 | 2.0 | GT 22-class 3D renders |
-| meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
-
-**Learnings:**
-- Dropping anime_seg (~14K noisy labels) and adding 874 diverse pseudo-labels → massive jump
-- Model peaked very early (epoch 5) then slowly overfit — early stopping triggered at 25
-- Auto-triage (`scripts/auto_triage.py`) eliminated manual review: 874/885 auto-accepted via anatomical heuristics
-- Bootstrapping loop validated: model → pseudo-label → triage → retrain works
-
-## Run 12 Results (March 19, 2026)
-
-**0.5068 mIoU** (epoch 17/60, manually stopped — plateau). Up from 0.5038 (run 10).
-
-Config: `training/configs/segmentation_a100_run12.yaml`. Script: `training/run_seg_run12.sh`.
-
-| Dataset | Examples | Weight | Source |
-|---------|----------|--------|--------|
-| cvat_annotated | 49 | 10.0 | Hand-annotated diverse illustrated |
-| sora_diverse | 1,056 | 4.0 | Sora/Gemini chars, run 10 labels, aspect-fixed |
-| gemini_li_converted | 694 | 3.0 | Dr. Li's expert labels |
-| flux_diverse_clean | 1,569 | 2.5 | Cleaned FLUX chars (no-torso removed) |
-| vroid_cc0 | 1,386 | 2.5 | GT 22-class VRoid characters |
-| humanrig | 11,434 | 2.0 | GT 22-class T-pose 3D renders |
-| meshy_cc0_textured | 15,281 | 1.5 | GT 22-class diverse 3D |
-
-**Learnings:**
-- lr=1e-5 flat with no warmup confirmed correct for fine-tuning (no peak-at-epoch-1)
-- Val loss plateaued at ~0.472 — model needs more data diversity, not more epochs
-- sora_diverse + flux_diverse_clean added illustrated coverage but insufficient to break 0.51
-
-## Run 13a (March 20, 2026) — IN PROGRESS
-
-**0.5116 mIoU at epoch 2/20** — new record, still climbing. Run 12 mix + toon_pseudo only.
+**0.5425 mIoU** (epoch 19/20). Up from 0.5068 (run 12) — **+7% improvement**.
 
 Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
 
-| Dataset | Examples (passed) | Weight | Change from run 12 |
-|---------|----------|--------|--------|
-| cvat_annotated | 49 | 10.0 | Same |
-| sora_diverse | 1,279 | 4.0 | +223 new Sora/Gemini images |
-| gemini_li_converted | 694 | 3.0 | Same |
-| flux_diverse_clean | 1,569 | 2.5 | Same |
-| vroid_cc0 | 1,386 | 2.5 | Same |
-| **toon_pseudo** | **6,317** | **1.0** | **NEW — pseudo-labeled toon-style renders (of 13,740 total, 7,423 rejected by quality filter)** |
-| humanrig | 11,434 | 0.5 | Weight reduced (tar now has 45K, 0.5 matches effective volume) |
-| meshy_cc0_textured | 15,281 | 1.5 | Same |
+| Dataset | Examples (passed) | Weight |
+|---------|----------|--------|
+| cvat_annotated | 49 | 10.0 |
+| sora_diverse | 1,279 | 4.0 |
+| gemini_li_converted | 694 | 3.0 |
+| flux_diverse_clean | 1,569 | 2.5 |
+| vroid_cc0 | 1,386 | 2.5 |
+| toon_pseudo | 6,317 | 1.0 |
+| meshy_cc0_textured | 15,281 | 1.5 |
+| humanrig | 11,434 | 0.5 |
 
-**Back view run 3** — chains after seg on same A100 session.
+## Next Steps
 
-### Run 13 Learnings (failed attempts before 13a)
+### Immediate (before next A100 run)
+- [ ] GT seg masks for humanrig_posed — rendering on Mac via Blender seg-only mode (~81K renders, in progress)
+- [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — 200 new prompts ready (1501-1700)
+- [ ] Ingest + tar new illustrated images → upload to bucket
+- [ ] 328 new Meshy CC0 characters extracted — render back view triplets
+- [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
 
-- **humanrig_posed at weight 2.0**: mIoU dropped 0.51→0.37 at epoch 1. 27K pseudo-labeled 3D posed renders drowned illustrated data.
-- **humanrig_posed at weight 0.5**: Still dropped to 0.34. Pseudo-labels were too noisy (66% rejected by quality filter — 40K missing_head, 30K missing_torso).
-- **Root cause**: Run 12 model produces bad pseudo-labels on posed 3D renders (domain gap). The 27K that passed quality filter still had noisy labels.
-- **Solution**: Dropped humanrig_posed entirely for 13a. Will re-pseudo-label after run 13a produces a better model (bootstrapping loop).
-- **humanrig tar expanded**: Now 45K examples (was 11K). Weight reduced to 0.5 to maintain same effective volume.
-- **Enriched tar strategy**: After training, enriched datasets (with depth+normals) are tarred and uploaded to bucket. Future runs download enriched tars and skip Marigold entirely (~10 hrs saved per A100 session).
-- **Key principle**: Change one dataset at a time. Throwing humanrig_posed + toon_pseudo + expanded humanrig all at once made it impossible to diagnose what was helping vs hurting.
+### Next A100 Run (Run 15)
+- Resume from run 14 (0.5561 mIoU)
+- Add GT humanrig_posed masks (from Blender, not pseudo-labels)
+- Add more illustrated chars (ongoing generation)
+- Target: >0.60 mIoU
 
-## Future: Run 13b
-
-If run 13a improves, cautiously add humanrig_posed:
-- Re-pseudo-label 81K humanrig_posed with run 13a's better model
-- Expect higher pass rate on quality filter (better head/torso detection)
-- Add at low weight (0.5) to avoid drowning illustrated data
-- More Sora/Gemini illustrated images = highest-leverage data to add
-
-## After Seg Converges: Ship Run
-
-Once seg hits target (>0.55 mIoU), one combined run to ship all 4 models:
-- Retrain joints with humanrig_posed GT examples (have joints.json)
+### Ship Run (after seg >0.65)
+- Retrain joints with humanrig_posed GT (diverse poses)
 - Retrain weights with new seg encoder features
-- Inpainting already converged — keep run 6 checkpoint
-- ONNX export all 4 → ship to `../strata/src-tauri/models/`
+- Inpainting: keep run 6 checkpoint (already converged)
+- ONNX export all 4 → `../strata/src-tauri/models/`
 
 ## Model 6: Back View Generation
 
 **Status:** Run 3 complete. 0.2408 val/l1 — improving but still overfitting.
 
-**Run history:**
 | Run | val/l1 | Pairs | Notes |
 |-----|--------|-------|-------|
 | 1 | 0.2982 | 1,085 | First model, clear overfitting |
-| 2 | 0.2354 | 1,085 | Same data, longer training (unrigged merge bug) |
-| 3 | 0.2408 | 1,805 | Fixed unrigged merge (renumbered pair IDs), early stopped 127/200 |
+| 2 | 0.2354 | 1,085 | Same data, longer training |
+| 3 | 0.2408 | 1,805 | Fixed unrigged merge, early stopped 127/200 |
 
-**Data:** front+3/4+back triplets from 3D characters (`scripts/render_back_view_data.py`):
-- `tars/back_view_pairs.tar` (652 MiB): 1,085 rigged triplets (Meshy FBX+GLB+VRoid)
-- `tars/back_view_pairs_unrigged.tar` (319 MiB): ~720 additional unrigged (Meshy GLB)
-- Combined: ~1,805 pairs (unrigged pairs start at pair_00000, must be renumbered before merging)
-
-**Architecture:** U-Net, input [B,8,512,512] (front RGBA + 3/4 RGBA), output [B,4,512,512] (back RGBA).
+**Data:** `scripts/render_back_view_data.py` renders front+3/4+back triplets from 3D characters.
+**Architecture:** U-Net, input [B,8,512,512], output [B,4,512,512].
 **Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
-**Training:** `training/run_back_view.sh` on A100, config `training/configs/back_view_a100.yaml`.
+**Next:** 328 new Meshy CC0 characters available for rendering more pairs.
 
-**Next steps:**
-- 328 new Meshy CC0 characters extracted on external HD (March 20) — available for rendering
-- Download more Meshy CC0 characters + render to increase pair count
-- Model 5 (Texture Inpainting) depends on model 6 output
+## Quality Filter
 
-## Quality Filter (`scripts/filter_seg_quality.py`)
-
-Rejects pseudo-labeled examples with implausible segmentation masks:
-- `--min-regions 4` — at least 4 distinct body regions
-- `--max-single-region 0.70` — no single region > 70% of foreground
-- `--min-foreground 0.05` — at least 5% foreground pixels
+`scripts/filter_seg_quality.py` — rejects pseudo-labeled examples with implausible masks:
+- `--min-regions 4`, `--max-single-region 0.70`, `--min-foreground 0.05`
 - Also checks for `missing_head` and `missing_torso`
-
-Outputs `quality_filter.json` per dataset with passed/rejected lists and reasons. Rejection rates vary:
-- GT datasets (humanrig, vroid, meshy): <1% rejected
-- Pseudo-labeled datasets: depends on model quality. humanrig_posed had 66% rejection with run 12 labels.
-
-## Marigold Enrichment Timing
-
-- **A100 (batch_size=16)**: ~5.1 img/s → 81K images = ~4.5 hrs per pass (depth or normals), ~9 hrs total
-- **Mac MPS**: ~4.5s/image → 81K images = ~100 hrs (impractical for large datasets)
-- **Strategy**: Enrich once on A100, upload `{name}_enriched.tar` to bucket. Future runs download pre-enriched data.
-- GT 3D datasets (humanrig, humanrig_posed) could compute exact depth/normals in Blender instead of Marigold — TODO for future pipeline improvement.
+- GT datasets: <1% rejected. Pseudo-labeled: varies (humanrig_posed had 66% rejection with run 12 model).
 
 ## Dr. Li's Label Schema Conversion
 
-Dr. Li provided 694 segmentation labels using a 19-class clothing-oriented schema (indices ×10: hair=0, face=20, topwear=110, bottomwear=130, etc.). Converted to Strata's 22-class skeleton schema using joint-based L/R splitting:
-- topwear → chest/spine/shoulder/upper_arm (split L/R by joint positions + midline)
-- handwear → forearm/hand, bottomwear → hips/upper_leg, legwear → lower_leg, footwear → foot
-- Dresses labeled as leg regions (not accessories) — correct for rigging convention
-
-Script: `scripts/convert_li_labels.py`. Pipeline: align raw images (rembg + crop) → joints inference → convert labels with joint-based splitting.
+Dr. Li provided 694 segmentation labels using a 19-class clothing-oriented schema. Converted to Strata's 22-class skeleton schema using joint-based L/R splitting via `scripts/convert_li_labels.py`.
