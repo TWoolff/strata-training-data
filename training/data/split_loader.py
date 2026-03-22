@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 # pose index, style, and angle suffixes.
 
 _CHAR_ID_PATTERNS: list[re.Pattern[str]] = [
+    # HumanRig posed: "humanrig_00000_catwalk_walk_frame_01_front" → "humanrig_00000"
+    # Must be before _pose_ pattern (which would mis-capture on t_pose names)
+    re.compile(r"^(humanrig_\d+)_"),
     # Mixamo / pipeline standard: "mixamo_001_pose_05_flat" → "mixamo_001"
     re.compile(r"^(.+?)_pose_\d+"),
     # FBAnimeHQ: "fbanimehq_0000_000005" → "fbanimehq_0000"
@@ -66,6 +69,7 @@ def load_or_generate_splits(
     *,
     seed: int = 42,
     ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
+    train_only_dirs: list[Path] | None = None,
 ) -> dict[str, list[str]]:
     """Load existing splits or generate new character-level splits.
 
@@ -78,6 +82,9 @@ def load_or_generate_splits(
         dataset_dirs: List of dataset root directories to scan.
         seed: Random seed for deterministic shuffling.
         ratios: ``(train, val, test)`` ratios summing to 1.0.
+        train_only_dirs: Directories whose characters are always assigned
+            to train (never val/test).  Prevents new datasets from
+            reshuffling the validation set.
 
     Returns:
         Dict with ``"train"``, ``"val"``, ``"test"`` keys mapping to
@@ -86,8 +93,17 @@ def load_or_generate_splits(
     # Load any existing splits
     existing = _load_existing_splits(dataset_dirs)
 
-    # Discover all character IDs across directories
-    all_char_ids = _discover_characters(dataset_dirs)
+    # Discover character IDs — split-eligible dirs only
+    train_only_set = set(train_only_dirs or [])
+    split_dirs = [d for d in dataset_dirs if d not in train_only_set]
+    all_char_ids = _discover_characters(split_dirs)
+
+    # Discover train-only character IDs separately
+    train_only_char_ids: set[str] = set()
+    if train_only_set:
+        train_only_char_ids = _discover_characters(list(train_only_set))
+        # Remove any overlap (train-only chars that also appear in split dirs)
+        train_only_char_ids -= all_char_ids
 
     if not all_char_ids:
         logger.warning("No characters found in dataset directories")
@@ -116,6 +132,16 @@ def load_or_generate_splits(
     if new_ids:
         _assign_new_characters(new_ids, splits, ratios=ratios, seed=seed)
         logger.info("Assigned %d new character(s) to splits", len(new_ids))
+
+    # Add train-only characters (never in val/test)
+    if train_only_char_ids:
+        assigned_all = set()
+        for ids in splits.values():
+            assigned_all.update(ids)
+        new_train_only = sorted(cid for cid in train_only_char_ids if cid not in assigned_all)
+        if new_train_only:
+            splits["train"].extend(new_train_only)
+            logger.info("Added %d train-only character(s)", len(new_train_only))
 
     # Sort for deterministic output
     for key in splits:

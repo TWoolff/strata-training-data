@@ -77,6 +77,7 @@ class DatasetConfig:
     split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
     dataset_weights: dict[str, float] = field(default_factory=dict)
+    train_only_datasets: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict) -> DatasetConfig:
@@ -101,6 +102,7 @@ class DatasetConfig:
                 ratios.get("test", 0.1),
             ),
             dataset_weights=data.get("dataset_weights", {}),
+            train_only_datasets=data.get("train_only_datasets", []),
         )
 
 
@@ -288,11 +290,16 @@ class SegmentationDataset:
         self.config.augment = augment
         self.split = split
 
-        # Load character-level splits
+        # Identify train-only directories
+        train_only_names = set(self.config.train_only_datasets)
+        train_only_dirs = [d for d in dataset_dirs if d.name in train_only_names]
+
+        # Load character-level splits (train-only dirs excluded from val/test)
         splits = load_or_generate_splits(
             dataset_dirs,
             seed=self.config.split_seed,
             ratios=self.config.split_ratios,
+            train_only_dirs=train_only_dirs,
         )
         allowed_chars: set[str] = set(splits.get(split, []))
 

@@ -369,7 +369,7 @@ def convert_image(
     example_dir.mkdir(parents=True, exist_ok=True)
 
     resized.save(example_dir / "image.png", format="PNG", compress_level=6)
-    mask.save(example_dir / "segmentation.png", format="PNG", compress_level=6)
+    mask.save(example_dir / "fg_mask.png", format="PNG", compress_level=6)
 
     prompt = manifest_entry.get("prompt", "") if manifest_entry else ""
     tags = {

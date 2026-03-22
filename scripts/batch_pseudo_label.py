@@ -176,8 +176,23 @@ def main() -> None:
 
     for i, (image_path, example_dir) in enumerate(pairs):
         if args.only_missing and (example_dir / "segmentation.png").exists():
-            skipped += 1
-            continue
+            # Check metadata — if has_segmentation_mask is False, it's a placeholder
+            meta_path = example_dir / "metadata.json"
+            is_placeholder = False
+            if meta_path.exists():
+                import json as _json
+                try:
+                    meta = _json.loads(meta_path.read_text())
+                    if meta.get("has_segmentation_mask") is False:
+                        is_placeholder = True
+                except (ValueError, OSError):
+                    pass
+            if not is_placeholder:
+                skipped += 1
+                continue
+            # Placeholder mask — rename and re-label
+            (example_dir / "segmentation.png").rename(example_dir / "fg_mask.png")
+            logger.info("Renamed placeholder mask in %s", example_dir.name)
 
         ok = process_image(model, image_path, example_dir, device, args.resolution)
         if ok:

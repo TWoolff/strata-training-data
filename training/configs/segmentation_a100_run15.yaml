@@ -24,6 +24,7 @@ model:
 data:
   dataset_dirs:
     - "./data_cloud/humanrig"
+    - "./data_cloud/humanrig_posed"
     - "./data_cloud/vroid_cc0"
     - "./data_cloud/meshy_cc0_textured"
     - "./data_cloud/gemini_li_converted"
@@ -31,6 +32,8 @@ data:
     - "./data_cloud/sora_diverse"
     - "./data_cloud/flux_diverse_clean"
     - "./data_cloud/toon_pseudo"
+  train_only_datasets:
+    - humanrig_posed
   quality_filter: true
   resolution: 512
   split_seed: 42
@@ -42,6 +45,7 @@ data:
     flux_diverse_clean: 2.5
     vroid_cc0: 2.5
     toon_pseudo: 1.0
+    humanrig_posed: 0.5
     meshy_cc0_textured: 1.5
     humanrig: 0.5
 
