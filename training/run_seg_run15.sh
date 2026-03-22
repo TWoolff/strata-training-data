@@ -131,6 +131,8 @@ download_dataset() {
 }
 
 download_dataset humanrig humanrig "segmentation.png"
+# humanrig_posed — force fresh download (GT masks replaced old pseudo-labels)
+rm -rf ./data_cloud/humanrig_posed
 download_dataset humanrig_posed humanrig_posed "segmentation.png"
 download_dataset vroid_cc0 vroid_cc0
 download_dataset gemini_li_converted gemini_li_converted
