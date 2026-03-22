@@ -276,7 +276,7 @@ Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_s
 **Data:** `scripts/render_back_view_data.py` renders front+3/4+back triplets from 3D characters.
 **Architecture:** U-Net, input [B,8,512,512], output [B,4,512,512].
 **Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
-**Next:** 328 new Meshy CC0 characters available for rendering more pairs.
+**Next:** `back_view_pairs_new.tar` in bucket (1,244 new pairs from FBX chars). Combined with existing pairs = ~3,049 total. Ready for next back view training run.
 
 ## Quality Filter
 
