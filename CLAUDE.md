@@ -32,7 +32,7 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.5561 mIoU (run 14) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). GT humanrig_posed masks. |
+| 1 | **Segmentation** | 0.5695 mIoU (run 15) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). Fix split for humanrig_posed. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
@@ -186,7 +186,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 | 10 | 0.5038 | Bootstrap round 3 | Incremental gains |
 | 12 | 0.5068 | +sora_diverse, +flux_diverse_clean, lr=1e-5 flat | Val plateau — needs more data diversity |
 | 13a | 0.5425 | +toon_pseudo (wt 1.0), run 12 mix unchanged | +7% from toon data alone. Change one thing at a time. |
-| **14** | **0.5561** | +295 illustrated chars, no humanrig_posed | **+2.5% from illustrated data. Pseudo-labeled humanrig_posed confirmed unusable.** |
+| 14 | 0.5561 | +295 illustrated chars, no humanrig_posed | +2.5% from illustrated data. Pseudo-labeled humanrig_posed confirmed unusable. |
+| **15** | **0.5695** | +99 illustrated chars, no humanrig_posed | **+2.4%. GT humanrig_posed causes split change → mIoU regression. Needs fix.** |
 
 ### Run 13/14 Learnings
 
@@ -194,7 +195,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
 - **GT masks needed**: humanrig_posed needs GT seg masks rendered in Blender (seg-only mode), not pseudo-labels. Rendering in progress on Mac (~81K examples).
 - **Key principle**: Change one dataset at a time. Isolate what helps vs hurts.
 - **Enriched tars**: Upload depth+normals-enriched datasets after training. Saves ~10 hrs Marigold per future run.
-- **More illustrated data = best lever**: 295 new chars gave +2.5% mIoU (run 14). Keep generating.
+- **More illustrated data = best lever**: each batch of ~100-300 chars gives +2-3% mIoU. Keep generating.
+- **humanrig_posed GT masks are correct** (0.2% rejection, 81K examples) but adding them changes the character-level split (64K→146K chars), reshuffling val set. Need to lock val set or exclude posed data from splits.
+- **sora_diverse 52% rejection**: many illustrated images fail quality filter. May need to relax filter for illustrated data or review rejected examples.
 
 ## Bootstrapping Loop
 
@@ -232,16 +235,18 @@ Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_s
 ## Next Steps
 
 ### Immediate (before next A100 run)
-- [ ] GT seg masks for humanrig_posed — rendering on Mac via Blender seg-only mode (~81K renders, in progress)
+- [x] GT seg masks for humanrig_posed — 81,864 rendered, 0.2% rejection, tar in bucket (12 GB)
+- [ ] Fix character-level split to support humanrig_posed without reshuffling val set
 - [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — 200 new prompts ready (1501-1700)
+- [ ] Investigate sora_diverse 52% rejection rate — relax filter or review rejects
 - [ ] Ingest + tar new illustrated images → upload to bucket
 - [ ] 328 new Meshy CC0 characters extracted — render back view triplets
 - [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
 
-### Next A100 Run (Run 15)
-- Resume from run 14 (0.5561 mIoU)
-- Add GT humanrig_posed masks (from Blender, not pseudo-labels)
+### Next A100 Run (Run 16)
+- Resume from run 15 (0.5695 mIoU)
 - Add more illustrated chars (ongoing generation)
+- Add GT humanrig_posed (after split fix)
 - Target: >0.60 mIoU
 
 ### Ship Run (after seg >0.65)
