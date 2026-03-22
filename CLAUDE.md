@@ -127,29 +127,29 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 20, 2026)
+### Bucket Contents (March 22, 2026)
 
-Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`. ~142 GiB total.
+Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 
 **Tars (for A100 setup):**
 | Tar | Size | Contents |
 |-----|-----:|---------|
 | `humanrig.tar` | 16.8 GiB | 45,738 GT 22-class T-pose renders |
-| `humanrig_posed.tar` | ~20 GiB | 81,864 posed renders (images+seg+joints, no depth/normals) |
+| `humanrig_posed.tar` | 12 GiB | 81,864 GT posed renders (Blender seg masks, no depth/normals) |
 | `toon_pseudo.tar` | ~5 GiB | 13,740 toon-style renders (pseudo-labeled, 6,317 pass quality filter) |
 | `meshy_cc0_textured_restructured.tar` | 2.8 GiB | Meshy CC0 textured (15,281 examples) |
 | `vroid_cc0.tar` | 203 MiB | VRoid CC0 GT 22-class (11 chars, 1,386 examples) |
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 | `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
-| `sora_diverse.tar` | ~200 MiB | 1,279 Sora/Gemini chars (run 10 labels) |
+| `sora_diverse.tar` | ~350 MiB | 1,693 Sora/Gemini/ChatGPT chars (839 need pseudo-labeling, placeholder masks renamed) |
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (Meshy FBX+GLB+VRoid) |
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~720 additional back view triplets (unrigged Meshy GLB) |
 
 **Enriched tars** (include depth+normals, skip Marigold on A100):
-`{name}_enriched.tar` uploaded after run 13a for: sora_diverse, flux_diverse_clean, gemini_li_converted, toon_pseudo, humanrig_posed. The run script tries enriched tars first, falls back to regular. Saves ~10 hrs Marigold per A100 session.
+`{name}_enriched.tar` for: flux_diverse_clean, gemini_li_converted, toon_pseudo. Note: sora_diverse_enriched and humanrig_posed_enriched were deleted (stale data).
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10, 12, 13), `models/` (ONNX exports), `logs/`.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-15), `models/` (ONNX exports), `logs/`.
 
 ## A100 Training Run Workflow
 
@@ -245,9 +245,17 @@ Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_s
 
 ### Next A100 Run (Run 16)
 - Resume from run 15 (0.5695 mIoU)
-- Add more illustrated chars (ongoing generation)
-- Add GT humanrig_posed (after split fix)
+- **Three fixes deployed:**
+  1. Split loader: humanrig_posed as `train_only` (val set unchanged)
+  2. sora_diverse: 839 placeholder masks renamed → will be pseudo-labeled (~doubles usable illustrated data)
+  3. humanrig_\d+ regex: 81K examples correctly grouped into 666 characters
+- GT humanrig_posed at weight 0.5 (train-only, won't affect val)
+- Updated sora_diverse tar in bucket (1,693 images, 839 need pseudo-labeling)
+- ~1,244 new back view pairs rendering on Mac
 - Target: >0.60 mIoU
+- Config: `training/configs/segmentation_a100_run16.yaml`
+- Script: `training/run_seg_run16.sh`
+- Estimated A100 time: ~3 hrs (pseudo-label 839 sora + Marigold + train)
 
 ### Ship Run (after seg >0.65)
 - Retrain joints with humanrig_posed GT (diverse poses)
