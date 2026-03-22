@@ -97,10 +97,16 @@ def check_mask(
     min_regions: int = 4,
     max_single_region: float = 0.70,
     min_foreground: float = 0.05,
+    skip_anatomy: bool = False,
 ) -> list[str]:
     """Check a single segmentation mask against quality criteria.
 
     Returns a list of rejection reasons (empty list = passed).
+
+    Args:
+        skip_anatomy: If True, skip missing_head/missing_torso checks.
+            Use for GT data where masks are known-correct but poses may
+            legitimately hide the head or torso from certain angles.
     """
     reasons: list[str] = []
 
@@ -135,12 +141,13 @@ def check_mask(
     if n_regions < min_regions:
         reasons.append(f"too_few_regions({n_regions})")
 
-    # --- Required regions ---
-    unique_set = set(unique_regions.tolist())
-    if HEAD_REGION not in unique_set:
-        reasons.append("missing_head")
-    if not unique_set & TORSO_REGIONS:
-        reasons.append("missing_torso")
+    # --- Required regions (skip for GT posed data) ---
+    if not skip_anatomy:
+        unique_set = set(unique_regions.tolist())
+        if HEAD_REGION not in unique_set:
+            reasons.append("missing_head")
+        if not unique_set & TORSO_REGIONS:
+            reasons.append("missing_torso")
 
     # --- Max single region dominance ---
     counts = np.bincount(fg_values, minlength=22)
@@ -308,6 +315,11 @@ def main(argv: list[str] | None = None) -> None:
         help="Min fraction of image that must be non-background (default: 0.05).",
     )
     parser.add_argument(
+        "--skip-anatomy",
+        action="store_true",
+        help="Skip missing_head/missing_torso checks (for GT posed data).",
+    )
+    parser.add_argument(
         "--max-rejected-grid",
         type=int,
         default=50,
@@ -343,6 +355,7 @@ def main(argv: list[str] | None = None) -> None:
                 min_regions=args.min_regions,
                 max_single_region=args.max_single_region,
                 min_foreground=args.min_foreground,
+                skip_anatomy=args.skip_anatomy,
             )
             if reasons:
                 rejected[full_key] = reasons

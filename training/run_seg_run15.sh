@@ -250,7 +250,26 @@ echo ""
 echo "[3/5] Quality filter..."
 echo ""
 
-for ds in humanrig humanrig_posed vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
+# humanrig_posed — GT masks, skip anatomy checks (poses legitimately hide head/torso)
+HP_DIR="./data_cloud/humanrig_posed"
+if [ -d "$HP_DIR" ]; then
+    if [ -f "$HP_DIR/quality_filter.json" ]; then
+        echo "  humanrig_posed: quality_filter.json exists, skipping."
+    else
+        echo "  Filtering humanrig_posed (--skip-anatomy for GT posed data)..."
+        python scripts/filter_seg_quality.py \
+            --data-dirs "$HP_DIR" \
+            --output-dir "$HP_DIR" \
+            --min-regions 3 \
+            --max-single-region 0.80 \
+            --min-foreground 0.03 \
+            --skip-anatomy \
+            2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+    fi
+fi
+
+# All other datasets — standard filter
+for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         if [ -f "$ds_dir/quality_filter.json" ]; then
