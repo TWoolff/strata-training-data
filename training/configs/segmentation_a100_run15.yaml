@@ -43,7 +43,7 @@ data:
     flux_diverse_clean: 2.5
     vroid_cc0: 2.5
     toon_pseudo: 1.0
-    humanrig_posed: 0.1
+    humanrig_posed: 0.05
     meshy_cc0_textured: 1.5
     humanrig: 0.5
 
