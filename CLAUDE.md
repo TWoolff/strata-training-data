@@ -142,7 +142,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 | `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
-| `sora_diverse.tar` | ~350 MiB | 1,693 Sora/Gemini/ChatGPT chars (839 need pseudo-labeling, placeholder masks renamed) |
+| `sora_diverse.tar` | ~380 MiB | 1,829 Sora/Gemini/ChatGPT chars (~975 need pseudo-labeling, placeholder masks renamed) |
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (Meshy FBX+GLB+VRoid) |
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~720 additional back view triplets (unrigged Meshy GLB) |
 
@@ -250,7 +250,7 @@ Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_s
   2. sora_diverse: 839 placeholder masks renamed → will be pseudo-labeled (~doubles usable illustrated data)
   3. humanrig_\d+ regex: 81K examples correctly grouped into 666 characters
 - GT humanrig_posed at weight 0.5 (train-only, won't affect val)
-- Updated sora_diverse tar in bucket (1,693 images, 839 need pseudo-labeling)
+- Updated sora_diverse tar in bucket (1,829 images, ~975 need pseudo-labeling)
 - ~1,244 new back view pairs rendering on Mac
 - Target: >0.60 mIoU
 - Config: `training/configs/segmentation_a100_run16.yaml`

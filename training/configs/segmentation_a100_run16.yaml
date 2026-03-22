@@ -8,7 +8,7 @@
 #
 # Data composition:
 #   - cvat_annotated:       49   hand-annotated diverse illustrated chars    (wt 10.0)
-#   - sora_diverse:      ~1,693  Sora/Gemini/ChatGPT chars (839 newly pseudo-labeled) (wt 4.0)
+#   - sora_diverse:      ~1,829  Sora/Gemini/ChatGPT chars (~975 newly pseudo-labeled) (wt 4.0)
 #   - gemini_li_converted:  694  Dr. Li expert labels                        (wt 3.0)
 #   - flux_diverse_clean: 1,569  cleaned FLUX chars                          (wt 2.5)
 #   - vroid_cc0:          1,386  GT 22-class VRoid chars                     (wt 2.5)
