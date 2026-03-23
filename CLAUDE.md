@@ -32,7 +32,7 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.5695 mIoU (run 15) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). Fix split for humanrig_posed. |
+| 1 | **Segmentation** | 0.5808 mIoU (run 16) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). Frozen val set deployed. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
@@ -187,7 +187,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | 12 | 0.5068 | +sora_diverse, +flux_diverse_clean, lr=1e-5 flat | Val plateau — needs more data diversity |
 | 13a | 0.5425 | +toon_pseudo (wt 1.0), run 12 mix unchanged | +7% from toon data alone. Change one thing at a time. |
 | 14 | 0.5561 | +295 illustrated chars, no humanrig_posed | +2.5% from illustrated data. Pseudo-labeled humanrig_posed confirmed unusable. |
-| **15** | **0.5695** | +99 illustrated chars, no humanrig_posed | **+2.4%. GT humanrig_posed causes split change → mIoU regression. Needs fix.** |
+| 15 | 0.5695 | +99 illustrated chars, no humanrig_posed | +2.4%. GT humanrig_posed causes split change → mIoU regression. |
+| **16** | **0.5808** | +200 illustrated + relaxed filter + frozen val | **+2.0%. Frozen val set deployed. humanrig_posed confirmed harmful even with frozen val.** |
 
 ### Run 13/14 Learnings
 
