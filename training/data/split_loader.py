@@ -4,6 +4,10 @@ Discovers characters across multiple dataset directories, assigns each to
 train/val/test by character ID (preventing data leakage), and caches the
 result as ``splits.json``.  Reads existing splits when available.
 
+Supports frozen val/test sets via ``frozen_splits_file`` — once created,
+the val and test character lists never change regardless of what training
+datasets are added.
+
 Pure Python (no Blender dependency).
 """
 
@@ -70,44 +74,51 @@ def load_or_generate_splits(
     seed: int = 42,
     ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
     train_only_dirs: list[Path] | None = None,
+    frozen_splits_file: Path | None = None,
 ) -> dict[str, list[str]]:
     """Load existing splits or generate new character-level splits.
-
-    Scans one or more dataset directories for examples, extracts character
-    IDs, and assigns each character to exactly one split.  If any directory
-    contains a ``splits.json``, those assignments are loaded and merged
-    (existing assignments are preserved).
 
     Args:
         dataset_dirs: List of dataset root directories to scan.
         seed: Random seed for deterministic shuffling.
         ratios: ``(train, val, test)`` ratios summing to 1.0.
         train_only_dirs: Directories whose characters are always assigned
-            to train (never val/test).  Prevents new datasets from
-            reshuffling the validation set.
+            to train (never val/test).
+        frozen_splits_file: Path to a JSON file with frozen val/test
+            character lists.  If the file exists, val and test are loaded
+            from it and never change.  All other characters go to train.
+            If the file does not exist, splits are generated normally
+            and the val/test lists are saved to this file.
 
     Returns:
         Dict with ``"train"``, ``"val"``, ``"test"`` keys mapping to
         sorted lists of character IDs.
     """
-    # Load any existing splits
-    existing = _load_existing_splits(dataset_dirs)
-
-    # Discover character IDs — split-eligible dirs only
-    train_only_set = set(train_only_dirs or [])
-    split_dirs = [d for d in dataset_dirs if d not in train_only_set]
-    all_char_ids = _discover_characters(split_dirs)
-
-    # Discover train-only character IDs separately
-    train_only_char_ids: set[str] = set()
-    if train_only_set:
-        train_only_char_ids = _discover_characters(list(train_only_set))
-        # Remove any overlap (train-only chars that also appear in split dirs)
-        train_only_char_ids -= all_char_ids
+    # Discover ALL character IDs across ALL directories
+    all_char_ids = _discover_characters(dataset_dirs)
 
     if not all_char_ids:
         logger.warning("No characters found in dataset directories")
         return {"train": [], "val": [], "test": []}
+
+    # --- Frozen splits mode ---
+    if frozen_splits_file is not None:
+        return _handle_frozen_splits(
+            all_char_ids, frozen_splits_file, seed=seed, ratios=ratios
+        )
+
+    # --- Legacy mode (no frozen file) ---
+    existing = _load_existing_splits(dataset_dirs)
+
+    # Separate train-only characters
+    train_only_set = set(train_only_dirs or [])
+    if train_only_set:
+        split_dirs = [d for d in dataset_dirs if d not in train_only_set]
+        split_char_ids = _discover_characters(split_dirs)
+        train_only_char_ids = all_char_ids - split_char_ids
+    else:
+        split_char_ids = all_char_ids
+        train_only_char_ids = set()
 
     # Determine which characters are already assigned
     assigned = set()
@@ -115,25 +126,25 @@ def load_or_generate_splits(
         for ids in existing.values():
             assigned.update(ids)
 
-    new_ids = sorted(cid for cid in all_char_ids if cid not in assigned)
+    new_ids = sorted(cid for cid in split_char_ids if cid not in assigned)
 
     if existing and not new_ids:
         logger.info("All %d characters already assigned — splits unchanged", len(assigned))
-        return {k: sorted(v) for k, v in existing.items()}
+        splits = {k: sorted(v) for k, v in existing.items()}
+    else:
+        # Start from existing or empty splits
+        splits = (
+            {k: list(v) for k, v in existing.items()}
+            if existing
+            else {"train": [], "val": [], "test": []}
+        )
 
-    # Start from existing or empty splits
-    splits: dict[str, list[str]] = (
-        {k: list(v) for k, v in existing.items()}
-        if existing
-        else {"train": [], "val": [], "test": []}
-    )
+        # Assign new characters
+        if new_ids:
+            _assign_new_characters(new_ids, splits, ratios=ratios, seed=seed)
+            logger.info("Assigned %d new character(s) to splits", len(new_ids))
 
-    # Assign new characters
-    if new_ids:
-        _assign_new_characters(new_ids, splits, ratios=ratios, seed=seed)
-        logger.info("Assigned %d new character(s) to splits", len(new_ids))
-
-    # Add train-only characters (never in val/test)
+    # Add train-only characters
     if train_only_char_ids:
         assigned_all = set()
         for ids in splits.values():
@@ -144,6 +155,67 @@ def load_or_generate_splits(
             logger.info("Added %d train-only character(s)", len(new_train_only))
 
     # Sort for deterministic output
+    for key in splits:
+        splits[key].sort()
+
+    return splits
+
+
+def _handle_frozen_splits(
+    all_char_ids: set[str],
+    frozen_file: Path,
+    *,
+    seed: int,
+    ratios: tuple[float, float, float],
+) -> dict[str, list[str]]:
+    """Handle frozen val/test splits.
+
+    If the frozen file exists, load val/test from it and put everything
+    else in train.  If not, generate fresh splits and save val/test.
+    """
+    if frozen_file.exists():
+        # Load frozen val/test
+        data = json.loads(frozen_file.read_text(encoding="utf-8"))
+        frozen_val = set(data.get("val", []))
+        frozen_test = set(data.get("test", []))
+        frozen = frozen_val | frozen_test
+
+        # Everything not in val/test goes to train
+        train_chars = sorted(cid for cid in all_char_ids if cid not in frozen)
+        val_chars = sorted(cid for cid in frozen_val if cid in all_char_ids)
+        test_chars = sorted(cid for cid in frozen_test if cid in all_char_ids)
+
+        logger.info(
+            "Frozen splits loaded: %d val, %d test chars (from %s). "
+            "%d train chars (%d new since freeze).",
+            len(val_chars), len(test_chars), frozen_file.name,
+            len(train_chars),
+            len(all_char_ids) - len(frozen) - (len(train_chars) - (len(all_char_ids) - len(frozen))),
+        )
+
+        return {"train": train_chars, "val": val_chars, "test": test_chars}
+
+    # File doesn't exist — generate fresh splits and save
+    logger.info("No frozen splits file found — generating and saving to %s", frozen_file)
+    splits: dict[str, list[str]] = {"train": [], "val": [], "test": []}
+    all_sorted = sorted(all_char_ids)
+    _assign_new_characters(all_sorted, splits, ratios=ratios, seed=seed)
+
+    # Save val/test to frozen file (train is implicit: everything else)
+    frozen_file.parent.mkdir(parents=True, exist_ok=True)
+    frozen_data = {
+        "val": sorted(splits["val"]),
+        "test": sorted(splits["test"]),
+        "_info": f"Frozen val/test split. Generated with seed={seed}, "
+                 f"{len(all_char_ids)} total characters. "
+                 f"All characters not listed here go to train.",
+    }
+    frozen_file.write_text(json.dumps(frozen_data, indent=2), encoding="utf-8")
+    logger.info(
+        "Saved frozen splits: %d val, %d test chars to %s",
+        len(splits["val"]), len(splits["test"]), frozen_file,
+    )
+
     for key in splits:
         splits[key].sort()
 

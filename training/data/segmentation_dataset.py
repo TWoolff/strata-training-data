@@ -78,6 +78,7 @@ class DatasetConfig:
 
     dataset_weights: dict[str, float] = field(default_factory=dict)
     train_only_datasets: list[str] = field(default_factory=list)
+    frozen_splits_file: str = ""
 
     @classmethod
     def from_dict(cls, d: dict) -> DatasetConfig:
@@ -103,6 +104,7 @@ class DatasetConfig:
             ),
             dataset_weights=data.get("dataset_weights", {}),
             train_only_datasets=data.get("train_only_datasets", []),
+            frozen_splits_file=data.get("frozen_splits_file", ""),
         )
 
 
@@ -294,12 +296,20 @@ class SegmentationDataset:
         train_only_names = set(self.config.train_only_datasets)
         train_only_dirs = [d for d in dataset_dirs if d.name in train_only_names]
 
-        # Load character-level splits (train-only dirs excluded from val/test)
+        # Frozen splits file (if configured)
+        frozen_file = (
+            Path(self.config.frozen_splits_file)
+            if self.config.frozen_splits_file
+            else None
+        )
+
+        # Load character-level splits
         splits = load_or_generate_splits(
             dataset_dirs,
             seed=self.config.split_seed,
             ratios=self.config.split_ratios,
             train_only_dirs=train_only_dirs,
+            frozen_splits_file=frozen_file,
         )
         allowed_chars: set[str] = set(splits.get(split, []))
 

@@ -76,6 +76,14 @@ else
         exit 1
     fi
 fi
+
+# Download frozen splits file if available in bucket
+FROZEN_FILE="./data_cloud/frozen_val_test.json"
+if [ ! -f "$FROZEN_FILE" ]; then
+    mkdir -p ./data_cloud
+    rclone copy hetzner:strata-training-data/data_cloud/frozen_val_test.json ./data_cloud/ \
+        --transfers 4 2>/dev/null || true
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -272,6 +280,37 @@ echo ""
 # ---------------------------------------------------------------------------
 # 4. Train
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 3b. Generate frozen val/test splits (if not already present)
+# ---------------------------------------------------------------------------
+FROZEN_FILE="./data_cloud/frozen_val_test.json"
+if [ ! -f "$FROZEN_FILE" ]; then
+    echo "  Generating frozen val/test split (without humanrig_posed)..."
+    python3 -c "
+from pathlib import Path
+from training.data.split_loader import load_or_generate_splits
+# Generate splits from base datasets only (no humanrig_posed)
+dirs = [
+    Path('./data_cloud/humanrig'),
+    Path('./data_cloud/vroid_cc0'),
+    Path('./data_cloud/meshy_cc0_textured'),
+    Path('./data_cloud/gemini_li_converted'),
+    Path('./data_cloud/cvat_annotated'),
+    Path('./data_cloud/sora_diverse'),
+    Path('./data_cloud/flux_diverse_clean'),
+    Path('./data_cloud/toon_pseudo'),
+]
+splits = load_or_generate_splits(dirs, seed=42, frozen_splits_file=Path('$FROZEN_FILE'))
+print(f'  Val: {len(splits[\"val\"])} chars, Test: {len(splits[\"test\"])} chars')
+"
+    # Upload frozen file to bucket for future runs
+    rclone copy "$FROZEN_FILE" hetzner:strata-training-data/data_cloud/ --transfers 4 -P
+    echo "  Frozen splits saved and uploaded."
+else
+    echo "  Frozen splits file exists."
+fi
+echo ""
+
 echo "[4/5] Training SEGMENTATION model..."
 echo "  Resuming from: $RUN15_CKPT (run 15 best)"
 echo "  Config: training/configs/segmentation_a100_run16.yaml"
