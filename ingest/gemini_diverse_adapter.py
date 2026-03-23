@@ -57,6 +57,7 @@ _GENERATOR_MAP = {
     "gemini": "Google Gemini",
     "chatgpt": "OpenAI ChatGPT",
     "sora": "OpenAI Sora",
+    "pixabay": "Pixabay",
 }
 
 
@@ -71,6 +72,8 @@ def _detect_source(filename: str) -> tuple[str, str]:
         return "chatgpt", _GENERATOR_MAP["chatgpt"]
     if name_lower.startswith("sora"):
         return "sora", _GENERATOR_MAP["sora"]
+    if name_lower.startswith("pixabay"):
+        return "pixabay", _GENERATOR_MAP["pixabay"]
     # Default: Gemini (covers "Gemini_Generated_Image_*" and others)
     return "gemini", _GENERATOR_MAP["gemini"]
 
@@ -97,6 +100,11 @@ def _clean_image_id(source_tag: str, filename_stem: str) -> str:
         # Strip the "sora_" prefix since source_tag already provides it
         stem = stem.removeprefix("sora_")
         stem = stem.replace(" ", "_")
+        stem = re.sub(r"_+", "_", stem).strip("_")
+    elif source_tag == "pixabay":
+        # "pixabay_woman-female-business-10024023" -> "woman_female_business_10024023"
+        stem = stem.removeprefix("pixabay_")
+        stem = stem.replace("-", "_").replace(" ", "_")
         stem = re.sub(r"_+", "_", stem).strip("_")
     elif source_tag == "gemini":
         # "Gemini_Generated_Image_108cyi108cyi108c" -> "108cyi108cyi108c"
