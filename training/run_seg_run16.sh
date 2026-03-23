@@ -255,9 +255,8 @@ if [ -d "$HP_DIR" ]; then
     fi
 fi
 
-# All other datasets — standard filter (force re-run sora_diverse since masks changed)
-rm -f ./data_cloud/sora_diverse/quality_filter.json 2>/dev/null
-for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
+# GT datasets — strict filter
+for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         if [ -f "$ds_dir/quality_filter.json" ]; then
@@ -270,6 +269,27 @@ for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotat
                 --min-regions 4 \
                 --max-single-region 0.70 \
                 --min-foreground 0.05 \
+                2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+        fi
+    fi
+done
+
+# Pseudo-labeled datasets — relaxed filter (skip anatomy, higher single-region threshold)
+rm -f ./data_cloud/sora_diverse/quality_filter.json 2>/dev/null
+for ds in sora_diverse flux_diverse_clean toon_pseudo; do
+    ds_dir="./data_cloud/$ds"
+    if [ -d "$ds_dir" ]; then
+        if [ -f "$ds_dir/quality_filter.json" ]; then
+            echo "  $ds: quality_filter.json exists, skipping."
+        else
+            echo "  Filtering $ds (--skip-anatomy, relaxed thresholds)..."
+            python scripts/filter_seg_quality.py \
+                --data-dirs "$ds_dir" \
+                --output-dir "$ds_dir" \
+                --min-regions 4 \
+                --max-single-region 0.80 \
+                --min-foreground 0.05 \
+                --skip-anatomy \
                 2>&1 | tee -a "$LOG_DIR/quality_filter.log"
         fi
     fi
