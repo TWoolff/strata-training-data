@@ -148,7 +148,6 @@ download_dataset vroid_cc0 vroid_cc0
 download_dataset gemini_li_converted gemini_li_converted
 download_dataset cvat_annotated cvat_annotated
 download_dataset flux_diverse_clean flux_diverse_clean "image.png"
-download_dataset toon_pseudo toon_pseudo "image.png"
 download_dataset sora_diverse sora_diverse "image.png"
 
 # meshy_cc0_textured (restructured tar, special naming)
@@ -173,7 +172,7 @@ fi
 
 echo ""
 echo "  Dataset summary:"
-for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean toon_pseudo; do
+for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean; do
     count=$(ls "./data_cloud/$ds/" 2>/dev/null | wc -l | tr -d ' ')
     echo "    $ds: $count examples"
 done
@@ -185,7 +184,7 @@ echo ""
 echo "[2/5] Marigold enrichment (new images only)..."
 echo ""
 
-for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted" "./data_cloud/toon_pseudo"; do
+for ds_dir in "./data_cloud/sora_diverse" "./data_cloud/flux_diverse_clean" "./data_cloud/gemini_li_converted"; do
     ds_name=$(basename "$ds_dir")
     if [ ! -d "$ds_dir" ]; then continue; fi
     MISSING=$(find "$ds_dir" -name "image.png" -exec sh -c '
@@ -230,7 +229,7 @@ for ds in humanrig vroid_cc0 meshy_cc0_textured gemini_li_converted cvat_annotat
 done
 
 # Pseudo-labeled datasets — relaxed filter
-for ds in sora_diverse flux_diverse_clean toon_pseudo; do
+for ds in sora_diverse flux_diverse_clean; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         if [ -f "$ds_dir/quality_filter.json" ]; then

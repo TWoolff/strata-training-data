@@ -92,13 +92,18 @@ def _denormalize_image(tensor: np.ndarray) -> np.ndarray:
 
 def _seg_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """Collate for segmentation eval (subset of train collate)."""
-    return {
+    result = {
         "image": torch.stack([b["image"] for b in batch]),
         "segmentation": torch.stack([b["segmentation"] for b in batch]),
-        "draw_order": torch.stack([b["draw_order"] for b in batch]),
-        "has_draw_order": torch.tensor([b["has_draw_order"] for b in batch], dtype=torch.bool),
-        "confidence_target": torch.stack([b["confidence_target"] for b in batch]),
     }
+    if "draw_order" in batch[0]:
+        result["draw_order"] = torch.stack([b["draw_order"] for b in batch])
+        result["has_draw_order"] = torch.tensor(
+            [b["has_draw_order"] for b in batch], dtype=torch.bool
+        )
+    if "confidence_target" in batch[0]:
+        result["confidence_target"] = torch.stack([b["confidence_target"] for b in batch])
+    return result
 
 
 def evaluate_segmentation(
