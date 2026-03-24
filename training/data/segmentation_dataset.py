@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 
 NUM_CLASSES: int = 22  # 20 pipeline regions + unused (20) + accessory (21)
 ACCESSORY_CLASS: int = 21
+
+# Class 20 ("unused") is not used by Strata's rigging pipeline — remap to
+# background so the model doesn't waste capacity on it.
+LABEL_REMAP: dict[int, int] = {20: 0}
 DEFAULT_RESOLUTION: int = 512
 
 # Regex to strip style suffix from flat-layout image filenames.
@@ -403,6 +407,10 @@ class SegmentationDataset:
 
         # Clamp out-of-range class IDs to ignore_index (-1).
         mask_np[mask_np >= NUM_CLASSES] = -1
+
+        # Remap dead classes (e.g. class 20 "unused" → background).
+        for src, dst in LABEL_REMAP.items():
+            mask_np[mask_np == src] = dst
 
         # Load depth (optional, Marigold LCM grayscale uint8)
         has_depth = ex.depth_path is not None
