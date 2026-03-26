@@ -451,7 +451,9 @@ class SegmentationDataset:
         soft_seg_np = None
         bsr = getattr(self.config, "boundary_softening_radius", 0)
         if bsr > 0 and self.split == "train":
-            soft_seg_np = self._soften_boundaries(mask_np, radius=bsr)
+            soft_seg_np = self._soften_boundaries(
+                mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,
+            )
 
         # Convert to tensors
         img_tensor = torch.from_numpy(img_np.transpose(2, 0, 1))  # [3, H, W]
@@ -480,9 +482,16 @@ class SegmentationDataset:
     # Boundary softening
     # -----------------------------------------------------------------------
 
+    # Classes to exclude from boundary softening (small/thin regions that
+    # get blurred into neighbors).  Neck regressed 0.62→0.45 in run 20.
+    SOFTENING_EXCLUDE_CLASSES: set[int] = {2, 21}  # neck, accessory/hair_back
+
     @staticmethod
     def _soften_boundaries(
-        mask: np.ndarray, radius: int = 2, sigma: float = 1.0,
+        mask: np.ndarray,
+        radius: int = 2,
+        sigma: float = 1.0,
+        exclude_classes: set[int] | None = None,
     ) -> np.ndarray:
         """Create soft one-hot targets with Gaussian-blurred boundaries.
 
@@ -494,11 +503,15 @@ class SegmentationDataset:
             mask: ``[H, W]`` int64 region IDs (0=bg, 1-21=body parts, -1=ignore).
             radius: Dilation radius for boundary detection.
             sigma: Gaussian sigma for softening.
+            exclude_classes: Class IDs to keep as hard labels even at boundaries.
 
         Returns:
             ``[num_classes, H, W]`` float32 soft target distribution.
         """
         from scipy.ndimage import gaussian_filter
+
+        if exclude_classes is None:
+            exclude_classes = set()
 
         h, w = mask.shape
         num_classes = NUM_CLASSES
@@ -527,13 +540,19 @@ class SegmentationDataset:
         eroded = minimum_filter(mask, size=2 * radius + 1)
         boundary = (dilated != eroded) & fg_mask
 
+        # Exclude specified classes from softening (keep hard labels)
+        if exclude_classes:
+            for c in exclude_classes:
+                boundary = boundary & (mask != c)
+
         # At non-boundary pixels, revert to hard one-hot
         for c in range(num_classes):
             soft[c] = np.where(boundary, soft[c], one_hot[c])
 
         # Re-normalize boundary pixels
-        boundary_total = soft[:, boundary].sum(axis=0, keepdims=True).clip(min=1e-8)
-        soft[:, boundary] = soft[:, boundary] / boundary_total
+        if boundary.any():
+            boundary_total = soft[:, boundary].sum(axis=0, keepdims=True).clip(min=1e-8)
+            soft[:, boundary] = soft[:, boundary] / boundary_total
 
         # Ignore index pixels → all zeros
         ignore_mask = (mask < 0) | (mask >= num_classes)
