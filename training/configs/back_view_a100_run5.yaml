@@ -29,7 +29,7 @@ training:
   num_workers: 8
   epochs: 200
   optimizer: "adam"
-  learning_rate: 5.0e-5
+  learning_rate: 1.0e-4
   weight_decay: 1.0e-5
   scheduler: "cosine"
   warmup_epochs: 5
@@ -38,7 +38,7 @@ loss:
   l1_weight: 1.0
   perceptual_weight: 0.1
   palette_weight: 0.05
-  gan_weight: 0.1
+  gan_weight: 0.01
 
 checkpointing:
   save_dir: "./checkpoints/back_view"
