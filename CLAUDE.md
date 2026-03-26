@@ -13,7 +13,7 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 | 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
 | 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
 | 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
-| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~1,805 pairs) |
+| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~3,049 pairs) |
 
 ### Model I/O
 
@@ -37,12 +37,12 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
 | 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
-| 6 | **Back View** | 0.2152 val/l1 (run 4) | **<0.15 val/l1** | +1,244 new pairs helped. Run 5: PatchGAN discriminator. |
+| 6 | **Back View** | 0.2152 val/l1 (run 4) | **<0.15 val/l1** | +1,244 new pairs helped. PatchGAN (run 5) failed — needs more data or rectified flow. |
 
 **Priority order:**
-1. Seg to 0.65 — keep adding illustrated data + bootstrapping loop
-2. Back view to 0.15 — render more pairs from 328 new Meshy characters
-3. Ship run — retrain joints + weights with better seg encoder
+1. Seg past 0.65 — boundary softening got us to 0.6485 test. Next: PatchGAN (run 21), GT labels, manual corrections
+2. Ship run — retrain joints + weights with run 20 seg encoder (0.6485 is close enough to start)
+3. Back view to 0.15 — needs more data (5K+ pairs) or rectified flow. GAN didn't help at 3K pairs
 4. Texture inpainting — depends on back view
 5. Inpainting — may need architecture work
 
@@ -127,7 +127,7 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 24, 2026)
+### Bucket Contents (March 26, 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 
@@ -151,7 +151,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 
 **Frozen splits:** `data_cloud/frozen_val_test.json` — 3,016 val + 3,015 test characters (from 30,154 total, seed=42). Generated during run 17, persisted in bucket.
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-17), `models/` (ONNX exports), `logs/`.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-20), `checkpoints_back_view*/` (runs 1-4), `models/` (ONNX exports), `evaluation_run*/`, `logs/`.
 
 ## A100 Training Run Workflow
 
@@ -167,7 +167,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | Script | Purpose |
 |--------|---------|
 | `training/cloud_setup.sh` | A100 setup (deps + rclone) |
-| `training/run_seg_run18.sh` | Run 18: same data as run 17, frozen val/test splits |
+| `training/run_seg_run19.sh` | Run 19: class 20 remap, frozen splits |
 | `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
 | `run_normals_enrich.py` | Marigold normals + depth enrichment |
 | `run_benchmark.py` | Benchmark on 7 Gemini test characters |
@@ -207,6 +207,11 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 - **Class 20 "unused" is dead**: Not used by Strata's rigging pipeline. At 69.8% accuracy it dragged down mIoU and confused adjacent classes. Remapped to background in dataset loader for run 19+.
 - **Pseudo-label ceiling**: 617 new illustrated chars in run 17/18 didn't improve mIoU. More pseudo-labeled data alone won't break through — need more GT expert labels (Dr. Li).
 - **sora_diverse 52% rejection**: many illustrated images fail quality filter. May need to relax filter for illustrated data or review rejected examples.
+- **Boundary label softening is the biggest lever found**: Gaussian blur at body-part boundaries converts hard one-hot targets to soft distributions. Interior pixels keep hard labels. Reduced mIoU penalty for ambiguous boundary pixels, letting the model focus on interior classification. +8.8% val mIoU in a single run.
+- **Boundary softening hurts small/thin regions**: Neck (0.62→0.45) and accessory (0.45→0.29) regressed because softening blurs them into neighbors. Future runs should exclude these from softening or reduce radius for small regions.
+- **PatchGAN doesn't help at 3K pairs**: Back view run 5 with gan_weight=0.01 was worse than run 4. Discriminator overfits quickly and destabilizes generator. GAN needs 5K+ pairs minimum.
+- **A100 is 40GB, not 80GB**: Can't run seg + back view in parallel. Boundary softening adds ~700MB/batch for soft targets [B,22,512,512]. Batch 32 OOMs on 40GB — use batch 16.
+- **SAM2 pseudo-labels are poor for body parts**: SAM2 segments by visual features (clothing, hair), not anatomy. Joint-based region assignment gave only 13.3% match rate. SAM2 is not a viable pseudo-labeler for our task.
 
 ## Bootstrapping Loop
 
@@ -224,28 +229,44 @@ python scripts/ingest_gemini.py --input-dir /Volumes/TAMWoolff/data/raw/gemini_d
 # 4. Train with filtered pseudo-labels
 ```
 
-## Run 18 Results (March 24, 2026)
+## Run 20 Results (March 26, 2026)
 
-**0.5750 mIoU** (epoch 9/20, early stopped). Frozen val/test splits (3,016 val + 3,015 test chars). Test set mIoU: 0.5995.
+**0.6171 val mIoU / 0.6485 test mIoU** (epoch 17/20). Boundary label softening (radius=2, sigma=1.0).
 
-Config: `training/configs/segmentation_a100_run18.yaml`. Script: `training/run_seg_run18.sh`.
+Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft targets need extra memory).
 
 | Dataset | Examples (approx) | Weight |
 |---------|----------|--------|
 | cvat_annotated | 49 | 10.0 |
-| sora_diverse | ~2,467 | 4.0 |
+| sora_diverse | 854 | 4.0 |
 | gemini_li_converted | 694 | 3.0 |
 | flux_diverse_clean | 1,569 | 2.5 |
 | vroid_cc0 | 1,386 | 2.5 |
 | meshy_cc0_textured | 15,281 | 1.5 |
 | humanrig | ~45,738 | 0.5 |
 
-### Per-Class Analysis (test set)
+### Per-Class Analysis (run 20 vs run 18 test set)
 
-**Weakest classes:** forearm_r (0.42), accessory (0.45), foot_r (0.45), hand_r (0.48), foot_l (0.48).
-**Strongest:** background (0.94), head (0.74), hips (0.69), chest (0.69).
-**Key finding:** Class 20 "unused" at 69.8% accuracy — confusion bleeds into lower_legs and accessory. Remapped to background for run 19.
-**Adjacent-region confusion** is the main error source: chest↔spine (5%), upper_arm↔shoulder (4%), lower_leg↔foot (4%), upper_arm↔forearm (3-5%).
+| Class | Run 18 | Run 20 | Change |
+|-------|--------|--------|--------|
+| background | 0.9354 | 0.9585 | +2.3% |
+| head | 0.7413 | 0.7911 | +5.0% |
+| neck | 0.6243 | **0.4515** | **-17.3% regression** |
+| chest | 0.6863 | 0.7103 | +2.4% |
+| spine | 0.6306 | 0.6800 | +4.9% |
+| hips | 0.6933 | 0.7382 | +4.5% |
+| shoulder_l | 0.6826 | 0.7473 | +6.5% |
+| forearm_r | 0.4216 | 0.5685 | **+14.7%** |
+| foot_r | 0.4526 | 0.6084 | **+15.6%** |
+| foot_l | 0.4811 | 0.6255 | **+14.4%** |
+| accessory | 0.4526 | **0.2901** | **-16.3% regression** |
+
+**Key findings:**
+- Boundary softening gave biggest improvement ever (+8.8% val mIoU over run 19)
+- Massive gains on weak classes: forearms, feet, hands all improved 7-16%
+- **Neck regressed badly** (0.62→0.45) — small thin region gets softened into neighbors. May need to exclude neck/accessory from softening.
+- **Accessory regressed** (0.45→0.29) — same issue, small scattered regions.
+- Class 20 "unused" correctly at 0.00 (remapped to background)
 
 ## Next Steps
 
@@ -271,18 +292,21 @@ Config: `training/configs/segmentation_a100_run18.yaml`. Script: `training/run_s
 
 ## Model 6: Back View Generation
 
-**Status:** Run 3 complete. 0.2408 val/l1 — improving but still overfitting.
+**Status:** Run 4 best at 0.2152 val/l1. PatchGAN (run 5) failed — GAN destabilized generator at 3K pairs.
 
 | Run | val/l1 | Pairs | Notes |
 |-----|--------|-------|-------|
 | 1 | 0.2982 | 1,085 | First model, clear overfitting |
 | 2 | 0.2354 | 1,085 | Same data, longer training |
 | 3 | 0.2408 | 1,805 | Fixed unrigged merge, early stopped 127/200 |
+| **4** | **0.2152** | **3,049** | **+1,244 new FBX pairs. 10.6% improvement. Best result.** |
+| 5 | 0.2276 | 3,049 | PatchGAN (gan_weight=0.01). GAN hurt — early stopped epoch 32. |
 
 **Data:** `scripts/render_back_view_data.py` renders front+3/4+back triplets from 3D characters.
-**Architecture:** U-Net, input [B,8,512,512], output [B,4,512,512].
-**Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency.
-**Next:** `back_view_pairs_new.tar` in bucket (1,244 new pairs from FBX chars). Combined with existing pairs = ~3,049 total. Ready for next back view training run.
+**Architecture:** U-Net (29M params), input [B,8,512,512], output [B,4,512,512].
+**Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency. GAN optional but didn't help at this data scale.
+**PatchGAN finding:** Discriminator overfits quickly at 3K pairs and destabilizes the generator. GAN needs more data (5K+) or a different approach (one-step rectified flow).
+**Next steps:** More training pairs (render from new Meshy characters), or explore one-step rectified flow (same architecture, different training objective).
 
 ## Quality Filter
 
