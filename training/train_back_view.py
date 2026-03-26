@@ -1,7 +1,8 @@
 """Training script for back view generation model (Model 6).
 
 Trains a U-Net to generate back view RGBA from concatenated front + 3/4 view
-inputs.  Loss: L1 reconstruction + perceptual (VGG) + palette consistency.
+inputs.  Loss: L1 reconstruction + perceptual (VGG) + palette consistency
++ optional PatchGAN adversarial loss.
 
 Usage::
 
@@ -139,6 +140,41 @@ def palette_consistency_loss(
 
 
 # ---------------------------------------------------------------------------
+# PatchGAN discriminator
+# ---------------------------------------------------------------------------
+
+
+class PatchDiscriminator(nn.Module):
+    """PatchGAN discriminator (pix2pix style).
+
+    Classifies 70x70 overlapping patches as real/fake.  Takes concatenated
+    condition (8ch input) + image (4ch RGBA) = 12 channels.
+
+    Only used during training — discarded at inference / ONNX export.
+    """
+
+    def __init__(self, in_channels: int = 12) -> None:
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(in_channels, 64, 4, stride=2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, 128, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(128, 256, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(256, 512, 4, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(512, 1, 4, stride=1, padding=1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
+
+
+# ---------------------------------------------------------------------------
 # LR schedule
 # ---------------------------------------------------------------------------
 
@@ -176,12 +212,19 @@ def train_one_epoch(
     perceptual_loss: PerceptualLoss | None,
     perceptual_weight: float,
     palette_weight: float,
+    discriminator: PatchDiscriminator | None = None,
+    optimizer_d: torch.optim.Optimizer | None = None,
+    gan_weight: float = 0.0,
 ) -> dict[str, float]:
     """Train for one epoch. Returns average losses."""
     model.train()
+    if discriminator is not None:
+        discriminator.train()
     total_l1 = 0.0
     total_perc = 0.0
     total_palette = 0.0
+    total_gan_g = 0.0
+    total_gan_d = 0.0
     total_loss = 0.0
     n_batches = 0
 
@@ -192,6 +235,24 @@ def train_one_epoch(
         outputs = model(image)
         pred = outputs["output"]
 
+        # ------ Discriminator step ------
+        d_loss_val = 0.0
+        if discriminator is not None and optimizer_d is not None and gan_weight > 0:
+            optimizer_d.zero_grad()
+            # Real
+            real_input = torch.cat([image, target], dim=1)  # [B, 12, H, W]
+            pred_real = discriminator(real_input)
+            loss_d_real = nn.functional.mse_loss(pred_real, torch.ones_like(pred_real))
+            # Fake (detach generator output)
+            fake_input = torch.cat([image, pred.detach()], dim=1)
+            pred_fake = discriminator(fake_input)
+            loss_d_fake = nn.functional.mse_loss(pred_fake, torch.zeros_like(pred_fake))
+            loss_d = (loss_d_real + loss_d_fake) * 0.5
+            loss_d.backward()
+            optimizer_d.step()
+            d_loss_val = loss_d.item()
+
+        # ------ Generator step ------
         # Alpha-weighted L1: only penalize non-transparent pixels
         alpha = target[:, 3:4]  # [B, 1, H, W]
         l1 = (torch.abs(pred - target) * alpha).sum() / alpha.sum().clamp(min=1.0)
@@ -212,6 +273,15 @@ def train_one_epoch(
             loss = loss + palette_weight * pal
             palette_val = pal.item()
 
+        # GAN generator loss (fool the discriminator)
+        gan_g_val = 0.0
+        if discriminator is not None and gan_weight > 0:
+            fake_input = torch.cat([image, pred], dim=1)
+            pred_fake = discriminator(fake_input)
+            gan_g = nn.functional.mse_loss(pred_fake, torch.ones_like(pred_fake))
+            loss = loss + gan_weight * gan_g
+            gan_g_val = gan_g.item()
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -219,16 +289,22 @@ def train_one_epoch(
         total_l1 += l1.item()
         total_perc += perc_val
         total_palette += palette_val
+        total_gan_g += gan_g_val
+        total_gan_d += d_loss_val
         total_loss += loss.item()
         n_batches += 1
 
     d = max(n_batches, 1)
-    return {
+    metrics = {
         "train/loss": total_loss / d,
         "train/l1": total_l1 / d,
         "train/perceptual": total_perc / d,
         "train/palette": total_palette / d,
     }
+    if discriminator is not None and gan_weight > 0:
+        metrics["train/gan_g"] = total_gan_g / d
+        metrics["train/gan_d"] = total_gan_d / d
+    return metrics
 
 
 @torch.no_grad()
@@ -423,6 +499,7 @@ def main() -> None:
     l1_weight = loss_cfg.get("l1_weight", 1.0)
     perceptual_weight = loss_cfg.get("perceptual_weight", 0.1)
     palette_weight = loss_cfg.get("palette_weight", 0.05)
+    gan_weight = loss_cfg.get("gan_weight", 0.0)
 
     perceptual_loss: PerceptualLoss | None = None
     if perceptual_weight > 0:
@@ -432,6 +509,22 @@ def main() -> None:
         except Exception as e:
             logger.warning("Could not load VGG for perceptual loss: %s", e)
             perceptual_loss = None
+
+    # --- GAN discriminator (optional) ---
+    discriminator: PatchDiscriminator | None = None
+    optimizer_d: torch.optim.Optimizer | None = None
+    if gan_weight > 0:
+        discriminator = PatchDiscriminator(
+            in_channels=model_cfg.get("in_channels", 8) + model_cfg.get("out_channels", 4),
+        ).to(device)
+        optimizer_d = torch.optim.Adam(
+            discriminator.parameters(),
+            lr=base_lr * 0.5,  # Lower LR for discriminator stability
+            betas=(0.5, 0.999),
+            weight_decay=train_cfg.get("weight_decay", 1e-5),
+        )
+        d_params = sum(p.numel() for p in discriminator.parameters())
+        logger.info("PatchGAN discriminator enabled (weight=%.3f, %s params)", gan_weight, f"{d_params:,}")
 
     # --- Checkpointing ---
     save_dir = Path(ckpt_cfg.get("save_dir", "./checkpoints/back_view"))
@@ -479,6 +572,9 @@ def main() -> None:
             perceptual_loss,
             perceptual_weight,
             palette_weight,
+            discriminator=discriminator,
+            optimizer_d=optimizer_d,
+            gan_weight=gan_weight,
         )
         val_metrics = validate(
             model,
