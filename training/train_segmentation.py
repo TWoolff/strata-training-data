@@ -121,17 +121,29 @@ def compute_loss(
     sample_weights = targets["dataset_weight"].to(device)  # [B]
 
     # Segmentation: CrossEntropyLoss with class weights + optional label smoothing
-    # Use reduction="none" for per-sample weighting, then weighted mean
+    # Use soft targets when available (boundary softening), else hard CE
     label_smoothing = loss_weights.get("label_smoothing", 0.0)
-    seg_loss_per_pixel = F.cross_entropy(
-        outputs["segmentation"],
-        targets["segmentation"],
-        weight=class_weights.to(device),
-        ignore_index=-1,
-        label_smoothing=label_smoothing,
-        reduction="none",
-    )  # [B, H, W]
-    per_sample_seg = seg_loss_per_pixel.mean(dim=(1, 2))  # [B]
+
+    if "soft_segmentation" in targets:
+        # Soft cross-entropy: -sum(soft_target * log_softmax(logits))
+        soft_targets = targets["soft_segmentation"].to(device)  # [B, C, H, W]
+        log_probs = F.log_softmax(outputs["segmentation"], dim=1)  # [B, C, H, W]
+        # Apply class weights via soft_targets
+        cw = class_weights.to(device).view(1, -1, 1, 1)  # [1, C, 1, 1]
+        seg_loss_per_pixel = -(soft_targets * log_probs * cw).sum(dim=1)  # [B, H, W]
+        # Mask out ignore pixels (soft_targets sum to 0 there, so loss is already 0)
+        per_sample_seg = seg_loss_per_pixel.mean(dim=(1, 2))  # [B]
+    else:
+        seg_loss_per_pixel = F.cross_entropy(
+            outputs["segmentation"],
+            targets["segmentation"],
+            weight=class_weights.to(device),
+            ignore_index=-1,
+            label_smoothing=label_smoothing,
+            reduction="none",
+        )  # [B, H, W]
+        per_sample_seg = seg_loss_per_pixel.mean(dim=(1, 2))  # [B]
+
     seg_loss = (per_sample_seg * sample_weights).mean()
 
     # Depth: L1 loss, only for examples that have Marigold depth labels
@@ -212,7 +224,7 @@ def adjust_lr(
 
 def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """Custom collate that stacks tensors and converts booleans to bool tensors."""
-    return {
+    result = {
         "image": torch.stack([b["image"] for b in batch]),
         "segmentation": torch.stack([b["segmentation"] for b in batch]),
         "depth": torch.stack([b["depth"] for b in batch]),
@@ -222,6 +234,10 @@ def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
         "confidence_target": torch.stack([b["confidence_target"] for b in batch]),
         "dataset_weight": torch.tensor([b["dataset_weight"] for b in batch], dtype=torch.float32),
     }
+    # Soft segmentation targets (boundary softening, train only)
+    if "soft_segmentation" in batch[0]:
+        result["soft_segmentation"] = torch.stack([b["soft_segmentation"] for b in batch])
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +254,9 @@ def train_one_epoch(
     device: torch.device,
     writer: SummaryWriter | None,
     global_step: int,
+    discriminator: torch.nn.Module | None = None,
+    optimizer_d: torch.optim.Optimizer | None = None,
+    adversarial_weight: float = 0.0,
 ) -> tuple[float, int]:
     """Run one training epoch.
 
@@ -245,8 +264,12 @@ def train_one_epoch(
         ``(avg_loss, updated_global_step)``.
     """
     model.train()
+    if discriminator is not None:
+        discriminator.train()
     total_loss = 0.0
     num_batches = 0
+
+    num_classes = class_weights.shape[0]
 
     for batch in loader:
         images = batch["image"].to(device)
@@ -254,6 +277,47 @@ def train_one_epoch(
 
         outputs = model(images)
         loss, components = compute_loss(outputs, targets, class_weights, loss_weights)
+
+        # --- Discriminator step ---
+        if discriminator is not None and optimizer_d is not None and adversarial_weight > 0:
+            optimizer_d.zero_grad()
+            seg_logits = outputs["segmentation"].detach()
+            seg_soft = torch.softmax(seg_logits, dim=1)  # [B, C, H, W]
+
+            # De-normalize image for discriminator (approx: just use raw tensor)
+            img_raw = images
+
+            # Real: image + one-hot GT
+            gt_seg = targets["segmentation"].long()  # [B, H, W]
+            gt_onehot = torch.zeros(gt_seg.shape[0], num_classes, *gt_seg.shape[1:], device=device)
+            gt_valid = gt_seg.clamp(0, num_classes - 1)
+            gt_onehot.scatter_(1, gt_valid.unsqueeze(1), 1.0)
+            # Zero out ignore pixels
+            ignore = (gt_seg < 0) | (gt_seg >= num_classes)
+            gt_onehot[:, :, ignore.squeeze() if ignore.dim() == 2 else True] = 0.0
+
+            real_input = torch.cat([img_raw, gt_onehot], dim=1)
+            pred_real = discriminator(real_input)
+            loss_d_real = F.mse_loss(pred_real, torch.ones_like(pred_real) * 0.9)  # label smoothing
+
+            # Fake: image + softmax prediction
+            fake_input = torch.cat([img_raw, seg_soft], dim=1)
+            pred_fake = discriminator(fake_input)
+            loss_d_fake = F.mse_loss(pred_fake, torch.zeros_like(pred_fake) + 0.1)
+
+            loss_d = (loss_d_real + loss_d_fake) * 0.5
+            loss_d.backward()
+            optimizer_d.step()
+
+            components["loss/disc"] = float(loss_d)
+
+            # --- Generator adversarial loss ---
+            seg_soft_g = torch.softmax(outputs["segmentation"], dim=1)
+            fake_input_g = torch.cat([img_raw, seg_soft_g], dim=1)
+            pred_fake_g = discriminator(fake_input_g)
+            gan_g_loss = F.mse_loss(pred_fake_g, torch.ones_like(pred_fake_g))
+            loss = loss + adversarial_weight * gan_g_loss
+            components["loss/gan_g"] = float(gan_g_loss)
 
         optimizer.zero_grad()
         loss.backward()
@@ -488,6 +552,22 @@ def train(config: dict, resume_path: str | None = None, args: argparse.Namespace
     # ---- Metrics ----
     val_metrics = SegmentationMetrics(num_classes=num_classes)
 
+    # ---- GAN discriminator (optional) ----
+    adversarial_weight = loss_cfg.get("adversarial_weight", 0.0)
+    discriminator = None
+    optimizer_d = None
+    if adversarial_weight > 0:
+        from training.models.seg_discriminator import SegPatchDiscriminator
+
+        disc_in_ch = 3 + num_classes  # image RGB + seg one-hot/softmax
+        discriminator = SegPatchDiscriminator(in_channels=disc_in_ch).to(device)
+        disc_lr = loss_cfg.get("discriminator_lr", 2e-4)
+        optimizer_d = torch.optim.Adam(
+            discriminator.parameters(), lr=disc_lr, betas=(0.5, 0.999),
+        )
+        d_params = sum(p.numel() for p in discriminator.parameters())
+        logger.info("SegPatchDiscriminator enabled (weight=%.3f, %s params)", adversarial_weight, f"{d_params:,}")
+
     # ---- Training loop ----
     best_miou = 0.0
     sample_overlay_interval = 10  # log overlays every N epochs
@@ -507,7 +587,9 @@ def train(config: dict, resume_path: str | None = None, args: argparse.Namespace
 
         # Train
         train_loss, global_step = train_one_epoch(
-            model, train_loader, optimizer, class_weights, loss_cfg, device, writer, global_step
+            model, train_loader, optimizer, class_weights, loss_cfg, device, writer, global_step,
+            discriminator=discriminator, optimizer_d=optimizer_d,
+            adversarial_weight=adversarial_weight,
         )
         writer.add_scalar("train/epoch_loss", train_loss, epoch)
 

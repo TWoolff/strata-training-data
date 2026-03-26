@@ -80,6 +80,7 @@ class DatasetConfig:
     split_seed: int = 42
     split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
+    boundary_softening_radius: int = 0  # 0 = disabled, 2-3 = recommended
     dataset_weights: dict[str, float] = field(default_factory=dict)
     train_only_datasets: list[str] = field(default_factory=list)
     frozen_splits_file: str = ""
@@ -106,6 +107,7 @@ class DatasetConfig:
                 ratios.get("val", 0.1),
                 ratios.get("test", 0.1),
             ),
+            boundary_softening_radius=d.get("loss", {}).get("boundary_softening_radius", 0),
             dataset_weights=data.get("dataset_weights", {}),
             train_only_datasets=data.get("train_only_datasets", []),
             frozen_splits_file=data.get("frozen_splits_file", ""),
@@ -445,6 +447,12 @@ class SegmentationDataset:
         # Confidence target: 1.0 where image has alpha > 0 or mask > 0
         confidence = np.where((alpha > 0) | (mask_np > 0), 1.0, 0.0).astype(np.float32)
 
+        # Boundary softening (optional): create soft targets at body-part boundaries
+        soft_seg_np = None
+        bsr = getattr(self.config, "boundary_softening_radius", 0)
+        if bsr > 0 and self.split == "train":
+            soft_seg_np = self._soften_boundaries(mask_np, radius=bsr)
+
         # Convert to tensors
         img_tensor = torch.from_numpy(img_np.transpose(2, 0, 1))  # [3, H, W]
         img_tensor = normalize_imagenet(img_tensor)
@@ -454,7 +462,7 @@ class SegmentationDataset:
         normals_tensor = torch.from_numpy(normals_np.transpose(2, 0, 1))  # [3, H, W]
         confidence_tensor = torch.from_numpy(confidence).unsqueeze(0)  # [1, H, W]
 
-        return {
+        result = {
             "image": img_tensor,
             "segmentation": seg_tensor,
             "depth": depth_tensor,
@@ -464,6 +472,74 @@ class SegmentationDataset:
             "confidence_target": confidence_tensor,
             "dataset_weight": ex.dataset_weight,
         }
+        if soft_seg_np is not None:
+            result["soft_segmentation"] = torch.from_numpy(soft_seg_np)  # [C, H, W]
+        return result
+
+    # -----------------------------------------------------------------------
+    # Boundary softening
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _soften_boundaries(
+        mask: np.ndarray, radius: int = 2, sigma: float = 1.0,
+    ) -> np.ndarray:
+        """Create soft one-hot targets with Gaussian-blurred boundaries.
+
+        Interior pixels retain hard one-hot labels. Pixels within ``radius``
+        of a body-part boundary get a soft distribution over neighboring
+        classes. Background (0) boundaries are not softened.
+
+        Args:
+            mask: ``[H, W]`` int64 region IDs (0=bg, 1-21=body parts, -1=ignore).
+            radius: Dilation radius for boundary detection.
+            sigma: Gaussian sigma for softening.
+
+        Returns:
+            ``[num_classes, H, W]`` float32 soft target distribution.
+        """
+        from scipy.ndimage import gaussian_filter
+
+        h, w = mask.shape
+        num_classes = NUM_CLASSES
+
+        # Build one-hot encoding (ignore index → all zeros)
+        one_hot = np.zeros((num_classes, h, w), dtype=np.float32)
+        for c in range(num_classes):
+            one_hot[c] = (mask == c).astype(np.float32)
+
+        # Gaussian blur each class channel
+        soft = np.zeros_like(one_hot)
+        for c in range(num_classes):
+            if one_hot[c].any():
+                soft[c] = gaussian_filter(one_hot[c], sigma=sigma)
+
+        # Normalize to sum to 1 at each pixel
+        total = soft.sum(axis=0, keepdims=True).clip(min=1e-8)
+        soft = soft / total
+
+        # Only soften at body-part boundaries (not interior, not background-only)
+        # Detect boundary: pixels where a dilation differs from the original
+        from scipy.ndimage import maximum_filter, minimum_filter
+
+        fg_mask = (mask > 0) & (mask < num_classes)  # foreground pixels
+        dilated = maximum_filter(mask, size=2 * radius + 1)
+        eroded = minimum_filter(mask, size=2 * radius + 1)
+        boundary = (dilated != eroded) & fg_mask
+
+        # At non-boundary pixels, revert to hard one-hot
+        for c in range(num_classes):
+            soft[c] = np.where(boundary, soft[c], one_hot[c])
+
+        # Re-normalize boundary pixels
+        boundary_total = soft[:, boundary].sum(axis=0, keepdims=True).clip(min=1e-8)
+        soft[:, boundary] = soft[:, boundary] / boundary_total
+
+        # Ignore index pixels → all zeros
+        ignore_mask = (mask < 0) | (mask >= num_classes)
+        soft[:, ignore_mask] = 0.0
+
+        return soft
 
     # -----------------------------------------------------------------------
     # Augmentation
