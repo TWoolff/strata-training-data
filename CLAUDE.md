@@ -32,12 +32,12 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.5750 mIoU (run 18, frozen val) | **>0.65 mIoU** | Class 20 remap + more GT illustrated labels (Dr. Li). Frozen val set deployed. |
+| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.65 mIoU** | Boundary softening breakthrough. Next: PatchGAN (run 21), more GT labels. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
 | 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
-| 6 | **Back View** | 0.2368 val/l1 (run 13a) | **<0.15 val/l1** | More training pairs from new Meshy characters. |
+| 6 | **Back View** | 0.2152 val/l1 (run 4) | **<0.15 val/l1** | +1,244 new pairs helped. Run 5: PatchGAN discriminator. |
 
 **Priority order:**
 1. Seg to 0.65 — keep adding illustrated data + bootstrapping loop
@@ -192,7 +192,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | 15 | 0.5695 | +99 illustrated chars, no humanrig_posed | +2.4%. GT humanrig_posed causes split change → mIoU regression. |
 | 16 | 0.5808 | +200 illustrated + relaxed filter + frozen val | +2.0%. Frozen val set deployed. humanrig_posed confirmed harmful even with frozen val. |
 | 17 | pending | +617 illustrated (2,467 total incl Pixabay), same mix | Frozen val/test generated (3,016 val + 3,015 test chars). mIoU not directly comparable (pre-freeze). |
-| **18** | **0.5750** | Same data as 17, frozen val/test splits | **True baseline with frozen val. Plateaued epoch 9. Per-class eval: forearm_r 0.42, feet 0.45-0.48, class 20 "unused" 69.8% acc dragging others down.** |
+| 18 | 0.5750 | Same data as 17, frozen val/test splits | True baseline with frozen val. Plateaued epoch 9. Per-class eval: forearm_r 0.42, feet 0.45-0.48, class 20 "unused" 69.8% acc dragging others down. |
+| 19 | 0.5287 | Class 20 remap to background | Val set different (1,658 chars). mIoU not comparable to run 18 directly. |
+| **20** | **0.6171 val / 0.6485 test** | **Boundary label softening (radius=2)** | **+8.8% over run 19. Biggest single improvement ever. forearm_r 0.42→0.57, feet 0.45→0.61. Neck regressed 0.62→0.45.** |
 
 ### Run 13/14 Learnings
 
@@ -247,14 +249,17 @@ Config: `training/configs/segmentation_a100_run18.yaml`. Script: `training/run_s
 
 ## Next Steps
 
-### Next Run (Run 19)
-- Class 20 "unused" remapped to background (already in code)
-- Ask Dr. Li for more GT illustrated labels — targeting boundary regions (chest/spine, shoulder/arm, leg/foot)
-- Resume from run 18 checkpoint (0.5750 mIoU)
-- Expected gain: +1-2% from class 20 remap, +2-3% from more GT labels
+### Next Run (Run 21)
+- PatchGAN discriminator on top of boundary softening
+- Resume from run 20 checkpoint (0.6171 mIoU)
+- Investigate neck regression (0.62→0.45) — may need to exclude neck from boundary softening
+- Config: `training/configs/segmentation_a100_run21.yaml`
 
 ### Other Tasks
 - [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — prompts 1501-2100 ready
+- [ ] Waiting on Dr. Li for GT illustrated labels (emailed March 24)
+- [ ] Add humanrig_posed GT (81K examples) as train-only — never tested with boundary softening
+- [ ] Manually correct 100-200 pseudo-labeled illustrated examples
 - [ ] 328 new Meshy CC0 characters extracted — render back view triplets
 - [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
 
