@@ -32,7 +32,7 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.5808 mIoU (run 16) | **>0.65 mIoU** | More illustrated data (Sora/Gemini/ChatGPT). Frozen val set deployed. |
+| 1 | **Segmentation** | 0.5750 mIoU (run 18, frozen val) | **>0.65 mIoU** | Class 20 remap + more GT illustrated labels (Dr. Li). Frozen val set deployed. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
@@ -127,7 +127,7 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 22, 2026)
+### Bucket Contents (March 24, 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 
@@ -142,14 +142,16 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | `gemini_li_converted.tar` | 223 MiB | Dr. Li's 694 expert-labeled diverse illustrated chars |
 | `cvat_annotated.tar` | 9.0 MiB | 49 hand-annotated diverse illustrated chars |
 | `flux_diverse_clean.tar` | ~300 MiB | 1,569 cleaned FLUX chars (no-torso removed) |
-| `sora_diverse.tar` | ~380 MiB | 1,829 Sora/Gemini/ChatGPT chars (~975 need pseudo-labeling, placeholder masks renamed) |
+| `sora_diverse.tar` | ~380 MiB | ~2,467 Sora/Gemini/ChatGPT chars (incl Pixabay, pseudo-labeled in run 17) |
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (Meshy FBX+GLB+VRoid) |
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~720 additional back view triplets (unrigged Meshy GLB) |
 
 **Enriched tars** (include depth+normals, skip Marigold on A100):
 `{name}_enriched.tar` for: flux_diverse_clean, gemini_li_converted, toon_pseudo. Note: sora_diverse_enriched and humanrig_posed_enriched were deleted (stale data).
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-15), `models/` (ONNX exports), `logs/`.
+**Frozen splits:** `data_cloud/frozen_val_test.json` — 3,016 val + 3,015 test characters (from 30,154 total, seed=42). Generated during run 17, persisted in bucket.
+
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-17), `models/` (ONNX exports), `logs/`.
 
 ## A100 Training Run Workflow
 
@@ -165,7 +167,7 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | Script | Purpose |
 |--------|---------|
 | `training/cloud_setup.sh` | A100 setup (deps + rclone) |
-| `training/run_seg_run13.sh` | Run 13a: run 12 mix + toon_pseudo, enriched tar upload, + back view |
+| `training/run_seg_run18.sh` | Run 18: same data as run 17, frozen val/test splits |
 | `training/run_ship.sh` | Ship run: retrain joints+weights, export all 4 ONNX |
 | `run_normals_enrich.py` | Marigold normals + depth enrichment |
 | `run_benchmark.py` | Benchmark on 7 Gemini test characters |
@@ -188,16 +190,20 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | 13a | 0.5425 | +toon_pseudo (wt 1.0), run 12 mix unchanged | +7% from toon data alone. Change one thing at a time. |
 | 14 | 0.5561 | +295 illustrated chars, no humanrig_posed | +2.5% from illustrated data. Pseudo-labeled humanrig_posed confirmed unusable. |
 | 15 | 0.5695 | +99 illustrated chars, no humanrig_posed | +2.4%. GT humanrig_posed causes split change → mIoU regression. |
-| **16** | **0.5808** | +200 illustrated + relaxed filter + frozen val | **+2.0%. Frozen val set deployed. humanrig_posed confirmed harmful even with frozen val.** |
+| 16 | 0.5808 | +200 illustrated + relaxed filter + frozen val | +2.0%. Frozen val set deployed. humanrig_posed confirmed harmful even with frozen val. |
+| 17 | pending | +617 illustrated (2,467 total incl Pixabay), same mix | Frozen val/test generated (3,016 val + 3,015 test chars). mIoU not directly comparable (pre-freeze). |
+| **18** | **0.5750** | Same data as 17, frozen val/test splits | **True baseline with frozen val. Plateaued epoch 9. Per-class eval: forearm_r 0.42, feet 0.45-0.48, class 20 "unused" 69.8% acc dragging others down.** |
 
 ### Run 13/14 Learnings
 
 - **humanrig_posed pseudo-labels are unusable**: Tried with run 12 labels (66% rejected), run 13a labels (94% rejected), at weights 2.0/0.5/0.3 — always causes mIoU regression. Even quality-filtered examples are too noisy.
-- **GT masks needed**: humanrig_posed needs GT seg masks rendered in Blender (seg-only mode), not pseudo-labels. Rendering in progress on Mac (~81K examples).
+- **GT masks needed**: humanrig_posed has GT seg masks rendered in Blender (81K examples, 0.2% rejection), but was not included in runs 16/17 configs (missing from dataset_dirs). Available for future runs.
 - **Key principle**: Change one dataset at a time. Isolate what helps vs hurts.
 - **Enriched tars**: Upload depth+normals-enriched datasets after training. Saves ~10 hrs Marigold per future run.
 - **More illustrated data = best lever**: each batch of ~100-300 chars gives +2-3% mIoU. Keep generating.
-- **humanrig_posed GT masks are correct** (0.2% rejection, 81K examples) but adding them changes the character-level split (64K→146K chars), reshuffling val set. Need to lock val set or exclude posed data from splits.
+- **Frozen val/test splits**: Generated during run 17 (3,016 val + 3,015 test chars from 30,154 total). Persisted in bucket at `data_cloud/frozen_val_test.json`. All future runs must use this file.
+- **Class 20 "unused" is dead**: Not used by Strata's rigging pipeline. At 69.8% accuracy it dragged down mIoU and confused adjacent classes. Remapped to background in dataset loader for run 19+.
+- **Pseudo-label ceiling**: 617 new illustrated chars in run 17/18 didn't improve mIoU. More pseudo-labeled data alone won't break through — need more GT expert labels (Dr. Li).
 - **sora_diverse 52% rejection**: many illustrated images fail quality filter. May need to relax filter for illustrated data or review rejected examples.
 
 ## Bootstrapping Loop
@@ -216,47 +222,41 @@ python scripts/ingest_gemini.py --input-dir /Volumes/TAMWoolff/data/raw/gemini_d
 # 4. Train with filtered pseudo-labels
 ```
 
-## Run 13a Results (March 20, 2026)
+## Run 18 Results (March 24, 2026)
 
-**0.5425 mIoU** (epoch 19/20). Up from 0.5068 (run 12) — **+7% improvement**.
+**0.5750 mIoU** (epoch 9/20, early stopped). Frozen val/test splits (3,016 val + 3,015 test chars). Test set mIoU: 0.5995.
 
-Config: `training/configs/segmentation_a100_run13.yaml`. Script: `training/run_seg_run13.sh`.
+Config: `training/configs/segmentation_a100_run18.yaml`. Script: `training/run_seg_run18.sh`.
 
-| Dataset | Examples (passed) | Weight |
+| Dataset | Examples (approx) | Weight |
 |---------|----------|--------|
 | cvat_annotated | 49 | 10.0 |
-| sora_diverse | 1,279 | 4.0 |
+| sora_diverse | ~2,467 | 4.0 |
 | gemini_li_converted | 694 | 3.0 |
 | flux_diverse_clean | 1,569 | 2.5 |
 | vroid_cc0 | 1,386 | 2.5 |
-| toon_pseudo | 6,317 | 1.0 |
 | meshy_cc0_textured | 15,281 | 1.5 |
-| humanrig | 11,434 | 0.5 |
+| humanrig | ~45,738 | 0.5 |
+
+### Per-Class Analysis (test set)
+
+**Weakest classes:** forearm_r (0.42), accessory (0.45), foot_r (0.45), hand_r (0.48), foot_l (0.48).
+**Strongest:** background (0.94), head (0.74), hips (0.69), chest (0.69).
+**Key finding:** Class 20 "unused" at 69.8% accuracy — confusion bleeds into lower_legs and accessory. Remapped to background for run 19.
+**Adjacent-region confusion** is the main error source: chest↔spine (5%), upper_arm↔shoulder (4%), lower_leg↔foot (4%), upper_arm↔forearm (3-5%).
 
 ## Next Steps
 
-### Immediate (before next A100 run)
-- [x] GT seg masks for humanrig_posed — 81,864 rendered, 0.2% rejection, tar in bucket (12 GB)
-- [ ] Fix character-level split to support humanrig_posed without reshuffling val set
-- [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — 200 new prompts ready (1501-1700)
-- [ ] Investigate sora_diverse 52% rejection rate — relax filter or review rejects
-- [ ] Ingest + tar new illustrated images → upload to bucket
+### Next Run (Run 19)
+- Class 20 "unused" remapped to background (already in code)
+- Ask Dr. Li for more GT illustrated labels — targeting boundary regions (chest/spine, shoulder/arm, leg/foot)
+- Resume from run 18 checkpoint (0.5750 mIoU)
+- Expected gain: +1-2% from class 20 remap, +2-3% from more GT labels
+
+### Other Tasks
+- [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — prompts 1501-2100 ready
 - [ ] 328 new Meshy CC0 characters extracted — render back view triplets
 - [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
-
-### Next A100 Run (Run 16)
-- Resume from run 15 (0.5695 mIoU)
-- **Three fixes deployed:**
-  1. Split loader: humanrig_posed as `train_only` (val set unchanged)
-  2. sora_diverse: 839 placeholder masks renamed → will be pseudo-labeled (~doubles usable illustrated data)
-  3. humanrig_\d+ regex: 81K examples correctly grouped into 666 characters
-- GT humanrig_posed at weight 0.5 (train-only, won't affect val)
-- Updated sora_diverse tar in bucket (1,829 images, ~975 need pseudo-labeling)
-- ~1,244 new back view pairs rendering on Mac
-- Target: >0.60 mIoU
-- Config: `training/configs/segmentation_a100_run16.yaml`
-- Script: `training/run_seg_run16.sh`
-- Estimated A100 time: ~3 hrs (pseudo-label 839 sora + Marigold + train)
 
 ### Ship Run (after seg >0.65)
 - Retrain joints with humanrig_posed GT (diverse poses)
