@@ -117,7 +117,7 @@ download_tar() {
 
 download_tar "humanrig.tar" "./data_cloud/humanrig"
 download_tar "vroid_cc0.tar" "./data_cloud/vroid_cc0"
-download_tar "meshy_cc0_textured_restructured.tar" "./data_cloud/meshy_cc0_textured"
+download_tar "meshy_cc0_restructured.tar" "./data_cloud/meshy_cc0_textured"
 download_tar "gemini_li_converted.tar" "./data_cloud/gemini_li_converted"
 download_tar "cvat_annotated.tar" "./data_cloud/cvat_annotated"
 download_tar "sora_diverse.tar" "./data_cloud/sora_diverse"
@@ -178,7 +178,7 @@ echo "[4/6] Quality filter..."
 # Remove old quality filter for sora_diverse so it re-runs
 rm -f ./data_cloud/sora_diverse/quality_filter.json
 
-for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc0_textured_restructured ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated ./data_cloud/flux_diverse_clean; do
+for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc0_restructured ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated ./data_cloud/flux_diverse_clean; do
     ds_name=$(basename "$ds_dir")
     if [ -f "$ds_dir/quality_filter.json" ]; then
         echo "  $ds_name: quality_filter.json exists, skipping."
