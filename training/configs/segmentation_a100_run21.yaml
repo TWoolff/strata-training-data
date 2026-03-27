@@ -53,7 +53,7 @@ augmentation:
 
 training:
   batch_size: 16
-  num_workers: 8
+  num_workers: 4
   epochs: 20
   optimizer: "adamw"
   learning_rate: 1.0e-5
