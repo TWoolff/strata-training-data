@@ -127,7 +127,7 @@ rclone copy ./output/ hetzner:strata-training-data/output/ \
 - Config: `~/.config/rclone/rclone.conf`, remote: `hetzner`
 - **Never use `rclone sync`** (deletes remote files) or `aws s3 sync` (too slow)
 
-### Bucket Contents (March 26, 2026)
+### Bucket Contents (March 27, 2026)
 
 Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 
@@ -145,13 +145,17 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | `sora_diverse.tar` | ~380 MiB | ~2,467 Sora/Gemini/ChatGPT chars (incl Pixabay, pseudo-labeled in run 17) |
 | `back_view_pairs.tar` | 652 MiB | 1,085 back view triplets (Meshy FBX+GLB+VRoid) |
 | `back_view_pairs_unrigged.tar` | 319 MiB | ~720 additional back view triplets (unrigged Meshy GLB) |
+| `back_view_pairs_new.tar` | ~500 MiB | 1,244 new pairs from Meshy FBX chars |
+| `sora_diverse_new.tar` | 74 MiB | 291 new illustrated chars (March 27 batch) |
+| `soft_targets_precomputed.tar` | 1.9 GiB | Precomputed boundary-softened seg targets for all datasets |
+| `demo_back_view_pairs.tar` | 1 MiB | 5 demo character triplets (Gemini-generated views) |
 
 **Enriched tars** (include depth+normals, skip Marigold on A100):
 `{name}_enriched.tar` for: flux_diverse_clean, gemini_li_converted, toon_pseudo. Note: sora_diverse_enriched and humanrig_posed_enriched were deleted (stale data).
 
-**Frozen splits:** `data_cloud/frozen_val_test.json` — 3,016 val + 3,015 test characters (from 30,154 total, seed=42). Generated during run 17, persisted in bucket.
+**Frozen splits:** `data_cloud/frozen_val_test.json` — frozen val/test characters. Persisted in bucket.
 
-**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-20), `checkpoints_back_view*/` (runs 1-4), `models/` (ONNX exports), `evaluation_run*/`, `logs/`.
+**Other prefixes:** `animation/` (67 GiB, 100STYLE mocap), `checkpoints_run*/` (runs 10-21), `checkpoints_back_view*/` (runs 1-5), `models/` (ONNX exports), `evaluation_run*/`, `logs/`.
 
 ## A100 Training Run Workflow
 
@@ -194,7 +198,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | 17 | pending | +617 illustrated (2,467 total incl Pixabay), same mix | Frozen val/test generated (3,016 val + 3,015 test chars). mIoU not directly comparable (pre-freeze). |
 | 18 | 0.5750 | Same data as 17, frozen val/test splits | True baseline with frozen val. Plateaued epoch 9. Per-class eval: forearm_r 0.42, feet 0.45-0.48, class 20 "unused" 69.8% acc dragging others down. |
 | 19 | 0.5287 | Class 20 remap to background | Val set different (1,658 chars). mIoU not comparable to run 18 directly. |
-| **20** | **0.6171 val / 0.6485 test** | **Boundary label softening (radius=2)** | **+8.8% over run 19. Biggest single improvement ever. forearm_r 0.42→0.57, feet 0.45→0.61. Neck regressed 0.62→0.45.** |
+| 20 | 0.6171 val / 0.6485 test | Boundary label softening (radius=2) | +8.8% over run 19. Biggest single improvement ever. forearm_r 0.42→0.57, feet 0.45→0.61. Neck regressed 0.62→0.45. |
+| 21 | 0.6060 val / 0.6361 test | Re-pseudo-label with run 20 model, no softening | sora_diverse 854→2,122 through filter. +7.5% from better pseudo-labels alone. Neck 0.5558 (better than run 20's 0.4515). |
+| **22** | **pending** | **Re-pseudo-labels + precomputed boundary softening (neck excluded)** | **Combines both improvements. Precomputed .npz soft targets in bucket. Config ready.** |
 
 ### Run 13/14 Learnings
 
@@ -212,6 +218,10 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 - **PatchGAN doesn't help at 3K pairs**: Back view run 5 with gan_weight=0.01 was worse than run 4. Discriminator overfits quickly and destabilizes generator. GAN needs 5K+ pairs minimum.
 - **A100 is 40GB, not 80GB**: Can't run seg + back view in parallel. Boundary softening adds ~700MB/batch for soft targets [B,22,512,512]. Batch 32 OOMs on 40GB — use batch 16.
 - **SAM2 pseudo-labels are poor for body parts**: SAM2 segments by visual features (clothing, hair), not anatomy. Joint-based region assignment gave only 13.3% match rate. SAM2 is not a viable pseudo-labeler for our task.
+- **Bootstrapping loop works again with stronger model**: Re-pseudo-labeling sora_diverse with run 20 model (0.6485) pushed pass rate from 854 to 2,122 (+149%). Each bootstrapping round now has much more impact.
+- **Boundary softening must be precomputed**: scipy gaussian_filter + max_filter per sample is too slow for training (killed A100 process). Precompute as `.npz` files (~17KB each, 1.9GB total for all datasets). Loader checks for `.npz` before falling back to on-the-fly computation.
+- **Meshy tar extracts as `meshy_cc0_restructured`** (not `meshy_cc0_textured` or `meshy_cc0_textured_restructured`). Must use this exact name in configs.
+- **Gemini can generate consistent multi-view character art**: Fed front view → prompted for 3/4 and back views. Maintains style, colors, proportions. Viable for creating back view training pairs from 2D illustrations.
 
 ## Bootstrapping Loop
 
@@ -270,18 +280,34 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next Run (Run 21)
-- PatchGAN discriminator on top of boundary softening
-- Resume from run 20 checkpoint (0.6171 mIoU)
-- Investigate neck regression (0.62→0.45) — may need to exclude neck from boundary softening
-- Config: `training/configs/segmentation_a100_run21.yaml`
+### Next Run (Run 22) — Ready to Go
+- Re-pseudo-labeled data + precomputed boundary softening (neck/hair_back excluded)
+- Soft targets precomputed and uploaded to bucket (`soft_targets_precomputed.tar`)
+- Resume from run 21 checkpoint (0.6060 val mIoU)
+- Config: `training/configs/segmentation_a100_run22.yaml`
+- Expected: >0.65 test mIoU (combines run 20's 0.6485 + run 21's better neck)
+- **A100 command:**
+  ```
+  git pull && rclone copy hetzner:strata-training-data/tars/soft_targets_precomputed.tar ./data/tars/ -P
+  tar xf data/tars/soft_targets_precomputed.tar && rm data/tars/soft_targets_precomputed.tar
+  python3 -m training.train_segmentation --config training/configs/segmentation_a100_run22.yaml \
+      --resume checkpoints/segmentation/run21_best.pt --reset-epochs
+  ```
+
+### Demo Preparation
+- 5 demo characters selected and cleaned: MMA fighter, construction worker, golf dad, Celtic warrior, athlete
+- Gemini-generated 3/4 + back views for all 5 → uploaded as `demo_back_view_pairs.tar`
+- Back view fine-tuning with demo pairs at high weight — next back view run
+- `scripts/score_illustrations.py` — ranks characters by seg quality for demo selection
+- Scoring results: `output/demo_scores.csv` (2,758 characters ranked)
 
 ### Other Tasks
 - [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — prompts 1501-2100 ready
 - [ ] Waiting on Dr. Li for GT illustrated labels (emailed March 24)
 - [ ] Add humanrig_posed GT (81K examples) as train-only — never tested with boundary softening
 - [ ] Manually correct 100-200 pseudo-labeled illustrated examples
-- [ ] 328 new Meshy CC0 characters extracted — render back view triplets
+- [ ] Implement rectified flow training for back view model (sharper outputs)
+- [ ] Fine-tune back view on 5 demo character pairs (high weight)
 - [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
 
 ### Ship Run (after seg >0.65)
