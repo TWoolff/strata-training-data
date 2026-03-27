@@ -447,21 +447,15 @@ class SegmentationDataset:
         # Confidence target: 1.0 where image has alpha > 0 or mask > 0
         confidence = np.where((alpha > 0) | (mask_np > 0), 1.0, 0.0).astype(np.float32)
 
-        # Boundary softening (optional): load precomputed or compute on the fly
+        # Boundary softening (optional): compute from the (potentially augmented) mask.
+        # NOTE: precomputed .npz files exist but can't be used when augmentation is on
+        # because flip/rotate/scale change the mask. Always compute from mask_np.
         soft_seg_np = None
         bsr = getattr(self.config, "boundary_softening_radius", 0)
         if bsr > 0 and self.split == "train":
-            # Try loading precomputed soft targets first
-            soft_path_npz = ex.mask_path.parent / "soft_segmentation.npz"
-            soft_path_npy = ex.mask_path.parent / "soft_segmentation.npy"
-            if soft_path_npz.exists():
-                soft_seg_np = np.load(soft_path_npz)["soft"].astype(np.float32)
-            elif soft_path_npy.exists():
-                soft_seg_np = np.load(soft_path_npy).astype(np.float32)
-            else:
-                soft_seg_np = self._soften_boundaries(
-                    mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,
-                )
+            soft_seg_np = self._soften_boundaries(
+                mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,
+            )
 
         # Convert to tensors
         img_tensor = torch.from_numpy(img_np.transpose(2, 0, 1))  # [3, H, W]
