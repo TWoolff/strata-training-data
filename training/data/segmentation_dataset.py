@@ -452,9 +452,12 @@ class SegmentationDataset:
         bsr = getattr(self.config, "boundary_softening_radius", 0)
         if bsr > 0 and self.split == "train":
             # Try loading precomputed soft targets first
-            soft_path = ex.mask_path.parent / "soft_segmentation.npy"
-            if soft_path.exists():
-                soft_seg_np = np.load(soft_path).astype(np.float32)
+            soft_path_npz = ex.mask_path.parent / "soft_segmentation.npz"
+            soft_path_npy = ex.mask_path.parent / "soft_segmentation.npy"
+            if soft_path_npz.exists():
+                soft_seg_np = np.load(soft_path_npz)["soft"].astype(np.float32)
+            elif soft_path_npy.exists():
+                soft_seg_np = np.load(soft_path_npy).astype(np.float32)
             else:
                 soft_seg_np = self._soften_boundaries(
                     mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,

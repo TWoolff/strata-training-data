@@ -134,7 +134,7 @@ def process_directory(
     logger.info("Found %d examples in %s", len(examples), data_dir.name)
 
     for i, ex_dir in enumerate(examples):
-        soft_path = ex_dir / "soft_segmentation.npy"
+        soft_path = ex_dir / "soft_segmentation.npz"
 
         if only_missing and soft_path.exists():
             skipped += 1
@@ -145,8 +145,8 @@ def process_directory(
 
         soft = soften_boundaries(mask, radius=radius, sigma=sigma, exclude_classes=exclude_classes)
 
-        # Save as compressed float16 to reduce disk usage (~22*512*512*2 = 11MB → ~1MB compressed)
-        np.save(soft_path, soft.astype(np.float16))
+        # Save as compressed npz (~50-200KB per example vs 11MB uncompressed)
+        np.savez_compressed(soft_path, soft=soft.astype(np.float16))
 
         processed += 1
 
