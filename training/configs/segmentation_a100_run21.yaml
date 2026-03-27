@@ -26,7 +26,7 @@ data:
   dataset_dirs:
     - "./data_cloud/humanrig"
     - "./data_cloud/vroid_cc0"
-    - "./data_cloud/meshy_cc0_textured"
+    - "./data_cloud/meshy_cc0_textured_restructured"
     - "./data_cloud/gemini_li_converted"
     - "./data_cloud/cvat_annotated"
     - "./data_cloud/sora_diverse"
