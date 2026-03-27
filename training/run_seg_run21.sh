@@ -94,7 +94,6 @@ mkdir -p data_cloud data/tars
 download_tar() {
     local tar_name="$1"
     local extract_dir="$2"
-    local enriched_name="${tar_name%.tar}_enriched.tar"
 
     if [ -d "$extract_dir" ] && [ "$(ls "$extract_dir"/ 2>/dev/null | head -1)" ]; then
         local count=$(ls -d "$extract_dir"/*/ 2>/dev/null | wc -l | tr -d ' ')
@@ -102,20 +101,14 @@ download_tar() {
         return 0
     fi
 
-    # Try enriched tar first
-    echo "  Checking for $enriched_name..."
-    if rclone ls "hetzner:strata-training-data/tars/$enriched_name" &>/dev/null; then
-        echo "  Downloading $enriched_name..."
-        rclone copy "hetzner:strata-training-data/tars/$enriched_name" ./data/tars/ \
-            --transfers 32 --fast-list -P
-        tar xf "./data/tars/$enriched_name" -C ./data_cloud/
-        rm -f "./data/tars/$enriched_name"
-    else
-        echo "  Downloading $tar_name..."
-        rclone copy "hetzner:strata-training-data/tars/$tar_name" ./data/tars/ \
-            --transfers 32 --fast-list -P
+    echo "  Downloading $tar_name..."
+    rclone copy "hetzner:strata-training-data/tars/$tar_name" ./data/tars/ \
+        --transfers 32 --fast-list -P
+    if [ -f "./data/tars/$tar_name" ]; then
         tar xf "./data/tars/$tar_name" -C ./data_cloud/
         rm -f "./data/tars/$tar_name"
+    else
+        echo "  WARN: $tar_name not found in bucket"
     fi
 
     local count=$(ls -d "$extract_dir"/*/ 2>/dev/null | wc -l | tr -d ' ')
