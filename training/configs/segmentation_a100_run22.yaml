@@ -1,0 +1,65 @@
+# Run 22 seg — Re-pseudo-labeled data + precomputed boundary softening
+#
+# Combines the two best improvements:
+#   1. Re-pseudo-labeled sora_diverse with run 20 model (2,122 pass filter)
+#   2. Boundary softening with precomputed .npz files (neck/accessory excluded)
+# Resume from run 21 checkpoint (0.6060 val mIoU / 0.6361 test mIoU)
+#
+# Expected: >0.65 test mIoU (run 20 got 0.6485 with softening, run 21 got 0.6361 without)
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/vroid_cc0"
+    - "./data_cloud/meshy_cc0_restructured"
+    - "./data_cloud/gemini_li_converted"
+    - "./data_cloud/cvat_annotated"
+    - "./data_cloud/sora_diverse"
+    - "./data_cloud/flux_diverse_clean"
+  frozen_splits_file: "./data_cloud/frozen_val_test.json"
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0
+    sora_diverse: 4.0
+    gemini_li_converted: 3.0
+    flux_diverse_clean: 2.5
+    vroid_cc0: 2.5
+    meshy_cc0_restructured: 1.5
+    humanrig: 0.5
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 20
+  optimizer: "adamw"
+  learning_rate: 1.0e-5
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 0
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.2
+  normals_weight: 0.2
+  confidence_weight: 0.1
+  label_smoothing: 0.0
+  boundary_softening_radius: 2
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 10
+  early_stopping_metric: "val/miou"
