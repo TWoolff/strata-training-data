@@ -447,13 +447,18 @@ class SegmentationDataset:
         # Confidence target: 1.0 where image has alpha > 0 or mask > 0
         confidence = np.where((alpha > 0) | (mask_np > 0), 1.0, 0.0).astype(np.float32)
 
-        # Boundary softening (optional): create soft targets at body-part boundaries
+        # Boundary softening (optional): load precomputed or compute on the fly
         soft_seg_np = None
         bsr = getattr(self.config, "boundary_softening_radius", 0)
         if bsr > 0 and self.split == "train":
-            soft_seg_np = self._soften_boundaries(
-                mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,
-            )
+            # Try loading precomputed soft targets first
+            soft_path = ex.mask_path.parent / "soft_segmentation.npy"
+            if soft_path.exists():
+                soft_seg_np = np.load(soft_path).astype(np.float32)
+            else:
+                soft_seg_np = self._soften_boundaries(
+                    mask_np, radius=bsr, exclude_classes=self.SOFTENING_EXCLUDE_CLASSES,
+                )
 
         # Convert to tensors
         img_tensor = torch.from_numpy(img_np.transpose(2, 0, 1))  # [3, H, W]
