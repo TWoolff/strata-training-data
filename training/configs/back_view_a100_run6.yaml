@@ -1,0 +1,52 @@
+# Back View Model — Run 6
+#
+# Fine-tune on 5 demo character pairs at high weight.
+# Same 3,049 existing pairs + 5 demo pairs (weight 50.0).
+# Resume from run 4 checkpoint (val/l1 = 0.2152).
+# Lower LR for fine-tuning. No GAN (failed in run 5).
+#
+# Goal: make the 5 demo characters look great for investor demo.
+
+model:
+  type: "unet"
+  in_channels: 8     # front RGBA + 3/4 RGBA
+  out_channels: 4    # back RGBA
+
+data:
+  dataset_dirs:
+    - "./data/training/back_view_pairs_merged"
+    - "./data/training/back_view_pairs_unrigged"
+    - "./data/training/back_view_pairs_new"
+    - "./data/training/demo_pairs"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+  dataset_weights:
+    demo_pairs: 50.0
+    back_view_pairs_merged: 1.0
+    back_view_pairs_unrigged: 1.0
+    back_view_pairs_new: 1.0
+
+augmentation:
+  horizontal_flip: false   # Don't flip demo chars — preserve L/R consistency
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1, hue: 0.02}
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 2.0e-5
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+  palette_weight: 0.05
+
+checkpointing:
+  save_dir: "./checkpoints/back_view"
+  early_stopping_patience: 30
+  early_stopping_metric: "val/l1"
