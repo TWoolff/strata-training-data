@@ -3,8 +3,8 @@
 # Strata Training — Run 22 Seg (A100)
 #
 # Re-pseudo-labeled data + boundary softening (neck/hair_back excluded).
-# Data already pseudo-labeled and enriched from run 21.
-# Resume from run 21 checkpoint (0.6060 val mIoU).
+# Resume from run 20 checkpoint (0.6171 val mIoU) — better starting point
+# than run 21 since run 20 already has boundary softening baked in.
 #
 # Estimated: ~5 hrs on A100 (download + train + export + upload)
 #
@@ -75,12 +75,12 @@ echo "[0/5] Downloading checkpoint + frozen splits..."
 
 mkdir -p checkpoints/segmentation data_cloud
 
-RUN21_CKPT="checkpoints/segmentation/run21_best.pt"
-if [ ! -f "$RUN21_CKPT" ]; then
-    rclone copy hetzner:strata-training-data/checkpoints_run21_seg/segmentation/run21_best.pt \
+RUN20_CKPT="checkpoints/segmentation/run20_best.pt"
+if [ ! -f "$RUN20_CKPT" ]; then
+    rclone copy hetzner:strata-training-data/checkpoints_run20_seg/segmentation/run20_best.pt \
         ./checkpoints/segmentation/ --transfers 32 --fast-list -P
 fi
-echo "  Run 21 checkpoint: $RUN21_CKPT"
+echo "  Run 20 checkpoint: $RUN20_CKPT"
 
 if [ ! -f "data_cloud/frozen_val_test.json" ]; then
     rclone copy hetzner:strata-training-data/data_cloud/frozen_val_test.json \
@@ -152,7 +152,7 @@ echo "[2/5] Re-pseudo-labeling sora_diverse..."
 python3 scripts/batch_pseudo_label.py \
     --input-dir ./data_cloud/sora_diverse \
     --output-dir ./data_cloud/sora_diverse \
-    --checkpoint "$RUN21_CKPT" \
+    --checkpoint "$RUN20_CKPT" \
     --device cuda \
     2>&1 | tee "$LOG_DIR/pseudo_label.log"
 
@@ -204,7 +204,7 @@ echo ""
 # 4. Train
 # ---------------------------------------------------------------------------
 echo "[4/5] Training SEGMENTATION model..."
-echo "  Resuming from: $RUN21_CKPT"
+echo "  Resuming from: $RUN20_CKPT"
 echo "  Config: training/configs/segmentation_a100_run22.yaml"
 echo "  Boundary softening: radius=2 (computed on-the-fly, neck/hair_back excluded)"
 echo ""
@@ -213,7 +213,7 @@ rm -f checkpoints/segmentation/latest.pt
 
 python3 -m training.train_segmentation \
     --config training/configs/segmentation_a100_run22.yaml \
-    --resume "$RUN21_CKPT" \
+    --resume "$RUN20_CKPT" \
     --reset-epochs \
     2>&1 | tee "$LOG_DIR/train.log"
 
@@ -274,3 +274,16 @@ echo ""
 echo "  To download:"
 echo "    rclone copy hetzner:strata-training-data/checkpoints_run22_seg/ /Volumes/TAMWoolff/data/checkpoints_run22_seg/ --transfers 32 --fast-list -P"
 echo "============================================"
+echo ""
+echo ""
+
+# =============================================================================
+# BACK VIEW RUN 6 — Fine-tune on 5 demo characters
+# =============================================================================
+echo "============================================"
+echo "  Starting Back View Run 6 (Demo Fine-tune)"
+echo "  $(date)"
+echo "============================================"
+echo ""
+
+./training/run_back_view_run6.sh
