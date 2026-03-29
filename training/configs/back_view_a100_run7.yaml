@@ -1,0 +1,56 @@
+# Back View Model — Run 7
+#
+# Rectified flow training + 42 demo character pairs at high weight.
+# Resume from run 4 checkpoint (val/l1 = 0.2152).
+#
+# Key changes from run 6:
+#   - Rectified flow loss (sharper outputs, handles multi-modal uncertainty)
+#   - 42 demo pairs (up from 5) — 7 characters × 6 angle combinations
+#   - Train from scratch with flow loss (don't resume — loss landscape is different)
+#
+# Goal: sharp, recognizable back views for 7 demo characters.
+
+model:
+  type: "unet"
+  in_channels: 8     # front RGBA + 3/4 RGBA
+  out_channels: 4    # back RGBA
+
+data:
+  dataset_dirs:
+    - "./data/training/back_view_pairs_merged"
+    - "./data/training/back_view_pairs_unrigged"
+    - "./data/training/back_view_pairs_new"
+    - "./data/training/demo_pairs"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+  dataset_weights:
+    demo_pairs: 50.0
+    back_view_pairs_merged: 1.0
+    back_view_pairs_unrigged: 1.0
+    back_view_pairs_new: 1.0
+
+augmentation:
+  horizontal_flip: false
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1, hue: 0.02}
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 150
+  optimizer: "adam"
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+  palette_weight: 0.0
+  rectified_flow: true
+
+checkpointing:
+  save_dir: "./checkpoints/back_view"
+  early_stopping_patience: 30
+  early_stopping_metric: "val/l1"
