@@ -37,14 +37,14 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 | 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
 | 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
-| 6 | **Back View** | 0.2152 val/l1 (run 4) | **<0.15 val/l1** | +1,244 new pairs helped. PatchGAN (run 5) failed — needs more data or rectified flow. |
+| 6 | **View Synthesis** | 0.2139 val/l1 (run 1) | **<0.15 val/l1** | Replaces back view model. Any 2 views + target angle → target view. Gemini turnaround sheets are key data source. |
 
 **Priority order:**
-1. Seg past 0.65 — boundary softening got us to 0.6485 test. Next: PatchGAN (run 21), GT labels, manual corrections
-2. Ship run — retrain joints + weights with run 20 seg encoder (0.6485 is close enough to start)
-3. Back view to 0.15 — needs more data (5K+ pairs) or rectified flow. GAN didn't help at 3K pairs
-4. Texture inpainting — depends on back view
-5. Inpainting — may need architecture work
+1. View synthesis — more turnaround sheets (150 prompts ready), fix foot rendering, retrain
+2. Ship run — retrain joints + weights with run 20 seg encoder
+3. Seg past 0.65 — boundary softening + more GT labels
+4. Weights — fix limb deformation artifacts (retrain with better seg encoder)
+5. Texture inpainting — may not need separate model if view synthesis is good enough
 
 ## Project Layout
 
@@ -221,7 +221,11 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 - **Bootstrapping loop works again with stronger model**: Re-pseudo-labeling sora_diverse with run 20 model (0.6485) pushed pass rate from 854 to 2,122 (+149%). Each bootstrapping round now has much more impact.
 - **Boundary softening must be precomputed**: scipy gaussian_filter + max_filter per sample is too slow for training (killed A100 process). Precompute as `.npz` files (~17KB each, 1.9GB total for all datasets). Loader checks for `.npz` before falling back to on-the-fly computation.
 - **Meshy tar extracts as `meshy_cc0_restructured`** (not `meshy_cc0_textured` or `meshy_cc0_textured_restructured`). Must use this exact name in configs.
-- **Gemini can generate consistent multi-view character art**: Fed front view → prompted for 3/4 and back views. Maintains style, colors, proportions. Viable for creating back view training pairs from 2D illustrations.
+- **Gemini turnaround sheets are the best data source**: Single-image prompt generates 5 consistent views (front, 3/4, side, back 3/4, back). 81 sheets → 171 characters → 2,640 training pairs. Can generate ~120 sheets/day. Script `split_turnaround.py` auto-splits with rembg.
+- **Unified view synthesis beats back-view-only**: Same U-Net, 9ch input (vs 8ch), handles any target angle. Run 1: 0.2139 val/l1 on multi-angle task ≈ old back-view-only model (0.2152) but far more capable.
+- **Rectified flow failed**: Run 7 with flow matching loss severely overfit (train 0.06, val 0.37). L1 + perceptual loss remains the reliable choice.
+- **Foot rendering is the biggest visual artifact**: Model shows front-facing toes instead of heels in back views. Doesn't understand 3D rotation — needs more training data with visible foot rotation across views.
+- **Soapbox VC opportunity**: Connected with CEO Jesse Heasman. Preparing video demo of 3D character rotation from 2D illustrations.
 
 ## Bootstrapping Loop
 
@@ -280,59 +284,55 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next Run (Run 22) — Ready to Go
-- Re-pseudo-labeled data + precomputed boundary softening (neck/hair_back excluded)
-- Soft targets precomputed and uploaded to bucket (`soft_targets_precomputed.tar`)
-- Resume from run 21 checkpoint (0.6060 val mIoU)
-- Config: `training/configs/segmentation_a100_run22.yaml`
-- Expected: >0.65 test mIoU (combines run 20's 0.6485 + run 21's better neck)
-- **A100 command:**
-  ```
-  git pull && rclone copy hetzner:strata-training-data/tars/soft_targets_precomputed.tar ./data/tars/ -P
-  tar xf data/tars/soft_targets_precomputed.tar && rm data/tars/soft_targets_precomputed.tar
-  python3 -m training.train_segmentation --config training/configs/segmentation_a100_run22.yaml \
-      --resume checkpoints/segmentation/run21_best.pt --reset-epochs
-  ```
+### Immediate — Demo Video
+- [ ] Generate 120 more turnaround sheets (TS-051 to TS-150 prompts ready)
+- [ ] Split, rebuild pairs, retrain view synthesis run 2 with expanded data
+- [ ] Fix foot rendering issue (feet show front-facing toes instead of heels)
+- [ ] Update Strata Rust code to use new view synthesis model (9ch input)
+- [ ] Retrain weights model with run 20 seg encoder features (fix limb deformation)
+- [ ] Record video demo with 7 demo characters rotating in 3D
 
-### Demo Preparation
-- 5 demo characters selected and cleaned: MMA fighter, construction worker, golf dad, Celtic warrior, athlete
-- Gemini-generated 3/4 + back views for all 5 → uploaded as `demo_back_view_pairs.tar`
-- Back view fine-tuning with demo pairs at high weight — next back view run
-- `scripts/score_illustrations.py` — ranks characters by seg quality for demo selection
-- Scoring results: `output/demo_scores.csv` (2,758 characters ranked)
+### Demo Characters
+- 7 primary: MMA fighter, construction worker, golf dad, Celtic warrior, athlete, bear chef, rogue
+- 171 total characters from 81 Gemini turnaround sheets
+- `scripts/score_illustrations.py` ranks characters by seg quality
+- `scripts/split_turnaround.py` auto-splits turnaround sheets into individual views
 
-### Other Tasks
-- [ ] Keep generating illustrated chars (Sora/Gemini/ChatGPT) — prompts 1501-2100 ready
-- [ ] Waiting on Dr. Li for GT illustrated labels (emailed March 24)
-- [ ] Add humanrig_posed GT (81K examples) as train-only — never tested with boundary softening
-- [ ] Manually correct 100-200 pseudo-labeled illustrated examples
-- [ ] Implement rectified flow training for back view model (sharper outputs)
-- [ ] Fine-tune back view on 5 demo character pairs (high weight)
-- [ ] Contact Layered Temporal Dataset authors via LinkedIn (both at Meta Reality Labs)
+### Seg Improvement (when ready)
+- Run 22 config ready: boundary softening + re-pseudo-labeled data
+- Resume from run 20 checkpoint (0.6485 test mIoU)
+- Add humanrig_posed GT (81K examples, train-only)
+- Waiting on Dr. Li for GT illustrated labels (emailed March 24)
 
-### Ship Run (after seg >0.65)
+### Ship Run
 - Retrain joints with humanrig_posed GT (diverse poses)
-- Retrain weights with new seg encoder features
-- Inpainting: keep run 6 checkpoint (already converged)
-- ONNX export all 4 → `../strata/src-tauri/models/`
+- Retrain weights with run 20 seg encoder features (fix limb deformation)
+- Export all models to ONNX → `../strata/src-tauri/models/`
 
-## Model 6: Back View Generation
+## Model 6: View Synthesis (replaces Back View Generation)
 
-**Status:** Run 4 best at 0.2152 val/l1. PatchGAN (run 5) failed — GAN destabilized generator at 3K pairs.
+**Status:** Unified view synthesis model. Any 2 source views + target angle → target view RGBA. Run 1: 0.2139 val/l1 on multi-angle task.
 
+### Back View History
 | Run | val/l1 | Pairs | Notes |
 |-----|--------|-------|-------|
-| 1 | 0.2982 | 1,085 | First model, clear overfitting |
-| 2 | 0.2354 | 1,085 | Same data, longer training |
-| 3 | 0.2408 | 1,805 | Fixed unrigged merge, early stopped 127/200 |
-| **4** | **0.2152** | **3,049** | **+1,244 new FBX pairs. 10.6% improvement. Best result.** |
-| 5 | 0.2276 | 3,049 | PatchGAN (gan_weight=0.01). GAN hurt — early stopped epoch 32. |
+| 1 | 0.2982 | 1,085 | First back-view-only model |
+| 4 | 0.2152 | 3,049 | Best back-view-only result |
+| 5 | 0.2276 | 3,049 | PatchGAN failed |
+| 6 | 0.2090 | 3,054 | +5 demo pairs at high weight |
+| 7 | 0.2298 | 3,091 | Rectified flow — failed (overfitting) |
 
-**Data:** `scripts/render_back_view_data.py` renders front+3/4+back triplets from 3D characters.
-**Architecture:** U-Net (29M params), input [B,8,512,512], output [B,4,512,512].
-**Loss:** L1 (alpha-weighted) + perceptual (VGG) + palette consistency. GAN optional but didn't help at this data scale.
-**PatchGAN finding:** Discriminator overfits quickly at 3K pairs and destabilizes the generator. GAN needs more data (5K+) or a different approach (one-step rectified flow).
-**Next steps:** More training pairs (render from new Meshy characters), or explore one-step rectified flow (same architecture, different training objective).
+### View Synthesis (new unified model)
+| Run | val/l1 | Triplets | Notes |
+|-----|--------|----------|-------|
+| **1** | **0.2139** | **14,505** | **From scratch. 2,640 illustrated pairs (171 chars from Gemini turnaround sheets) + 3,049 3D pairs. Trained 200 epochs.** |
+
+**Architecture:** Same U-Net (29M params), input [B,9,512,512] = src_A (4ch) + src_B (4ch) + angle_map (1ch), output [B,4,512,512].
+**Angle encoding:** 0.0=front, 0.2=front_3/4, 0.4=side, 0.6=back_3/4, 0.8=back. Broadcast to [1,H,W] channel.
+**Data source:** Gemini turnaround sheets — 5 consistent views per character, all angle combinations as training pairs. `scripts/split_turnaround.py` auto-splits sheets. 150 prompts ready (TS-001 to TS-150).
+**Known issue:** Feet render as front-facing (toes instead of heels). Model doesn't understand 3D rotation — maps pixels spatially.
+**ONNX contract change:** Input 8ch → 9ch. Strata Rust code needs update to pass target angle.
+**Next:** More turnaround sheets (120/day possible), fix foot rendering with better training data, retrain weights model.
 
 ## Quality Filter
 
