@@ -1,150 +1,8 @@
 # Gemini Character Generation Prompts
 
 
-## Batch 18 — Diverse Professions, Fantasy Archetypes & Cultural Characters (2101-2300)
-
-2232. Full-body digital painting of a samurai in full Sengoku-period armor — a kabuto helmet with elaborate maedate crest, menpo face guard, dō chest armor, kusazuri hip plates, suneate shin guards, and a katana drawn. The character is masculine-presenting, imposing, with East Asian skin visible only at the eyes. Standing in a battōjutsu stance. Historical Japanese painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2233. Full-body watercolor of a florist arranging a bouquet in a work apron over a linen dress, clogs, and pruning shears in a back pocket, surrounded by loose flowers. The character is feminine-presenting, creative, with light freckled skin and copper hair in a messy bun. Standing arranging. Soft botanical watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2234. Full-body flat vector illustration of a competitive esports player in a team jersey, headset around the neck, gaming gloves, joggers, and sneakers, holding a controller. The character is masculine-presenting, intense, with East Asian skin and bleached white hair. Standing mid-celebration. Esports broadcast vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2235. Full-body anime illustration of a Neon Genesis Evangelion-style pilot in a plugsuit — a form-fitting interface suit with neural connectors at the wrists and temples, and color-coded segments. The character is androgynous, introspective, with East Asian skin and short blue hair. Standing looking down. Gainax mecha anime style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2236. Full-body gouache painting of a traditional Flamenco dancer in a fitted red dress with a ruffled train, a fringed manton shawl, high-heeled dance shoes, a rose in the hair, and castanets on the fingers. The character is feminine-presenting, passionate, with warm Spanish skin and dark hair pulled tight. Standing in a dramatic flamenca pose. Fiery Andalusian gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2237. Full-body digital painting of a halfling rogue in dark leather armor, a hooded cloak, soft-soled boots, and a belt loaded with lockpicks, daggers, and smoke bombs, with a mischievous grin. The character is masculine-presenting, short and stout, with ruddy light brown skin, curly brown hair, and large bare hairy feet. Standing sneaking. Classic fantasy painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2238. Full-body ink sketch of a professional dog groomer in a colorful smock over casual clothes, slip-resistant shoes, and holding electric clippers and a slicker brush. The character is feminine-presenting, patient, with brown Latina skin and a messy ponytail with dog hair on it. Standing grooming. Pet care ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2239. Full-body cel-shaded illustration of a Castlevania-style vampire hunter in a long leather coat, a ruffled cravat, high boots, and leather gauntlets, wielding a whip that crackles with holy energy. The character is masculine-presenting, brooding, with pale Eastern European skin and long dark hair. Standing with the whip coiled. Konami gothic action art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2240. Full-body watercolor of a traditional Chinese lion dance performer partially inside a lion costume — the legs visible in silk pants and flexible shoes, holding the lion head above with both arms. The character is masculine-presenting, athletic, with East Asian skin. Standing performing the lion dance. Festive Lunar New Year watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2241. Full-body digital painting of a quantum physicist in smart casual (a blazer over a band T-shirt, dark jeans, Chelsea boots) with chalk dust on the hands and wild equations implied. The character is feminine-presenting, brilliant, with dark brown Indian skin and thick black hair with a white streak. Standing with a thoughtful hand gesture. Academic portrait painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2242. Full-body flat vector illustration of a theme park mascot performer partially in costume — the oversized cartoon character head tucked under one arm, revealing the sweaty performer underneath in the body suit. The character is androgynous, exhausted, with light skin and matted hair. Standing on break. Behind-the-scenes vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2243. Full-body anime illustration of a Black Clover-style magic knight in a squad robe over a tunic, armored boots, and a grimoire floating open beside them, with clover-shaped magical energy. The character is masculine-presenting, scrappy, with tan skin and wild ash-grey hair. Standing channeling magic from the grimoire. Tabata manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2244. Full-body gouache painting of a traditional Cossack dancer in a cherkeska coat with cartridge pockets, wide sharovary pants, soft leather boots, and a papakha fur hat, captured mid-prisyadka (squat kick dance). The character is masculine-presenting, explosive, with light Eastern Slavic skin and a shaved head. Standing in a squat kick. Dynamic folk dance gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2245. Full-body digital painting of a 1970s disco dancer in a sequined jumpsuit with a plunging neckline, platform shoes, a gold chain, and an afro pick in the hair. The character is masculine-presenting, groovy, with dark brown African American skin and a magnificent afro. Standing in a Saturday Night Fever pose. Retro disco painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2246. Full-body ink illustration of a volcano researcher in heat-resistant silver proximity suit pants, heavy boots, a reflective jacket open to show a T-shirt, a hard hat with a face shield flipped up, and a gas detector. The character is feminine-presenting, intrepid, with Southeast Asian skin and dark hair in a practical braid. Standing near implied lava. Geothermal field ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2247. Full-body cel-shaded illustration of a Cuphead-style character — a 1930s rubber hose animation figure with a cup for a head, simple gloves, shorts, and shoes, in a finger-gun pose. The character is androgynous, classic cartoon, with a white cup head with a straw and simple black limbs. Standing shooting finger guns. MDHR 1930s cartoon style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2248. Full-body watercolor of a traditional Bhutanese archer in a gho robe (knee-length, belted), knee-high socks, leather shoes, and a longbow, in an archery stance. The character is masculine-presenting, steady, with East Asian Bhutanese skin. Standing drawing the bow. Himalayan archery watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2249. Full-body digital painting of a futuristic courier in a sleek delivery bodysuit with speed-stripe reflectives, mag-boots, a heads-up display visor, and a climate-controlled parcel container on the back. The character is androgynous, swift, with mixed-race brown skin and close-cropped hair. Standing dashing forward. Sci-fi delivery service art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2250. Full-body anime illustration of a Vinland Saga-style Viking warrior in a simple tunic, leather vest, fur-trimmed arm wraps, rough-sewn trousers, and leather boots, with a hand axe and a round wooden shield. The character is masculine-presenting, battle-scarred, with pale Nordic skin, blue eyes, and long dirty blonde hair. Standing weary but resolute. Makoto Yukimura manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2251. Full-body digital painting of a Muay Thai fighter in traditional Muay Thai shorts, hand wraps extending to mid-forearm, a mongkol headband, an armband, and bare feet with ankle wraps. The character is masculine-presenting, lean and scarred, with warm Thai skin and a shaved head. Standing in a fighting stance with knee raised. Combat sports painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2252. Full-body watercolor of a vintage newspaper boy in a flat cap, suspenders over a loose shirt, knickerbockers, wool socks, and scuffed shoes, waving a newspaper overhead. The character is masculine-presenting, scrappy, with light Irish skin and freckles. Standing shouting headlines. Sepia-tinted newsie watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2253. Full-body anime illustration of a Dragon Ball-style fighter in a torn orange gi, a blue undershirt, blue wristbands, blue boots, and a spiky golden super-powered aura around the body. The character is masculine-presenting, impossibly muscular, with light skin and gravity-defying spiky golden hair. Standing powering up. Toriyama manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2254. Full-body flat vector illustration of a dental hygienist in light blue scrubs, a face mask pulled down to the chin, nitrile gloves, supportive shoes, and a mirror tool in hand. The character is feminine-presenting, friendly, with South Asian brown skin and dark hair in a neat bun. Standing ready to examine. Medical profession vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2255. Full-body cel-shaded illustration of a Bayonetta-style witch — in a skin-tight suit made of enchanted hair, guns strapped to the heels of stiletto boots, butterfly-wing glasses, and a confident strut. The character is feminine-presenting, impossibly tall and stylish, with light skin and a beehive hairdo. Standing in a provocative action pose. PlatinumGames character art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2256. Full-body gouache painting of a traditional Berber nomad in an indigo blue tagelmust head wrap and veil, layered desert robes, leather sandals, and a ceremonial silver sword at the belt. The character is masculine-presenting, desert-weathered, with North African Tuareg skin and indigo-stained cheeks. Standing in the desert wind. Saharan gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2257. Full-body ink sketch of a concert roadie in a black crew T-shirt, cargo shorts, work boots, a utility belt of gaffer tape and cable ties, and a walkie-talkie, carrying a guitar case. The character is androgynous, strong, with dark brown skin and a bandana tied on the head. Standing hauling gear. Backstage crew ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2258. Full-body digital painting of a wood elf ranger in green and brown leather armor, a long cloak with a leaf clasp, soft moccasin boots, a longbow, and a quiver of arrows, with pointed ears and face paint. The character is feminine-presenting, lithe, with olive-tinted elven skin and long auburn hair with braids. Standing nocking an arrow. Tolkien-inspired fantasy painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2259. Full-body watercolor of a traditional Maori warrior in a piupiu flax skirt, bare-chested with full tā moko facial tattoo, a mere pounamu (jade club) in hand, and bare feet. The character is masculine-presenting, powerful, with warm Polynesian brown skin and traditional tattoos. Standing in a haka stance. Powerful Pacific watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2260. Full-body anime illustration of a Mob Psycho 100-style esper — a plain-looking middle school student in a school uniform (gakuran, slacks, indoor shoes), with psychic energy distorting the air around them. The character is masculine-presenting, unremarkable, with East Asian skin and a bowl cut. Standing with energy building. ONE manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2261. Full-body flat vector illustration of a park ranger in a campaign hat, a khaki uniform shirt with badge, green pants, hiking boots, binoculars, and a walking stick. The character is feminine-presenting, outdoorsy, with brown Native American skin and a friendly expression. Standing on a trail. National park vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2262. Full-body cel-shaded illustration of a Persona-style student — a Japanese high schooler in a school uniform (blazer, plaid pants, loafers) with a summoning card in hand and a mystical tarot-card aura behind them. The character is feminine-presenting, composed, with East Asian skin and a red headband in short dark hair. Standing crushing the card. Atlus JRPG character art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2263. Full-body digital painting of a Georgian-era gentleman duelist in a long frock coat, embroidered waistcoat, breeches, silk stockings, buckle shoes, a powdered wig, and a rapier held en garde. The character is masculine-presenting, haughty, with dark brown skin and a beauty mark. Standing in a fencing stance. Historical portrait painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2264. Full-body gouache painting of a traditional Balinese Legong dancer in an elaborate gold-and-brocade costume, a gilded crown headdress, and intricate makeup, with frangipani flowers behind the ears and extremely precise hand positions. The character is feminine-presenting, otherworldly, with warm Southeast Asian skin and large expressive eyes. Standing in a Legong pose. Ornate Balinese gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2265. Full-body ink illustration of an urban skateboarder in a graphic tee, an unbuttoned flannel, baggy jeans with scuffed knees, worn Vans, and a beanie, carrying a beat-up skateboard. The character is masculine-presenting, lanky, with mixed-race light brown skin and shaggy hair. Standing with the board at the side. Street culture ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2266. Full-body watercolor of a traditional Swiss alpine cheesemaker in a linen shirt, leather suspenders, wool trousers, heavy boots, and a felt hat, holding a large wheel of cheese. The character is masculine-presenting, stout, with ruddy Alpine European skin and a thick blonde mustache. Standing in a cheese cave. Alpine dairy watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2267. Full-body digital painting of a Xenoblade-style blade — an ethereal humanoid weapon-spirit in crystalline armor with glowing ether lines, no shoes (floating slightly), a massive energy sword, and a core crystal on the chest. The character is androgynous, otherworldly, with luminous blue-white skin and crystalline hair. Standing hovering. Monolith Soft JRPG character art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2268. Full-body anime illustration of a Haikyuu-style volleyball player in a team jersey, shorts, volleyball shoes, and knee pads, mid-jump with arm pulled back for a spike. The character is masculine-presenting, explosive, with East Asian skin and wild orange hair. Standing in a spike approach. Furudate sports manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2269. Full-body flat vector illustration of a veterinarian in a colorful animal-print scrub top, scrub pants, comfortable clogs, a stethoscope, and an otoscope in the pocket. The character is feminine-presenting, compassionate, with light skin, glasses, and short practical hair. Standing ready to treat. Animal care vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2270. Full-body cel-shaded illustration of a NieR: Automata-style android in a gothic-lolita-inspired combat outfit — a black dress with a white collar, thigh-high boots, long gloves, a blindfold visor, and a floating sword behind. The character is feminine-presenting, elegant yet deadly, with pale synthetic skin and white bobbed hair. Standing in a ready stance. PlatinumGames action RPG art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2271. Full-body digital painting of a traditional Georgian (Caucasus) dancer in a chokha coat with ornamental cartridge pockets, a kinzhal dagger at the belt, soft leather boots, and a papakha hat. The character is masculine-presenting, proud, with olive Caucasian skin and a dark mustache. Standing in a lezginka dance pose on tiptoes. Mountain dance painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2272. Full-body watercolor of a deep-sea pearl farmer in a lightweight wetsuit, flippers held in one hand, a mesh collecting bag, and a dive knife strapped to the calf. The character is feminine-presenting, sun-kissed, with dark Micronesian skin and salt-encrusted curly hair. Standing at the water's edge. Tropical lagoon watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2273. Full-body gouache painting of a traditional Tibetan monk in maroon and saffron robes wrapped in the traditional manner, with shaved head, prayer beads around one wrist, and simple leather sandals. The character is masculine-presenting, peaceful, with warm Tibetan skin and serene eyes. Standing in a walking meditation. Himalayan monastic gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2274. Full-body anime illustration of a Made in Abyss-style cave raider — a young adventurer in a pith helmet, a rucksack, a short-sleeved shirt, shorts, sturdy boots, and a relic-detecting monocle, carrying a pickaxe. The character is androgynous, intrepid, with light skin and messy light brown hair. Standing peering into a dark chasm. Tsukushi manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2275. Full-body ink sketch of an auctioneer in a pinstripe suit, a crisp shirt, a bold tie, polished oxfords, and a gavel in hand, mouth open mid-chant. The character is masculine-presenting, animated, with light skin and a distinguished grey temples. Standing calling bids. Sharp auction house ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2276. Full-body digital painting of an Aztec-inspired fantasy eagle warrior in a full eagle-feathered headdress, a quilted cotton ichcahuipilli armor, sandals with shin guards, and a macuahuitl (obsidian-edged club). The character is masculine-presenting, fierce, with brown Mesoamerican skin and warrior face paint. Standing in a battle stance. Ancient fantasy painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2277. Full-body flat vector illustration of a school crossing guard in a reflective yellow-green vest, dark pants, sturdy shoes, a whistle, and a handheld stop sign, escorting implied children. The character is feminine-presenting, watchful, with dark brown African American skin and reading glasses. Standing directing traffic. Community safety vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2278. Full-body cel-shaded illustration of a Stardew Valley-style character in overalls over a gingham shirt, rain boots, and a wide-brimmed hat, holding a fishing rod with a fish dangling. The character is androgynous, relaxed, with warm brown skin and a satisfied smile. Standing with the catch. Cozy pixel-adjacent farm life. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2279. Full-body watercolor of a traditional Venetian glass bead maker (perler) in a simple apron over a linen shirt, rolled sleeves, and sturdy shoes, holding a glass rod over an implied flame. The character is feminine-presenting, precise, with olive Italian skin and grey hair pinned up. Standing at the lampwork bench. Murano workshop watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2280. Full-body anime illustration of a Berserk-style dark warrior in a massive suit of berserker armor — black iron plates, a wolf-shaped helm, a tattered cape, and an impossibly large dragonslayer greatsword over one shoulder. The character is masculine-presenting, towering, with one visible scarred eye and white streaked hair under the helm. Standing mid-stride. Miura manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2281. Full-body digital painting of a professional stunt performer in a fire-resistant suit underneath civilian clothes (jeans, a jacket), with hidden padding at the knees and elbows, ready for an action sequence. The character is feminine-presenting, athletic, with East Asian skin and a ponytail. Standing in a pre-fall crouch. Action movie behind-the-scenes art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2282. Full-body gouache painting of a traditional Ghanaian kente weaver in a simple cloth wrapped at the waist, bare-chested, working at an implied narrow-strip loom, with colorful kente cloth visible. The character is masculine-presenting, focused, with dark West African skin and short grey hair. Standing weaving. Vibrant Ghanaian craft gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2283. Full-body flat vector illustration of an optician in a trendy outfit (slim pants, a button-up, clean sneakers) with a measuring PD ruler and a tray of designer eyeglass frames. The character is androgynous, fashion-forward, with light skin and multiple piercings. Standing presenting frames. Optical retail vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2284. Full-body ink illustration of a competitive archer in a form-fitting archery jersey, fitted pants, flat-soled shoes, a chest guard, a finger tab, and a modern recurve bow at full draw. The character is feminine-presenting, calm, with South Korean skin and hair pulled back in a ponytail. Standing at full draw. Olympic sport ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2285. Full-body cel-shaded illustration of a Kingdom Hearts-style keyblade wielder in an outfit mixing zippers, belts, and oversized shoes with fantasy elements, wielding a giant key-shaped weapon. The character is masculine-presenting, bright-eyed, with light skin and spiky brown hair. Standing swinging the keyblade. Square Enix/Disney crossover art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2286. Full-body watercolor of a traditional Inuit throat singer in a decorated amautik parka with geometric beadwork, sealskin kamik boots, and a fur-trimmed hood pushed back. The character is feminine-presenting, joyful, with indigenous Inuit skin and long black hair. Standing singing with hands clasped. Arctic cultural watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2287. Full-body digital painting of a plague era apothecary in a long leather coat, high leather boots, a wide-brimmed hat, a satchel overflowing with dried herbs, and glass vials on a bandolier. The character is androgynous, eccentric, with olive Mediterranean skin and wild curly hair. Standing mixing a potion. Dark Renaissance apothecary art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2288. Full-body anime illustration of a Spy x Family-style child assassin prodigy in a prim school uniform (blazer, skirt, knee socks, Mary Janes), with hidden weapons in the school bag and an innocent smile that doesn't reach the eyes. The character is feminine-presenting, deceptively sweet, with light skin and long dark hair with a red hairband. Standing looking up sweetly. Tatsuya Endo manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2289. Full-body gouache painting of a traditional Sardinian shepherd in a wool vest, cotton shirt, moleskin trousers, leather leggings, and hobnail boots, with a crook and a sheepskin draped over one shoulder. The character is masculine-presenting, sun-weathered, with dark Mediterranean skin and a thick grey beard. Standing on rocky terrain. Rustic pastoral gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2290. Full-body flat vector illustration of a sign painter in paint-splattered overalls, a baseball cap turned backwards, sneakers, and holding a mahl stick and a lettering brush. The character is masculine-presenting, meticulous, with brown Filipino skin and paint on the hands. Standing lettering. Traditional signage vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2291. Full-body digital painting of a dragonborn paladin in gleaming silver full plate with a sun emblem on the breastplate, a flowing white cloak, armored boots, a warhammer, and a shield with a holy symbol. The character is androgynous, draconic, with gold-scaled skin, a reptilian face, and small horns. Standing radiating divine light. D&D fantasy painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2292. Full-body watercolor of a traditional Cajun accordion player at a fais do-do in a western shirt, jeans, cowboy boots, and a straw cowboy hat, squeezing a single-row Cajun accordion. The character is masculine-presenting, animated, with tanned Creole skin and a wide grin. Standing playing with energy. Louisiana bayou watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2293. Full-body cel-shaded illustration of a Hollow Knight-style bug mage — a tall, thin insect sorcerer in flowing moth-wing robes, with large compound eyes, delicate antennae, and a staff topped with a glowing dream nail. The character is androgynous, ethereal, with pale moth-white fur and iridescent wing fragments. Standing channeling moth magic. Indie metroidvania art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2294. Full-body ink sketch of a rickshaw puller in a simple vest, loose cotton pants rolled up, bare feet, and a towel around the neck, gripping the handles of an implied rickshaw. The character is masculine-presenting, wiry and strong, with dark South Asian skin and sweat on the brow. Standing pulling. Documentary-style ink. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2295. Full-body anime illustration of a JoJo's Bizarre Adventure-style Stand user in an absurdly flamboyant outfit — an open cropped jacket with chains, impossibly tight pants, platform boots, and dramatic pointed shoulder pads, striking a JoJo pose. The character is masculine-presenting, impossibly proportioned, with olive Italian skin and elaborately styled purple hair. Standing in a menacing pose. Araki manga style. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2296. Full-body digital painting of a Mars colonist in a lightweight habitat suit — a jumpsuit with life-support sensors, magnetic boots, a helmet clipped to the belt, and a dust mask at the neck, with reddish Martian dust on the lower legs. The character is feminine-presenting, pioneering, with dark brown skin and close-cropped hair. Standing on red soil. Hard sci-fi Mars art. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2297. Full-body gouache painting of a traditional Tuvan horseback archer in a deel robe and leather armor, leather boots with upturned toes, a fur-trimmed cap, and a compact composite bow, riding posture but shown dismounted. The character is masculine-presenting, wind-hardened, with Central Asian skin and narrow eyes. Standing with the bow at rest. Steppe warfare gouache. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2298. Full-body flat vector illustration of a museum curator in a turtleneck, tailored trousers, loafers, and a lanyard, carefully holding a small artifact with cotton gloves. The character is feminine-presenting, scholarly, with dark brown African skin and natural hair styled in a fade. Standing examining the artifact. Cultural institution vector. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2299. Full-body watercolor of a traditional Andean panpipe player in a poncho with geometric patterns, wool pants, leather sandals, and a chullo hat with ear flaps, playing a zampoña (panpipe). The character is masculine-presenting, serene, with indigenous Quechua brown skin and weathered hands. Standing playing in mountain air. High altitude watercolor. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
-2300. Full-body digital painting of a time traveler caught between eras — wearing a Victorian waistcoat over a futuristic undersuit, one arm with a clockwork bracer and the other with a holographic display, mismatched boots (one leather, one mag-lock), and a temporal distortion effect around the edges. The character is androgynous, bewildered, with medium brown skin and wild hair stuck between two hairstyles. Standing disoriented between time periods. Paradoxical mixed-era painting. Single character only, centered in the frame, full body visible. Solid plain white background. No text, no watermark, no UI elements.
-
----
-
 ## Turnaround Sheet Prompts (TS-001 to TS-050)
-
+<!-- 
 Multi-view character turnaround sheets for back view model training. Each generates a single image with 5 consistent views of the same character in a row. Cut into individual images for training pairs.
 
 ### Gouache / Children's Book Style
@@ -205,8 +63,8 @@ TS-023. Character turnaround sheet of a roller derby player in a tank top, short
 
 TS-024. Character turnaround sheet of a tiny fairy with butterfly wings, a flower petal dress, bare feet, and glowing dust trailing from the wings. Whimsical flat vector style with soft pastels. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
-TS-025. Character turnaround sheet of a luchador wrestler in a colorful mask, cape, wrestling trunks, boots, and championship belt. Bold graphic cartoon style with vibrant Mexican colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-025. Character turnaround sheet of a luchador wrestler in a colorful mask, cape, wrestling trunks, boots, and championship belt. Bold graphic cartoon style with vibrant Mexican colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 ### Ink / Sketch Style
 
 TS-026. Character turnaround sheet of a jazz musician in a fedora, loose suit, open collar shirt, and holding a saxophone. Expressive ink sketch style with splatter textures and loose confident lines. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
@@ -261,8 +119,212 @@ TS-046. Character turnaround sheet of a samurai in full armor rendered in tradit
 
 TS-047. Character turnaround sheet of a disco dancer in a sequined jumpsuit, platform shoes, an afro, and oversized sunglasses. 1970s retro poster art style with warm oranges, golds, and browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
-TS-048. Character turnaround sheet of a plague doctor in a long black leather coat, beaked mask, wide-brimmed hat, gloves, and a walking stick. Dark atmospheric oil painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+TS-048. Character turnaround sheet of a plague doctor in a long black leather coat, beaked mask, wide-brimmed hat, gloves, and a walking stick. Dark atmospheric oil painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
 
-TS-049. Character turnaround sheet of a young witch's apprentice in mismatched patched robes, too-big boots, a crooked hat, round glasses, and clutching a spellbook. Cozy storybook gouache with autumn colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+<!-- TS-049. Character turnaround sheet of a young witch's apprentice in mismatched patched robes, too-big boots, a crooked hat, round glasses, and clutching a spellbook. Cozy storybook gouache with autumn colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
-TS-050. Character turnaround sheet of an African warrior princess in beaded leather armor, a spear, a round shield with tribal patterns, gold arm bands, and an elaborate braided hairstyle. Rich digital painting with warm earth tones and gold accents. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+TS-050. Character turnaround sheet of an African warrior princess in beaded leather armor, a spear, a round shield with tribal patterns, gold arm bands, and an elaborate braided hairstyle. Rich digital painting with warm earth tones and gold accents. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+
+## Turnaround Sheet Prompts — Batch 2 (TS-051 to TS-100)
+
+TS-051. Character turnaround sheet of a Viking shieldmaiden in fur-trimmed leather armor, a round wooden shield, a hand axe, braided red hair, and face paint. Gouache illustration with earthy Nordic tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-052. Character turnaround sheet of a 1950s greaser in a leather jacket, white T-shirt, rolled-up jeans, motorcycle boots, and a slicked-back pompadour. Retro Americana watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-053. Character turnaround sheet of a geisha in a formal furisode kimono with floral pattern, obi sash, wooden geta sandals, elaborate hair with kanzashi pins, and white face makeup. Ukiyo-e inspired digital painting. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-054. Character turnaround sheet of a robot butler with a polished chrome body, bow tie painted on the chest, white gloves, a serving tray in one hand, and a monocle display on one eye. Retro-futuristic cartoon style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-055. Character turnaround sheet of a Maasai warrior in a red shuka cloth wrap, beaded jewelry on neck and wrists, leather sandals, and holding a long spear. Rich gouache with warm African earth tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-056. Character turnaround sheet of a punk rock girl with a mohawk, studded leather jacket, torn fishnet stockings, combat boots, and an electric guitar slung on the back. Bold ink and marker style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-057. Character turnaround sheet of a garden gnome with a tall red pointy hat, white beard, green tunic, brown belt, and tiny boots, holding a fishing rod. Cute children's book gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-058. Character turnaround sheet of a sci-fi bounty hunter in a battered trench coat over body armor, a helmet with a T-shaped visor, jetpack, and twin blaster pistols at the hips. Concept art style with weathered metallics. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-059. Character turnaround sheet of a traditional Korean hanbok lady in a jeogori top and chima skirt with flowing layers, silk shoes, and a decorative norigae pendant. Elegant watercolor with soft pinks and greens. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-060. Character turnaround sheet of a scarecrow come to life with a burlap sack head, stitched smile, patched overalls, a plaid shirt, straw poking out at the wrists and neck, and a floppy hat. Autumn gouache illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-061. Character turnaround sheet of a cybernetic police officer in a sleek black uniform with glowing blue accents, a visor helmet, armored forearms, a holstered energy pistol, and magnetic boots. Sci-fi anime style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-062. Character turnaround sheet of a Polynesian navigator in a tapa cloth wrap, shell necklace, tribal tattoos on arms and chest, bare feet, and holding a carved paddle. Warm tropical watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-063. Character turnaround sheet of a teddy bear doctor in a tiny white coat, stethoscope, head mirror, and holding a clipboard. Soft children's book gouache with pastel hospital colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-064. Character turnaround sheet of a medieval plague survivor in tattered robes, a wooden walking staff, bandaged hands, a hooded cloak, and a lantern hanging from the belt. Dark atmospheric oil painting. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-065. Character turnaround sheet of an Indian classical dancer in a Bharatanatyam costume with a pleated fan skirt, gold temple jewelry, ankle bells, bare feet, and elaborate hair with flowers. Vibrant gouache with rich golds and reds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-066. Character turnaround sheet of a mushroom person with a large spotted red cap for a head, a short round body, stubby arms and legs, wearing a tiny vest and leaf shoes. Whimsical watercolor with forest greens and reds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-067. Character turnaround sheet of a WW2 pilot in a leather flight jacket, aviator goggles pushed up, flight pants, boots, a white scarf, and a Mae West life vest. Vintage illustration style with muted military tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-068. Character turnaround sheet of a vampire count in a high-collared cape, formal evening suit, red cravat, slicked-back hair, pale skin, and pointed ears. Gothic digital painting with deep reds and blacks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-069. Character turnaround sheet of a frog prince in a miniature royal outfit — a tiny crown, velvet cape, ruffled collar, and buckled shoes — standing upright on two legs. Storybook gouache with emerald greens and golds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-070. Character turnaround sheet of a female boxer in a sports bra, boxing shorts, high-top boxing boots, wrapped hands, and a mouthguard hanging around the neck. Dynamic sports illustration with bold colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-071. Character turnaround sheet of a goblin merchant with green skin, large pointed ears, a ragged vest covered in trinkets, baggy pants, curled-toe shoes, and a bulging sack of goods. Fantasy RPG watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-072. Character turnaround sheet of a 1920s detective in a trench coat, fedora, dress shirt and tie, suspenders, and oxford shoes, holding a magnifying glass. Noir-style ink illustration with sepia tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-073. Character turnaround sheet of a centaur archer with a human upper body in leather armor and a horse lower body, carrying a bow and quiver. Fantasy concept art with warm earthy browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-074. Character turnaround sheet of a sushi chef in a white chef's coat, hachimaki headband, apron, and slip-resistant shoes, holding a long sushi knife. Clean anime style with bright kitchen whites. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-075. Character turnaround sheet of a snow fairy with translucent icy wings, a dress made of snowflakes, bare feet on tiptoe, white hair, and a trail of frost. Delicate watercolor with whites, silvers, and pale blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-076. Character turnaround sheet of an Egyptian pharaoh in full regalia — a nemes headdress with uraeus, a broad usekh collar, a shendyt kilt, gold sandals, and a crook and flail. Rich gouache with gold and lapis lazuli blue. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-077. Character turnaround sheet of a roller skating diner waitress in a pink uniform dress, white apron, roller skates, a cap, and balancing a tray of milkshakes. 1950s retro cartoon style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-078. Character turnaround sheet of a minotaur gladiator with a bull head, massive muscular body, leather gladiator armor, arm wraps, sandals, and a two-handed war hammer. Dark fantasy concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-079. Character turnaround sheet of a kindergarten teacher in a colorful cardigan, comfortable pants, sneakers, and a lanyard with craft scissors, carrying a picture book. Warm friendly gouache illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-080. Character turnaround sheet of a crystal golem with a body made of translucent purple amethyst chunks, glowing energy veins between the crystals, and no clothing. Fantasy digital painting with jewel tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-081. Character turnaround sheet of a Scottish Highlander in a great kilt, ghillie shirt, knee-high socks, brogues, a sporran pouch, and a claymore sword on the back. Historical watercolor with deep greens and tartans. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-082. Character turnaround sheet of a baby dragon hatching from an egg, with tiny wet wings, stubby legs, a curled tail, big curious eyes, and eggshell pieces still on the head. Adorable children's book gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-083. Character turnaround sheet of a DJ in oversized headphones, a graphic hoodie, track pants, high-top sneakers, and vinyl records tucked under one arm. Urban flat vector style with neon accents. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-084. Character turnaround sheet of an orc shaman with green skin, bone piercings, a feathered headdress, a leather loincloth, bare feet, tribal tattoos, and a gnarled wooden staff with a skull on top. Dark fantasy gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-085. Character turnaround sheet of a figure skater in a sparkly competition leotard with a flowing skirt, white ice skates, hair in a tight ponytail, and a small tiara. Elegant watercolor with icy silvers and blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-086. Character turnaround sheet of a cowboy in a wide-brimmed hat, duster coat, bandana, chaps over jeans, spurred boots, a holstered revolver, and a lasso at the hip. Western oil painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-087. Character turnaround sheet of a fox tavern keeper standing upright, wearing a leather vest, rolled-up sleeves, an apron, and boots, holding a foaming mug. Cozy fantasy watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-088. Character turnaround sheet of a riot police officer in full tactical gear — helmet with face shield, body armor, shin guards, combat boots, and holding a riot shield. Gritty concept art with dark blues and grays. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-089. Character turnaround sheet of a mermaid with a human upper body, seashell top, long flowing hair with starfish, a scaled fish tail instead of legs, and coral jewelry. Fantasy watercolor with ocean teals and golds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-090. Character turnaround sheet of a chimney sweep child in Victorian-era soot-covered clothes, a flat cap, suspenders, bare feet, and carrying a chimney brush. Dickensian ink and watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-091. Character turnaround sheet of a battle mage in half-plate armor with magical runes, a spell tome chained to the belt, a crystal-topped staff, armored boots, and glowing eyes. JRPG fantasy anime style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-092. Character turnaround sheet of a Brazilian carnival dancer in an elaborate feathered headdress, a beaded bikini costume, platform sandals, and flowing feather tail. Vibrant gouache with tropical carnival colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-093. Character turnaround sheet of a clockwork automaton in a top hat, with a wind-up key on the back, visible gears in the chest cavity, articulated brass limbs, and glass eyes. Steampunk digital painting. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-094. Character turnaround sheet of an Inuit hunter in a fur-lined parka, sealskin pants, mukluks, and mittens, carrying a harpoon and with a husky companion at the feet. Arctic watercolor with whites and icy blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-095. Character turnaround sheet of a jellyfish person with a translucent bell-shaped head, flowing tentacle hair, a simple tunic, and floating slightly above the ground. Ethereal watercolor with bioluminescent blues and pinks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-096. Character turnaround sheet of a Renaissance painter in a paint-stained smock, beret, puffy sleeves, hose, and buckled shoes, holding a palette and brushes. Classical oil painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-097. Character turnaround sheet of an armored war elephant with decorative plates, a howdah seat on the back, tusks capped with metal, and a mahout rider on the neck. Historical concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-098. Character turnaround sheet of a competitive gamer girl in an oversized team jersey, gaming headset, fingerless gloves, leggings, and chunky sneakers, holding a game controller. Modern anime cel-shaded style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-099. Character turnaround sheet of a sand elemental — a humanoid figure made of swirling golden sand, with glowing amber eyes, sand particles trailing from the arms, and a vaguely armored sandy form. Fantasy concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-100. Character turnaround sheet of a mail carrier in a postal uniform with shorts, knee-high socks, comfortable walking shoes, a mail satchel, and a sun visor, holding a bundle of letters. Cheerful flat vector style with bright postal colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+## Turnaround Sheet Prompts — Batch 3 (TS-101 to TS-150)
+
+TS-101. Character turnaround sheet of a medieval jester in a half-and-half color outfit (red and yellow), a three-pointed jingling hat, curled-toe shoes, and holding a marotte scepter with a small head on top. Playful gouache with bright primary colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-102. Character turnaround sheet of a Valkyrie in winged Norse armor, a flowing war skirt, feathered helmet, shield on the back, and a glowing spear. Epic fantasy digital painting with golds and steel blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-103. Character turnaround sheet of a panda monk in a saffron robe, rope sandals, prayer beads, and holding a bamboo staff, standing upright on two legs. Cute gouache with zen-inspired simplicity. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-104. Character turnaround sheet of a deep space engineer in an orange EVA hardsuit, magnetic boots, utility belt with plasma tools, a helmet with HUD display tucked under one arm. Hard sci-fi concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-105. Character turnaround sheet of a flamenco guitarist in a fitted black suit, a wide-brimmed cordovan hat, polished shoes, and cradling a classical guitar. Warm Spanish watercolor with reds and blacks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-106. Character turnaround sheet of a tiny cactus person with a round green body, flower blooming on the head, stubby arms with tiny spines, a cheerful face, and terracotta pot shoes. Cute flat vector style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-107. Character turnaround sheet of a Roman centurion in a lorica segmentata, red military cloak, crested galea helmet, caligae sandals, gladius sword, and a rectangular scutum shield. Historical gouache with imperial reds and bronzes. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-108. Character turnaround sheet of a ghost bride in a tattered white wedding dress, a veil floating in an unseen wind, bare feet hovering above the ground, and translucent skin. Eerie watercolor with pale blues and grays. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-109. Character turnaround sheet of a street food vendor in an apron, rolled-up sleeves, comfortable pants, sneakers, and a bandana, standing behind an implied cart with tongs in hand. Warm urban gouache illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-110. Character turnaround sheet of an angel warrior in gleaming white and gold armor, massive feathered wings, a glowing sword, bare feet, and a halo of light. Sacred fantasy digital painting. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-111. Character turnaround sheet of a raccoon thief standing upright, wearing a black domino mask (natural markings), a dark cloak, lockpicks on the belt, soft leather boots, and carrying a stolen gem. Fantasy ink and watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-112. Character turnaround sheet of a Thai Muay Thai fighter in traditional Muay Thai shorts, wrapped hands and forearms, a mongkhon headband, no shirt, bare feet, and a muscular build. Dynamic sports illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-113. Character turnaround sheet of a mushroom witch with a large mushroom cap hat, a dress made of layered fungus, bare gnarly feet, carrying a cauldron, and spores floating around. Dark whimsical gouache with forest earth tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-114. Character turnaround sheet of a 1980s aerobics instructor in a neon leotard, leg warmers, high-top sneakers, a sweatband, and holding small dumbbells. Bright retro vector style with hot pinks and electric blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-115. Character turnaround sheet of a stone golem with a body of carved granite blocks, glowing rune carvings, moss growing in the cracks, and heavy fists. Fantasy concept art with gray stone textures. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-116. Character turnaround sheet of a Mongolian eagle hunter in a traditional chapan coat with fur trim, leather boots, a fox fur hat, and a leather gauntlet with a golden eagle perched on the arm. Rich watercolor with steppe browns and golds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-117. Character turnaround sheet of a candy princess with a dress made of layered hard candy, lollipop scepter, cotton candy hair, gumdrop shoes, and a crown of rock candy. Sweet children's book gouache with pastel candy colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-118. Character turnaround sheet of a wilderness survival expert in cargo pants, a utility vest, hiking boots, a shemagh scarf, and carrying a machete and a coil of rope. Rugged outdoor concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-119. Character turnaround sheet of a demon lord in spiked black armor, a tattered cape of dark flame, cloven hooves, curved horns, bat wings folded behind, and a fiery greatsword. Dark fantasy anime style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-120. Character turnaround sheet of a bee keeper in a full white bee suit, mesh veil hat, rubber gloves, boots, and holding a smoker. Cheerful flat illustration with sunny yellows and whites. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-121. Character turnaround sheet of a nautical octopus captain standing upright on tentacles, wearing a navy captain's coat, a bicorn hat, a spyglass, and tentacles holding multiple items at once. Whimsical watercolor with deep sea blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-122. Character turnaround sheet of a Tibetan monk in maroon and saffron robes, simple sandals, a shaved head, prayer beads on the wrist, and a serene expression. Peaceful gouache with warm monastery tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-123. Character turnaround sheet of a neon hacker in a long black coat with LED strip lining, VR goggles, fingerless gloves with circuit board patterns, combat boots, and a holographic display projected from the wrist. Cyberpunk concept art with electric neons. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-124. Character turnaround sheet of a penguin emperor in a miniature royal ermine cape, a tiny gold crown, a scepter, and a dignified waddle stance. Cute children's book gouache with arctic blues and royal purples. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-125. Character turnaround sheet of a desert nomad in flowing white robes, a keffiyeh headscarf, leather sandals, a curved scimitar, and a waterskin. Warm watercolor with sand and ochre tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-126. Character turnaround sheet of a witch doctor with a painted skull face, bone necklace, grass skirt, bare feet, a wooden staff with shrunken heads, and feathered anklets. Dark tribal gouache with earth and bone tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-127. Character turnaround sheet of a space tourist in a casual jumpsuit with a travel agency patch, magnetic shoes, a selfie stick, a fanny pack, and a clear bubble helmet. Fun sci-fi cartoon style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-128. Character turnaround sheet of a forest spirit deer with a deer body, tree antlers with glowing leaves, vines wrapped around the legs, flowers growing from the back, and gentle glowing eyes. Mystical watercolor with enchanted greens. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-129. Character turnaround sheet of a competitive swimmer in a full-body racing swimsuit, swim cap, goggles pushed up, and bare feet, with a muscular athletic build. Clean sports illustration style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-130. Character turnaround sheet of a mad scientist in a stained lab coat, wild frizzy hair, safety goggles, rubber gloves, and holding a bubbling beaker with green liquid. Energetic cartoon style with electric colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-131. Character turnaround sheet of a Persian prince in a jeweled turban, embroidered silk tunic, sash belt with a curved dagger, silk pants, and pointed shoes. Opulent gouache with rich jewel tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-132. Character turnaround sheet of a fire ant soldier standing upright with a segmented insect body, mandibles, six limbs (two as arms, four as legs), wearing tiny armor plates. Sci-fi creature concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-133. Character turnaround sheet of a librarian ghost floating slightly above the ground in a Victorian dress, translucent body, spectral chains of books around the arms, and glowing white eyes. Ethereal digital painting with pale blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-134. Character turnaround sheet of a lumberjack in a red plaid flannel shirt, jeans, heavy work boots, suspenders, and holding a large axe over one shoulder, with a thick beard. Rustic watercolor with forest greens and reds. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-135. Character turnaround sheet of a kitsune (fox spirit) in human form wearing a traditional miko shrine maiden outfit — white kosode top, red hakama pants, tabi socks, and zori sandals, with fox ears and multiple fluffy tails visible. Japanese fantasy watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-136. Character turnaround sheet of a deep sea anglerfish person with a bulbous head, bioluminescent lure, sharp teeth, a humanoid body in dark diving gear, webbed hands, and flipper boots. Deep ocean concept art with abyssal blues and bioluminescent glows. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-137. Character turnaround sheet of a vintage circus strongman in a striped unitard, curled mustache, leather belt, bare feet, and holding a huge barbell overhead. Classic poster art style with warm vintage tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-138. Character turnaround sheet of a celestial being made of living constellations — a humanoid figure of deep blue night sky with glowing star patterns, a nebula scarf, and crescent moon crown. Cosmic digital painting. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-139. Character turnaround sheet of a Dutch Golden Age merchant in a black doublet with a large white ruff collar, puffed breeches, stockings, buckled shoes, and a wide-brimmed hat. Rembrandt-inspired oil painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-140. Character turnaround sheet of a baby owl wizard with huge round eyes, tiny feathered body, a miniature wizard hat, a cape, and a wand held in one wing. Adorable children's book gouache with warm browns and purples. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-141. Character turnaround sheet of a parkour runner in athletic compression gear, lightweight trainers, fingerless gloves, and a small backpack, in a relaxed athletic stance. Dynamic urban ink illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-142. Character turnaround sheet of a swamp hag with green warty skin, wild tangled hair with moss, a ragged dress, bare gnarled feet, a crooked nose, and a bubbling potion bottle. Dark fairy tale gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-143. Character turnaround sheet of a Aztec jaguar warrior in a jaguar skin costume with the head as a helmet, obsidian macuahuitl sword, feathered shield, and wooden sandals. Historical concept art with vibrant Mesoamerican colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-144. Character turnaround sheet of a sentient lamp post with a thin metal body, a glowing bulb head, thin wire arms, a small door in the chest, and a cobblestone base for feet. Whimsical children's book watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-145. Character turnaround sheet of a K-pop boy band member in a designer oversized jacket, crop top, leather pants, chunky platform sneakers, layered chains, and styled two-tone hair. Modern fashion anime style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-146. Character turnaround sheet of a war elephant rider (mahout) in lightweight armor, sitting atop an armored elephant with a howdah, holding a long hook and wearing a turban. Historical Indian miniature painting style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-147. Character turnaround sheet of a shadow assassin made of living darkness, with a featureless smooth black body, glowing white eyes, wisps of shadow trailing off, and two daggers. Dark fantasy concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+
+TS-148. Character turnaround sheet of a grandpa fisherman bear in a knitted sweater, waders, a bucket hat, rubber boots, and holding a fishing rod, standing upright. Cozy storybook gouache with seaside colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-149. Character turnaround sheet of a solar punk gardener in a plant-embedded outfit — a living moss vest, vine-wrapped arms, recycled fabric pants, sandals made of bark, and a sun hat with a small solar panel. Optimistic watercolor with bright greens and warm sunlight. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+
+TS-150. Character turnaround sheet of a heavy metal guitarist in spiked leather everything — jacket, pants, boots, wristbands — with long wild hair, face paint, and a flying V guitar. Aggressive ink illustration with heavy black and red. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
