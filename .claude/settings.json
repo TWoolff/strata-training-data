@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/taw/Downloads/**)",
+      "Bash(PYTHONPATH=. python3 scripts/split_turnaround.py --input-dir /Volumes/TAMWoolff/data/turnaround_sheets/ --output-dir /Volumes/TAMWoolff/data/demo/)"
+    ]
+  }
+}
