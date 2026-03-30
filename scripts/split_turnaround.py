@@ -133,8 +133,23 @@ def find_content_rows(img_array: np.ndarray) -> tuple[int, int]:
 
     # Crop to content area, leaving a small margin
     top = max(0, content_rows[0] - 5)
-    # Exclude bottom 12% to remove labels
-    bottom = min(h, int(h * 0.88))
+
+    # Find the bottom of character content (before label text).
+    # Labels are typically a thin band of content at the very bottom
+    # with a gap above them. Look for a gap in content density from
+    # the bottom up.
+    last_content = content_rows[-1]
+    # Search from 95% down for a gap (low density row)
+    search_start = int(h * 0.75)
+    gap_threshold = row_density.max() * 0.15
+    bottom = last_content + 5  # default: use all content
+
+    # Walk from bottom up — find where character content ends and label begins
+    for row in range(last_content, search_start, -1):
+        if row_density[row] < gap_threshold:
+            # Found a gap — this is between feet and labels
+            bottom = row
+            break
 
     return top, bottom
 
