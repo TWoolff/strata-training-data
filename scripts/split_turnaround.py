@@ -42,8 +42,11 @@ VIEW_NAMES = ["front", "threequarter", "side", "back_threequarter", "back"]
 def find_split_columns(img_array: np.ndarray, num_splits: int = 5) -> list[tuple[int, int]]:
     """Find column ranges for each character view by detecting vertical gaps.
 
+    Uses rembg alpha channel for reliable content detection, then finds
+    the deepest valleys in column density to split between characters.
+
     Args:
-        img_array: [H, W, 4] RGBA or [H, W, 3] RGB uint8 image.
+        img_array: [H, W, 4] RGBA uint8 image (should be rembg-processed).
         num_splits: Expected number of views (default 5).
 
     Returns:
@@ -51,69 +54,65 @@ def find_split_columns(img_array: np.ndarray, num_splits: int = 5) -> list[tuple
     """
     h, w = img_array.shape[:2]
 
-    # Compute content density per column (ignore bottom 15% where labels are)
+    # Use alpha channel — ignore bottom 15% where labels are
     crop_h = int(h * 0.85)
-    if img_array.shape[2] == 4:
-        # Use alpha channel for content detection
-        col_density = (img_array[:crop_h, :, 3] > 30).sum(axis=0).astype(float)
-    else:
-        # Use brightness for RGB images (white bg = high brightness)
-        gray = np.mean(img_array[:crop_h, :, :3], axis=2)
-        col_density = (gray < 240).sum(axis=0).astype(float)
+    alpha = img_array[:crop_h, :, 3]
+    col_density = (alpha > 30).sum(axis=0).astype(float)
 
-    # Smooth the density to avoid noise
-    kernel_size = max(w // 100, 3)
+    # Smooth heavily to find broad character regions
+    kernel_size = max(w // 50, 5)
     kernel = np.ones(kernel_size) / kernel_size
     smoothed = np.convolve(col_density, kernel, mode="same")
 
-    # Find content threshold
-    threshold = smoothed.max() * 0.05
+    # We need to find (num_splits - 1) split points between characters.
+    # Strategy: find the valleys (local minima) in the smoothed density,
+    # then pick the (num_splits - 1) deepest ones.
 
-    # Find runs of content (above threshold)
-    is_content = smoothed > threshold
-    regions = []
-    in_region = False
-    start = 0
+    # Expected character width
+    expected_width = w / num_splits
+    min_char_width = int(expected_width * 0.4)
 
-    for col in range(w):
-        if is_content[col] and not in_region:
-            start = col
-            in_region = True
-        elif not is_content[col] and in_region:
-            regions.append((start, col))
-            in_region = False
-    if in_region:
-        regions.append((start, w))
+    # Find all local minima
+    valleys = []
+    for col in range(min_char_width, w - min_char_width):
+        # Check if this is a local minimum in a window
+        window = int(expected_width * 0.15)
+        local_slice = smoothed[max(0, col - window):min(w, col + window + 1)]
+        if smoothed[col] <= local_slice.min() + 1e-6:
+            valleys.append((col, smoothed[col]))
 
-    # Merge regions that are very close (< 2% of image width)
-    merge_gap = int(w * 0.02)
-    merged = [regions[0]]
-    for start, end in regions[1:]:
-        prev_start, prev_end = merged[-1]
-        if start - prev_end < merge_gap:
-            merged[-1] = (prev_start, end)
-        else:
-            merged.append((start, end))
+    # Deduplicate: keep only the deepest valley in each window
+    if valleys:
+        deduped = [valleys[0]]
+        for col, val in valleys[1:]:
+            if col - deduped[-1][0] < min_char_width:
+                # Same valley — keep the deeper one
+                if val < deduped[-1][1]:
+                    deduped[-1] = (col, val)
+            else:
+                deduped.append((col, val))
+        valleys = deduped
 
-    # If we have more regions than expected, keep the N largest
-    if len(merged) > num_splits:
-        merged.sort(key=lambda r: r[1] - r[0], reverse=True)
-        merged = sorted(merged[:num_splits], key=lambda r: r[0])
+    # Sort by depth (ascending density = deepest valley first)
+    valleys.sort(key=lambda x: x[1])
 
-    # If we have fewer, try equal-width splitting as fallback
-    if len(merged) < num_splits:
+    # Pick the best (num_splits - 1) split points
+    split_cols = sorted([v[0] for v in valleys[:num_splits - 1]])
+
+    if len(split_cols) == num_splits - 1:
+        # Build regions from split points
+        boundaries = [0] + split_cols + [w]
+        regions = [(boundaries[i], boundaries[i + 1]) for i in range(num_splits)]
+    else:
+        # Fallback: equal-width split
         logger.warning(
-            "Found %d regions, expected %d — falling back to equal-width split",
-            len(merged), num_splits,
+            "Found %d valleys, need %d — falling back to equal-width split",
+            len(split_cols), num_splits - 1,
         )
         view_width = w // num_splits
-        merged = [(i * view_width, (i + 1) * view_width) for i in range(num_splits)]
+        regions = [(i * view_width, (i + 1) * view_width) for i in range(num_splits)]
 
-    # Add padding to each region (5% on each side)
-    pad = int(w * 0.01)
-    padded = [(max(0, s - pad), min(w, e + pad)) for s, e in merged]
-
-    return padded
+    return regions
 
 
 def find_content_rows(img_array: np.ndarray) -> tuple[int, int]:
@@ -158,26 +157,36 @@ def split_turnaround(
         List of saved file paths.
     """
     img = Image.open(img_path)
-    img_array = np.array(img)
 
-    # Ensure RGBA
-    if img_array.shape[2] == 3:
-        # Add alpha channel (white = transparent for white-bg images)
-        gray = np.mean(img_array[:, :, :3], axis=2)
-        alpha = np.where(gray < 250, 255, 0).astype(np.uint8)
-        img_array = np.concatenate([img_array, alpha[:, :, np.newaxis]], axis=2)
+    # Run rembg on the FULL sheet first for clean alpha-based splitting
+    try:
+        from rembg import remove
+        logger.info("  Running rembg on full sheet for split detection...")
+        img_rgba = remove(img.convert("RGB"))
+        img_array = np.array(img_rgba)
+    except ImportError:
+        logger.warning("  rembg not available — using brightness-based detection")
+        img_array = np.array(img.convert("RGBA") if img.mode == "RGBA" else img)
+        if img_array.shape[2] == 3:
+            gray = np.mean(img_array[:, :, :3], axis=2)
+            alpha = np.where(gray < 250, 255, 0).astype(np.uint8)
+            img_array = np.concatenate([img_array, alpha[:, :, np.newaxis]], axis=2)
 
-    # Find content area (rows)
+    # Find content area (rows) using rembg'd alpha
     top, bottom = find_content_rows(img_array)
     logger.info("  Content rows: %d to %d (of %d)", top, bottom, img_array.shape[0])
 
-    # Find split columns
+    # Find split columns using rembg'd alpha (clean gaps)
     columns = find_split_columns(img_array, num_views)
     logger.info("  Found %d view regions: %s", len(columns), columns)
 
     if len(columns) != num_views:
         logger.error("Expected %d views, found %d — skipping", num_views, len(columns))
         return []
+
+    # Load the ORIGINAL image for cropping (rembg on full sheet may be imperfect)
+    orig_img = Image.open(img_path).convert("RGBA") if Image.open(img_path).mode == "RGBA" else Image.open(img_path).convert("RGB")
+    orig_array = np.array(orig_img)
 
     view_names = VIEW_NAMES[:num_views]
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -191,14 +200,13 @@ def split_turnaround(
         logger.warning("rembg not available — skipping background removal")
 
     for i, ((col_start, col_end), view_name) in enumerate(zip(columns, view_names)):
-        # Crop the view
-        crop = img_array[top:bottom, col_start:col_end]
-        crop_img = Image.fromarray(crop, "RGBA")
+        # Crop from ORIGINAL image (not rembg'd sheet)
+        crop = orig_array[top:bottom, col_start:col_end]
+        crop_img = Image.fromarray(crop)
 
-        # Remove background
+        # Run rembg on each individual crop (more accurate than full sheet)
         if has_rembg:
-            crop_rgb = crop_img.convert("RGB")
-            crop_img = remove(crop_rgb)
+            crop_img = remove(crop_img.convert("RGB"))
 
         # Resize to 512x512 with padding
         w, h = crop_img.size

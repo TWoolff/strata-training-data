@@ -128,7 +128,12 @@ class ViewSynthesisDataset:
     def _discover_characters(
         self, dataset_dirs: list[Path], dataset_weights: dict[str, float],
     ) -> list[_Character]:
-        """Find all characters with 2+ views across dataset directories."""
+        """Find all characters with 2+ views across dataset directories.
+
+        Supports two layouts:
+        1. Pre-built triplets with view_info.json (from turnaround sheet processing)
+        2. Character directories with named view files (front.png, back.png, etc.)
+        """
         characters = []
 
         for dataset_dir in dataset_dirs:
@@ -143,6 +148,35 @@ class ViewSynthesisDataset:
                 if not pair_dir.is_dir() or pair_dir.name.startswith("."):
                     continue
 
+                # Check for pre-built triplet with view_info.json
+                view_info_path = pair_dir / "view_info.json"
+                if view_info_path.exists():
+                    try:
+                        info = json.loads(view_info_path.read_text())
+                        # Pre-built triplet: front.png=src_a, three_quarter.png=src_b, back.png=target
+                        views = {}
+                        src_a_name = info.get("src_a", "front")
+                        src_b_name = info.get("src_b", "threequarter")
+                        target_name = info.get("target", "back")
+
+                        if (pair_dir / "front.png").exists():
+                            views[src_a_name] = pair_dir / "front.png"
+                        if (pair_dir / "three_quarter.png").exists():
+                            views[src_b_name] = pair_dir / "three_quarter.png"
+                        if (pair_dir / "back.png").exists():
+                            views[target_name] = pair_dir / "back.png"
+
+                        if len(views) >= 2:
+                            characters.append(_Character(
+                                char_id=f"{ds_name}/{pair_dir.name}",
+                                views=views,
+                                dataset_weight=weight,
+                            ))
+                    except (json.JSONDecodeError, OSError):
+                        pass
+                    continue
+
+                # Standard layout: named view files
                 views = {}
                 for filename, view_name in FILENAME_TO_VIEW.items():
                     img_path = pair_dir / filename
