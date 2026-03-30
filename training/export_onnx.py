@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 from training.models.back_view_model import BackViewModel
+from training.models.view_synthesis_model import ViewSynthesisModel
 from training.models.diffusion_weight_model import DiffusionWeightPredictionModel
 from training.models.inpainting_model import InpaintingModel
 from training.models.joint_model import JointModel
@@ -191,6 +192,21 @@ class BackViewWrapper(nn.Module):
         return (out["output"],)
 
 
+class ViewSynthesisWrapper(nn.Module):
+    """Wraps ViewSynthesisModel for ONNX export (dict → tuple).
+
+    ONNX contract uses a single ``"input"`` tensor (9ch: src A RGBA + src B RGBA + angle map).
+    """
+
+    def __init__(self, model: ViewSynthesisModel) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor]:
+        out = self.model(x)
+        return (out["output"],)
+
+
 # ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
@@ -300,6 +316,18 @@ MODEL_CONFIGS: dict[str, dict] = {
         },
         "default_filename": "back_view_generation.onnx",
         "input_shape": (1, 8, RESOLUTION, RESOLUTION),
+    },
+    "view_synthesis": {
+        "model_class": ViewSynthesisModel,
+        "wrapper_class": ViewSynthesisWrapper,
+        "model_kwargs": {"in_channels": 9, "out_channels": 4},
+        "output_names": ["output"],
+        "dynamic_axes": {
+            "input": {0: "batch"},
+            "output": {0: "batch"},
+        },
+        "default_filename": "view_synthesis.onnx",
+        "input_shape": (1, 9, RESOLUTION, RESOLUTION),
     },
 }
 
@@ -608,6 +636,7 @@ def main(argv: list[str] | None = None) -> None:
             "inpainting",
             "texture_inpainting",
             "back_view",
+            "view_synthesis",
         ],
         help="Model to export.",
     )

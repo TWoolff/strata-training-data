@@ -1,0 +1,53 @@
+# View Synthesis Model — Run 1
+#
+# Unified view synthesis: any 2 source views + target angle → target view.
+# Replaces the back-view-only model (Model 6).
+#
+# Data:
+#   - demo_pairs: Gemini turnaround sheets (high weight)
+#   - back_view_pairs_*: existing 3D-rendered pairs (front+3/4→back only)
+#
+# Trains from scratch (new architecture with 9 input channels).
+
+model:
+  type: "view_synthesis"
+  in_channels: 9     # source A (4) + source B (4) + target angle (1)
+  out_channels: 4    # target RGBA
+
+data:
+  dataset_dirs:
+    - "./data/training/demo_pairs"
+    - "./data/training/back_view_pairs_merged"
+    - "./data/training/back_view_pairs_unrigged"
+    - "./data/training/back_view_pairs_new"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+  dataset_weights:
+    demo_pairs: 10.0
+    back_view_pairs_merged: 1.0
+    back_view_pairs_unrigged: 1.0
+    back_view_pairs_new: 1.0
+
+augmentation:
+  horizontal_flip: false
+  color_jitter: {brightness: 0.15, contrast: 0.15, saturation: 0.15, hue: 0.03}
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 200
+  optimizer: "adam"
+  learning_rate: 2.0e-4
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 5
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/view_synthesis"
+  early_stopping_patience: 30
+  early_stopping_metric: "val/l1"
