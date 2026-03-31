@@ -259,7 +259,7 @@ MODEL_CONFIGS: dict[str, dict] = {
             "weights": {0: "batch", 2: "vertices"},
             "confidence": {0: "batch", 2: "vertices"},
         },
-        "default_filename": "weight_prediction.onnx",
+        "default_filename": "weight_prediction_vertex.onnx",
         "input_shape": (1, 31, 2048, 1),
     },
     "diffusion_weights": {
@@ -713,6 +713,7 @@ def _find_checkpoint(model_name: str) -> Path | None:
         "inpainting": Path("checkpoints/inpainting/best.pt"),
         "texture_inpainting": Path("checkpoints/texture_inpainting/best.pt"),
         "back_view": Path("checkpoints/back_view/best.pt"),
+        "view_synthesis": Path("checkpoints/view_synthesis/best.pt"),
     }
     path = default_dirs.get(model_name)
     if path is not None and path.exists():
