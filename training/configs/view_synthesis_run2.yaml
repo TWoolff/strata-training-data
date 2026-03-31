@@ -1,0 +1,50 @@
+# View Synthesis Model — Run 2
+#
+# Resume from run 1 (0.2139 val/l1) with expanded turnaround sheet data.
+# +120 new sheets → ~3,600 new illustrated pairs.
+# Total: ~6,240 illustrated + 3,049 3D = ~9,289 pairs.
+#
+# Target: val/l1 < 0.20, fix foot rendering with more angle diversity.
+
+model:
+  type: "view_synthesis"
+  in_channels: 9
+  out_channels: 4
+
+data:
+  dataset_dirs:
+    - "./data/training/demo_pairs"
+    - "./data/training/back_view_pairs_merged"
+    - "./data/training/back_view_pairs_unrigged"
+    - "./data/training/back_view_pairs_new"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+  dataset_weights:
+    demo_pairs: 10.0
+    back_view_pairs_merged: 1.0
+    back_view_pairs_unrigged: 1.0
+    back_view_pairs_new: 1.0
+
+augmentation:
+  horizontal_flip: false
+  color_jitter: {brightness: 0.15, contrast: 0.15, saturation: 0.15, hue: 0.03}
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 100
+  optimizer: "adam"
+  learning_rate: 5.0e-5
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 3
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/view_synthesis"
+  early_stopping_patience: 30
+  early_stopping_metric: "val/l1"
