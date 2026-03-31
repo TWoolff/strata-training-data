@@ -34,7 +34,7 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 |---|-------|-------------|--------|----------------------|
 | 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.65 mIoU** | Boundary softening breakthrough. Next: PatchGAN (run 21), more GT labels. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
-| 3 | **Weights** | 0.0231 MAE (run 3) | **<0.015** | Retrain with better seg encoder features. Tied to seg quality. |
+| 3 | **Weights** | 0.0215 MAE (retrain, in progress) | **<0.015** | Retraining with run 20 seg encoder. Fixes limb pixel pulling. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
 | 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
 | 6 | **View Synthesis** | 0.2139 val/l1 (run 1) | **<0.15 val/l1** | Replaces back view model. Any 2 views + target angle → target view. Gemini turnaround sheets are key data source. |
@@ -284,55 +284,33 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next A100 Run — View Synthesis Run 2 + Weights Retrain
-**View Synthesis Run 2:**
-- Resume from run 1 checkpoint (0.2139 val/l1)
-- +120 new turnaround sheets (TS-051 to TS-150) → ~3,600 new pairs
-- Total: ~6,240 illustrated + 3,049 3D = ~9,289 pairs
-- Target: val/l1 < 0.20, fix foot rendering
-- Config: `training/configs/view_synthesis_run2.yaml`
-- Script: `training/run_view_synthesis_run2.sh`
+### Immediate — This Week
+1. **Get bear chef A-pose demo working in Strata** — weights training finishing now (0.0215 MAE, epoch 17)
+2. **Record demo video** — import → auto-rig → pose → rotate. Use bear chef gouache character.
+3. **Deploy new models to Strata** — view synthesis run 2 ONNX (0.2100) + retrained weights ONNX
 
-**Weights Retrain (run after view synthesis):**
-- Retrain weights model using run 20 seg encoder features
-- Fixes limb deformation artifacts (pulling wrong pixels when posing)
-- Config: `training/configs/weights_a100_run4.yaml`
-- Script: `training/run_weights_run4.sh`
-
-**A100 command:**
-```
-git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
-./training/cloud_setup.sh lean
-./training/run_view_synthesis_run2.sh  # ~3-4 hrs
-./training/run_weights_run4.sh         # ~2 hrs
-```
-
-### Demo Progress
-- [x] 7 demo characters selected and cleaned
-- [x] 81 Gemini turnaround sheets generated (171 characters, 2,640 pairs)
-- [x] View synthesis model run 1 complete (0.2139 val/l1)
+### Completed Today (March 31)
+- [x] View synthesis run 2: 0.2100 val/l1 (6,180 illustrated pairs from 199 turnaround sheets)
+- [x] Weights retrain started with run 20 seg encoder features (0.0215 MAE so far)
+- [x] Bear chef A-pose turnaround generated and processed
+- [x] 199 Gemini turnaround sheets (407 characters, 6,210 training pairs)
 - [x] Strata Rust code updated for 9ch view synthesis model
-- [ ] Generate 120 more turnaround sheets (TS-051 to TS-150, in progress)
-- [ ] View synthesis run 2 (more data, fix feet)
-- [ ] Retrain weights model (fix limb deformation)
-- [ ] Record video demo with demo characters rotating in 3D
-- [ ] Demo call with Jesse Heasman (Soapbox VC)
 
-### Seg Improvement — Next Session (Dr. Li's SAM model)
-- **Dr. Li released See-Through SAM Body Parsing model** (March 31, Apache-2.0)
-  - Repo: `https://github.com/shitagaki-lab/see-through`
-  - 19-class SAM-HQ multi-decoder segmentation (independent decoder per body part)
-  - Models on HuggingFace, inference script ready
-  - Dr. Li offered to run on our 2,467 images (1-2 days), or we run it ourselves
-- **Plan:** Run SAM Body Parsing on all gemini_diverse images → convert 19→22 class → retrain seg
-  - Expected: much better pseudo-labels than our 0.6485 model → break 0.70+ mIoU
-  - Convert with existing `scripts/convert_li_labels.py`
-- Also: boundary softening + humanrig_posed GT (81K examples, train-only)
+### Next A100 Runs (after demo)
+1. **Dr. Li's SAM model for seg** — Run SAM Body Parsing on all gemini_diverse images → convert 19→22 class → retrain seg
+   - Repo: `https://github.com/shitagaki-lab/see-through` (Apache-2.0)
+   - SAM-HQ multi-decoder, 19-class. Models on HuggingFace (`24yearsold/l2d_sam_iter2`)
+   - Also try their anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
+   - Expected: break 0.70+ mIoU (currently 0.6485)
+   - Training code releasing April 12
+2. **Retrain joints** with humanrig_posed GT (diverse poses) — current model only trained on T-poses
+3. **Retrain weights again** with improved seg encoder from step 1
 
-### Ship Run
-- Retrain joints with humanrig_posed GT (diverse poses)
-- Retrain weights with run 20 seg encoder features
-- Export all models to ONNX → `../strata/src-tauri/models/`
+### Later — Post Launch
+- Cloud 3D reconstruction service (TripoSR/InstantMesh fine-tuned on turnaround sheets)
+- Interactive view correction paint tool in Strata
+- Blueprint marketplace
+- InnoFounder application (August 2026 start, 430K DKK grant)
 
 ## Model 6: View Synthesis (replaces Back View Generation)
 
