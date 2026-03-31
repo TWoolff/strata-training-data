@@ -192,7 +192,7 @@ def _detect_layout(dataset_dir: Path) -> str:
         for view_dir in child.iterdir():
             if view_dir.is_dir() and (view_dir / "weights.json").exists():
                 return "per_example"
-        break  # Only check first child for detection
+        continue  # Check all children (first child may lack weights.json)
     return "flat"
 
 
@@ -209,15 +209,26 @@ def _parse_joint_positions(
     Maps pipeline joint names to BONE_ORDER names.
     """
     data = json.loads(joints_path.read_text(encoding="utf-8"))
-    joints_dict = data.get("joints", {})
 
     positions: dict[str, tuple[float, float]] = {}
-    for pipeline_name, joint_info in joints_dict.items():
-        bone_name = PIPELINE_TO_BONE.get(pipeline_name, pipeline_name)
-        if bone_name not in BONE_TO_INDEX:
-            continue
-        pos = joint_info.get("position", [0, 0])
-        positions[bone_name] = (float(pos[0]), float(pos[1]))
+
+    # Handle list format: [{"name": "head", "x": 0.0, "y": 0.0, ...}, ...]
+    if isinstance(data, list):
+        for joint in data:
+            name = joint.get("name", "")
+            bone_name = PIPELINE_TO_BONE.get(name, name)
+            if bone_name not in BONE_TO_INDEX:
+                continue
+            positions[bone_name] = (float(joint.get("x", 0)), float(joint.get("y", 0)))
+    else:
+        # Handle dict format: {"joints": {"head": {"position": [x, y]}, ...}}
+        joints_dict = data.get("joints", {})
+        for pipeline_name, joint_info in joints_dict.items():
+            bone_name = PIPELINE_TO_BONE.get(pipeline_name, pipeline_name)
+            if bone_name not in BONE_TO_INDEX:
+                continue
+            pos = joint_info.get("position", [0, 0])
+            positions[bone_name] = (float(pos[0]), float(pos[1]))
 
     return positions
 
