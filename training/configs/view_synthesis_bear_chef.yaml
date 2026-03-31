@@ -1,0 +1,50 @@
+# View Synthesis — Bear Chef Fine-tune
+#
+# Fine-tune on bear chef A-pose at very high weight for demo.
+# Resume from run 2 (0.2100 val/l1).
+# Short run — just enough to memorize the bear chef.
+#
+# Also includes all other data to maintain general quality.
+
+model:
+  type: "view_synthesis"
+  in_channels: 9
+  out_channels: 4
+
+data:
+  dataset_dirs:
+    - "./data/training/demo_pairs"
+    - "./data/training/back_view_pairs_merged"
+    - "./data/training/back_view_pairs_unrigged"
+    - "./data/training/back_view_pairs_new"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.85, val: 0.10, test: 0.05}
+  dataset_weights:
+    demo_pairs: 10.0
+    back_view_pairs_merged: 1.0
+    back_view_pairs_unrigged: 1.0
+    back_view_pairs_new: 1.0
+
+augmentation:
+  horizontal_flip: false
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1, hue: 0.02}
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 50
+  optimizer: "adam"
+  learning_rate: 2.0e-5
+  weight_decay: 1.0e-5
+  scheduler: "cosine"
+  warmup_epochs: 2
+
+loss:
+  l1_weight: 1.0
+  perceptual_weight: 0.1
+
+checkpointing:
+  save_dir: "./checkpoints/view_synthesis"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/l1"
