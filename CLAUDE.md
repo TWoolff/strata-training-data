@@ -318,11 +318,16 @@ git clone https://github.com/TWoolff/strata-training-data.git && cd strata-train
 - [ ] Record video demo with demo characters rotating in 3D
 - [ ] Demo call with Jesse Heasman (Soapbox VC)
 
-### Seg Improvement (when ready)
-- Run 22 config ready: boundary softening + re-pseudo-labeled data
-- Resume from run 20 checkpoint (0.6485 test mIoU)
-- Add humanrig_posed GT (81K examples, train-only)
-- Waiting on Dr. Li for GT illustrated labels (emailed March 24)
+### Seg Improvement — Next Session (Dr. Li's SAM model)
+- **Dr. Li released See-Through SAM Body Parsing model** (March 31, Apache-2.0)
+  - Repo: `https://github.com/shitagaki-lab/see-through`
+  - 19-class SAM-HQ multi-decoder segmentation (independent decoder per body part)
+  - Models on HuggingFace, inference script ready
+  - Dr. Li offered to run on our 2,467 images (1-2 days), or we run it ourselves
+- **Plan:** Run SAM Body Parsing on all gemini_diverse images → convert 19→22 class → retrain seg
+  - Expected: much better pseudo-labels than our 0.6485 model → break 0.70+ mIoU
+  - Convert with existing `scripts/convert_li_labels.py`
+- Also: boundary softening + humanrig_posed GT (81K examples, train-only)
 
 ### Ship Run
 - Retrain joints with humanrig_posed GT (diverse poses)
