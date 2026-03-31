@@ -284,19 +284,39 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Immediate — Demo Video
-- [ ] Generate 120 more turnaround sheets (TS-051 to TS-150 prompts ready)
-- [ ] Split, rebuild pairs, retrain view synthesis run 2 with expanded data
-- [ ] Fix foot rendering issue (feet show front-facing toes instead of heels)
-- [ ] Update Strata Rust code to use new view synthesis model (9ch input)
-- [ ] Retrain weights model with run 20 seg encoder features (fix limb deformation)
-- [ ] Record video demo with 7 demo characters rotating in 3D
+### Next A100 Run — View Synthesis Run 2 + Weights Retrain
+**View Synthesis Run 2:**
+- Resume from run 1 checkpoint (0.2139 val/l1)
+- +120 new turnaround sheets (TS-051 to TS-150) → ~3,600 new pairs
+- Total: ~6,240 illustrated + 3,049 3D = ~9,289 pairs
+- Target: val/l1 < 0.20, fix foot rendering
+- Config: `training/configs/view_synthesis_run2.yaml`
+- Script: `training/run_view_synthesis_run2.sh`
 
-### Demo Characters
-- 7 primary: MMA fighter, construction worker, golf dad, Celtic warrior, athlete, bear chef, rogue
-- 171 total characters from 81 Gemini turnaround sheets
-- `scripts/score_illustrations.py` ranks characters by seg quality
-- `scripts/split_turnaround.py` auto-splits turnaround sheets into individual views
+**Weights Retrain (run after view synthesis):**
+- Retrain weights model using run 20 seg encoder features
+- Fixes limb deformation artifacts (pulling wrong pixels when posing)
+- Config: `training/configs/weights_a100_run4.yaml`
+- Script: `training/run_weights_run4.sh`
+
+**A100 command:**
+```
+git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
+./training/cloud_setup.sh lean
+./training/run_view_synthesis_run2.sh  # ~3-4 hrs
+./training/run_weights_run4.sh         # ~2 hrs
+```
+
+### Demo Progress
+- [x] 7 demo characters selected and cleaned
+- [x] 81 Gemini turnaround sheets generated (171 characters, 2,640 pairs)
+- [x] View synthesis model run 1 complete (0.2139 val/l1)
+- [x] Strata Rust code updated for 9ch view synthesis model
+- [ ] Generate 120 more turnaround sheets (TS-051 to TS-150, in progress)
+- [ ] View synthesis run 2 (more data, fix feet)
+- [ ] Retrain weights model (fix limb deformation)
+- [ ] Record video demo with demo characters rotating in 3D
+- [ ] Demo call with Jesse Heasman (Soapbox VC)
 
 ### Seg Improvement (when ready)
 - Run 22 config ready: boundary softening + re-pseudo-labeled data
@@ -306,7 +326,7 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ### Ship Run
 - Retrain joints with humanrig_posed GT (diverse poses)
-- Retrain weights with run 20 seg encoder features (fix limb deformation)
+- Retrain weights with run 20 seg encoder features
 - Export all models to ONNX → `../strata/src-tauri/models/`
 
 ## Model 6: View Synthesis (replaces Back View Generation)
