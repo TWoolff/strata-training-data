@@ -32,19 +32,19 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.65 mIoU** | Boundary softening breakthrough. Next: PatchGAN (run 21), more GT labels. |
+| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.70 mIoU** | Dr. Li's SAM labels ready (2,467 images). Next run uses SAM labels + boundary softening. |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
-| 3 | **Weights** | 0.0215 MAE (retrain, in progress) | **<0.015** | Retraining with run 20 seg encoder. Fixes limb pixel pulling. |
-| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — may need architecture change or illustrated training data. |
-| 5 | **Texture Inpaint** | No model yet | **<0.005 val/l1** | Blocked on model 6. |
-| 6 | **View Synthesis** | 0.2139 val/l1 (run 1) | **<0.15 val/l1** | Replaces back view model. Any 2 views + target angle → target view. Gemini turnaround sheets are key data source. |
+| 3 | **Weights** | 0.0215 MAE (retrained) | **<0.015** | Retrained with run 20 seg encoder. 7% better than old 0.0231. ONNX in bucket. |
+| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — low priority. |
+| 5 | **Texture Inpaint** | No model yet | — | May not need if view synthesis + Strata mesh projection works. |
+| 6 | **View Synthesis** | 0.2047 val/l1 (run 2+) | **<0.15 val/l1** | 407 characters from 199 turnaround sheets. Bear chef A-pose fine-tune next. |
 
 **Priority order:**
-1. View synthesis — more turnaround sheets (150 prompts ready), fix foot rendering, retrain
-2. Ship run — retrain joints + weights with run 20 seg encoder
-3. Seg past 0.65 — boundary softening + more GT labels
-4. Weights — fix limb deformation artifacts (retrain with better seg encoder)
-5. Texture inpainting — may not need separate model if view synthesis is good enough
+1. Demo video — bear chef A-pose in Strata (import → rig → pose → rotate)
+2. Seg with SAM labels — 2,467 expert labels ready, expect 0.70+ mIoU
+3. Bear chef view synthesis fine-tune — memorize the demo character
+4. Retrain joints with humanrig_posed GT
+5. Future: cloud 3D reconstruction (TripoSR/InstantMesh), interactive view correction
 
 ## Project Layout
 
@@ -284,33 +284,48 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Immediate — This Week
-1. **Get bear chef A-pose demo working in Strata** — weights training finishing now (0.0215 MAE, epoch 17)
-2. **Record demo video** — import → auto-rig → pose → rotate. Use bear chef gouache character.
-3. **Deploy new models to Strata** — view synthesis run 2 ONNX (0.2100) + retrained weights ONNX
+### Next A100 Run (April 1) — Ready to Go
+**Script:** `./training/run_next.sh` | **Storage:** 40 GB | **Time:** ~4-5 hrs
+```
+git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
+./training/cloud_setup.sh lean
+./training/run_next.sh
+```
 
-### Completed Today (March 31)
-- [x] View synthesis run 2: 0.2100 val/l1 (6,180 illustrated pairs from 199 turnaround sheets)
-- [x] Weights retrain started with run 20 seg encoder features (0.0215 MAE so far)
-- [x] Bear chef A-pose turnaround generated and processed
-- [x] 199 Gemini turnaround sheets (407 characters, 6,210 training pairs)
-- [x] Strata Rust code updated for 9ch view synthesis model
+**Part 1 — Seg with SAM labels (~3 hrs):**
+- Dr. Li's SAM Body Parsing labels on 2,467 illustrated images (ran March 31, zero errors)
+- Converted 19→22 class with `scripts/convert_sam_labels.py`, uploaded as `sam_seg_converted.tar`
+- Retrain seg with boundary softening, resume from run 20
+- Target: 0.70+ mIoU (currently 0.6485)
 
-### Next A100 Runs (after demo)
-1. **Dr. Li's SAM model for seg** — Run SAM Body Parsing on all gemini_diverse images → convert 19→22 class → retrain seg
-   - Repo: `https://github.com/shitagaki-lab/see-through` (Apache-2.0)
-   - SAM-HQ multi-decoder, 19-class. Models on HuggingFace (`24yearsold/l2d_sam_iter2`)
-   - Also try their anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
-   - Expected: break 0.70+ mIoU (currently 0.6485)
-   - Training code releasing April 12
-2. **Retrain joints** with humanrig_posed GT (diverse poses) — current model only trained on T-poses
-3. **Retrain weights again** with improved seg encoder from step 1
+**Part 2 — Bear chef view synthesis (~1 hr):**
+- 30 bear chef A-pose pairs only (fast memorization)
+- Resume from run 2 (0.2047 val/l1)
+- Goal: sharp back/side views for demo video
+
+### Completed March 31
+- [x] **Dr. Li's SAM model ran on all 2,467 images** (13 min, zero errors, A100)
+- [x] SAM labels converted 19→22 class locally (35 sec, 2,467 masks)
+- [x] Both tars uploaded: `sam_labels.tar` (raw) + `sam_seg_converted.tar` (converted)
+- [x] View synthesis run 2: 0.2047 val/l1 (6,180 pairs, 199 turnaround sheets)
+- [x] Weights retrain: 0.0215 MAE (7% better than old 0.0231). ONNX uploaded.
+- [x] Bear chef A-pose turnaround generated, cut, and added to demo_pairs
+- [x] Updated demo_pairs tar with bear chef (6,210 pairs total). Uploaded.
+- [x] Strata Rust code updated for 9ch view synthesis + new weights model
+
+### After Demo
+1. **Retrain joints** with humanrig_posed GT (diverse poses)
+2. **Retrain weights again** with improved seg encoder from SAM-trained model
+3. **More turnaround sheets** — 150 prompts ready (TS-001 to TS-150)
+4. Try Dr. Li's anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
+5. Dr. Li's training code releasing April 12 — learn multi-decoder approach
 
 ### Later — Post Launch
-- Cloud 3D reconstruction service (TripoSR/InstantMesh fine-tuned on turnaround sheets)
+- Cloud 3D reconstruction (TripoSR/InstantMesh fine-tuned on turnaround sheets)
 - Interactive view correction paint tool in Strata
 - Blueprint marketplace
 - InnoFounder application (August 2026 start, 430K DKK grant)
+- Approach PreSeed Ventures / Accelerace / byFounders for angel investment
 
 ## Model 6: View Synthesis (replaces Back View Generation)
 
@@ -328,14 +343,15 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 ### View Synthesis (new unified model)
 | Run | val/l1 | Triplets | Notes |
 |-----|--------|----------|-------|
-| **1** | **0.2139** | **14,505** | **From scratch. 2,640 illustrated pairs (171 chars from Gemini turnaround sheets) + 3,049 3D pairs. Trained 200 epochs.** |
+| 1 | 0.2139 | 14,505 | From scratch. 2,640 illustrated pairs + 3,049 3D. 200 epochs. |
+| **2** | **0.2047** | **~35,000** | **Resume from run 1. 6,210 illustrated pairs (407 chars from 199 sheets) + 3,049 3D. Stopped epoch 2 (slow). Best yet.** |
 
 **Architecture:** Same U-Net (29M params), input [B,9,512,512] = src_A (4ch) + src_B (4ch) + angle_map (1ch), output [B,4,512,512].
 **Angle encoding:** 0.0=front, 0.2=front_3/4, 0.4=side, 0.6=back_3/4, 0.8=back. Broadcast to [1,H,W] channel.
 **Data source:** Gemini turnaround sheets — 5 consistent views per character, all angle combinations as training pairs. `scripts/split_turnaround.py` auto-splits sheets. 150 prompts ready (TS-001 to TS-150).
-**Known issue:** Feet render as front-facing (toes instead of heels). Model doesn't understand 3D rotation — maps pixels spatially.
-**ONNX contract change:** Input 8ch → 9ch. Strata Rust code needs update to pass target angle.
-**Next:** More turnaround sheets (120/day possible), fix foot rendering with better training data, retrain weights model.
+**Known issues:** Feet render front-facing. Model doesn't understand 3D geometry. Template mesh doesn't match non-human characters (bear chef).
+**ONNX contract:** Input 9ch (was 8ch). Strata Rust code updated.
+**Future approach:** On-device model for rough generation + cloud 3D reconstruction (TripoSR/InstantMesh) for quality + interactive paint correction in Strata.
 
 ## Quality Filter
 
