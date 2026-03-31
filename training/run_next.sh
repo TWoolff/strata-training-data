@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Strata Training — Next Run
+# Strata Training — April 1 Run
 #
-# 1. Run Dr. Li's SAM Body Parsing on gemini_diverse (~30 min)
-# 2. Fine-tune view synthesis on bear chef A-pose (~2-3 hrs)
+# 1. Seg retrain with SAM labels (~3 hrs)
+# 2. View synthesis bear chef fine-tune (~1 hr)
 #
-# Total: ~3-4 hrs. Storage: 30 GB.
+# Total: ~4-5 hrs. Storage: 40 GB.
 #
 # Usage:
 #   git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
@@ -15,11 +15,11 @@
 set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="./logs/next_run_${TIMESTAMP}"
+LOG_DIR="./logs/april1_${TIMESTAMP}"
 mkdir -p "$LOG_DIR"
 
 echo "============================================"
-echo "  Next Run: SAM Seg + Bear Chef View Synth"
+echo "  April 1 Run: SAM Seg + Bear Chef"
 echo "  Started: $(date)"
 echo "============================================"
 echo ""
@@ -34,118 +34,170 @@ echo "  OK: CUDA — $GPU_NAME"
 echo ""
 
 # =============================================================================
-# PART 1: Dr. Li's SAM Body Parsing on gemini_diverse
+# PART 1: Segmentation retrain with SAM labels
 # =============================================================================
 echo "########################################################"
-echo "  PART 1: SAM Body Parsing (Dr. Li's See-Through)"
+echo "  PART 1: Seg Retrain with SAM Labels"
 echo "########################################################"
 echo ""
 
-# 1.0 Install See-Through dependencies
-echo "[1.0] Installing See-Through dependencies..."
-if [ ! -d "see-through" ]; then
-    git clone https://github.com/shitagaki-lab/see-through.git
+# 1.0 Download seg data + checkpoint
+echo "[1.0] Downloading seg data..."
+mkdir -p data_cloud data/tars checkpoints/segmentation
+
+# Seg checkpoint (run 20)
+SEG_CKPT="checkpoints/segmentation/run20_best.pt"
+if [ ! -f "$SEG_CKPT" ]; then
+    rclone copy hetzner:strata-training-data/checkpoints_run20_seg/segmentation/run20_best.pt \
+        ./checkpoints/segmentation/ --transfers 32 --fast-list -P
 fi
-cd see-through
-pip install -r requirements.txt 2>&1 | tail -5
-pip install --no-build-isolation -r requirements-inference-sam2.txt 2>&1 | tail -5
-ln -sf common/assets assets 2>/dev/null || true
-cd ..
-echo "  See-Through installed."
-echo ""
+echo "  Seg checkpoint: $SEG_CKPT"
 
-# 1.1 Download sora_diverse (illustrated images to label)
-echo "[1.1] Downloading illustrated images..."
-mkdir -p data_cloud data/tars
-
-if [ ! -d "data_cloud/sora_diverse" ] || [ -z "$(ls data_cloud/sora_diverse/ 2>/dev/null | head -1)" ]; then
-    rclone copy hetzner:strata-training-data/tars/sora_diverse.tar ./data/tars/ --transfers 32 --fast-list -P
-    tar xf ./data/tars/sora_diverse.tar -C ./data_cloud/
-    rm -f ./data/tars/sora_diverse.tar
+# Frozen splits
+if [ ! -f "data_cloud/frozen_val_test.json" ]; then
+    rclone copy hetzner:strata-training-data/data_cloud/frozen_val_test.json \
+        ./data_cloud/ --transfers 4 --fast-list -P
 fi
 
-# Also download new sora_diverse tars
+# Download datasets
+download_tar() {
+    local tar_name="$1"; local extract_dir="$2"
+    if [ -d "$extract_dir" ] && [ "$(ls "$extract_dir"/ 2>/dev/null | head -1)" ]; then
+        local count=$(ls -d "$extract_dir"/*/ 2>/dev/null | wc -l | tr -d ' ')
+        echo "  $(basename "$extract_dir"): $count examples (exists)"
+        return 0
+    fi
+    echo "  Downloading $tar_name..."
+    rclone copy "hetzner:strata-training-data/tars/$tar_name" ./data/tars/ --transfers 32 --fast-list -P
+    if [ -f "./data/tars/$tar_name" ]; then
+        tar xf "./data/tars/$tar_name" -C ./data_cloud/
+        rm -f "./data/tars/$tar_name"
+    fi
+}
+
+download_tar "humanrig.tar" "./data_cloud/humanrig"
+download_tar "vroid_cc0.tar" "./data_cloud/vroid_cc0"
+download_tar "meshy_cc0_textured_restructured.tar" "./data_cloud/meshy_cc0_restructured"
+download_tar "gemini_li_converted.tar" "./data_cloud/gemini_li_converted"
+download_tar "cvat_annotated.tar" "./data_cloud/cvat_annotated"
+download_tar "sora_diverse.tar" "./data_cloud/sora_diverse"
+download_tar "flux_diverse_clean.tar" "./data_cloud/flux_diverse_clean"
+
+# Download new sora_diverse images
 for tar in sora_diverse_new.tar sora_diverse_new2.tar; do
     if rclone ls "hetzner:strata-training-data/tars/$tar" &>/dev/null 2>&1; then
         echo "  Downloading $tar..."
         rclone copy "hetzner:strata-training-data/tars/$tar" ./data/tars/ --transfers 32 --fast-list -P
-        tar xf "./data/tars/$tar" -C ./data_cloud/ 2>/dev/null || true
-        rm -f "./data/tars/$tar"
+        if [ -f "./data/tars/$tar" ]; then
+            tar xf "./data/tars/$tar" -C ./data_cloud/ 2>/dev/null || true
+            rm -f "./data/tars/$tar"
+        fi
     fi
 done
 
-SORA_COUNT=$(ls -d ./data_cloud/sora_diverse/*/ 2>/dev/null | wc -l | tr -d ' ')
-echo "  sora_diverse: $SORA_COUNT images"
+# 1.1 Apply SAM-converted seg labels (overwrite old pseudo-labels)
+echo ""
+echo "[1.1] Applying SAM-converted seg labels..."
+rclone copy hetzner:strata-training-data/tars/sam_seg_converted.tar ./data/tars/ --transfers 32 --fast-list -P
+if [ -f "./data/tars/sam_seg_converted.tar" ]; then
+    # Extract into sora_diverse — overwrites old segmentation.png with SAM labels
+    tar xf ./data/tars/sam_seg_converted.tar -C ./data_cloud/
+    rm -f ./data/tars/sam_seg_converted.tar
+fi
+SAM_COUNT=$(find ./data_cloud/sora_diverse -name "segmentation.png" | wc -l | tr -d ' ')
+echo "  Applied SAM labels to $SAM_COUNT images"
 echo ""
 
-# 1.2 Run SAM Body Parsing on all images
-echo "[1.2] Running SAM Body Parsing..."
+# 1.2 Marigold enrichment (new images only)
+echo "[1.2] Marigold enrichment..."
+for ds in sora_diverse flux_diverse_clean gemini_li_converted; do
+    ds_dir="./data_cloud/$ds"
+    if [ -d "$ds_dir" ]; then
+        python3 run_normals_enrich.py --input-dir "$ds_dir" --only-missing --batch-size 16 \
+            2>&1 | tee -a "$LOG_DIR/enrich.log"
+        echo "  $ds: enriched."
+    fi
+done
+echo ""
 
-python3 -c "
-import sys, json, logging
-from pathlib import Path
-sys.path.insert(0, 'see-through')
+# 1.3 Quality filter
+echo "[1.3] Quality filter..."
+# Re-run quality filter on sora_diverse (new SAM labels)
+rm -f ./data_cloud/sora_diverse/quality_filter.json
+for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc0_restructured \
+              ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated ./data_cloud/flux_diverse_clean; do
+    ds_name=$(basename "$ds_dir")
+    if [ -f "$ds_dir/quality_filter.json" ]; then
+        echo "  $ds_name: exists, skipping."
+    elif [ -d "$ds_dir" ]; then
+        python3 scripts/filter_seg_quality.py --data-dir "$ds_dir" \
+            --min-regions 4 --max-single-region 0.70 --min-foreground 0.05 \
+            2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+    fi
+done
+echo "  sora_diverse: quality filter (SAM labels)..."
+python3 scripts/filter_seg_quality.py --data-dir ./data_cloud/sora_diverse \
+    --min-regions 4 --max-single-region 0.70 --min-foreground 0.05 \
+    2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+echo ""
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-logger = logging.getLogger(__name__)
+# 1.4 Train seg
+echo "[1.4] Training SEGMENTATION model..."
+echo "  Config: training/configs/segmentation_a100_run20.yaml (boundary softening)"
+echo "  Resuming from run 20 (0.6485 test mIoU)"
+echo "  SAM labels on sora_diverse — expect significant mIoU jump"
+echo ""
 
-# Import SAM body parsing from see-through
-try:
-    from annotators.lang_sam import LangSAMAnnotator
-    logger.info('LangSAM loaded')
-except ImportError:
-    logger.error('Could not import LangSAM — check see-through installation')
-    sys.exit(1)
+rm -f checkpoints/segmentation/latest.pt
+python3 -m training.train_segmentation \
+    --config training/configs/segmentation_a100_run20.yaml \
+    --resume "$SEG_CKPT" --reset-epochs \
+    2>&1 | tee "$LOG_DIR/seg_train.log"
 
-# Find all image directories
-data_dir = Path('data_cloud/sora_diverse')
-examples = sorted([d for d in data_dir.iterdir() if d.is_dir() and (d / 'image.png').exists()])
-logger.info('Found %d images to process', len(examples))
+echo ""
 
-# Initialize model
-annotator = LangSAMAnnotator()
+# 1.5 Export + evaluate + upload seg
+echo "[1.5] Exporting seg..."
+cp checkpoints/segmentation/best.pt checkpoints/segmentation/sam_best.pt
 
-processed = 0
-for i, ex_dir in enumerate(examples):
-    img_path = ex_dir / 'image.png'
-    out_path = ex_dir / 'sam_segmentation.png'
+python3 -m training.export_onnx --model segmentation \
+    --checkpoint checkpoints/segmentation/sam_best.pt \
+    --output ./models/onnx/segmentation_sam.onnx \
+    2>&1 | tee "$LOG_DIR/seg_export.log"
 
-    # Skip if already processed
-    if out_path.exists():
-        continue
+python3 -m training.evaluate --model segmentation \
+    --checkpoint checkpoints/segmentation/sam_best.pt \
+    --dataset-dir ./data_cloud/humanrig \
+    --dataset-dir ./data_cloud/vroid_cc0 \
+    --dataset-dir ./data_cloud/meshy_cc0_restructured \
+    --dataset-dir ./data_cloud/gemini_li_converted \
+    --dataset-dir ./data_cloud/cvat_annotated \
+    --dataset-dir ./data_cloud/sora_diverse \
+    --dataset-dir ./data_cloud/flux_diverse_clean \
+    --output-dir ./evaluation_sam \
+    2>&1 | tee "$LOG_DIR/seg_evaluate.log"
 
-    try:
-        # Run SAM body parsing
-        result = annotator.predict(str(img_path))
-        # Save result
-        from PIL import Image
-        import numpy as np
-        if result is not None:
-            mask = np.array(result, dtype=np.uint8)
-            Image.fromarray(mask).save(out_path)
-            processed += 1
-    except Exception as e:
-        logger.warning('Error on %s: %s', ex_dir.name, e)
+rclone copy checkpoints/segmentation/sam_best.pt \
+    hetzner:strata-training-data/checkpoints_seg_sam/ --transfers 4 --fast-list --size-only -P
+rclone copy ./models/onnx/segmentation_sam.onnx \
+    hetzner:strata-training-data/models/seg_sam/ --transfers 4 --fast-list --size-only -P
+rclone copy ./evaluation_sam/ hetzner:strata-training-data/evaluation_sam/ --transfers 4 --fast-list -P
 
-    if (i + 1) % 100 == 0:
-        logger.info('Progress: %d/%d (%d processed)', i + 1, len(examples), processed)
-
-logger.info('Done: %d processed out of %d', processed, len(examples))
-" 2>&1 | tee "$LOG_DIR/sam_parsing.log"
-
-echo "  SAM Body Parsing complete."
+echo ""
+echo "  Seg results:"
+grep -E "mIoU|Per-Class" "$LOG_DIR/seg_evaluate.log" 2>/dev/null | head -25 || true
 echo ""
 
 # =============================================================================
 # PART 2: View Synthesis Bear Chef Fine-tune
 # =============================================================================
 echo "########################################################"
-echo "  PART 2: View Synthesis Bear Chef Fine-tune"
+echo "  PART 2: View Synthesis Bear Chef"
 echo "########################################################"
 echo ""
 
-# 2.0 Download checkpoint + data
-echo "[2.0] Downloading data..."
+# 2.0 Download view synthesis data
+echo "[2.0] Downloading view synthesis data..."
 mkdir -p checkpoints/view_synthesis data/training
 
 RUN2_CKPT="checkpoints/view_synthesis/run2_best.pt"
@@ -154,7 +206,7 @@ if [ ! -f "$RUN2_CKPT" ]; then
         ./checkpoints/view_synthesis/ --transfers 32 --fast-list -P
 fi
 
-# Demo pairs
+# Demo pairs (includes bear chef A-pose)
 if [ ! -d "data/training/demo_pairs" ] || [ -z "$(ls data/training/demo_pairs/ 2>/dev/null | head -1)" ]; then
     rclone copy hetzner:strata-training-data/tars/demo_back_view_pairs.tar ./data/tars/ --transfers 32 --fast-list -P
     tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/
@@ -163,25 +215,46 @@ fi
 DEMO_COUNT=$(ls -d ./data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
 echo "  demo_pairs: $DEMO_COUNT"
 
-# 3D pairs
-download_tar() {
-    local tar_name="$1"; local extract_dir="$2"
-    if [ -d "$extract_dir" ] && [ "$(ls -d "$extract_dir"/pair_* 2>/dev/null | head -1)" ]; then
-        echo "  $(basename "$extract_dir"): exists"; return 0
-    fi
-    echo "  Downloading ${tar_name}..."
-    rclone copy "hetzner:strata-training-data/tars/${tar_name}" ./data/tars/ --transfers 32 --fast-list -P
-    if [ -f "./data/tars/${tar_name}" ]; then
-        tar xf "./data/tars/${tar_name}" -C ./data/training/; rm -f "./data/tars/${tar_name}"
-    fi
-}
-download_tar "back_view_pairs.tar" "./data/training/back_view_pairs_merged"
-download_tar "back_view_pairs_unrigged.tar" "./data/training/back_view_pairs_unrigged"
-download_tar "back_view_pairs_new.tar" "./data/training/back_view_pairs_new"
+# Skip 3D pairs to save space — focus on demo pairs
 echo ""
 
-# 2.1 Train
-echo "[2.1] Training view synthesis (bear chef fine-tune)..."
+# 2.1 Create bear-chef-only dataset for fast fine-tune
+echo "[2.1] Creating bear chef only dataset..."
+mkdir -p data/training/bear_chef_only
+
+# Find bear chef A-pose pairs (last 30 pairs in demo_pairs)
+# Copy them to a separate directory
+python3 -c "
+from pathlib import Path
+import shutil, json
+
+demo = Path('data/training/demo_pairs')
+out = Path('data/training/bear_chef_only')
+
+# Find pairs that contain bear chef views (check image similarity or just use last 30)
+all_pairs = sorted(demo.glob('pair_demo_*'))
+# Bear chef A-pose was added last — find them
+bear_count = 0
+for pd in reversed(all_pairs):
+    vi = pd / 'view_info.json'
+    if vi.exists():
+        # Check if images are 512x512 bear-like (just copy last 30)
+        if bear_count < 30:
+            dest = out / pd.name
+            if not dest.exists():
+                shutil.copytree(pd, dest)
+            bear_count += 1
+        else:
+            break
+print(f'Copied {bear_count} bear chef pairs')
+"
+
+BC_COUNT=$(ls -d data/training/bear_chef_only/pair_* 2>/dev/null | wc -l | tr -d ' ')
+echo "  bear_chef_only: $BC_COUNT pairs"
+echo ""
+
+# 2.2 Train (bear chef only — very fast)
+echo "[2.2] Training view synthesis (bear chef only)..."
 
 rm -f checkpoints/view_synthesis/latest.pt
 python3 -c "
@@ -191,22 +264,41 @@ ckpt['epoch'] = -1
 torch.save(ckpt, 'checkpoints/view_synthesis/latest.pt')
 "
 
+# Quick config: bear chef only, 100 epochs, should be very fast
+python3 -c "
+import yaml
+cfg = {
+    'model': {'type': 'view_synthesis', 'in_channels': 9, 'out_channels': 4},
+    'data': {
+        'dataset_dirs': ['./data/training/bear_chef_only'],
+        'resolution': 512, 'split_seed': 42,
+        'split_ratios': {'train': 0.85, 'val': 0.10, 'test': 0.05},
+        'dataset_weights': {'bear_chef_only': 1.0},
+    },
+    'augmentation': {'horizontal_flip': False, 'color_jitter': {'brightness': 0.1, 'contrast': 0.1, 'saturation': 0.1, 'hue': 0.02}},
+    'training': {'batch_size': 16, 'num_workers': 4, 'epochs': 100, 'optimizer': 'adam', 'learning_rate': 1e-4, 'weight_decay': 1e-5, 'scheduler': 'cosine', 'warmup_epochs': 3},
+    'loss': {'l1_weight': 1.0, 'perceptual_weight': 0.1},
+    'checkpointing': {'save_dir': './checkpoints/view_synthesis', 'early_stopping_patience': 20, 'early_stopping_metric': 'val/l1'},
+}
+with open('training/configs/view_synthesis_bear_chef_only.yaml', 'w') as f:
+    yaml.dump(cfg, f)
+print('Config written')
+"
+
 python3 -m training.train_view_synthesis \
-    --config training/configs/view_synthesis_bear_chef.yaml \
-    2>&1 | tee "$LOG_DIR/train.log"
+    --config training/configs/view_synthesis_bear_chef_only.yaml \
+    2>&1 | tee "$LOG_DIR/bear_chef_train.log"
 
 echo ""
 
-# 2.2 Export + Upload
-echo "[2.2] Exporting + uploading..."
-mkdir -p ./models/onnx
-
+# 2.3 Export + upload
+echo "[2.3] Exporting view synthesis..."
 if [ -f "checkpoints/view_synthesis/best.pt" ]; then
     cp checkpoints/view_synthesis/best.pt checkpoints/view_synthesis/bear_chef_best.pt
     python3 -m training.export_onnx --model view_synthesis \
         --checkpoint checkpoints/view_synthesis/bear_chef_best.pt \
         --output ./models/onnx/view_synthesis_bear_chef.onnx \
-        2>&1 | tee "$LOG_DIR/export.log"
+        2>&1 | tee "$LOG_DIR/vs_export.log"
 fi
 
 rclone copy ./checkpoints/view_synthesis/bear_chef_best.pt \
@@ -215,15 +307,16 @@ if [ -f "./models/onnx/view_synthesis_bear_chef.onnx" ]; then
     rclone copy ./models/onnx/view_synthesis_bear_chef.onnx \
         hetzner:strata-training-data/models/view_synthesis_bear_chef/ --transfers 4 --fast-list --size-only -P
 fi
-rclone copy "$LOG_DIR/" hetzner:strata-training-data/logs/next_run_${TIMESTAMP}/ --transfers 4 --fast-list -P
+
+rclone copy "$LOG_DIR/" hetzner:strata-training-data/logs/april1_${TIMESTAMP}/ --transfers 4 --fast-list -P
 
 echo ""
 echo "============================================"
 echo "  ALL DONE! $(date)"
 echo ""
-echo "  SAM Parsing:"
-grep -c "processed" "$LOG_DIR/sam_parsing.log" 2>/dev/null || echo "  (check log)"
+echo "  Seg (SAM labels):"
+grep -E "best mIoU|Training complete" "$LOG_DIR/seg_train.log" 2>/dev/null | tail -2 || true
 echo ""
-echo "  View Synthesis:"
-grep -E "best val/l1|New best" "$LOG_DIR/train.log" 2>/dev/null | tail -3 || true
+echo "  View Synthesis (bear chef):"
+grep -E "best val/l1|Training complete" "$LOG_DIR/bear_chef_train.log" 2>/dev/null | tail -2 || true
 echo "============================================"
