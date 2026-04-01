@@ -97,20 +97,144 @@ done
 
 # 1.1 Apply SAM-converted seg labels (overwrite old pseudo-labels)
 echo ""
-echo "[1.1] Applying SAM-converted seg labels..."
+echo "[1.1] Applying SAM-converted seg labels to sora_diverse..."
 rclone copy hetzner:strata-training-data/tars/sam_seg_converted.tar ./data/tars/ --transfers 32 --fast-list -P
 if [ -f "./data/tars/sam_seg_converted.tar" ]; then
-    # Extract into sora_diverse — overwrites old segmentation.png with SAM labels
     tar xf ./data/tars/sam_seg_converted.tar -C ./data_cloud/
     rm -f ./data/tars/sam_seg_converted.tar
 fi
 SAM_COUNT=$(find ./data_cloud/sora_diverse -name "segmentation.png" | wc -l | tr -d ' ')
-echo "  Applied SAM labels to $SAM_COUNT images"
+echo "  Applied SAM labels to $SAM_COUNT sora_diverse images"
+echo ""
+
+# 1.1b Extract unique view images from demo_pairs → seg-compatible layout
+echo "[1.1b] Extracting demo_pairs views for SAM labeling..."
+python3 -c "
+from pathlib import Path
+from PIL import Image
+import hashlib, shutil
+
+demo_dir = Path('data/training/demo_pairs')
+out_dir = Path('data_cloud/demo_views')
+out_dir.mkdir(parents=True, exist_ok=True)
+
+# Deduplicate by image content hash
+seen_hashes = set()
+extracted = 0
+
+for pair_dir in sorted(demo_dir.glob('pair_*')):
+    for img_name in ['front.png', 'three_quarter.png', 'back.png']:
+        img_path = pair_dir / img_name
+        if not img_path.exists():
+            continue
+        # Hash to deduplicate (same source image used in many pairs)
+        h = hashlib.md5(img_path.read_bytes()).hexdigest()[:12]
+        if h in seen_hashes:
+            continue
+        seen_hashes.add(h)
+
+        # Create seg-compatible example dir: demo_views/char_HASH/image.png
+        ex_dir = out_dir / f'{pair_dir.name}_{img_name.replace(\".png\", \"\")}_{h}'
+        ex_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(img_path, ex_dir / 'image.png')
+        extracted += 1
+
+print(f'Extracted {extracted} unique images from demo_pairs')
+"
+DEMO_VIEW_COUNT=$(ls -d data_cloud/demo_views/*/ 2>/dev/null | wc -l | tr -d ' ')
+echo "  demo_views: $DEMO_VIEW_COUNT unique images"
+echo ""
+
+# 1.1c Run SAM Body Parsing on demo_views + flux_diverse_clean
+echo "[1.1c] Running SAM Body Parsing on demo_views + flux_diverse_clean..."
+# Clone see-through repo for SAM inference (same as March 31 run)
+if [ ! -d "../see-through" ]; then
+    git clone https://github.com/shitagaki-lab/see-through.git ../see-through
+    pip install -q -r ../see-through/requirements.txt 2>&1 | tail -5 || true
+fi
+
+python3 -c "
+import sys, os
+sys.path.insert(0, '../see-through')
+import numpy as np
+import torch
+from PIL import Image
+from pathlib import Path
+import time
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+
+from live2d.scrap_model import VALID_BODY_PARTS_V2
+from utils.torch_utils import init_model_from_pretrained
+from modules.semanticsam import SemanticSam
+
+logger.info('Loading SAM model...')
+model = init_model_from_pretrained(
+    pretrained_model_name_or_path='24yearsold/l2d_sam_iter2',
+    weights_name='checkpoint-18000.pt',
+    module_cls=SemanticSam,
+    download_from_hf=True,
+    model_args=dict(class_num=19)
+).to(device='cuda')
+model.eval()
+logger.info('Model loaded. 19 classes: %s', VALID_BODY_PARTS_V2)
+
+# Process both demo_views and flux_diverse_clean
+datasets = [
+    Path('data_cloud/demo_views'),
+    Path('data_cloud/flux_diverse_clean'),
+]
+
+for data_dir in datasets:
+    if not data_dir.exists():
+        logger.warning('Skipping %s (not found)', data_dir)
+        continue
+    examples = sorted([d for d in data_dir.iterdir() if d.is_dir() and (d / 'image.png').exists()])
+    logger.info('Processing %s: %d images', data_dir.name, len(examples))
+
+    t0 = time.time()
+    processed = 0
+    skipped = 0
+
+    for i, ex_dir in enumerate(examples):
+        out_path = ex_dir / 'sam_segmentation.npz'
+        if out_path.exists():
+            skipped += 1
+            continue
+
+        try:
+            img = np.array(Image.open(ex_dir / 'image.png').convert('RGB'))
+            with torch.inference_mode():
+                preds = model.inference(img)[0]
+                masks = (preds > 0).cpu().numpy().astype(np.uint8)  # [19, H, W]
+
+            np.savez_compressed(ex_dir / 'sam_segmentation.npz', masks=masks, classes=VALID_BODY_PARTS_V2)
+            processed += 1
+        except Exception as e:
+            logger.warning('Error on %s: %s', ex_dir.name, e)
+
+        if (i + 1) % 100 == 0:
+            rate = processed / max(time.time() - t0, 1)
+            logger.info('  %s progress: %d/%d (%d processed, %d skipped, %.1f img/s)',
+                        data_dir.name, i+1, len(examples), processed, skipped, rate)
+
+    elapsed = time.time() - t0
+    logger.info('%s done: %d processed, %d skipped, %.0fs (%.1f img/s)',
+                data_dir.name, processed, skipped, elapsed, processed/max(elapsed,1))
+" 2>&1 | tee "$LOG_DIR/sam_inference.log"
+
+# 1.1d Convert SAM 19-class → Strata 22-class for demo_views + flux_diverse_clean
+echo ""
+echo "[1.1d] Converting SAM labels to 22-class..."
+python3 scripts/convert_sam_labels.py --input-dir ./data_cloud/demo_views 2>&1 | tee -a "$LOG_DIR/sam_convert.log"
+python3 scripts/convert_sam_labels.py --input-dir ./data_cloud/flux_diverse_clean 2>&1 | tee -a "$LOG_DIR/sam_convert.log"
 echo ""
 
 # 1.2 Marigold enrichment (new images only)
 echo "[1.2] Marigold enrichment..."
-for ds in sora_diverse flux_diverse_clean gemini_li_converted; do
+for ds in sora_diverse flux_diverse_clean gemini_li_converted demo_views; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
         python3 run_normals_enrich.py --input-dir "$ds_dir" --only-missing --batch-size 1 \
@@ -122,10 +246,12 @@ echo ""
 
 # 1.3 Quality filter
 echo "[1.3] Quality filter..."
-# Re-run quality filter on sora_diverse (new SAM labels)
+# Re-run quality filter on datasets with new SAM labels
 rm -f ./data_cloud/sora_diverse/quality_filter.json
+rm -f ./data_cloud/flux_diverse_clean/quality_filter.json
+rm -f ./data_cloud/demo_views/quality_filter.json
 for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc0_restructured \
-              ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated ./data_cloud/flux_diverse_clean; do
+              ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated; do
     ds_name=$(basename "$ds_dir")
     if [ -f "$ds_dir/quality_filter.json" ]; then
         echo "  $ds_name: exists, skipping."
@@ -135,17 +261,19 @@ for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc
             2>&1 | tee -a "$LOG_DIR/quality_filter.log"
     fi
 done
-echo "  sora_diverse: quality filter (SAM labels)..."
-python3 scripts/filter_seg_quality.py --data-dir ./data_cloud/sora_diverse \
-    --min-regions 4 --max-single-region 0.70 --min-foreground 0.05 \
-    2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+for ds in sora_diverse flux_diverse_clean demo_views; do
+    echo "  $ds: quality filter (SAM labels)..."
+    python3 scripts/filter_seg_quality.py --data-dir "./data_cloud/$ds" \
+        --min-regions 4 --max-single-region 0.70 --min-foreground 0.05 \
+        2>&1 | tee -a "$LOG_DIR/quality_filter.log"
+done
 echo ""
 
 # 1.4 Train seg
 echo "[1.4] Training SEGMENTATION model..."
 echo "  Config: training/configs/segmentation_a100_run22.yaml (boundary softening + SAM labels)"
 echo "  Resuming from run 20 (0.6485 test mIoU)"
-echo "  SAM labels on sora_diverse — expect significant mIoU jump"
+echo "  SAM labels on sora_diverse + demo_views + flux_diverse_clean"
 echo ""
 
 rm -f checkpoints/segmentation/latest.pt
