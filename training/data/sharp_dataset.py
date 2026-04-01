@@ -245,16 +245,17 @@ class SharpDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx: int) -> dict:
         """Return a training example.
 
-        For training: randomly pick one view as input, rest as targets.
-        For val/test: use front view as input, rest as targets.
+        For training: randomly pick one view as input, one random target.
+        For val/test: use front view as input, one random target.
 
-        Returns dict with:
+        Returns fixed-size tensors (no variable-length batching issues):
             input_image: [3, H, W] RGB
             input_angle: float (degrees)
-            target_images: [N, 3, H, W] RGB
-            target_angles: [N] float (degrees)
+            target_image: [3, H, W] RGB (single target)
+            target_angle: float (degrees)
             disparity_factor: scalar
-            extrinsics: [N+1, 4, 4] (input + targets)
+            input_extrinsics: [4, 4]
+            target_extrinsics: [4, 4]
             intrinsics: [4, 4]
         """
         char = self.characters[idx]
@@ -271,24 +272,26 @@ class SharpDataset(torch.utils.data.Dataset):
         input_name = view_names[input_idx]
         target_names = [n for n in view_names if n != input_name]
 
+        # Pick one random target (fixed-size output, no batching issues)
+        if self.split == "train":
+            target_name = target_names[np.random.randint(len(target_names))]
+        else:
+            target_name = target_names[0]
+
         # Load images
         input_image = _load_image_rgb(views[input_name], self.resolution)
-        target_images = torch.stack([
-            _load_image_rgb(views[n], self.resolution)
-            for n in target_names
-        ])
+        target_image = _load_image_rgb(views[target_name], self.resolution)
 
         # Camera poses
         input_angle = VIEW_ANGLES[input_name]
-        target_angles = torch.tensor([VIEW_ANGLES[n] for n in target_names])
+        target_angle = VIEW_ANGLES[target_name]
 
-        # All extrinsics (input first, then targets)
-        all_angles = [input_angle] + [VIEW_ANGLES[n] for n in target_names]
-        all_extrinsics = torch.stack([
-            _make_camera_pose(a, self.focal_length_px, self.resolution).extrinsics
-            for a in all_angles
-        ])
-
+        input_extrinsics = _make_camera_pose(
+            input_angle, self.focal_length_px, self.resolution
+        ).extrinsics
+        target_extrinsics = _make_camera_pose(
+            target_angle, self.focal_length_px, self.resolution
+        ).extrinsics
         intrinsics = _make_camera_pose(
             0.0, self.focal_length_px, self.resolution
         ).intrinsics
@@ -300,10 +303,11 @@ class SharpDataset(torch.utils.data.Dataset):
         return {
             "input_image": input_image,
             "input_angle": input_angle,
-            "target_images": target_images,
-            "target_angles": target_angles,
+            "target_image": target_image,
+            "target_angle": target_angle,
             "disparity_factor": disparity_factor,
-            "extrinsics": all_extrinsics,
+            "input_extrinsics": input_extrinsics,
+            "target_extrinsics": target_extrinsics,
             "intrinsics": intrinsics,
             "char_id": char["char_id"],
         }

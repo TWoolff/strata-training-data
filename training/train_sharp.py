@@ -42,10 +42,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Append ml-sharp to path
-ML_SHARP_PATH = Path(__file__).parent.parent.parent / "ml-sharp"
-if ML_SHARP_PATH.exists():
-    sys.path.insert(0, str(ML_SHARP_PATH / "src"))
+# Append ml-sharp to path (try multiple locations)
+for candidate in [
+    Path(__file__).parent.parent.parent / "ml-sharp",  # sibling to strata-training-data
+    Path("/workspace/ml-sharp"),  # A100 cloud
+    Path("../ml-sharp"),  # relative
+]:
+    if candidate.exists():
+        sys.path.insert(0, str(candidate / "src"))
+        break
 
 
 def create_model(checkpoint_path: str | None, device: torch.device):
@@ -180,8 +185,9 @@ def train_one_epoch(
         optimizer.zero_grad()
 
         input_image = batch["input_image"].to(device)  # [B, 3, H, W]
-        target_images = batch["target_images"].to(device)  # [B, N, 3, H, W]
-        extrinsics = batch["extrinsics"].to(device)  # [B, N+1, 4, 4]
+        target_image = batch["target_image"].to(device)  # [B, 3, H, W]
+        input_extrinsics = batch["input_extrinsics"].to(device)  # [B, 4, 4]
+        target_extrinsics = batch["target_extrinsics"].to(device)  # [B, 4, 4]
         intrinsics = batch["intrinsics"].to(device)  # [B, 4, 4]
         disparity_factor = batch["disparity_factor"].to(device)  # [B]
 
@@ -207,25 +213,23 @@ def train_one_epoch(
 
             gaussians = unproject_gaussians(
                 gaussians_ndc,
-                extrinsics[b, 0],  # input view extrinsics
+                input_extrinsics[b],
                 intrinsics_resized,
                 (internal_size, internal_size),
             )
 
-            # Render from each target camera and compute loss
-            n_targets = target_images.shape[1]
-            for t in range(n_targets):
-                rendered_rgb, rendered_alpha = render_from_gaussians(
-                    renderer, gaussians,
-                    extrinsics[b, t + 1],  # target extrinsics (offset by 1, input is at 0)
-                    intrinsics[b],
-                    image_size,
-                )
+            # Render from target camera and compute loss
+            rendered_rgb, rendered_alpha = render_from_gaussians(
+                renderer, gaussians,
+                target_extrinsics[b],
+                intrinsics[b],
+                image_size,
+            )
 
-                loss, metrics = compute_loss(
-                    rendered_rgb, target_images[b, t], rendered_alpha,
-                )
-                batch_loss += loss / n_targets
+            loss, metrics = compute_loss(
+                rendered_rgb, target_image[b], rendered_alpha,
+            )
+            batch_loss += loss
 
         batch_loss = batch_loss / batch_size
         batch_loss.backward()
@@ -260,8 +264,9 @@ def validate(
 
     for batch in val_loader:
         input_image = batch["input_image"].to(device)
-        target_images = batch["target_images"].to(device)
-        extrinsics = batch["extrinsics"].to(device)
+        target_image = batch["target_image"].to(device)
+        input_extrinsics = batch["input_extrinsics"].to(device)
+        target_extrinsics = batch["target_extrinsics"].to(device)
         intrinsics = batch["intrinsics"].to(device)
         disparity_factor = batch["disparity_factor"].to(device)
 
@@ -283,23 +288,21 @@ def validate(
 
             gaussians = unproject_gaussians(
                 gaussians_ndc,
-                extrinsics[b, 0],
+                input_extrinsics[b],
                 intrinsics_resized,
                 (internal_size, internal_size),
             )
 
-            n_targets = target_images.shape[1]
-            for t in range(n_targets):
-                rendered_rgb, _ = render_from_gaussians(
-                    renderer, gaussians,
-                    extrinsics[b, t + 1],
-                    intrinsics[b],
-                    image_size,
-                )
+            rendered_rgb, _ = render_from_gaussians(
+                renderer, gaussians,
+                target_extrinsics[b],
+                intrinsics[b],
+                image_size,
+            )
 
-                l1 = F.l1_loss(rendered_rgb, target_images[b, t].unsqueeze(0))
-                total_l1 += l1.item()
-                n_samples += 1
+            l1 = F.l1_loss(rendered_rgb, target_image[b].unsqueeze(0))
+            total_l1 += l1.item()
+            n_samples += 1
 
     return {"val/l1": total_l1 / max(n_samples, 1)}
 
