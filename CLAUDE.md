@@ -32,19 +32,18 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 
 | # | Model | Current Best | Target | What moves the needle |
 |---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.70 mIoU** | Dr. Li's SAM labels ready (2,467 images). Next run uses SAM labels + boundary softening. |
+| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.70 mIoU** | Blocked: SAM labels don't help (clothing≠anatomy). Wait for Dr. Li's training code (April 12). |
 | 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
 | 3 | **Weights** | 0.0215 MAE (retrained) | **<0.015** | Retrained with run 20 seg encoder. 7% better than old 0.0231. ONNX in bucket. |
 | 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — low priority. |
-| 5 | **Texture Inpaint** | No model yet | — | May not need if view synthesis + Strata mesh projection works. |
-| 6 | **View Synthesis** | 0.2047 val/l1 (run 2+) | **<0.15 val/l1** | 407 characters from 199 turnaround sheets. Bear chef A-pose fine-tune next. |
+| 5 | **Texture Inpaint** | No model yet | — | May not need if 3D reconstruction works. |
+| 6 | **View Synthesis** | 0.2047 val/l1 (run 2) | — | U-Net too weak for sharp views. Replacing with SHARP 3D Gaussian approach. |
 
 **Priority order:**
-1. Demo video — bear chef A-pose in Strata (import → rig → pose → rotate)
-2. Seg with SAM labels — 2,467 expert labels ready, expect 0.70+ mIoU
-3. Bear chef view synthesis fine-tune — memorize the demo character
-4. Retrain joints with humanrig_posed GT
-5. Future: cloud 3D reconstruction (TripoSR/InstantMesh), interactive view correction
+1. **SHARP 3D fine-tune** — single image → 3D Gaussian splats, fine-tuned on turnaround sheets (next A100 run)
+2. Seg blocked until April 12 (Dr. Li's multi-decoder training code)
+3. Retrain joints with humanrig_posed GT
+4. Demo video once SHARP produces usable 3D from bear chef
 
 ## Project Layout
 
@@ -148,7 +147,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | `back_view_pairs_new.tar` | ~500 MiB | 1,244 new pairs from Meshy FBX chars |
 | `sora_diverse_new.tar` | 74 MiB | 291 new illustrated chars (March 27 batch) |
 | `soft_targets_precomputed.tar` | 1.9 GiB | Precomputed boundary-softened seg targets for all datasets |
-| `demo_back_view_pairs.tar` | 1 MiB | 5 demo character triplets (Gemini-generated views) |
+| `demo_back_view_pairs.tar` | 3.4 GiB | 6,210 illustrated pairs (407 chars from 199 turnaround sheets + bear chef) |
+| `sam_labels.tar` | 28 MiB | Raw SAM Body Parsing npz files for 2,467 sora_diverse images |
+| `sam_seg_converted.tar` | small | SAM labels converted to Strata 22-class (old conversion, superseded) |
 
 **Enriched tars** (include depth+normals, skip Marigold on A100):
 `{name}_enriched.tar` for: flux_diverse_clean, gemini_li_converted, toon_pseudo. Note: sora_diverse_enriched and humanrig_posed_enriched were deleted (stale data).
@@ -182,6 +183,9 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | `scripts/render_back_view_data.py` | Render front+3/4+back triplets from FBX/GLB |
 | `scripts/render_toon_styles.py` | Render FBX/GLB in toon styles (multi-angle) |
 | `scripts/convert_li_labels.py` | Convert Dr. Li's 19-class → Strata 22-class |
+| `scripts/convert_sam_labels.py` | Convert SAM Body Parsing 19-class → Strata 22-class (anatomy-aware) |
+| `training/train_sharp.py` | Fine-tune SHARP for illustrated character 3D reconstruction |
+| `training/run_sharp_finetune.sh` | A100 run script for SHARP fine-tuning |
 
 ## Segmentation Run History
 
@@ -200,7 +204,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 | 19 | 0.5287 | Class 20 remap to background | Val set different (1,658 chars). mIoU not comparable to run 18 directly. |
 | 20 | 0.6171 val / 0.6485 test | Boundary label softening (radius=2) | +8.8% over run 19. Biggest single improvement ever. forearm_r 0.42→0.57, feet 0.45→0.61. Neck regressed 0.62→0.45. |
 | 21 | 0.6060 val / 0.6361 test | Re-pseudo-label with run 20 model, no softening | sora_diverse 854→2,122 through filter. +7.5% from better pseudo-labels alone. Neck 0.5558 (better than run 20's 0.4515). |
-| **22** | **pending** | **Re-pseudo-labels + precomputed boundary softening (neck excluded)** | **Combines both improvements. Precomputed .npz soft targets in bucket. Config ready.** |
+| 22 | 0.5597 val (epoch 10) | SAM labels + improved conversion + no softening | SAM labels don't help — clothing→anatomy mismatch. Peaked at 0.5597, well below run 20. |
+| 22b | 0.5891 val (epoch 4) | SAM labels + boundary softening | Softening + SAM still worse than run 20. SAM labels are fundamentally wrong domain. |
 
 ### Run 13/14 Learnings
 
@@ -226,6 +231,13 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 - **Rectified flow failed**: Run 7 with flow matching loss severely overfit (train 0.06, val 0.37). L1 + perceptual loss remains the reliable choice.
 - **Foot rendering is the biggest visual artifact**: Model shows front-facing toes instead of heels in back views. Doesn't understand 3D rotation — needs more training data with visible foot rotation across views.
 - **Soapbox VC opportunity**: Connected with CEO Jesse Heasman. Preparing video demo of 3D character rotation from 2D illustrations.
+- **SAM Body Parsing labels don't help segmentation**: SAM segments by clothing (topwear, legwear, handwear), not anatomy (forearm, shoulder, upper_arm). The 19→22 class conversion (`convert_sam_labels.py`) can't bridge this gap. Rewrote with anatomy-aware logic (connected components for L/R, torso core detection for arm splitting, legwear→hips+upper_leg+lower_leg when no bottomwear), but still plateaued at 0.56-0.59. Run 20 (0.6485) remains best. All illustrated datasets (sora_diverse, flux_diverse_clean, gemini_li_converted) have clothing-based labels, not anatomy.
+- **gemini_li_converted labels are also clothing-based**: The 694 labels from Dr. Li were from her model, not hand-annotated. Same clothing→anatomy mismatch as SAM.
+- **View synthesis U-Net is fundamentally limited**: 29M param U-Net + L1/perceptual loss produces blurry novel views. Bear chef fine-tune at lr=1e-4 (val/l1=0.0548) had tile artifacts on unseen angles. At lr=1e-5 (val/l1=0.0853) preserved general ability but too blurry. Mixed training (full dataset + bear chef at 10-20x weight) barely improves over general model. L1 loss learns pixel averages → inherently blurry.
+- **SHARP (Apple) is the replacement for view synthesis**: Single image → 3D Gaussian splats in <1s on Mac MPS. Open-source (Apache code, research-only model weights). Runs inference on MPS but training needs CUDA (gsplat renderer). Fine-tuning pipeline built: `training/train_sharp.py` + `training/data/sharp_dataset.py` + `training/run_sharp_finetune.sh`.
+- **Python 3.14 multiprocessing breaking change**: Default start method changed to forkserver (requires pickling). Our dataset stores unpicklable module ref. Fixed with `multiprocessing.set_start_method("fork")`.
+- **see-through repo setup**: Clone to ../see-through, `sys.path.insert(0, '../see-through/common')`, install `einops pycocotools segment-anything-hq timm`.
+- **Never `pkill -f python3` on cloud instances**: Kills system processes and crashes the instance.
 
 ## Bootstrapping Loop
 
@@ -284,74 +296,87 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next A100 Run (April 1) — Ready to Go
-**Script:** `./training/run_next.sh` | **Storage:** 40 GB | **Time:** ~4-5 hrs
+### Next A100 Run (April 2) — SHARP Fine-tune
+**Script:** `./training/run_sharp_finetune.sh` | **Storage:** 30 GB | **Time:** ~4-5 hrs
 ```
 git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
 ./training/cloud_setup.sh lean
-./training/run_next.sh
+./training/run_sharp_finetune.sh
 ```
 
-**Part 1 — Seg with SAM labels (~3 hrs):**
-- Dr. Li's SAM Body Parsing labels on 2,467 illustrated images (ran March 31, zero errors)
-- Converted 19→22 class with `scripts/convert_sam_labels.py`, uploaded as `sam_seg_converted.tar`
-- Retrain seg with boundary softening, resume from run 20
-- Target: 0.70+ mIoU (currently 0.6485)
+**SHARP 3D Gaussian fine-tune:**
+- Apple's SHARP model: single image → 3D Gaussian splats in <1s
+- Fine-tune on ~6,200 turnaround sheet pairs (demo_back_view_pairs.tar)
+- Frozen DINOv2 encoder, train decoder + heads only
+- gsplat differentiable renderer for multi-view supervision loss
+- lr=1e-5, 300 samples/epoch, 20 epochs, internal_resolution=768
+- Goal: teach SHARP that illustrated characters are 3D beings, not flat cards
+- **License: research-only weights** — for production need own model or MIT alternative
 
-**Part 2 — Bear chef view synthesis (~1 hr):**
-- 30 bear chef A-pose pairs only (fast memorization)
-- Resume from run 2 (0.2047 val/l1)
-- Goal: sharp back/side views for demo video
+### Completed April 1
+- [x] **SAM labels tested — don't help seg** (clothing≠anatomy, peaked at 0.56-0.59 vs run 20's 0.6485)
+- [x] Rewrote `convert_sam_labels.py` with anatomy-aware logic (all 22 classes present)
+- [x] SAM inference pipeline working: see-through repo + 19-class SAM on A100
+- [x] Bear chef view synthesis fine-tune (lr=1e-4: val/l1=0.0548, lr=1e-5: val/l1=0.0853)
+- [x] Both bear chef ONNX models exported and in bucket
+- [x] **View synthesis U-Net confirmed too weak** for sharp novel views (blurry output from L1 loss)
+- [x] SHARP installed and tested on Mac MPS (7s inference, produces .ply Gaussian splats)
+- [x] SHARP fine-tuning pipeline built: `train_sharp.py` + `sharp_dataset.py` + `run_sharp_finetune.sh`
+- [x] Fixed Python 3.14 multiprocessing breaking change in train_segmentation.py
 
-### Completed March 31
-- [x] **Dr. Li's SAM model ran on all 2,467 images** (13 min, zero errors, A100)
-- [x] SAM labels converted 19→22 class locally (35 sec, 2,467 masks)
-- [x] Both tars uploaded: `sam_labels.tar` (raw) + `sam_seg_converted.tar` (converted)
-- [x] View synthesis run 2: 0.2047 val/l1 (6,180 pairs, 199 turnaround sheets)
-- [x] Weights retrain: 0.0215 MAE (7% better than old 0.0231). ONNX uploaded.
-- [x] Bear chef A-pose turnaround generated, cut, and added to demo_pairs
-- [x] Updated demo_pairs tar with bear chef (6,210 pairs total). Uploaded.
-- [x] Strata Rust code updated for 9ch view synthesis + new weights model
+### Blocked — Waiting
+- **Seg >0.70 mIoU** — blocked until Dr. Li's training code (April 12). SAM/pseudo-labels can't bridge clothing→anatomy gap. Need anatomy-native model or hand-annotated illustrated data.
+- **Demo video** — waiting on SHARP fine-tune results for usable 3D bear chef rotation
 
-### After Demo
+### After SHARP
 1. **Retrain joints** with humanrig_posed GT (diverse poses)
-2. **Retrain weights again** with improved seg encoder from SAM-trained model
-3. **More turnaround sheets** — 150 prompts ready (TS-001 to TS-150)
-4. Try Dr. Li's anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
-5. Dr. Li's training code releasing April 12 — learn multi-decoder approach
+2. **Retrain weights** with improved seg encoder (once seg improves)
+3. **Dr. Li's training code** (April 12) — multi-decoder approach for anatomy-native seg
+4. **More turnaround sheets** — 150 prompts ready (TS-001 to TS-150)
+5. Try Dr. Li's anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
 
 ### Later — Post Launch
-- Cloud 3D reconstruction (TripoSR/InstantMesh fine-tuned on turnaround sheets)
+- Production 3D reconstruction (train own model with MIT license, or use cloud API)
 - Interactive view correction paint tool in Strata
 - Blueprint marketplace
 - InnoFounder application (August 2026 start, 430K DKK grant)
 - Approach PreSeed Ventures / Accelerace / byFounders for angel investment
 
-## Model 6: View Synthesis (replaces Back View Generation)
+## Model 6: View Synthesis → 3D Reconstruction
 
-**Status:** Unified view synthesis model. Any 2 source views + target angle → target view RGBA. Run 1: 0.2139 val/l1 on multi-angle task.
+### U-Net View Synthesis (deprecated)
 
-### Back View History
-| Run | val/l1 | Pairs | Notes |
-|-----|--------|-------|-------|
-| 1 | 0.2982 | 1,085 | First back-view-only model |
-| 4 | 0.2152 | 3,049 | Best back-view-only result |
-| 5 | 0.2276 | 3,049 | PatchGAN failed |
-| 6 | 0.2090 | 3,054 | +5 demo pairs at high weight |
-| 7 | 0.2298 | 3,091 | Rectified flow — failed (overfitting) |
+U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel views. L1 loss learns pixel averages. GAN loss failed at 3K pairs. **Replaced by SHARP 3D Gaussian approach.**
 
-### View Synthesis (new unified model)
-| Run | val/l1 | Triplets | Notes |
-|-----|--------|----------|-------|
-| 1 | 0.2139 | 14,505 | From scratch. 2,640 illustrated pairs + 3,049 3D. 200 epochs. |
-| **2** | **0.2047** | **~35,000** | **Resume from run 1. 6,210 illustrated pairs (407 chars from 199 sheets) + 3,049 3D. Stopped epoch 2 (slow). Best yet.** |
+| Run | val/l1 | Notes |
+|-----|--------|-------|
+| run 2 (general) | 0.2047 | Best general model. Works OK for humanoid chars, fails on bear chef. |
+| bear chef lr=1e-4 | 0.0548 | Sharp on training pairs, tile artifacts on unseen angles. Destroyed general ability. |
+| bear chef lr=1e-5 | 0.0853 | Smoother but too blurry. Barely moved from general model. |
+| mixed (20x bear chef) | 0.1936 | Full dataset + bear chef at high weight. Barely better than general. |
 
-**Architecture:** Same U-Net (29M params), input [B,9,512,512] = src_A (4ch) + src_B (4ch) + angle_map (1ch), output [B,4,512,512].
-**Angle encoding:** 0.0=front, 0.2=front_3/4, 0.4=side, 0.6=back_3/4, 0.8=back. Broadcast to [1,H,W] channel.
-**Data source:** Gemini turnaround sheets — 5 consistent views per character, all angle combinations as training pairs. `scripts/split_turnaround.py` auto-splits sheets. 150 prompts ready (TS-001 to TS-150).
-**Known issues:** Feet render front-facing. Model doesn't understand 3D geometry. Template mesh doesn't match non-human characters (bear chef).
-**ONNX contract:** Input 9ch (was 8ch). Strata Rust code updated.
-**Future approach:** On-device model for rough generation + cloud 3D reconstruction (TripoSR/InstantMesh) for quality + interactive paint correction in Strata.
+**Conclusion:** U-Net + L1 loss cannot produce sharp novel views. Need fundamentally different approach.
+
+### SHARP 3D Gaussian Approach (new)
+
+**Apple SHARP** — single image → 3D Gaussian splats in <1s. Feedforward neural network, no diffusion.
+- **Repo:** `../ml-sharp/` (cloned from `github.com/apple/ml-sharp`)
+- **Architecture:** DINOv2-L16 encoder → monodepth → Gaussian decoder → 1.18M Gaussians
+- **Inference:** Works on Mac MPS (~7s) and CUDA (<1s)
+- **Training:** Requires CUDA (gsplat differentiable renderer for backprop)
+- **License:** Code is Apache-2.0. **Model weights are research-only** (no commercial use). For production: train own model from scratch.
+- **Current issue:** Interprets illustrated characters as flat cards (photos of paintings). Fine-tuning should teach it that characters are 3D beings.
+
+**Fine-tuning pipeline:**
+- `training/train_sharp.py` — training loop with gsplat rendering loss
+- `training/data/sharp_dataset.py` — turnaround sheet data loader with camera pose computation
+- `training/run_sharp_finetune.sh` — A100 run script
+- Training: predict Gaussians from one view → render from target camera → compare to GT view
+- Frozen DINOv2 encoder, train decoder + heads only
+
+**Data:** `demo_back_view_pairs.tar` (3.4 GB, 6,210 pairs, 3 views per pair: front, three_quarter, back)
+
+**ONNX contract (old U-Net):** Input 9ch (was 8ch). Strata Rust code updated. Will need new contract for SHARP integration (Gaussian splats → render on device).
 
 ## Quality Filter
 
@@ -362,4 +387,6 @@ git clone https://github.com/TWoolff/strata-training-data.git && cd strata-train
 
 ## Dr. Li's Label Schema Conversion
 
-Dr. Li provided 694 segmentation labels using a 19-class clothing-oriented schema. Converted to Strata's 22-class skeleton schema using joint-based L/R splitting via `scripts/convert_li_labels.py`.
+Dr. Li's SAM Body Parsing model and earlier See-Through model both use a 19-class **clothing-oriented** schema (topwear, legwear, handwear, etc.). Converted to Strata's 22-class **skeleton** schema via `scripts/convert_li_labels.py` (694 images) and `scripts/convert_sam_labels.py` (2,467+ images).
+
+**Critical finding (April 1):** Clothing-based labels fundamentally disagree with anatomy-based labels. SAM doesn't distinguish forearm from upper_arm (both are "topwear"), can't detect bare hands/legs, and the L/R split by image center fails on non-frontal views. Even with anatomy-aware conversion (connected components, torso core detection, legwear splitting), the labels still hurt training because the val set has GT bone-based labels. **Seg improvement requires anatomy-native labels** — either hand-annotated or from Dr. Li's upcoming training code (April 12).
