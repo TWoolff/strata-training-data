@@ -143,14 +143,14 @@ echo ""
 
 # 1.4 Train seg
 echo "[1.4] Training SEGMENTATION model..."
-echo "  Config: training/configs/segmentation_a100_run20.yaml (boundary softening)"
+echo "  Config: training/configs/segmentation_a100_run22.yaml (boundary softening + SAM labels)"
 echo "  Resuming from run 20 (0.6485 test mIoU)"
 echo "  SAM labels on sora_diverse — expect significant mIoU jump"
 echo ""
 
 rm -f checkpoints/segmentation/latest.pt
 python3 -m training.train_segmentation \
-    --config training/configs/segmentation_a100_run20.yaml \
+    --config training/configs/segmentation_a100_run22.yaml \
     --resume "$SEG_CKPT" --reset-epochs \
     2>&1 | tee "$LOG_DIR/seg_train.log"
 

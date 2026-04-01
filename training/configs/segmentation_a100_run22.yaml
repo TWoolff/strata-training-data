@@ -1,11 +1,11 @@
-# Run 22 seg — Re-pseudo-labeled data + precomputed boundary softening
+# Run 22 seg — SAM labels + boundary softening
 #
-# Combines the two best improvements:
-#   1. Re-pseudo-labeled sora_diverse with run 20 model (2,122 pass filter)
-#   2. Boundary softening with precomputed .npz files (neck/accessory excluded)
-# Resume from run 21 checkpoint (0.6060 val mIoU / 0.6361 test mIoU)
+# Key changes:
+#   1. SAM Body Parsing labels on 2,467 sora_diverse images (expert quality, not pseudo)
+#   2. Boundary softening radius=2 (neck/hair_back excluded in dataset code)
+# Resume from run 20 checkpoint (0.6485 test mIoU — best ever)
 #
-# Expected: >0.65 test mIoU (run 20 got 0.6485 with softening, run 21 got 0.6361 without)
+# Expected: >0.70 test mIoU from SAM labels + boundary softening combined
 
 model:
   backbone: "mobilenet_v3_large"
@@ -28,7 +28,7 @@ data:
   split_ratios: {train: 0.8, val: 0.1, test: 0.1}
   dataset_weights:
     cvat_annotated: 10.0
-    sora_diverse: 4.0
+    sora_diverse: 6.0  # SAM expert labels (was 4.0 with pseudo-labels)
     gemini_li_converted: 3.0
     flux_diverse_clean: 2.5
     vroid_cc0: 2.5
