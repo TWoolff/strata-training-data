@@ -113,7 +113,7 @@ echo "[1.2] Marigold enrichment..."
 for ds in sora_diverse flux_diverse_clean gemini_li_converted; do
     ds_dir="./data_cloud/$ds"
     if [ -d "$ds_dir" ]; then
-        python3 run_normals_enrich.py --input-dir "$ds_dir" --only-missing --batch-size 16 \
+        python3 run_normals_enrich.py --input-dir "$ds_dir" --only-missing --batch-size 1 \
             2>&1 | tee -a "$LOG_DIR/enrich.log"
         echo "  $ds: enriched."
     fi
