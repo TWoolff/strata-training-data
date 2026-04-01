@@ -95,6 +95,18 @@ for tar in sora_diverse_new.tar sora_diverse_new2.tar; do
     fi
 done
 
+# 1.0b Download demo_pairs (needed for SAM labeling in step 1.1b)
+echo "[1.0b] Downloading demo_pairs..."
+mkdir -p data/training
+if [ ! -d "data/training/demo_pairs" ] || [ -z "$(ls data/training/demo_pairs/ 2>/dev/null | head -1)" ]; then
+    rclone copy hetzner:strata-training-data/tars/demo_back_view_pairs.tar ./data/tars/ --transfers 32 --fast-list -P
+    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/
+    rm -f ./data/tars/demo_back_view_pairs.tar
+fi
+DEMO_COUNT=$(ls -d ./data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
+echo "  demo_pairs: $DEMO_COUNT"
+echo ""
+
 # 1.1 Apply SAM-converted seg labels (overwrite old pseudo-labels)
 echo ""
 echo "[1.1] Applying SAM-converted seg labels to sora_diverse..."
@@ -324,26 +336,15 @@ echo "  PART 2: View Synthesis Bear Chef"
 echo "########################################################"
 echo ""
 
-# 2.0 Download view synthesis data
-echo "[2.0] Downloading view synthesis data..."
-mkdir -p checkpoints/view_synthesis data/training
+# 2.0 Download view synthesis checkpoint
+echo "[2.0] Downloading view synthesis checkpoint..."
+mkdir -p checkpoints/view_synthesis
 
 RUN2_CKPT="checkpoints/view_synthesis/run2_best.pt"
 if [ ! -f "$RUN2_CKPT" ]; then
     rclone copy hetzner:strata-training-data/checkpoints_view_synthesis_run2/run2_best.pt \
         ./checkpoints/view_synthesis/ --transfers 32 --fast-list -P
 fi
-
-# Demo pairs (includes bear chef A-pose)
-if [ ! -d "data/training/demo_pairs" ] || [ -z "$(ls data/training/demo_pairs/ 2>/dev/null | head -1)" ]; then
-    rclone copy hetzner:strata-training-data/tars/demo_back_view_pairs.tar ./data/tars/ --transfers 32 --fast-list -P
-    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/
-    rm -f ./data/tars/demo_back_view_pairs.tar
-fi
-DEMO_COUNT=$(ls -d ./data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
-echo "  demo_pairs: $DEMO_COUNT"
-
-# Skip 3D pairs to save space — focus on demo pairs
 echo ""
 
 # 2.1 Create bear-chef-only dataset for fast fine-tune
