@@ -60,7 +60,7 @@ loss:
   normals_weight: 0.2
   confidence_weight: 0.1
   label_smoothing: 0.0
-  boundary_softening_radius: 2
+  boundary_softening_radius: 0  # SAM labels have clean boundaries, softening hurts
 
 checkpointing:
   save_dir: "./checkpoints/segmentation"
