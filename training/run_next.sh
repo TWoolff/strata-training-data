@@ -354,43 +354,24 @@ if [ ! -f "$RUN2_CKPT" ]; then
 fi
 echo ""
 
-# 2.1 Create bear-chef-only dataset for fast fine-tune
-echo "[2.1] Creating bear chef only dataset..."
-mkdir -p data/training/bear_chef_only
+# 2.1 Download full view synthesis dataset (back_view_pairs)
+echo "[2.1] Downloading full view synthesis data..."
+for tar in back_view_pairs.tar back_view_pairs_unrigged.tar back_view_pairs_new.tar; do
+    tar_dir="data/training/$(echo $tar | sed 's/.tar//')"
+    if [ -d "$tar_dir" ] && [ "$(ls "$tar_dir"/ 2>/dev/null | head -1)" ]; then
+        echo "  $tar: exists, skipping."
+    elif rclone ls "hetzner:strata-training-data/tars/$tar" &>/dev/null 2>&1; then
+        echo "  Downloading $tar..."
+        rclone copy "hetzner:strata-training-data/tars/$tar" ./data/tars/ --transfers 32 --fast-list -P
+        if [ -f "./data/tars/$tar" ]; then
+            tar xf "./data/tars/$tar" -C ./data/training/ 2>/dev/null || true
+            rm -f "./data/tars/$tar"
+        fi
+    fi
+done
 
-# Find bear chef A-pose pairs (last 30 pairs in demo_pairs)
-# Copy them to a separate directory
-python3 -c "
-from pathlib import Path
-import shutil, json
-
-demo = Path('data/training/demo_pairs')
-out = Path('data/training/bear_chef_only')
-
-# Find pairs that contain bear chef views (check image similarity or just use last 30)
-all_pairs = sorted(demo.glob('pair_demo_*'))
-# Bear chef A-pose was added last — find them
-bear_count = 0
-for pd in reversed(all_pairs):
-    vi = pd / 'view_info.json'
-    if vi.exists():
-        # Check if images are 512x512 bear-like (just copy last 30)
-        if bear_count < 30:
-            dest = out / pd.name
-            if not dest.exists():
-                shutil.copytree(pd, dest)
-            bear_count += 1
-        else:
-            break
-print(f'Copied {bear_count} bear chef pairs')
-"
-
-BC_COUNT=$(ls -d data/training/bear_chef_only/pair_* 2>/dev/null | wc -l | tr -d ' ')
-echo "  bear_chef_only: $BC_COUNT pairs"
-echo ""
-
-# 2.2 Train (bear chef only — very fast)
-echo "[2.2] Training view synthesis (bear chef only)..."
+# 2.2 Train view synthesis (full dataset + bear chef at high weight)
+echo "[2.2] Training view synthesis (full + bear chef)..."
 
 rm -f checkpoints/view_synthesis/latest.pt
 python3 -c "
@@ -400,29 +381,38 @@ ckpt['epoch'] = -1
 torch.save(ckpt, 'checkpoints/view_synthesis/latest.pt')
 "
 
-# Quick config: bear chef only, 100 epochs, should be very fast
 python3 -c "
 import yaml
 cfg = {
     'model': {'type': 'view_synthesis', 'in_channels': 9, 'out_channels': 4},
     'data': {
-        'dataset_dirs': ['./data/training/bear_chef_only'],
+        'dataset_dirs': [
+            './data/training/demo_pairs',
+            './data/training/back_view_pairs',
+            './data/training/back_view_pairs_unrigged',
+            './data/training/back_view_pairs_new',
+        ],
         'resolution': 512, 'split_seed': 42,
         'split_ratios': {'train': 0.85, 'val': 0.10, 'test': 0.05},
-        'dataset_weights': {'bear_chef_only': 1.0},
+        'dataset_weights': {
+            'demo_pairs': 10.0,
+            'back_view_pairs': 1.0,
+            'back_view_pairs_unrigged': 1.0,
+            'back_view_pairs_new': 1.0,
+        },
     },
     'augmentation': {'horizontal_flip': False, 'color_jitter': {'brightness': 0.1, 'contrast': 0.1, 'saturation': 0.1, 'hue': 0.02}},
-    'training': {'batch_size': 16, 'num_workers': 4, 'epochs': 100, 'optimizer': 'adam', 'learning_rate': 1e-4, 'weight_decay': 1e-5, 'scheduler': 'cosine', 'warmup_epochs': 3},
+    'training': {'batch_size': 16, 'num_workers': 4, 'epochs': 30, 'optimizer': 'adam', 'learning_rate': 5e-5, 'weight_decay': 1e-5, 'scheduler': 'cosine', 'warmup_epochs': 2},
     'loss': {'l1_weight': 1.0, 'perceptual_weight': 0.1},
-    'checkpointing': {'save_dir': './checkpoints/view_synthesis', 'early_stopping_patience': 20, 'early_stopping_metric': 'val/l1'},
+    'checkpointing': {'save_dir': './checkpoints/view_synthesis', 'early_stopping_patience': 10, 'early_stopping_metric': 'val/l1'},
 }
-with open('training/configs/view_synthesis_bear_chef_only.yaml', 'w') as f:
+with open('training/configs/view_synthesis_bear_chef_mixed.yaml', 'w') as f:
     yaml.dump(cfg, f)
 print('Config written')
 "
 
 python3 -m training.train_view_synthesis \
-    --config training/configs/view_synthesis_bear_chef_only.yaml \
+    --config training/configs/view_synthesis_bear_chef_mixed.yaml \
     2>&1 | tee "$LOG_DIR/bear_chef_train.log"
 
 echo ""
