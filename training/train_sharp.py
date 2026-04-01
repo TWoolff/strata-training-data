@@ -26,6 +26,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -326,6 +327,8 @@ def main():
                         help="Freeze the DINOv2 encoder (train only decoder + heads)")
     parser.add_argument("--patience", type=int, default=15,
                         help="Early stopping patience")
+    parser.add_argument("--max-train-samples", type=int, default=0,
+                        help="Cap training samples per epoch (0=all)")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -363,6 +366,13 @@ def main():
     val_ds = SharpDataset(config, split="val")
 
     logger.info("Train: %d characters, Val: %d characters", len(train_ds), len(val_ds))
+
+    # Optionally cap training samples per epoch
+    if args.max_train_samples > 0 and args.max_train_samples < len(train_ds):
+        indices = list(range(len(train_ds)))
+        np.random.shuffle(indices)
+        train_ds = torch.utils.data.Subset(train_ds, indices[:args.max_train_samples])
+        logger.info("Capped training to %d samples per epoch", args.max_train_samples)
 
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0,

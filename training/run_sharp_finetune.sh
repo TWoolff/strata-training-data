@@ -58,16 +58,22 @@ echo ""
 echo "[4] Training SHARP..."
 mkdir -p checkpoints/sharp logs
 
+# demo_pairs has ~6,200 pairs but many share the same character views.
+# At internal_res=768, ~2-3s per step.
+# Use --max-train-samples to cap epoch length.
+# 500 samples/epoch × 20 epochs × ~2.5s = ~7 hrs
+# 300 samples/epoch × 20 epochs × ~2.5s = ~4 hrs
 python3 -m training.train_sharp \
     --data-dir ./data/training/demo_pairs \
     --checkpoint "$SHARP_CKPT" \
     --output-dir ./checkpoints/sharp \
-    --epochs 50 \
+    --epochs 20 \
     --lr 1e-5 \
     --batch-size 1 \
     --internal-resolution 768 \
     --freeze-encoder \
-    --patience 15 \
+    --patience 10 \
+    --max-train-samples 300 \
     2>&1 | tee logs/sharp_finetune.log
 
 # 5. Upload
