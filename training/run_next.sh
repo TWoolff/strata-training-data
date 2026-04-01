@@ -107,16 +107,20 @@ DEMO_COUNT=$(ls -d ./data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d
 echo "  demo_pairs: $DEMO_COUNT"
 echo ""
 
-# 1.1 Apply SAM-converted seg labels (overwrite old pseudo-labels)
+# 1.1 Download raw SAM npz files for sora_diverse (if not already present from SAM inference)
 echo ""
-echo "[1.1] Applying SAM-converted seg labels to sora_diverse..."
-rclone copy hetzner:strata-training-data/tars/sam_seg_converted.tar ./data/tars/ --transfers 32 --fast-list -P
-if [ -f "./data/tars/sam_seg_converted.tar" ]; then
-    tar xf ./data/tars/sam_seg_converted.tar -C ./data_cloud/
-    rm -f ./data/tars/sam_seg_converted.tar
+echo "[1.1] Downloading raw SAM labels..."
+SAM_NPZ_COUNT=$(find ./data_cloud/sora_diverse -name "sam_segmentation.npz" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$SAM_NPZ_COUNT" -lt 100 ]; then
+    # Download raw SAM labels (npz files) and merge into sora_diverse
+    rclone copy hetzner:strata-training-data/tars/sam_labels.tar ./data/tars/ --transfers 32 --fast-list -P
+    if [ -f "./data/tars/sam_labels.tar" ]; then
+        tar xf ./data/tars/sam_labels.tar -C ./ 2>/dev/null || true
+        rm -f ./data/tars/sam_labels.tar
+    fi
+    SAM_NPZ_COUNT=$(find ./data_cloud/sora_diverse -name "sam_segmentation.npz" 2>/dev/null | wc -l | tr -d ' ')
 fi
-SAM_COUNT=$(find ./data_cloud/sora_diverse -name "segmentation.png" | wc -l | tr -d ' ')
-echo "  Applied SAM labels to $SAM_COUNT sora_diverse images"
+echo "  SAM npz files: $SAM_NPZ_COUNT in sora_diverse"
 echo ""
 
 # 1.1b Extract unique view images from demo_pairs → seg-compatible layout
@@ -238,9 +242,11 @@ for data_dir in datasets:
                 data_dir.name, processed, skipped, elapsed, processed/max(elapsed,1))
 " 2>&1 | tee "$LOG_DIR/sam_inference.log"
 
-# 1.1d Convert SAM 19-class → Strata 22-class for demo_views + flux_diverse_clean
+# 1.1d Convert SAM 19-class → Strata 22-class (improved anatomy-aware conversion)
 echo ""
-echo "[1.1d] Converting SAM labels to 22-class..."
+echo "[1.1d] Converting SAM labels to 22-class (all datasets)..."
+# Force re-convert all — new conversion logic fixes forearms, hips, upper legs
+python3 scripts/convert_sam_labels.py --input-dir ./data_cloud/sora_diverse 2>&1 | tee -a "$LOG_DIR/sam_convert.log"
 python3 scripts/convert_sam_labels.py --input-dir ./data_cloud/demo_views 2>&1 | tee -a "$LOG_DIR/sam_convert.log"
 python3 scripts/convert_sam_labels.py --input-dir ./data_cloud/flux_diverse_clean 2>&1 | tee -a "$LOG_DIR/sam_convert.log"
 echo ""
