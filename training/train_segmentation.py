@@ -15,8 +15,16 @@ from __future__ import annotations
 
 import argparse
 import logging
+import multiprocessing
 import sys
 from pathlib import Path
+
+# Python 3.14+ changed default to 'forkserver' which requires pickling.
+# Our dataset has unpicklable module refs, so use 'fork' instead.
+try:
+    multiprocessing.set_start_method("fork")
+except RuntimeError:
+    pass  # already set
 
 import numpy as np
 import torch

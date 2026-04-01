@@ -163,8 +163,8 @@ echo "[1.1c] Running SAM Body Parsing on demo_views + flux_diverse_clean..."
 if [ ! -d "../see-through" ]; then
     git clone https://github.com/shitagaki-lab/see-through.git ../see-through
 fi
-# Install deps from common/ (skip editable installs that fail)
-pip install -q segment-anything-hq 2>&1 | tail -3 || true
+# Install deps for see-through (skip broken editable installs)
+pip install -q einops pycocotools segment-anything-hq timm 2>&1 | tail -3 || true
 
 python3 -c "
 import sys, os
