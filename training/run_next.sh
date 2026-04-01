@@ -162,12 +162,13 @@ echo "[1.1c] Running SAM Body Parsing on demo_views + flux_diverse_clean..."
 # Clone see-through repo for SAM inference (same as March 31 run)
 if [ ! -d "../see-through" ]; then
     git clone https://github.com/shitagaki-lab/see-through.git ../see-through
-    pip install -q -r ../see-through/requirements.txt 2>&1 | tail -5 || true
 fi
+# Install deps from common/ (skip editable installs that fail)
+pip install -q segment-anything-hq 2>&1 | tail -3 || true
 
 python3 -c "
 import sys, os
-sys.path.insert(0, '../see-through')
+sys.path.insert(0, '../see-through/common')
 import numpy as np
 import torch
 from PIL import Image
