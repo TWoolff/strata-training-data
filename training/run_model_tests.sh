@@ -297,12 +297,96 @@ echo "  SAM 3 seg results: $(ls output/model_tests/sam3_seg/*.png 2>/dev/null | 
 echo ""
 
 # =============================================================================
-# Upload results
+# PART 2: SAM 3 Segmentation Fine-tune (22-class anatomy)
 # =============================================================================
-echo "[4] Uploading results..."
+echo "########################################################"
+echo "  PART 2: SAM 3 Seg Fine-tune (22-class anatomy)"
+echo "########################################################"
+echo ""
+
+# 2.1 Download GT seg data
+echo "[2.1] Downloading GT segmentation data..."
+mkdir -p data_cloud data/tars
+
+download_tar() {
+    local tar_name="$1"; local extract_dir="$2"
+    if [ -d "$extract_dir" ] && [ "$(ls "$extract_dir"/ 2>/dev/null | head -1)" ]; then
+        local count=$(find "$extract_dir" -maxdepth 1 -type d | wc -l | tr -d ' ')
+        echo "  $(basename "$extract_dir"): $count examples (exists)"
+        return 0
+    fi
+    echo "  Downloading $tar_name..."
+    rclone copy "hetzner:strata-training-data/tars/$tar_name" ./data/tars/ --transfers 32 --fast-list -P
+    if [ -f "./data/tars/$tar_name" ]; then
+        tar xf "./data/tars/$tar_name" -C ./data_cloud/ 2>/dev/null
+        rm -f "./data/tars/$tar_name"
+    fi
+}
+
+download_tar "humanrig.tar" "./data_cloud/humanrig"
+download_tar "vroid_cc0.tar" "./data_cloud/vroid_cc0"
+download_tar "meshy_cc0_textured_restructured.tar" "./data_cloud/meshy_cc0_restructured"
+download_tar "gemini_li_converted.tar" "./data_cloud/gemini_li_converted"
+download_tar "cvat_annotated.tar" "./data_cloud/cvat_annotated"
+
+# Download frozen splits
+if [ ! -f "data_cloud/frozen_val_test.json" ]; then
+    rclone copy hetzner:strata-training-data/data_cloud/frozen_val_test.json \
+        ./data_cloud/ --transfers 4 --fast-list -P
+fi
+
+echo ""
+
+# 2.2 Convert to COCO format
+echo "[2.2] Converting GT data to COCO format for SAM 3..."
+python3 scripts/convert_gt_to_coco.py \
+    --data-dirs ./data_cloud/humanrig ./data_cloud/vroid_cc0 \
+                ./data_cloud/meshy_cc0_restructured \
+                ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated \
+    --output-dir ./data_cloud/sam3_coco \
+    --split-file ./data_cloud/frozen_val_test.json \
+    2>&1 | tee output/model_tests/coco_convert.log
+
+TRAIN_COUNT=$(python3 -c "import json; d=json.load(open('data_cloud/sam3_coco/train/_annotations.coco.json')); print(len(d['images']))" 2>/dev/null || echo "0")
+VAL_COUNT=$(python3 -c "import json; d=json.load(open('data_cloud/sam3_coco/val/_annotations.coco.json')); print(len(d['images']))" 2>/dev/null || echo "0")
+echo "  COCO data: train=$TRAIN_COUNT, val=$VAL_COUNT"
+echo ""
+
+# 2.3 Install SAM 3 training deps
+echo "[2.3] Installing SAM 3 training dependencies..."
+cd ../sam3
+pip install -q -e ".[train]" 2>&1 | tail -5
+cd /workspace/strata-training-data
+echo ""
+
+# 2.4 Train SAM 3 segmentation
+echo "[2.4] Training SAM 3 segmentation (22-class anatomy)..."
+echo "  Config: training/configs/sam3_seg_finetune.yaml"
+echo "  Resolution: 1008, epochs: 20, batch_size: 1"
+echo ""
+
+cd ../sam3
+python3 sam3/train/train.py \
+    -c /workspace/strata-training-data/training/configs/sam3_seg_finetune.yaml \
+    --use-cluster 0 --num-gpus 1 \
+    2>&1 | tee /workspace/strata-training-data/output/model_tests/sam3_seg_train.log
+cd /workspace/strata-training-data
+
+echo ""
+
+# =============================================================================
+# Upload ALL results
+# =============================================================================
+echo "[5] Uploading results..."
 rclone copy output/model_tests/ hetzner:strata-training-data/model_tests_april2/ --transfers 4 --fast-list -P
+
+# Upload SAM 3 checkpoints
+if [ -d "checkpoints/sam3_seg/checkpoints" ]; then
+    rclone copy checkpoints/sam3_seg/ \
+        hetzner:strata-training-data/checkpoints_sam3_seg/ --transfers 4 --fast-list --size-only -P
+fi
 
 echo ""
 echo "============================================"
-echo "  ALL TESTS DONE! $(date)"
+echo "  ALL DONE! $(date)"
 echo "============================================"
