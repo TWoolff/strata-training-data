@@ -37,7 +37,7 @@ echo "[2] Downloading training data..."
 mkdir -p data/training data/tars
 if [ ! -d "data/training/demo_pairs" ] || [ -z "$(ls data/training/demo_pairs/ 2>/dev/null | head -1)" ]; then
     rclone copy hetzner:strata-training-data/tars/demo_back_view_pairs.tar ./data/tars/ --transfers 32 --fast-list -P
-    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/
+    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/ 2>/dev/null
     rm -f ./data/tars/demo_back_view_pairs.tar
 fi
 PAIR_COUNT=$(ls -d data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')

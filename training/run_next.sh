@@ -70,7 +70,7 @@ download_tar() {
     echo "  Downloading $tar_name..."
     rclone copy "hetzner:strata-training-data/tars/$tar_name" ./data/tars/ --transfers 32 --fast-list -P
     if [ -f "./data/tars/$tar_name" ]; then
-        tar xf "./data/tars/$tar_name" -C ./data_cloud/
+        tar xf "./data/tars/$tar_name" -C ./data_cloud/ 2>/dev/null
         rm -f "./data/tars/$tar_name"
     fi
 }
@@ -100,7 +100,7 @@ echo "[1.0b] Downloading demo_pairs..."
 mkdir -p data/training
 if [ ! -d "data/training/demo_pairs" ] || [ -z "$(ls data/training/demo_pairs/ 2>/dev/null | head -1)" ]; then
     rclone copy hetzner:strata-training-data/tars/demo_back_view_pairs.tar ./data/tars/ --transfers 32 --fast-list -P
-    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/
+    tar xf ./data/tars/demo_back_view_pairs.tar -C ./data/training/ 2>/dev/null
     rm -f ./data/tars/demo_back_view_pairs.tar
 fi
 DEMO_COUNT=$(ls -d ./data/training/demo_pairs/pair_* 2>/dev/null | wc -l | tr -d ' ')
