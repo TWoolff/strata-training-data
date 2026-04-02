@@ -54,14 +54,84 @@ echo "  Test images: $(ls test_images/*.png | wc -l)"
 echo ""
 
 # =============================================================================
-# TEST 1: SAM 3D Body
+# TEST 1: SAM 3D Objects (single image + mask → 3D Gaussian splat with texture)
 # =============================================================================
 echo "########################################################"
-echo "  TEST 1: SAM 3D Body (single image → rigged 3D mesh)"
+echo "  TEST 1: SAM 3D Objects (image → 3D textured model)"
 echo "########################################################"
 echo ""
 
-echo "[1.1] Installing SAM 3D Body..."
+echo "[1.1] Installing SAM 3D Objects..."
+if [ ! -d "../sam-3d-objects" ]; then
+    git clone --depth 1 https://github.com/facebookresearch/sam-3d-objects.git ../sam-3d-objects
+fi
+
+cd ../sam-3d-objects
+pip install -q -r requirements.inference.txt 2>&1 | tail -5
+pip install -q -e . 2>&1 | tail -3
+cd /workspace/strata-training-data
+
+echo ""
+echo "[1.2] Downloading SAM 3D Objects checkpoint..."
+python3 -c "
+from huggingface_hub import snapshot_download
+path = snapshot_download('facebook/sam-3d-objects', local_dir='../sam-3d-objects/checkpoints/hf')
+print(f'Downloaded to: {path}')
+" 2>&1 | tail -5
+
+echo ""
+echo "[1.3] Running SAM 3D Objects inference..."
+python3 -c "
+import sys, os
+sys.path.insert(0, '../sam-3d-objects')
+sys.path.insert(0, '../sam-3d-objects/notebook')
+from inference import Inference, load_image
+from PIL import Image
+import numpy as np
+import glob
+
+# Load model
+config_path = '../sam-3d-objects/checkpoints/hf/pipeline.yaml'
+inference = Inference(config_path, compile=False)
+
+images = sorted(glob.glob('test_images/*.png'))
+out_dir = 'output/model_tests/sam3d_objects'
+os.makedirs(out_dir, exist_ok=True)
+
+for img_path in images:
+    name = os.path.basename(img_path).replace('.png', '')
+    print(f'Processing {name}...')
+    try:
+        # Load as RGBA — alpha channel IS the mask for illustrated characters
+        img = Image.open(img_path).convert('RGBA')
+        img_np = np.array(img)
+
+        # Create mask from alpha channel (character = 1, background = 0)
+        mask = (img_np[:, :, 3] > 128).astype(np.uint8)
+
+        # Run 3D reconstruction
+        output = inference(img_np, mask, seed=42)
+
+        # Save Gaussian splat
+        output['gs'].save_ply(f'{out_dir}/{name}.ply')
+        print(f'  Saved {name}.ply')
+    except Exception as e:
+        print(f'  Error: {e}')
+" 2>&1 | tee output/model_tests/sam3d_objects.log
+
+echo ""
+echo "  SAM 3D Objects results: $(ls output/model_tests/sam3d_objects/*.ply 2>/dev/null | wc -l) splats"
+echo ""
+
+# =============================================================================
+# TEST 1b: SAM 3D Body (single image → rigged 3D mesh with skeleton)
+# =============================================================================
+echo "########################################################"
+echo "  TEST 1b: SAM 3D Body (image → rigged skeleton mesh)"
+echo "########################################################"
+echo ""
+
+echo "[1b.1] Installing SAM 3D Body..."
 if [ ! -d "../sam-3d-body" ]; then
     git clone --depth 1 https://github.com/facebookresearch/sam-3d-body.git ../sam-3d-body
 fi
@@ -74,8 +144,7 @@ pip install -q 'git+https://github.com/facebookresearch/detectron2.git@a1ce2f9' 
 cd /workspace/strata-training-data
 
 echo ""
-echo "[1.2] Downloading SAM 3D Body checkpoint..."
-# Requires HuggingFace auth — will use cached token or prompt
+echo "[1b.2] Downloading SAM 3D Body checkpoint..."
 python3 -c "
 from huggingface_hub import snapshot_download
 path = snapshot_download('facebook/sam-3d-body-dinov3', local_dir='../sam-3d-body/checkpoints/dinov3')
@@ -83,7 +152,7 @@ print(f'Downloaded to: {path}')
 " 2>&1 | tail -5
 
 echo ""
-echo "[1.3] Running SAM 3D Body inference..."
+echo "[1b.3] Running SAM 3D Body inference..."
 cd ../sam-3d-body
 python3 demo.py \
     --image_folder /workspace/strata-training-data/test_images \
