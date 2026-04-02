@@ -6,44 +6,55 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 
 Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined in `src-tauri/src/ai/runtime.rs`:
 
-| # | Model | Architecture | Training Pipeline | Status |
-|---|-------|-------------|-------------------|--------|
-| 1 | **Segmentation** | DeepLabV3+ MobileNetV3 (multi-head: seg + depth + normals) | `training/train_segmentation.py` | Has pipeline + data |
-| 2 | **Joint Refinement** | MobileNetV3 + regression heads | `training/train_joints.py` | Has pipeline + data |
-| 3 | **Weight Prediction** | Per-vertex MLP with optional encoder features | `training/train_weights.py` | Has pipeline + data |
-| 4 | **Inpainting** | U-Net for occluded body regions | `training/train_inpainting.py` | Has pipeline + data |
-| 5 | **Texture Inpainting** | U-Net partial→complete RGBA fill | `training/train_texture_inpainting.py` | Needs pipeline + data (depends on model 6) |
-| 6 | **Back View Generation** | U-Net (front+3/4 → back) | `training/train_back_view.py` | Has pipeline + data (~3,049 pairs) |
+### Current Models (being replaced — see New Model Strategy below)
 
-### Model I/O
+| # | Model | Architecture | Status |
+|---|-------|-------------|--------|
+| 1 | **Segmentation** | DeepLabV3+ MobileNetV3 | 0.6485 mIoU. Replacing with SAM 2.1 fine-tune. |
+| 2 | **Joint Refinement** | MobileNetV3 + regression | 0.00121 offset. Replacing with ViTPose++. |
+| 3 | **Weight Prediction** | Per-vertex MLP | 0.0215 MAE. Study Puppeteer architecture. |
+| 4 | **Inpainting** | U-Net | 0.0028 val/l1. Low priority. |
+| 5 | **Texture Inpainting** | None | May not need if 3D reconstruction works. |
+| 6 | **View Synthesis / 3D** | U-Net (blurry) | Replacing with TRELLIS.2 (MIT). |
 
-- **Segmentation** — Input: [1,3,512,512]. Outputs: 22-class logits + depth (Marigold-distilled) + normals [3ch] + confidence + encoder_features (→ model 3).
-- **Joint Refinement** — Input: [1,3,512,512]. Outputs: [1,2,20] offsets + [1,20] confidence + [1,20] presence.
-- **Weight Prediction** — Input A: [1,31,2048,1] vertex features. Input B (optional): encoder features from model 1. Outputs: [1,20,2048,1] weights + [1,1,2048,1] confidence.
-- **Inpainting** — U-Net fills occluded body regions. Fallback: EdgeExtend.
-- **Texture Inpainting** — Input: [B,5,512,512] (RGBA + observation mask). Output: [B,4,512,512] completed RGBA. Depends on model 6.
-- **Back View Generation** — Input: [B,8,512,512] (front RGBA + 3/4 RGBA concatenated). Output: [B,4,512,512] back view RGBA.
+All current models bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
 
-Models 1-4 have complete training pipelines. All bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
+### New Model Strategy (April 2026)
+
+| # | Task | New Model | License | Why |
+|---|------|-----------|---------|-----|
+| 1 | **Segmentation** | **SAM 2.1** (Hiera encoder + U-decoder) | Apache 2.0 | Fine-tune on 22-class schema. SAM2 fine-tuning shown IoU 0.69→0.83 on custom datasets. |
+| 2 | **Joints** | **ViTPose++** | Apache 2.0 | Strong pose estimator, ONNX export, fine-tunable on illustrated chars. |
+| 3 | **Weights** | Study **Puppeteer** (NeurIPS 2025) | TBD | 215% improvement over SOTA. Attention-based skinning with topology-aware joint attention. |
+| 4 | **Inpainting** | Keep current + Dr. Li's Body Part Consistency Module | Apache 2.0 | Dr. Li's diffusion-based "see-through" inpainting for occluded body structure. |
+| 5 | **Depth/Normals** | **Marigold v1.1** | Apache 2.0 | Drop-in upgrade. 1-step inference (was 4-10 steps). Adds albedo/roughness for PBR. |
+| 6 | **3D Reconstruction** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Single image → 3D mesh + PBR materials. 3 seconds. Full training code. Replaces SHARP (research-only) and U-Net view synthesis. |
+
+**Also available for pseudo-labeling (non-commercial):**
+- **Sapiens** (Meta, CC-BY-NC) — 28-class body seg + 308 keypoints + depth + normals. Use as teacher model for knowledge distillation.
+- **SAM 3** (Meta) — concept-level segmentation via text prompts ("left forearm"). May solve clothing≠anatomy problem.
+- **StdGEN** (research-only) — semantic-decomposed 3D character generation (separate body/clothes/hair meshes).
 
 ## Model Targets & Current Scores
 
 Goal: uploaded 2D character illustrations look natural from all generated angles when rigged and posed.
 
-| # | Model | Current Best | Target | What moves the needle |
-|---|-------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.6485 test mIoU (run 20) | **>0.70 mIoU** | Blocked: SAM labels don't help (clothing≠anatomy). Wait for Dr. Li's training code (April 12). |
-| 2 | **Joints** | 0.00121 offset (run 3) | **<0.0008** | Retrain with humanrig_posed GT joints (diverse poses). |
-| 3 | **Weights** | 0.0215 MAE (retrained) | **<0.015** | Retrained with run 20 seg encoder. 7% better than old 0.0231. ONNX in bucket. |
-| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Converged — low priority. |
-| 5 | **Texture Inpaint** | No model yet | — | May not need if 3D reconstruction works. |
-| 6 | **View Synthesis** | 0.2047 val/l1 (run 2) | — | U-Net too weak for sharp views. Replacing with SHARP 3D Gaussian approach. |
+| # | Task | Current Best | Target | What moves the needle |
+|---|------|-------------|--------|----------------------|
+| 1 | **Segmentation** | 0.6485 mIoU (DeepLabV3+, run 20) | **>0.80 mIoU** | SAM 2.1 fine-tune on 22-class. Hiera backbone >> MobileNetV3. |
+| 2 | **Joints** | 0.00121 offset (MobileNetV3, run 3) | **<0.0005** | ViTPose++ fine-tune on illustrated char joints. |
+| 3 | **Weights** | 0.0215 MAE (MLP retrained) | **<0.010** | Study Puppeteer attention-based architecture. |
+| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Low priority. Dr. Li's module could help. |
+| 5 | **Depth/Normals** | Marigold LCM (4-10 steps) | faster | Marigold v1.1 — 1-step inference, drop-in upgrade. |
+| 6 | **3D Reconstruction** | None (U-Net view synthesis deprecated) | usable 3D | TRELLIS.2 fine-tune on turnaround sheets. MIT license. |
 
-**Priority order:**
-1. **SHARP 3D fine-tune** — single image → 3D Gaussian splats, fine-tuned on turnaround sheets (next A100 run)
-2. Seg blocked until April 12 (Dr. Li's multi-decoder training code)
-3. Retrain joints with humanrig_posed GT
-4. Demo video once SHARP produces usable 3D from bear chef
+**Priority order (April 2026):**
+1. **TRELLIS.2 3D reconstruction** — single image → 3D mesh + PBR. MIT license. Fine-tune on turnaround sheets. Biggest unlock for demo + product.
+2. **SAM 2.1 segmentation fine-tune** — Apache 2.0. Fine-tune on 22-class anatomy schema. Could break 0.80 mIoU.
+3. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder approach. Combine with SAM 2.1.
+4. **ViTPose++ joints** — Apache 2.0. Fine-tune on illustrated character data.
+5. **Marigold v1.1 upgrade** — drop-in, 1-step inference.
+6. **Strata post-processing improvements** — already committed (alpha compositing, confidence cleanup, bilinear upscale, Laplacian smoothing).
 
 ## Project Layout
 
@@ -296,47 +307,54 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next A100 Run (April 2) — SHARP Fine-tune
-**Script:** `./training/run_sharp_finetune.sh` | **Storage:** 30 GB | **Time:** ~4-5 hrs
-```
-git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
-./training/cloud_setup.sh lean
-./training/run_sharp_finetune.sh
-```
+### Next A100 Run — TRELLIS.2 Fine-tune
+**Goal:** Single illustrated character → 3D mesh + PBR materials. Fine-tune Microsoft's TRELLIS.2 (MIT license) on turnaround sheet data.
 
-**SHARP 3D Gaussian fine-tune:**
-- Apple's SHARP model: single image → 3D Gaussian splats in <1s
-- Fine-tune on ~6,200 turnaround sheet pairs (demo_back_view_pairs.tar)
-- Frozen DINOv2 encoder, train decoder + heads only
-- gsplat differentiable renderer for multi-view supervision loss
-- lr=1e-5, 300 samples/epoch, 20 epochs, internal_resolution=768
-- Goal: teach SHARP that illustrated characters are 3D beings, not flat cards
-- **License: research-only weights** — for production need own model or MIT alternative
+**Setup:**
+- Clone TRELLIS.2: `github.com/microsoft/TRELLIS.2`
+- Download demo_back_view_pairs.tar (3.4 GB, 6,210 pairs from 407 chars)
+- Fine-tune with multi-view supervision (predict 3D from one view, render others, compare to GT)
+- MIT license — can ship in Strata
 
-### Completed April 1
+**Also on the same run (if time allows):**
+- SAM 2.1 segmentation fine-tune on 22-class anatomy schema
+
+### Completed April 1-2
 - [x] **SAM labels tested — don't help seg** (clothing≠anatomy, peaked at 0.56-0.59 vs run 20's 0.6485)
 - [x] Rewrote `convert_sam_labels.py` with anatomy-aware logic (all 22 classes present)
 - [x] SAM inference pipeline working: see-through repo + 19-class SAM on A100
 - [x] Bear chef view synthesis fine-tune (lr=1e-4: val/l1=0.0548, lr=1e-5: val/l1=0.0853)
-- [x] Both bear chef ONNX models exported and in bucket
 - [x] **View synthesis U-Net confirmed too weak** for sharp novel views (blurry output from L1 loss)
 - [x] SHARP installed and tested on Mac MPS (7s inference, produces .ply Gaussian splats)
-- [x] SHARP fine-tuning pipeline built: `train_sharp.py` + `sharp_dataset.py` + `run_sharp_finetune.sh`
+- [x] SHARP fine-tuning pipeline built (but SHARP is research-only → switching to TRELLIS.2)
+- [x] SHARP A100 training: 1536 resolution works but ~1 min/step — too slow. Killed.
 - [x] Fixed Python 3.14 multiprocessing breaking change in train_segmentation.py
+- [x] **Strata post-processing improvements committed** (6 changes in segmentation.rs, joints.rs, weights.rs):
+  - Alpha-aware preprocessing (composite onto black)
+  - Confidence-gated seg cleanup (5×5 majority vote + small component removal)
+  - Bilinear logit upscaling (smooth region boundaries)
+  - Laplacian weight smoothing (confidence-adaptive, 2 iterations)
+  - Adaptive joint offset cap (15% of character extent)
+  - Confidence-weighted MLP/heat blending
+- [x] **Comprehensive model research** — identified TRELLIS.2, SAM 2.1, ViTPose++, Puppeteer, Marigold v1.1 as replacements
 
-### Blocked — Waiting
-- **Seg >0.70 mIoU** — blocked until Dr. Li's training code (April 12). SAM/pseudo-labels can't bridge clothing→anatomy gap. Need anatomy-native model or hand-annotated illustrated data.
-- **Demo video** — waiting on SHARP fine-tune results for usable 3D bear chef rotation
+### Immediate Next Steps
+1. **Set up TRELLIS.2** — clone repo, test inference on bear chef, build fine-tuning pipeline
+2. **Set up SAM 2.1 fine-tune** — Apache 2.0, ~60 lines to fine-tune, train on 22-class GT data
+3. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder. Integrate with SAM 2.1.
+4. **Marigold v1.1 upgrade** — drop-in replacement, 1-step inference
+5. **ViTPose++ for joints** — fine-tune on illustrated character joint data
 
-### After SHARP
-1. **Retrain joints** with humanrig_posed GT (diverse poses)
-2. **Retrain weights** with improved seg encoder (once seg improves)
-3. **Dr. Li's training code** (April 12) — multi-decoder approach for anatomy-native seg
-4. **More turnaround sheets** — 150 prompts ready (TS-001 to TS-150)
-5. Try Dr. Li's anime-tuned Marigold depth (`24yearsold/seethroughv0.0.1_marigold`)
+### New Model Repos to Clone
+| Model | Repo | License | Purpose |
+|-------|------|---------|---------|
+| TRELLIS.2 | `github.com/microsoft/TRELLIS.2` | MIT | 3D reconstruction (replaces SHARP + U-Net view synthesis) |
+| SAM 2.1 | `github.com/facebookresearch/sam2` | Apache 2.0 | Segmentation backbone (replaces DeepLabV3+ MobileNetV3) |
+| ViTPose++ | `github.com/ViTAE-Transformer/ViTPose` | Apache 2.0 | Joint estimation (replaces MobileNetV3 regression) |
+| Marigold v1.1 | `github.com/prs-eth/Marigold` | Apache 2.0 | Depth + normals (upgrade from current LCM) |
+| Puppeteer | `github.com/Seed3D/Puppeteer` | TBD | Study architecture for weight prediction |
 
 ### Later — Post Launch
-- Production 3D reconstruction (train own model with MIT license, or use cloud API)
 - Interactive view correction paint tool in Strata
 - Blueprint marketplace
 - InnoFounder application (August 2026 start, 430K DKK grant)
@@ -346,7 +364,7 @@ git clone https://github.com/TWoolff/strata-training-data.git && cd strata-train
 
 ### U-Net View Synthesis (deprecated)
 
-U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel views. L1 loss learns pixel averages. GAN loss failed at 3K pairs. **Replaced by SHARP 3D Gaussian approach.**
+U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel views. L1 loss learns pixel averages. GAN loss failed at 3K pairs. **Replaced by TRELLIS.2 3D reconstruction.**
 
 | Run | val/l1 | Notes |
 |-----|--------|-------|
@@ -357,26 +375,24 @@ U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel
 
 **Conclusion:** U-Net + L1 loss cannot produce sharp novel views. Need fundamentally different approach.
 
-### SHARP 3D Gaussian Approach (new)
+### SHARP (Apple) — Research Only, Deprecated
+- Tested April 1-2. Runs on Mac MPS (~7s). Research-only license — **cannot ship in Strata**.
+- Interprets illustrated characters as flat cards. Fine-tuning attempted but ~1 min/step at 1536 resolution — too slow.
+- Fine-tuning pipeline exists: `training/train_sharp.py` + `training/data/sharp_dataset.py` + `training/run_sharp_finetune.sh`
+- **Replaced by TRELLIS.2 (MIT license).**
 
-**Apple SHARP** — single image → 3D Gaussian splats in <1s. Feedforward neural network, no diffusion.
-- **Repo:** `../ml-sharp/` (cloned from `github.com/apple/ml-sharp`)
-- **Architecture:** DINOv2-L16 encoder → monodepth → Gaussian decoder → 1.18M Gaussians
-- **Inference:** Works on Mac MPS (~7s) and CUDA (<1s)
-- **Training:** Requires CUDA (gsplat differentiable renderer for backprop)
-- **License:** Code is Apache-2.0. **Model weights are research-only** (no commercial use). For production: train own model from scratch.
-- **Current issue:** Interprets illustrated characters as flat cards (photos of paintings). Fine-tuning should teach it that characters are 3D beings.
+### TRELLIS.2 (Microsoft) — New 3D Reconstruction Model
+**Single image → 3D mesh + PBR materials (base color, roughness, metallic, opacity). MIT license.**
+- **Repo:** `github.com/microsoft/TRELLIS.2`
+- **License:** MIT (code + weights). Note: nvdiffrast dependency has separate NVIDIA license.
+- **Architecture:** 4B params. Generates 512³ resolution 3D in ~3 seconds on A100.
+- **Fine-tuning:** Full training codebase provided. Can fine-tune on turnaround sheet data.
+- **Key advantage over SHARP:** MIT license (can ship), higher quality, PBR output, full training code.
+- **Integration plan:** Fine-tune on turnaround sheets → export → run in Strata for character 3D reconstruction at import time.
 
-**Fine-tuning pipeline:**
-- `training/train_sharp.py` — training loop with gsplat rendering loss
-- `training/data/sharp_dataset.py` — turnaround sheet data loader with camera pose computation
-- `training/run_sharp_finetune.sh` — A100 run script
-- Training: predict Gaussians from one view → render from target camera → compare to GT view
-- Frozen DINOv2 encoder, train decoder + heads only
+**Data:** Same turnaround sheet data — `demo_back_view_pairs.tar` (3.4 GB, 6,210 pairs, 3 views per pair).
 
-**Data:** `demo_back_view_pairs.tar` (3.4 GB, 6,210 pairs, 3 views per pair: front, three_quarter, back)
-
-**ONNX contract (old U-Net):** Input 9ch (was 8ch). Strata Rust code updated. Will need new contract for SHARP integration (Gaussian splats → render on device).
+**ONNX contract (old U-Net):** Input 9ch. Strata Rust code exists. Will need new integration for TRELLIS.2 mesh output.
 
 ## Quality Filter
 
@@ -390,3 +406,14 @@ U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel
 Dr. Li's SAM Body Parsing model and earlier See-Through model both use a 19-class **clothing-oriented** schema (topwear, legwear, handwear, etc.). Converted to Strata's 22-class **skeleton** schema via `scripts/convert_li_labels.py` (694 images) and `scripts/convert_sam_labels.py` (2,467+ images).
 
 **Critical finding (April 1):** Clothing-based labels fundamentally disagree with anatomy-based labels. SAM doesn't distinguish forearm from upper_arm (both are "topwear"), can't detect bare hands/legs, and the L/R split by image center fails on non-frontal views. Even with anatomy-aware conversion (connected components, torso core detection, legwear splitting), the labels still hurt training because the val set has GT bone-based labels. **Seg improvement requires anatomy-native labels** — either hand-annotated or from Dr. Li's upcoming training code (April 12).
+
+## Strata Post-Processing Improvements (April 2, 2026)
+
+6 changes committed to Strata (`../strata/`) that improve effective model quality without retraining:
+
+1. **Alpha-aware preprocessing** (`segmentation.rs`, `joints.rs`) — composite RGBA onto black before normalization. Matches Blender training data.
+2. **Confidence-gated seg cleanup** (`segmentation.rs`) — replace low-confidence pixels (<0.4) with 5×5 neighborhood majority. Remove connected components <16 pixels.
+3. **Bilinear logit upscaling** (`segmentation.rs`) — interpolate raw class logits then argmax, instead of nearest-neighbor on labels. Sub-pixel smooth region boundaries.
+4. **Laplacian weight smoothing** (`weights.rs`) — 2 iterations of confidence-adaptive smoothing on mesh adjacency graph. Reduces discontinuities.
+5. **Adaptive joint offset cap** (`joints.rs`) — 15% of character bounding extent, clamped [0.02, 0.10]. Replaces hardcoded 5%.
+6. **Confidence-weighted MLP/heat blending** (`weights.rs`) — low-confidence MLP predictions blend toward heat diffusion fallback.
