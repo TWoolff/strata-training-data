@@ -19,42 +19,53 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 
 All current models bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
 
-### New Model Strategy (April 2026)
+### New Model Strategy (April 2, 2026) — Meta SAM 3D Pipeline
 
-| # | Task | New Model | License | Why |
-|---|------|-----------|---------|-----|
-| 1 | **Segmentation** | **SAM 2.1** (Hiera encoder + U-decoder) | Apache 2.0 | Fine-tune on 22-class schema. SAM2 fine-tuning shown IoU 0.69→0.83 on custom datasets. |
-| 2 | **Joints** | **ViTPose++** | Apache 2.0 | Strong pose estimator, ONNX export, fine-tunable on illustrated chars. |
-| 3 | **Weights** | Study **Puppeteer** (NeurIPS 2025) | TBD | 215% improvement over SOTA. Attention-based skinning with topology-aware joint attention. |
-| 4 | **Inpainting** | Keep current + Dr. Li's Body Part Consistency Module | Apache 2.0 | Dr. Li's diffusion-based "see-through" inpainting for occluded body structure. |
-| 5 | **Depth/Normals** | **Marigold v1.1** | Apache 2.0 | Drop-in upgrade. 1-step inference (was 4-10 steps). Adds albedo/roughness for PBR. |
-| 6 | **3D Reconstruction** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Single image → 3D mesh + PBR materials. 3 seconds. Full training code. Replaces SHARP (research-only) and U-Net view synthesis. |
+The core insight: Meta's SAM 3D suite can replace most of Strata's custom models.
 
-**Also available for pseudo-labeling (non-commercial):**
-- **Sapiens** (Meta, CC-BY-NC) — 28-class body seg + 308 keypoints + depth + normals. Use as teacher model for knowledge distillation.
-- **SAM 3** (Meta) — concept-level segmentation via text prompts ("left forearm"). May solve clothing≠anatomy problem.
-- **StdGEN** (research-only) — semantic-decomposed 3D character generation (separate body/clothes/hair meshes).
+| # | Task | New Model | License | Status |
+|---|------|-----------|---------|--------|
+| 1 | **Segmentation** | **SAM 3** (text-prompted, 840M params) | SAM License (commercial OK) | **Training now** — epoch 1 of fine-tune on 22K GT images. Loss 787→399 in 5K steps. |
+| 2 | **3D Mesh** | **SAM 3D Objects** | SAM License (commercial OK) | **Validated** — bear chef produces good 3D mesh from single image. Thin but recognizable. |
+| 3 | **Skeleton/Rigging** | **SAM 3D Body** (70 keypoints, MHR rig) | SAM License (commercial OK) | **Tested** — works great on humanoid chars, poor on chibi/non-human. |
+| 4 | **Texture** | Multi-view projection + inpainting | Our code | Front + side views projected onto SAM 3D mesh, inpaint gaps. |
+| 5 | **Depth/Normals** | **Marigold v1.1** | Apache 2.0 | Drop-in upgrade. 1-step inference. |
+| 6 | **Backup 3D** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Needs DINOv3 + RMBG access. MIT license = can ship. |
+
+**New Strata Pipeline (vision):**
+1. User imports front view illustration
+2. **SAM 3D Objects** → 3D mesh with basic texture (~3 sec)
+3. User optionally adds side/back views → project textures onto mesh
+4. **Inpaint** remaining texture gaps (back, occluded areas)
+5. **SAM 3** segments body parts (text-prompted: "left forearm", "chest", etc.)
+6. **SAM 3D Body** adds skeleton for humanoid chars / our joint model for non-human
+7. Weight prediction on the real 3D mesh
+
+**Also available:**
+- **ViTPose++** (Apache 2.0) — joint estimation for illustrated characters
+- **Puppeteer** (NeurIPS 2025) — attention-based skinning weights
+- **Sapiens** (CC-BY-NC) — pseudo-labeling teacher only
+- **StdGEN** (research-only) — semantic-decomposed 3D (body/clothes/hair meshes)
 
 ## Model Targets & Current Scores
 
 Goal: uploaded 2D character illustrations look natural from all generated angles when rigged and posed.
 
-| # | Task | Current Best | Target | What moves the needle |
-|---|------|-------------|--------|----------------------|
-| 1 | **Segmentation** | 0.6485 mIoU (DeepLabV3+, run 20) | **>0.80 mIoU** | SAM 2.1 fine-tune on 22-class. Hiera backbone >> MobileNetV3. |
-| 2 | **Joints** | 0.00121 offset (MobileNetV3, run 3) | **<0.0005** | ViTPose++ fine-tune on illustrated char joints. |
-| 3 | **Weights** | 0.0215 MAE (MLP retrained) | **<0.010** | Study Puppeteer attention-based architecture. |
-| 4 | **Inpainting** | 0.0028 val/l1 (run 6) | **<0.002** | Low priority. Dr. Li's module could help. |
-| 5 | **Depth/Normals** | Marigold LCM (4-10 steps) | faster | Marigold v1.1 — 1-step inference, drop-in upgrade. |
-| 6 | **3D Reconstruction** | None (U-Net view synthesis deprecated) | usable 3D | TRELLIS.2 fine-tune on turnaround sheets. MIT license. |
+| # | Task | Current | New Model | Status |
+|---|------|---------|-----------|--------|
+| 1 | **Segmentation** | 0.6485 mIoU (DeepLabV3+) | **SAM 3** fine-tune | Training overnight (loss 787→399) |
+| 2 | **3D Mesh** | None (U-Net was blurry) | **SAM 3D Objects** | Validated on bear chef — works! |
+| 3 | **Skeleton** | 0.00121 offset (MobileNetV3) | **SAM 3D Body** / ViTPose++ | Tested — good on humanoid |
+| 4 | **Texture** | N/A | Multi-view projection + inpaint | New pipeline concept |
+| 5 | **Weights** | 0.0215 MAE (MLP) | Puppeteer / current | Study Puppeteer architecture |
 
-**Priority order (April 2026):**
-1. **TRELLIS.2 3D reconstruction** — single image → 3D mesh + PBR. MIT license. Fine-tune on turnaround sheets. Biggest unlock for demo + product.
-2. **SAM 2.1 segmentation fine-tune** — Apache 2.0. Fine-tune on 22-class anatomy schema. Could break 0.80 mIoU.
-3. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder approach. Combine with SAM 2.1.
-4. **ViTPose++ joints** — Apache 2.0. Fine-tune on illustrated character data.
-5. **Marigold v1.1 upgrade** — drop-in, 1-step inference.
-6. **Strata post-processing improvements** — already committed (alpha compositing, confidence cleanup, bilinear upscale, Laplacian smoothing).
+**Priority order (April 2, 2026):**
+1. **SAM 3 seg fine-tune** — training now on A100. Evaluate epoch 1 results tomorrow.
+2. **SAM 3D Objects integration** — get running on A100 (kaolin dep issue), test multi-view input for better depth.
+3. **Multi-view texture pipeline** — project front+side textures onto SAM 3D mesh, inpaint gaps.
+4. **SAM 3D Body for rigging** — works on humanoid. For non-human: use our joint model on the 3D mesh.
+5. **TRELLIS.2** — MIT licensed backup. Needs DINOv3 + RMBG HF access (pending).
+6. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder, could improve SAM 3 seg further.
 
 ## Project Layout
 
@@ -307,52 +318,55 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next A100 Run — TRELLIS.2 Fine-tune
-**Goal:** Single illustrated character → 3D mesh + PBR materials. Fine-tune Microsoft's TRELLIS.2 (MIT license) on turnaround sheet data.
-
-**Setup:**
-- Clone TRELLIS.2: `github.com/microsoft/TRELLIS.2`
-- Download demo_back_view_pairs.tar (3.4 GB, 6,210 pairs from 407 chars)
-- Fine-tune with multi-view supervision (predict 3D from one view, render others, compare to GT)
-- MIT license — can ship in Strata
-
-**Also on the same run (if time allows):**
-- SAM 2.1 segmentation fine-tune on 22-class anatomy schema
+### Current A100 Run (April 2 overnight)
+**SAM 3 segmentation fine-tune** — training on 22K GT images with 21 anatomy text prompts.
+- Loss: 787 → 399 at step 5,000 (still dropping)
+- 1.54s/step, 30 GB VRAM, epoch 1 completes in ~9 hrs
+- Checkpoint saves after epoch 1 (`save_freq: 1`)
+- Config: `training/configs/sam3_seg_finetune.yaml`
+- Patched `sam3/perflib/fused.py` to allow training (fused ops blocked gradients)
 
 ### Completed April 1-2
-- [x] **SAM labels tested — don't help seg** (clothing≠anatomy, peaked at 0.56-0.59 vs run 20's 0.6485)
-- [x] Rewrote `convert_sam_labels.py` with anatomy-aware logic (all 22 classes present)
-- [x] SAM inference pipeline working: see-through repo + 19-class SAM on A100
-- [x] Bear chef view synthesis fine-tune (lr=1e-4: val/l1=0.0548, lr=1e-5: val/l1=0.0853)
-- [x] **View synthesis U-Net confirmed too weak** for sharp novel views (blurry output from L1 loss)
-- [x] SHARP installed and tested on Mac MPS (7s inference, produces .ply Gaussian splats)
-- [x] SHARP fine-tuning pipeline built (but SHARP is research-only → switching to TRELLIS.2)
-- [x] SHARP A100 training: 1536 resolution works but ~1 min/step — too slow. Killed.
-- [x] Fixed Python 3.14 multiprocessing breaking change in train_segmentation.py
-- [x] **Strata post-processing improvements committed** (6 changes in segmentation.rs, joints.rs, weights.rs):
-  - Alpha-aware preprocessing (composite onto black)
-  - Confidence-gated seg cleanup (5×5 majority vote + small component removal)
-  - Bilinear logit upscaling (smooth region boundaries)
-  - Laplacian weight smoothing (confidence-adaptive, 2 iterations)
-  - Adaptive joint offset cap (15% of character extent)
-  - Confidence-weighted MLP/heat blending
-- [x] **Comprehensive model research** — identified TRELLIS.2, SAM 2.1, ViTPose++, Puppeteer, Marigold v1.1 as replacements
+- [x] **SAM labels tested — don't help seg** (clothing≠anatomy, peaked at 0.56-0.59)
+- [x] **View synthesis U-Net confirmed too weak** (blurry from L1 loss)
+- [x] SHARP tested on Mac MPS — research-only license, abandoned
+- [x] **Strata post-processing improvements committed** (6 changes in segmentation.rs, joints.rs, weights.rs)
+- [x] **Comprehensive model research** — identified SAM 3, SAM 3D, TRELLIS.2, ViTPose++, Puppeteer
+- [x] **SAM 3D Body tested on A100** — great on humanoid, poor on chibi/non-human
+- [x] **SAM 3D Objects validated** (online demo) — bear chef produces good 3D mesh from single image
+- [x] **SAM 3 seg fine-tune started** — 22K train, 2.5K val, training overnight
+- [x] GT data → COCO format converter: `scripts/convert_gt_to_coco.py` (24,779 images, 1M+ annotations)
+- [x] TRELLIS.2 installed (needs DINOv3 + RMBG HF access)
 
-### Immediate Next Steps
-1. **Set up TRELLIS.2** — clone repo, test inference on bear chef, build fine-tuning pipeline
-2. **Set up SAM 2.1 fine-tune** — Apache 2.0, ~60 lines to fine-tune, train on 22-class GT data
-3. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder. Integrate with SAM 2.1.
-4. **Marigold v1.1 upgrade** — drop-in replacement, 1-step inference
-5. **ViTPose++ for joints** — fine-tune on illustrated character joint data
+### Next Steps (April 3+)
+1. **Evaluate SAM 3 seg checkpoint** — download epoch 1, test on illustrated characters
+2. **SAM 3D Objects on A100** — fix kaolin dep, test multi-view (front+side) for better depth
+3. **Multi-view texture pipeline** — project front+side textures onto SAM 3D mesh → inpaint gaps
+4. **TRELLIS.2 inference test** — once DINOv3 + RMBG access approved
+5. **Dr. Li's training code (April 12)** — could further improve SAM 3 seg
+6. **Integrate SAM 3D into Strata** — replace view synthesis with real 3D mesh pipeline
 
-### New Model Repos to Clone
-| Model | Repo | License | Purpose |
-|-------|------|---------|---------|
-| TRELLIS.2 | `github.com/microsoft/TRELLIS.2` | MIT | 3D reconstruction (replaces SHARP + U-Net view synthesis) |
-| SAM 2.1 | `github.com/facebookresearch/sam2` | Apache 2.0 | Segmentation backbone (replaces DeepLabV3+ MobileNetV3) |
-| ViTPose++ | `github.com/ViTAE-Transformer/ViTPose` | Apache 2.0 | Joint estimation (replaces MobileNetV3 regression) |
-| Marigold v1.1 | `github.com/prs-eth/Marigold` | Apache 2.0 | Depth + normals (upgrade from current LCM) |
-| Puppeteer | `github.com/Seed3D/Puppeteer` | TBD | Study architecture for weight prediction |
+### New Pipeline Vision
+```
+User imports front view illustration
+    → SAM 3D Objects generates 3D mesh (~3 sec)
+    → User optionally adds side/back views → project textures onto mesh
+    → Inpaint remaining texture gaps
+    → SAM 3 segments body parts (text-prompted anatomy)
+    → SAM 3D Body adds skeleton (humanoid) or our joint model (non-human)
+    → Weight prediction on the real 3D mesh
+    → Export rigged, textured 3D character
+```
+
+### Model Repos (cloned)
+| Model | Repo | License | Status |
+|-------|------|---------|--------|
+| SAM 3 | `github.com/facebookresearch/sam3` | SAM License (commercial OK) | **Training now** |
+| SAM 3D Objects | `github.com/facebookresearch/sam-3d-objects` | SAM License | Validated. Kaolin dep issue on A100. |
+| SAM 3D Body | `github.com/facebookresearch/sam-3d-body` | SAM License | **Tested** — works on humanoid |
+| TRELLIS.2 | `github.com/microsoft/TRELLIS.2` | MIT | Installed. Needs DINOv3 + RMBG HF access. |
+| ViTPose++ | `github.com/ViTAE-Transformer/ViTPose` | Apache 2.0 | For joints (future) |
+| Puppeteer | `github.com/Seed3D/Puppeteer` | TBD | For weights (study architecture) |
 
 ### Later — Post Launch
 - Interactive view correction paint tool in Strata
