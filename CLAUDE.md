@@ -318,13 +318,67 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Current A100 Run (April 2 overnight)
-**SAM 3 segmentation fine-tune** — training on 22K GT images with 21 anatomy text prompts.
-- Loss: 787 → 399 at step 5,000 (still dropping)
-- 1.54s/step, 30 GB VRAM, epoch 1 completes in ~9 hrs
-- Checkpoint saves after epoch 1 (`save_freq: 1`)
-- Config: `training/configs/sam3_seg_finetune.yaml`
-- Patched `sam3/perflib/fused.py` to allow training (fused ops blocked gradients)
+### Next A100 Run — SAM 3 Seg Fine-tune (rerun)
+**Storage: 100 GB minimum.** Previous run (April 2) completed epoch 1 but ran out of disk space saving the 8.7 GB checkpoint.
+
+**Validated results from April 2:**
+- mIoU 0.5386 after 1 epoch (our DeepLabV3+ needed 20 runs to reach 0.6485)
+- Loss: 787 → 384 across 22K steps
+- 1.54s/step, 30 GB VRAM, ~9 hrs per epoch
+- Training is stable (zero errors in 9 hours)
+
+**Run commands:**
+```bash
+git clone https://github.com/TWoolff/strata-training-data.git && cd strata-training-data
+./training/cloud_setup.sh lean
+
+# Install SAM 3
+cd /workspace && git clone --depth 1 https://github.com/facebookresearch/sam3.git
+cd sam3 && pip install -e ".[train]"
+pip install huggingface_hub submitit hydra-submitit-launcher hydra-colorlog fvcore
+
+# Login to HuggingFace (SAM 3 is gated)
+python3 -c "from huggingface_hub import login; login(token='YOUR_HF_TOKEN')"
+
+# Patch fused.py for training mode
+cat > sam3/perflib/fused.py << 'PYEOF'
+import torch
+def addmm_act(act_cls, linear, x):
+    if torch.is_grad_enabled():
+        out = torch.nn.functional.linear(x, linear.weight, linear.bias)
+        return act_cls()(out)
+    try:
+        from sam3.perflib._C import addmm_gelu, addmm_relu
+        if act_cls == torch.nn.GELU:
+            return addmm_gelu(x, linear.weight, linear.bias)
+        elif act_cls == torch.nn.ReLU:
+            return addmm_relu(x, linear.weight, linear.bias)
+    except ImportError:
+        pass
+    out = torch.nn.functional.linear(x, linear.weight, linear.bias)
+    return act_cls()(out)
+PYEOF
+
+# Download GT data and convert to COCO
+cd /workspace/strata-training-data
+pip install scipy pycocotools
+# (download tars + convert — see run_model_tests.sh Part 2 for full commands)
+# Then split train/val:
+python3 -c "..." # (split script from April 2)
+
+# Fix config save frequency
+sed -i 's/save_freq: 5/save_freq: 1/' /workspace/sam3/sam3/train/configs/sam3_seg_finetune.yaml
+
+# Train (let run for 2-3 epochs = ~27 hrs)
+cd /workspace/sam3
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python3 sam3/train/train.py \
+    -c configs/sam3_seg_finetune.yaml \
+    --use-cluster 0 --num-gpus 1
+```
+
+**Config:** `training/configs/sam3_seg_finetune.yaml`
+**Key settings:** 840M params, 22K train images, 21 anatomy classes, batch 1, lr_scale 0.05, segmentation enabled
+**Patch needed:** `sam3/perflib/fused.py` — replace fused ops with standard ops when grad enabled
 
 ### Completed April 1-2
 - [x] **SAM labels tested — don't help seg** (clothing≠anatomy, peaked at 0.56-0.59)
