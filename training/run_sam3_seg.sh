@@ -54,7 +54,7 @@ if [ ! -d "sam3" ]; then
 fi
 cd sam3
 pip install -q -e ".[train]" 2>&1 | tail -3
-pip install -q huggingface_hub submitit hydra-submitit-launcher hydra-colorlog fvcore scipy pycocotools 2>&1 | tail -3
+pip install -q huggingface_hub submitit hydra-submitit-launcher hydra-colorlog fvcore scipy pycocotools einops 2>&1 | tail -3
 
 # Patch fused.py for training (fused ops block gradients)
 cat > sam3/perflib/fused.py << 'PYEOF'
