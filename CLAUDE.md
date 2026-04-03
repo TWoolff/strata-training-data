@@ -19,33 +19,55 @@ Strata (Tauri/Rust/React desktop app at `../strata/`) uses 6 ONNX models defined
 
 All current models bundled in `../strata/src-tauri/models/` (~55MB total), loaded via `ort` ONNX runtime.
 
-### New Model Strategy (April 2, 2026) — Meta SAM 3D Pipeline
+### Model Strategy (April 3, 2026) — Combined Approach
 
-The core insight: Meta's SAM 3D suite can replace most of Strata's custom models.
+Strata's unique value: combining 3D reconstruction (Meta SAM 3D) with illustrated character understanding (Dr. Li's See-Through) for animation-ready rigging. Nobody else does this.
 
-| # | Task | New Model | License | Status |
-|---|------|-----------|---------|--------|
-| 1 | **Segmentation** | **SAM 3** (text-prompted, 840M params) | SAM License (commercial OK) | **Training now** — epoch 1 of fine-tune on 22K GT images. Loss 787→399 in 5K steps. |
-| 2 | **3D Mesh** | **SAM 3D Objects** | SAM License (commercial OK) | **Validated** — bear chef produces good 3D mesh from single image. Thin but recognizable. |
-| 3 | **Skeleton/Rigging** | **SAM 3D Body** (70 keypoints, MHR rig) | SAM License (commercial OK) | **Tested** — works great on humanoid chars, poor on chibi/non-human. |
-| 4 | **Texture** | Multi-view projection + inpainting | Our code | Front + side views projected onto SAM 3D mesh, inpaint gaps. |
-| 5 | **Depth/Normals** | **Marigold v1.1** | Apache 2.0 | Drop-in upgrade. 1-step inference. |
-| 6 | **Backup 3D** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Needs DINOv3 + RMBG access. MIT license = can ship. |
+| # | Task | Model | License | Status |
+|---|------|-------|---------|--------|
+| 1 | **Segmentation** | **Dr. Li's SAM-HQ** (encoder) + **our 22-class decoder** | Apache 2.0 | Training code releases April 12. Interim: SAM 3 fine-tune running now. |
+| 2 | **3D Mesh** | **SAM 3D Objects** | SAM License (commercial OK) | **Validated** — bear chef produces good 3D mesh from single image. |
+| 3 | **Skeleton/Rigging** | **SAM 3D Body** (70 keypoints, MHR rig) | SAM License (commercial OK) | **Tested** — great on humanoid, poor on chibi/non-human. |
+| 4 | **Anatomy Labels** | **SAM 3D Body → 2D projection** | Our pipeline | Built. Generates perfect anatomy seg labels from 3D mesh. |
+| 5 | **Texture** | Multi-view projection + inpainting | Our code | Front + side views projected onto SAM 3D mesh, inpaint gaps. |
+| 6 | **Backup 3D** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Needs HF access. MIT license = can ship. |
+
+**Why our 22-class anatomy schema (not Dr. Li's 19-class):**
+Dr. Li's 19 classes are clothing-based (topwear, legwear, handwear). They CANNOT drive animation because:
+- No left/right distinction (no shoulder_l vs shoulder_r)
+- No joint separation (topwear = chest + shoulders + arms all in one)
+- No forearm vs upper_arm, no upper_leg vs lower_leg
+- No hips region
+
+Our 22-class schema maps directly to skeleton bones — each class = one bone's influence zone. Required for rigging.
+
+**Why Dr. Li's encoder is still valuable (April 12):**
+- SAM-HQ with 19 independent decoders — each body part gets a specialist
+- Pretrained on 9K illustrated characters (anime/Live2D) — understands illustrated character boundaries
+- SIGGRAPH 2026 quality (8x H200, 129 hrs training)
+- **Plan:** Take her pretrained encoder, replace 19 clothing class heads with our 22 anatomy class heads, fine-tune on our data
+
+**What Dr. Li's model doesn't do (we solve):**
+- Her data is anime-only — we have diverse styles (3D-rendered, Gemini, Flux, hand-drawn)
+- She works in 2.5D (Live2D layers) — we do full 3D with SAM 3D Objects
+- She segments by clothing — we segment by anatomy (SAM 3D Body generates GT labels)
 
 **New Strata Pipeline (vision):**
 1. User imports front view illustration
 2. **SAM 3D Objects** → 3D mesh with basic texture (~3 sec)
 3. User optionally adds side/back views → project textures onto mesh
 4. **Inpaint** remaining texture gaps (back, occluded areas)
-5. **SAM 3** segments body parts (text-prompted: "left forearm", "chest", etc.)
-6. **SAM 3D Body** adds skeleton for humanoid chars / our joint model for non-human
+5. **Segmentation** (Dr. Li encoder + our 22-class decoder) → anatomy regions
+6. **SAM 3D Body** adds skeleton for humanoid / our joint model for non-human
 7. Weight prediction on the real 3D mesh
+8. Export rigged, textured, animatable 3D character
 
 **Also available:**
+- **SAM 3** (Meta, SAM License) — text-prompted seg, training now as interim solution
 - **ViTPose++** (Apache 2.0) — joint estimation for illustrated characters
 - **Puppeteer** (NeurIPS 2025) — attention-based skinning weights
+- **TRELLIS.2** (MIT) — backup 3D reconstruction with PBR materials
 - **Sapiens** (CC-BY-NC) — pseudo-labeling teacher only
-- **StdGEN** (research-only) — semantic-decomposed 3D (body/clothes/hair meshes)
 
 ## Model Targets & Current Scores
 
@@ -59,13 +81,13 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 | 4 | **Texture** | N/A | Multi-view projection + inpaint | New pipeline concept |
 | 5 | **Weights** | 0.0215 MAE (MLP) | Puppeteer / current | Study Puppeteer architecture |
 
-**Priority order (April 2, 2026):**
-1. **SAM 3 seg fine-tune** — training now on A100. Evaluate epoch 1 results tomorrow.
-2. **SAM 3D Objects integration** — get running on A100 (kaolin dep issue), test multi-view input for better depth.
-3. **Multi-view texture pipeline** — project front+side textures onto SAM 3D mesh, inpaint gaps.
-4. **SAM 3D Body for rigging** — works on humanoid. For non-human: use our joint model on the 3D mesh.
-5. **TRELLIS.2** — MIT licensed backup. Needs DINOv3 + RMBG HF access (pending).
-6. **Dr. Li's training code (April 12)** — anatomy-native multi-decoder, could improve SAM 3 seg further.
+**Priority order (April 3, 2026):**
+1. **SAM 3 seg fine-tune** — training now on A100 (interim seg model). Loss 787→399, epoch 1 ~9hrs.
+2. **Dr. Li's training code (April 12)** — THE endgame for seg. Take her SAM-HQ encoder, replace with our 22-class anatomy heads, fine-tune. Her model: 9K illustrated chars, 8xH200 129hrs, SIGGRAPH quality.
+3. **SAM 3D Body anatomy labels** — pipeline built (`scripts/batch_sam3d_body_labels.py`). Run on illustrated chars to generate perfect anatomy GT from 3D mesh projection. Complements Dr. Li's encoder.
+4. **SAM 3D Objects for 3D mesh** — validated on bear chef. Need to fix kaolin dep on A100 and test multi-view input for better depth.
+5. **Multi-view texture pipeline** — project front+side onto SAM 3D mesh, inpaint gaps.
+6. **TRELLIS.2** — MIT licensed backup 3D. Needs DINOv3 + RMBG HF access.
 
 ## Project Layout
 
@@ -474,6 +496,17 @@ U-Net approach (29M params, L1+perceptual loss) produces inherently blurry novel
 Dr. Li's SAM Body Parsing model and earlier See-Through model both use a 19-class **clothing-oriented** schema (topwear, legwear, handwear, etc.). Converted to Strata's 22-class **skeleton** schema via `scripts/convert_li_labels.py` (694 images) and `scripts/convert_sam_labels.py` (2,467+ images).
 
 **Critical finding (April 1):** Clothing-based labels fundamentally disagree with anatomy-based labels. SAM doesn't distinguish forearm from upper_arm (both are "topwear"), can't detect bare hands/legs, and the L/R split by image center fails on non-frontal views. Even with anatomy-aware conversion (connected components, torso core detection, legwear splitting), the labels still hurt training because the val set has GT bone-based labels. **Seg improvement requires anatomy-native labels** — either hand-annotated or from Dr. Li's upcoming training code (April 12).
+
+**Key insight (April 3):** Dr. Li's 19-class schema is clothing-oriented (designed for Live2D layer decomposition), NOT anatomy-oriented. It cannot drive animation — no L/R distinction, no forearm/upper_arm split, no hips. Our 22-class anatomy schema is correct for rigging. But her **encoder** (SAM-HQ pretrained on 9K illustrated chars) is extremely valuable — we'll take her encoder and replace the 19 clothing class heads with our 22 anatomy class heads.
+
+**New approach to anatomy labels:** SAM 3D Body → 3D mesh → project back to 2D → perfect anatomy segmentation. Built in `scripts/sam3d_body_to_seg.py` and `scripts/batch_sam3d_body_labels.py`. This generates clothing-independent anatomy labels because it reconstructs the actual 3D body underneath.
+
+**Dr. Li's paper details (arxiv 2602.03749):**
+- 9,102 Live2D models (7,404 train), 19 body part classes, 1024×1024 resolution
+- 8x NVIDIA H200 for 129 hours (Stage 2 diffusion training)
+- SAM-HQ with independent decoders per body part
+- Diffusion-based Body Part Consistency Module
+- Training code releases no later than April 12, 2026
 
 ## Strata Post-Processing Improvements (April 2, 2026)
 
