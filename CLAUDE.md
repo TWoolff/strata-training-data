@@ -54,13 +54,22 @@ Our 22-class schema maps directly to skeleton bones — each class = one bone's 
 
 **New Strata Pipeline (vision):**
 1. User imports front view illustration
-2. **SAM 3D Objects** → 3D mesh with basic texture (~3 sec)
-3. User optionally adds side/back views → project textures onto mesh
-4. **Inpaint** remaining texture gaps (back, occluded areas)
-5. **Segmentation** (Dr. Li encoder + our 22-class decoder) → anatomy regions
-6. **SAM 3D Body** adds skeleton for humanoid / our joint model for non-human
-7. Weight prediction on the real 3D mesh
-8. Export rigged, textured, animatable 3D character
+2. **SAM 3D Objects** → 3D mesh **geometry only** (vertices, faces, normals) — discard SAM's blurry texture
+3. **Texture projection** — ray-cast the artist's original illustration onto front-facing mesh faces → pixel-perfect texture where visible (standard CG, no AI)
+4. User optionally adds side/back views → project those onto side/back-facing faces → more pixel-perfect coverage
+5. **Inpaint** remaining texture gaps (~10% of surface, mostly back/occluded areas) → our inpainting model fills using surrounding colors
+6. **Result:** 90%+ of texture is the artist's actual drawing. Style-preserving. No hallucinated details.
+7. **Segmentation** (Dr. Li encoder + our 22-class decoder) → anatomy regions on the 2D views
+8. **SAM 3D Body** adds skeleton for humanoid / our joint model for non-human
+9. Weight prediction on the real 3D mesh
+10. Export rigged, textured, animatable 3D character
+
+**Why this texture approach is groundbreaking:**
+- SAM 3D Objects generates good geometry but blurry/hallucinated textures (guesses what back looks like)
+- Our approach: use SAM 3D for geometry only, then project the artist's actual illustration onto it
+- The artist stays in control of the look — their drawing IS the texture
+- Only gaps (back, occluded) get AI inpainting, using surrounding color context
+- Character looks exactly like the artist's drawing from the front, plausibly consistent from other angles
 
 **Also available:**
 - **SAM 3** (Meta, SAM License) — text-prompted seg, training now as interim solution
