@@ -71,6 +71,26 @@ Our 22-class schema maps directly to skeleton bones — each class = one bone's 
 - Only gaps (back, occluded) get AI inpainting, using surrounding color context
 - Character looks exactly like the artist's drawing from the front, plausibly consistent from other angles
 
+**Texture inpainting approach (TEXTure trimap method):**
+
+Use a **trimap** state per UV texel: `generated` (projected from artist view), `partial` (seam edge), `empty` (unseen).
+
+1. Project front view → mark visible texels as "generated" (pixel-perfect, never overwritten)
+2. Project side/back views if available → more "generated" texels
+3. **Depth-conditioned inpainting** fills "empty" regions — AI follows 3D surface shape (normals/depth)
+4. **Blend at "partial" seams** — smooth transition between projected and inpainted
+5. Artist's pixels ALWAYS win — AI only fills what the drawing doesn't cover
+
+**Phase 1 (ship first):** Simple palette fill + edge extension for gaps. Works for 80% of characters.
+**Phase 2 (post-launch):** Depth-conditioned diffusion inpainting fine-tuned on illustrated character textures. Generate training data from 3D-rendered characters (project front only → mask rest → train to reconstruct).
+
+**Reference implementations (open source):**
+- TEXTure (MIT) — trimap approach, `github.com/TEXTurePaper/TEXTurePaper`
+- Text2Tex (Apache 2.0) — depth-aware progressive inpainting, `github.com/daveredrum/Text2Tex`
+- Paint3D — UV inpainting with surface position maps
+- Meta 3D TextureGen — normal+position conditioned, best quality
+- SeqTex (SIGGRAPH Asia 2025) — video diffusion for texture consistency
+
 **Also available:**
 - **SAM 3** (Meta, SAM License) — text-prompted seg, training now as interim solution
 - **ViTPose++** (Apache 2.0) — joint estimation for illustrated characters
