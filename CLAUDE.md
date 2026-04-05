@@ -28,7 +28,7 @@ Strata's unique value: combining 3D reconstruction (Meta SAM 3D) with illustrate
 | 1 | **Segmentation** | **Dr. Li's SAM-HQ** (encoder) + **our 22-class decoder** | Apache 2.0 | Training code releases April 12. Interim: SAM 3 fine-tune running now. |
 | 2 | **3D Mesh** | **SAM 3D Objects** | SAM License (commercial OK) | **Validated** — bear chef produces good 3D mesh from single image. |
 | 3 | **Skeleton/Rigging** | **SAM 3D Body** (70 keypoints, MHR rig) | SAM License (commercial OK) | **Tested** — great on humanoid, poor on chibi/non-human. |
-| 4 | **Anatomy Labels** | **SAM 3D Body → 2D projection** | Our pipeline | Built. Generates perfect anatomy seg labels from 3D mesh. |
+| 4 | **Anatomy Labels** | **SAM 3D Body → 2D projection** | Our pipeline | Built but labels hurt training (body mesh ≠ clothing silhouette). |
 | 5 | **Texture** | Multi-view projection + inpainting | Our code | Front + side views projected onto SAM 3D mesh, inpaint gaps. |
 | 6 | **Backup 3D** | **TRELLIS.2** (Microsoft, 4B params) | **MIT** | Needs HF access. MIT license = can ship. |
 
@@ -110,13 +110,12 @@ Goal: uploaded 2D character illustrations look natural from all generated angles
 | 4 | **Texture** | N/A | Multi-view projection + inpaint | New pipeline concept |
 | 5 | **Weights** | 0.0215 MAE (MLP) | Puppeteer / current | Study Puppeteer architecture |
 
-**Priority order (April 3, 2026):**
-1. **SAM 3 seg fine-tune** — training now on A100 (interim seg model). Loss 787→399, epoch 1 ~9hrs.
-2. **Dr. Li's training code (April 12)** — THE endgame for seg. Take her SAM-HQ encoder, replace with our 22-class anatomy heads, fine-tune. Her model: 9K illustrated chars, 8xH200 129hrs, SIGGRAPH quality.
-3. **SAM 3D Body anatomy labels** — pipeline built (`scripts/batch_sam3d_body_labels.py`). Run on illustrated chars to generate perfect anatomy GT from 3D mesh projection. Complements Dr. Li's encoder.
-4. **SAM 3D Objects for 3D mesh** — validated on bear chef. Need to fix kaolin dep on A100 and test multi-view input for better depth.
-5. **Multi-view texture pipeline** — project front+side onto SAM 3D mesh, inpaint gaps.
-6. **TRELLIS.2** — MIT licensed backup 3D. Needs DINOv3 + RMBG HF access.
+**Priority order (April 5, 2026):**
+1. **Wait for Dr. Li's training code (April 12)** — THE endgame for seg. Take her SAM-HQ encoder, replace with our 22-class anatomy heads, fine-tune on our data.
+2. **SAM 3D Objects for 3D mesh** — validated on bear chef. Need to fix kaolin dep on A100 and test multi-view input for better depth.
+3. **Multi-view texture pipeline** — project front+side onto SAM 3D mesh, inpaint gaps.
+4. **TRELLIS.2** — MIT licensed backup 3D. Needs DINOv3 + RMBG HF access.
+5. **SAM 3D Body anatomy labels** — pipeline built but labels don't help training (see learnings below).
 
 ## Project Layout
 
@@ -311,6 +310,8 @@ Bucket: `strata-training-data` at `fsn1.your-objectstorage.com`.
 - **Python 3.14 multiprocessing breaking change**: Default start method changed to forkserver (requires pickling). Our dataset stores unpicklable module ref. Fixed with `multiprocessing.set_start_method("fork")`.
 - **see-through repo setup**: Clone to ../see-through, `sys.path.insert(0, '../see-through/common')`, install `einops pycocotools segment-anything-hq timm`.
 - **Never `pkill -f python3` on cloud instances**: Kills system processes and crashes the instance.
+- **SAM 3D Body labels don't help seg training**: SAM 3D Body reconstructs the nude body mesh underneath, not the clothing silhouette. When projected back to 2D, the mesh doesn't cover clothing pixels (jacket sleeves, pants, boots). mIoU dropped from 0.5952 → 0.5369 when these labels were added. Same fundamental problem as SAM Body Parsing labels (April 1). Anatomy labels from 3D body models don't match 2D pixel boundaries.
+- **SAM 3 seg fine-tune results**: 3 epochs on 24K GT data reached mIoU 0.5952. Adding 3,394 SAM 3D Body illustrated labels in epoch 4 hurt to 0.5369. Best checkpoint: epoch 3 (GT-only), uploaded as `best_epoch3_miou0595.pt`.
 
 ## Bootstrapping Loop
 
@@ -369,14 +370,17 @@ Config: `training/configs/segmentation_a100_run20.yaml`. Batch size 16 (soft tar
 
 ## Next Steps
 
-### Next A100 Run — SAM 3 Seg Fine-tune (rerun)
-**Storage: 100 GB minimum.** Previous run (April 2) completed epoch 1 but ran out of disk space saving the 8.7 GB checkpoint.
+### SAM 3 Seg Fine-tune Results (April 3-5)
+**Best model: epoch 3 checkpoint, mIoU 0.5952** (GT-only data, 24K images). Uploaded as `best_epoch3_miou0595.pt`.
 
-**Validated results from April 2:**
-- mIoU 0.5386 after 1 epoch (our DeepLabV3+ needed 20 runs to reach 0.6485)
-- Loss: 787 → 384 across 22K steps
-- 1.54s/step, 30 GB VRAM, ~9 hrs per epoch
-- Training is stable (zero errors in 9 hours)
+| Epoch | Data | Loss | mIoU | Notes |
+|-------|------|------|------|-------|
+| 0→1 | GT only (24K) | 381 | 0.5633 | First epoch |
+| 1→2 | GT only | 369 | 0.5868 | +0.0235 |
+| 2→3 | GT only | 365 | 0.5952 | +0.0084, diminishing returns |
+| 3→4 | GT + SAM 3D Body (28K) | 380 | 0.5369 | **Dropped** — body mesh labels don't match clothing silhouette |
+
+**Key settings:** 840M params, batch 1, lr_scale 0.05, 1.6s/step, ~12 hrs/epoch on A100. 100 GB storage needed.
 
 **Run commands:**
 ```bash
