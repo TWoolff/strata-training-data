@@ -107,11 +107,11 @@ TS-198. Character turnaround sheet of a viking shieldmaiden in chainmail, a fur-
 TS-199. Character turnaround sheet of a cyberpunk street kid in a torn hoodie with holographic patches, cargo shorts, cybernetic arm, sneakers with LED soles, and neon face paint. Pixel art style at high resolution. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
 
 <!-- TS-200. Character turnaround sheet of a 1950s housewife in a polka-dot dress, an apron, kitten heels, pearl necklace, and a perfectly coiffed hairstyle. Vintage magazine illustration with saturated pastels. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view. -->
-
+<!-- 
 TS-201. Character turnaround sheet of a tribal warrior in face paint, a grass skirt, bone piercings, bare feet, and a wooden spear with a stone tip. Bold graphic novel style with thick outlines and flat colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-202. Character turnaround sheet of a steampunk aviator woman in a corseted flight suit, brass goggles, a leather bomber jacket, propeller backpack, knee-high buckled boots, and a compass necklace. Detailed pencil sketch with sepia wash. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-202. Character turnaround sheet of a steampunk aviator woman in a corseted flight suit, brass goggles, a leather bomber jacket, propeller backpack, knee-high buckled boots, and a compass necklace. Detailed pencil sketch with sepia wash. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-203. Character turnaround sheet of a Korean hanbok lady in a flowing jeogori and chima, silk shoes, ornate hair pin, and holding a paper fan. Manhwa (Korean comic) style with clean lines and pastel coloring. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
 TS-204. Character turnaround sheet of a gladiator in a subligaculum loincloth, one arm guard, a helmet with visor, shin guards, sandals, and a gladius sword. Classical oil painting style inspired by Alma-Tadema. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -120,11 +120,11 @@ TS-205. Character turnaround sheet of a magical girl in a frilly transformation 
 
 TS-206. Character turnaround sheet of a medieval plague doctor in a long black coat, a beaked mask, a wide-brimmed hat, leather gloves, a walking cane, and boots. Woodcut print style with stark black and cream. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-207. Character turnaround sheet of a Maasai warrior in a red shuka cloth, beaded necklaces, beaded arm bands, sandals made from tire rubber, and carrying a long spear. Rich gouache with African savanna colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+TS-207. Character turnaround sheet of a Maasai warrior in a red shuka cloth, beaded necklaces, beaded arm bands, sandals made from tire rubber, and carrying a long spear. Rich gouache with African savanna colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
 
-TS-208. Character turnaround sheet of a 1920s flapper in a beaded drop-waist dress, a feathered headband, T-strap shoes, long pearl necklace, and a cigarette holder. Art Deco illustration with golds and blacks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+<!-- TS-208. Character turnaround sheet of a 1920s flapper in a beaded drop-waist dress, a feathered headband, T-strap shoes, long pearl necklace, and a cigarette holder. Art Deco illustration with golds and blacks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
-TS-209. Character turnaround sheet of a Minecraft-style blocky character — a cube head, rectangular body, square limbs, simple pixel face, a pickaxe, and a green shirt. Voxel-inspired flat illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+TS-209. Character turnaround sheet of a Minecraft-style blocky character — a cube head, rectangular body, square limbs, simple pixel face, a pickaxe, and a green shirt. Voxel-inspired flat illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
 
 TS-210. Character turnaround sheet of a Mucha-style Art Nouveau fairy with flowing ornamental hair, a diaphanous gown with floral borders, bare feet, butterfly wings, and surrounded by decorative circular framing. Alphonse Mucha illustration style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
