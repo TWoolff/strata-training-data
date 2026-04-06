@@ -25,6 +25,7 @@ export default function AnnotatePage() {
   const router = useRouter();
   const canvasRef = useRef<CanvasHandle>(null);
   const loadTimeRef = useRef(Date.now());
+  const imageIdRef = useRef<number | null>(null);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeRegion, setActiveRegion] = useState<Region>(REGIONS[1]); // head
@@ -71,7 +72,9 @@ export default function AnnotatePage() {
     try {
       const res = await fetch("/api/images?status=pending");
       const data = await res.json();
-      setCurrentImage(data.image ?? null);
+      const img = data.image ?? null;
+      setCurrentImage(img);
+      imageIdRef.current = img?.id ?? null;
       loadTimeRef.current = Date.now();
     } catch (err) {
       console.error("Failed to fetch image:", err);
@@ -121,7 +124,8 @@ export default function AnnotatePage() {
 
   // Submit annotation
   const handleSubmit = useCallback(async () => {
-    if (!currentImage || !userId || !canvasRef.current) return;
+    const submitImageId = imageIdRef.current;
+    if (!submitImageId || !userId || !canvasRef.current) return;
     const maskData = canvasRef.current.getMaskAsGrayscalePng();
     if (!maskData) return;
 
@@ -132,7 +136,7 @@ export default function AnnotatePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image_id: currentImage.id,
+          image_id: submitImageId,
           user_id: Number(userId),
           mask_data: maskData,
           time_spent: timeSpent,
@@ -169,7 +173,7 @@ export default function AnnotatePage() {
     }
 
     fetchNextImage();
-  }, [currentImage, userId, streak, fetchNextImage, fetchStats, fetchTotalAnnotations]);
+  }, [userId, streak, fetchNextImage, fetchStats, fetchTotalAnnotations]);
 
   // Skip image
   const handleSkip = useCallback(() => {
