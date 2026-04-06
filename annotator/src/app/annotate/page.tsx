@@ -1,12 +1,38 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
+import { Canvas, type CanvasHandle } from "@/components/Canvas";
+import { RegionPalette } from "@/components/RegionPalette";
+import { Toolbar } from "@/components/Toolbar";
+import { REGIONS, regionByShortcut, type Region } from "@/lib/regions";
+
+type ImageData = {
+  id: number;
+  dataset: string;
+  example_id: string;
+  image_url: string;
+  seg_url: string;
+  width: number;
+  height: number;
+};
 
 export default function AnnotatePage() {
   const router = useRouter();
+  const canvasRef = useRef<CanvasHandle>(null);
+  const loadTimeRef = useRef(Date.now());
+
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [activeRegion, setActiveRegion] = useState<Region>(REGIONS[1]); // head
+  const [brushSize, setBrushSize] = useState(15);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.4);
+  const [zoom, setZoom] = useState(1);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [currentImage, setCurrentImage] = useState<ImageData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [annotationCount, setAnnotationCount] = useState(0);
 
   const userName = useSyncExternalStore(
     () => () => {},
@@ -26,6 +52,118 @@ export default function AnnotatePage() {
     }
   }, [userId, router]);
 
+  // Fetch next pending image
+  const fetchNextImage = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/images?status=pending");
+      const data = await res.json();
+      setCurrentImage(data.image ?? null);
+      loadTimeRef.current = Date.now();
+    } catch (err) {
+      console.error("Failed to fetch image:", err);
+      setCurrentImage(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) fetchNextImage();
+  }, [userId, fetchNextImage]);
+
+  // Submit annotation
+  const handleSubmit = useCallback(async () => {
+    if (!currentImage || !userId || !canvasRef.current) return;
+    const maskData = canvasRef.current.getMaskAsGrayscalePng();
+    if (!maskData) return;
+
+    const timeSpent = Math.round((Date.now() - loadTimeRef.current) / 1000);
+
+    try {
+      const res = await fetch("/api/annotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_id: currentImage.id,
+          user_id: Number(userId),
+          mask_data: maskData,
+          time_spent: timeSpent,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAnnotationCount(data.count);
+      }
+    } catch (err) {
+      console.error("Failed to submit annotation:", err);
+    }
+
+    fetchNextImage();
+  }, [currentImage, userId, fetchNextImage]);
+
+  // Skip image
+  const handleSkip = useCallback(() => {
+    fetchNextImage();
+  }, [fetchNextImage]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't handle if typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        canvasRef.current?.undo();
+        return;
+      }
+      // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
+        e.preventDefault();
+        canvasRef.current?.redo();
+        return;
+      }
+
+      // Brush size: [ and ]
+      if (e.key === "[") {
+        setBrushSize((s) => Math.max(2, s - 3));
+        return;
+      }
+      if (e.key === "]") {
+        setBrushSize((s) => Math.min(50, s + 3));
+        return;
+      }
+
+      // Region shortcuts
+      const region = regionByShortcut(e.key);
+      if (region) {
+        setActiveRegion(region);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Listen for eyedropper picks from canvas
+  useEffect(() => {
+    function handleRegionPick(e: Event) {
+      const regionId = (e as CustomEvent).detail;
+      if (typeof regionId === "number" && REGIONS[regionId]) {
+        setActiveRegion(REGIONS[regionId]);
+      }
+    }
+    window.addEventListener("regionpick", handleRegionPick);
+    return () => window.removeEventListener("regionpick", handleRegionPick);
+  }, []);
+
   function handleLogout() {
     localStorage.removeItem("strata_user_id");
     localStorage.removeItem("strata_user_name");
@@ -44,49 +182,99 @@ export default function AnnotatePage() {
   if (!userId || !userName) return null;
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-zinc-50">Strata Label</h1>
-          <span className="text-sm text-zinc-500">
-            Signed in as{" "}
-            <span className="text-zinc-300">{userName}</span>
-          </span>
+          <h1 className="text-sm font-semibold text-zinc-50">Strata Label</h1>
+          {currentImage && (
+            <span className="text-xs text-zinc-500">
+              {currentImage.dataset}/{currentImage.example_id}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500">
+            {userName}
+          </span>
           <button
             onClick={handleShowOnboarding}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
             title="Show help guide"
           >
             ?
           </button>
           <button
             onClick={handleLogout}
-            className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded-lg px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
           >
             Sign out
           </button>
         </div>
       </header>
 
-      {/* Placeholder content */}
-      <div className="flex flex-1 items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800 text-2xl">
-            🎨
+      {/* Main content: Canvas + Palette */}
+      <div className="flex flex-1 overflow-hidden">
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <span className="text-sm text-zinc-500">Loading...</span>
           </div>
-          <h2 className="text-xl font-semibold text-zinc-200">
-            Annotation Canvas
-          </h2>
-          <p className="max-w-sm text-sm text-zinc-500">
-            The annotation interface will be built here. You&apos;ll be able to
-            view character images and paint over segmentation masks to correct
-            body region labels.
-          </p>
-        </div>
+        ) : !currentImage ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="text-3xl">&#10003;</div>
+              <h2 className="text-lg font-semibold text-zinc-200">
+                All caught up!
+              </h2>
+              <p className="max-w-sm text-sm text-zinc-500">
+                No pending images to annotate. Check back later or ask an admin
+                to add more images.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Canvas
+              ref={canvasRef}
+              imageUrl={currentImage.image_url}
+              segUrl={currentImage.seg_url}
+              width={currentImage.width ?? 512}
+              height={currentImage.height ?? 512}
+              activeRegion={activeRegion}
+              brushSize={brushSize}
+              overlayOpacity={overlayOpacity}
+              onZoomChange={setZoom}
+              onUndoRedoChange={(u, r) => {
+                setCanUndo(u);
+                setCanRedo(r);
+              }}
+            />
+            <RegionPalette
+              activeRegion={activeRegion}
+              onRegionChange={setActiveRegion}
+            />
+          </>
+        )}
       </div>
+
+      {/* Toolbar */}
+      {currentImage && (
+        <Toolbar
+          brushSize={brushSize}
+          onBrushSizeChange={setBrushSize}
+          overlayOpacity={overlayOpacity}
+          onOverlayOpacityChange={setOverlayOpacity}
+          zoom={zoom}
+          onResetZoom={() => canvasRef.current?.resetZoom()}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={() => canvasRef.current?.undo()}
+          onRedo={() => canvasRef.current?.redo()}
+          onSkip={handleSkip}
+          onSubmit={handleSubmit}
+          annotationCount={annotationCount}
+        />
+      )}
 
       {showOnboarding && (
         <OnboardingGuide onDismiss={handleDismissOnboarding} />
