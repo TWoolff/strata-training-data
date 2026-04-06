@@ -53,6 +53,12 @@ export default function AnnotatePage() {
     () => null,
   );
 
+  const hasReviewKey = useSyncExternalStore(
+    () => () => {},
+    () => !!localStorage.getItem("strata_review_key"),
+    () => false,
+  );
+
   useEffect(() => {
     if (!userId) {
       router.replace("/");
@@ -270,6 +276,14 @@ export default function AnnotatePage() {
           <span className="text-xs text-zinc-600">
             {totalAnnotations} total
           </span>
+          {hasReviewKey && (
+            <Link
+              href="/review"
+              className="rounded-lg px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            >
+              Review
+            </Link>
+          )}
           <Link
             href="/leaderboard"
             className="rounded-lg px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
