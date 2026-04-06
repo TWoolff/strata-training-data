@@ -29,6 +29,8 @@ export default function AnnotatePage() {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeRegion, setActiveRegion] = useState<Region>(REGIONS[1]); // head
+  const [erasing, setErasing] = useState(false);
+  const prevRegionRef = useRef<Region>(REGIONS[1]);
   const [brushSize, setBrushSize] = useState(15);
   const [overlayOpacity, setOverlayOpacity] = useState(0.4);
   const [zoom, setZoom] = useState(1);
@@ -204,6 +206,20 @@ export default function AnnotatePage() {
         return;
       }
 
+      // Eraser toggle: x
+      if (e.key === "x") {
+        setErasing((prev) => {
+          if (!prev) {
+            prevRegionRef.current = activeRegion;
+            setActiveRegion(REGIONS[0]); // background
+          } else {
+            setActiveRegion(prevRegionRef.current);
+          }
+          return !prev;
+        });
+        return;
+      }
+
       // Brush size: [ and ]
       if (e.key === "[") {
         setBrushSize((s) => Math.max(2, s - 3));
@@ -218,6 +234,7 @@ export default function AnnotatePage() {
       const region = regionByShortcut(e.key);
       if (region) {
         setActiveRegion(region);
+        setErasing(false);
       }
     }
 
@@ -348,7 +365,10 @@ export default function AnnotatePage() {
             />
             <RegionPalette
               activeRegion={activeRegion}
-              onRegionChange={setActiveRegion}
+              onRegionChange={(r) => {
+                setActiveRegion(r);
+                setErasing(false);
+              }}
             />
           </>
         )}
@@ -361,6 +381,18 @@ export default function AnnotatePage() {
           onBrushSizeChange={setBrushSize}
           overlayOpacity={overlayOpacity}
           onOverlayOpacityChange={setOverlayOpacity}
+          erasing={erasing}
+          onToggleEraser={() => {
+            setErasing((prev) => {
+              if (!prev) {
+                prevRegionRef.current = activeRegion;
+                setActiveRegion(REGIONS[0]);
+              } else {
+                setActiveRegion(prevRegionRef.current);
+              }
+              return !prev;
+            });
+          }}
           zoom={zoom}
           onResetZoom={() => canvasRef.current?.resetZoom()}
           canUndo={canUndo}

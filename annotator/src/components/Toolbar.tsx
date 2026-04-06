@@ -5,6 +5,8 @@ type Props = {
   onBrushSizeChange: (size: number) => void;
   overlayOpacity: number;
   onOverlayOpacityChange: (opacity: number) => void;
+  erasing: boolean;
+  onToggleEraser: () => void;
   zoom: number;
   onResetZoom: () => void;
   canUndo: boolean;
@@ -21,6 +23,8 @@ export function Toolbar({
   onBrushSizeChange,
   overlayOpacity,
   onOverlayOpacityChange,
+  erasing,
+  onToggleEraser,
   zoom,
   onResetZoom,
   canUndo,
@@ -64,6 +68,19 @@ export function Toolbar({
           {Math.round(overlayOpacity * 100)}%
         </span>
       </div>
+
+      {/* Eraser */}
+      <button
+        onClick={onToggleEraser}
+        className={`rounded px-2 py-1 text-xs transition-colors ${
+          erasing
+            ? "bg-zinc-600 text-white"
+            : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        }`}
+        title="Eraser (x)"
+      >
+        Eraser
+      </button>
 
       <div className="h-4 w-px bg-zinc-700" />
 
