@@ -272,7 +272,7 @@ export default function AnnotatePage() {
   if (!userId || !userName) return null;
 
   return (
-    <div className="flex flex-col" style={{ height: "100dvh" }}>
+    <div className="grid" style={{ height: "100dvh", gridTemplateRows: "auto 1fr auto" }}>
       {/* Header */}
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
         <div className="flex items-center gap-3">
@@ -328,7 +328,7 @@ export default function AnnotatePage() {
       </header>
 
       {/* Main content: Canvas + Palette */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 overflow-hidden">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <span className="text-sm text-zinc-500">Loading...</span>
