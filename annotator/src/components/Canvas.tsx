@@ -124,12 +124,30 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     inner.style.transform = `translate(${panOffset.current.x}px, ${panOffset.current.y}px) scale(${zoom.current})`;
   }, []);
 
-  const resetZoom = useCallback(() => {
-    zoom.current = 1;
+  const fitToView = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const padding = 32;
+    const scaleX = (rect.width - padding) / width;
+    const scaleY = (rect.height - padding) / height;
+    const fit = Math.min(scaleX, scaleY, 4);
+    zoom.current = fit;
     panOffset.current = { x: 0, y: 0 };
     applyTransform();
-    onZoomChange?.(1);
-  }, [applyTransform, onZoomChange]);
+    onZoomChange?.(fit);
+  }, [width, height, applyTransform, onZoomChange]);
+
+  const resetZoom = useCallback(() => {
+    fitToView();
+  }, [fitToView]);
+
+  // Fit canvas to viewport on mount and when image changes
+  useEffect(() => {
+    // Small delay to ensure container has layout dimensions
+    const id = requestAnimationFrame(() => fitToView());
+    return () => cancelAnimationFrame(id);
+  }, [fitToView, imageUrl]);
 
   // Load character image onto background canvas
   useEffect(() => {
@@ -430,7 +448,7 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       resetZoom,
       getZoom: () => zoom.current,
     }),
-    [getMaskAsGrayscalePng, undo, redo, resetZoom],
+    [getMaskAsGrayscalePng, undo, redo, resetZoom, fitToView],
   );
 
   return (
