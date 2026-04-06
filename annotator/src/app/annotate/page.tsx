@@ -272,7 +272,7 @@ export default function AnnotatePage() {
   if (!userId || !userName) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col" style={{ height: "100dvh" }}>
       {/* Header */}
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
         <div className="flex items-center gap-3">
