@@ -14,7 +14,7 @@ const GROUPS: { label: string; ids: number[] }[] = [
   { label: "Right Arm", ids: [10, 11, 12, 13] },
   { label: "Left Leg", ids: [14, 15, 16] },
   { label: "Right Leg", ids: [17, 18, 19] },
-  { label: "Other", ids: [20, 21, 0] },
+  { label: "Other", ids: [20, 21] },
 ];
 
 export function RegionPalette({ activeRegion, onRegionChange }: Props) {
