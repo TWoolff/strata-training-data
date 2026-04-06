@@ -3,7 +3,7 @@
 Focus areas: non-human characters, diverse body types, diverse art styles, A-pose priority for rigging.
 
 ## Animal / Non-Human Characters (TS-151 to TS-175)
-
+<!-- 
 TS-151. Character turnaround sheet of a robot butler with a rounded metallic body, a glowing blue visor, articulated fingers, a bow tie painted on the chest, and treaded feet. Retro-futuristic illustration with chrome and pastel blues. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-152. Character turnaround sheet of a cat wizard standing upright on two legs, wearing a starry robe, a pointed hat, holding a crystal staff, and with a long fluffy tail. Cozy fantasy watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -22,8 +22,8 @@ TS-158. Character turnaround sheet of a friendly alien with lavender skin, four 
 
 TS-159. Character turnaround sheet of a frog bard standing upright, wearing a feathered hat, a lute strapped to the back, a vest and puffy sleeves, and boots on webbed feet. Whimsical fantasy watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-160. Character turnaround sheet of a mechanical spider with a brass body, eight articulated clockwork legs, a single glass eye, steam vents, and tiny gears visible. Steampunk concept art with copper tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
-
+TS-160. Character turnaround sheet of a mechanical spider with a brass body, eight articulated clockwork legs, a single glass eye, steam vents, and tiny gears visible. Steampunk concept art with copper tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view. -->
+<!-- 
 TS-161. Character turnaround sheet of an elephant baker standing upright, wearing a chef's apron dusted with flour, a baker's cap, comfortable shoes, and holding a rolling pin. Warm children's book gouache with bakery browns and creams. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-162. Character turnaround sheet of a slime person with a translucent gelatinous body, a simple happy face floating inside, stubby arms and legs, and items visible inside the body. Cute flat vector style with bright greens. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -34,20 +34,20 @@ TS-164. Character turnaround sheet of an ice golem with a body of crystalline ic
 
 TS-165. Character turnaround sheet of a bunny astronaut in a custom-fitted spacesuit with ear holes, magnetic boots, a transparent helmet showing long ears inside, and a mission patch. Fun sci-fi cartoon style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-166. Character turnaround sheet of a mushroom farmer — a small mushroom person with a spotted red cap, overalls, gardening gloves, rubber boots, and carrying a watering can. Cozy storybook gouache with earthy tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-166. Character turnaround sheet of a mushroom farmer — a small mushroom person with a spotted red cap, overalls, gardening gloves, rubber boots, and carrying a watering can. Cozy storybook gouache with earthy tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-167. Character turnaround sheet of a gorilla blacksmith standing upright in a leather apron, thick gloves, bare feet, wielding a massive hammer, with soot on the fur. Dark fantasy gouache with fire and shadow. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-168. Character turnaround sheet of a ghost dog — a translucent spectral puppy with a glowing collar, floating slightly off the ground, friendly expression, and a wagging ethereal tail. Soft spooky watercolor with pale blues and whites. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
 TS-169. Character turnaround sheet of a coral mermaid warrior with a muscular fish tail, shell armor on the chest, a trident, seaweed hair, and barnacle-covered bracers. Underwater fantasy gouache with ocean blues and coral pinks. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-170. Character turnaround sheet of a mouse detective in a tiny deerstalker hat, a magnifying glass, a tweed coat, trousers, and polished shoes, standing upright on two legs. Classic mystery watercolor with warm browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-170. Character turnaround sheet of a mouse detective in a tiny deerstalker hat, a magnifying glass, a tweed coat, trousers, and polished shoes, standing upright on two legs. Classic mystery watercolor with warm browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-171. Character turnaround sheet of a crystal fairy with a body made of faceted gemstones, prismatic wings, bare feet on tiptoe, and rainbow light refractions. Ethereal digital painting with jewel tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-172. Character turnaround sheet of a panda sumo wrestler in a traditional mawashi loincloth, thick limbs, a topknot, bare feet, and a serious expression. Japanese woodblock print style with bold outlines. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-172. Character turnaround sheet of a panda sumo wrestler in a traditional mawashi loincloth, thick limbs, a topknot, bare feet, and a serious expression. Japanese woodblock print style with bold outlines. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-173. Character turnaround sheet of a scarecrow robot with a burlap sack head, LED eyes, a patched metal body, straw poking from joints, and wiry limbs. Post-apocalyptic watercolor with rusted earth tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-174. Character turnaround sheet of an owl librarian standing upright in a tweed vest, reading glasses, a bow tie, comfortable trousers, and slippers, holding a stack of books. Cozy academic gouache with warm library browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -56,16 +56,16 @@ TS-175. Character turnaround sheet of a lava elemental — a humanoid figure of 
 
 ## Diverse Body Types & Proportions (TS-176 to TS-195)
 
-TS-176. Character turnaround sheet of a plus-size superhero woman in a bold red and blue bodysuit, a flowing cape, knee-high boots, arm bracers, and a confident stance. Modern comic book style with strong colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-176. Character turnaround sheet of a plus-size superhero woman in a bold red and blue bodysuit, a flowing cape, knee-high boots, arm bracers, and a confident stance. Modern comic book style with strong colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-177. Character turnaround sheet of a very tall, thin wizard with elongated limbs, a floor-length robe, a pointed hat twice as tall as the head, bony fingers, and a gnarled staff. Dark fairy tale ink illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-178. Character turnaround sheet of a chibi knight — a super-deformed character with an oversized head, tiny body, huge eyes, miniature plate armor, a sword as big as the body, and stubby limbs. Cute anime chibi style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-179. Character turnaround sheet of a muscular dwarf blacksmith with a thick braided beard, a bare barrel chest, a leather apron, heavy boots, thick arms, and a war hammer. Fantasy oil painting with forge glow. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-180. Character turnaround sheet of an elderly grandmother in a floral dress, a knitted cardigan, comfortable shoes, reading glasses on a chain, and holding a plate of cookies. Warm nostalgic watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
-
+TS-180. Character turnaround sheet of an elderly grandmother in a floral dress, a knitted cardigan, comfortable shoes, reading glasses on a chain, and holding a plate of cookies. Warm nostalgic watercolor. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view. -->
+<!-- 
 TS-181. Character turnaround sheet of a toddler in a onesie with animal ear hood, bare feet, chubby proportions, a pacifier, and a stuffed toy tucked under one arm. Soft pastel children's book gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
 TS-182. Character turnaround sheet of a lanky basketball player in a jersey, shorts, high-top sneakers, a headband, and extremely long arms and legs with lean muscle. Dynamic sports illustration. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -76,8 +76,8 @@ TS-184. Character turnaround sheet of an athletic wheelchair racer in a racing c
 
 TS-185. Character turnaround sheet of a pregnant woman in a comfortable maternity dress, flat shoes, one hand resting on the belly, flowing hair, and a serene expression. Gentle watercolor with soft warm tones. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
 
-TS-186. Character turnaround sheet of a giant — a 10-foot-tall man in primitive furs, massive hands, bare feet, a club, and a belt of animal skulls. Epic fantasy concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
-
+TS-186. Character turnaround sheet of a giant — a 10-foot-tall man in primitive furs, massive hands, bare feet, a club, and a belt of animal skulls. Epic fantasy concept art. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
+<!-- 
 TS-187. Character turnaround sheet of a gnome tinker with a huge nose, tiny body, oversized goggles, a leather tool belt twice as wide as the torso, big boots, and wild tufty hair. Whimsical fantasy gouache. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
 TS-188. Character turnaround sheet of a sumo wrestler in a traditional mawashi, massive round body, a topknot, bare feet, and thick powerful legs. Japanese woodblock print style. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
@@ -104,9 +104,9 @@ TS-197. Character turnaround sheet of a disco dancer in bell-bottoms, a sequined
 
 TS-198. Character turnaround sheet of a viking shieldmaiden in chainmail, a fur-lined cloak, leather bracers, a round shield, and a bearded axe. Textured oil painting with muted Norse grays and browns. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
-TS-199. Character turnaround sheet of a cyberpunk street kid in a torn hoodie with holographic patches, cargo shorts, cybernetic arm, sneakers with LED soles, and neon face paint. Pixel art style at high resolution. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
+TS-199. Character turnaround sheet of a cyberpunk street kid in a torn hoodie with holographic patches, cargo shorts, cybernetic arm, sneakers with LED soles, and neon face paint. Pixel art style at high resolution. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view. -->
 
-TS-200. Character turnaround sheet of a 1950s housewife in a polka-dot dress, an apron, kitten heels, pearl necklace, and a perfectly coiffed hairstyle. Vintage magazine illustration with saturated pastels. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view.
+<!-- TS-200. Character turnaround sheet of a 1950s housewife in a polka-dot dress, an apron, kitten heels, pearl necklace, and a perfectly coiffed hairstyle. Vintage magazine illustration with saturated pastels. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, neutral pose. Solid white background. Label each view. -->
 
 TS-201. Character turnaround sheet of a tribal warrior in face paint, a grass skirt, bone piercings, bare feet, and a wooden spear with a stone tip. Bold graphic novel style with thick outlines and flat colors. Show 5 views in a single row: front, front 3/4, side, back 3/4, back. Same character, same scale, A-pose. Solid white background. Label each view.
 
