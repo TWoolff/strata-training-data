@@ -82,9 +82,15 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
   const zoom = useRef(1);
   const panOffset = useRef({ x: 0, y: 0 });
 
+  // Stable refs for callbacks so they never trigger effect re-runs
+  const onUndoRedoChangeRef = useRef(onUndoRedoChange);
+  onUndoRedoChangeRef.current = onUndoRedoChange;
+  const onZoomChangeRef = useRef(onZoomChange);
+  onZoomChangeRef.current = onZoomChange;
+
   const notifyUndoRedo = useCallback(() => {
-    onUndoRedoChange?.(undoStack.current.length > 0, redoStack.current.length > 0);
-  }, [onUndoRedoChange]);
+    onUndoRedoChangeRef.current?.(undoStack.current.length > 0, redoStack.current.length > 0);
+  }, []);
 
   const pushUndo = useCallback(() => {
     const ctx = maskCanvasRef.current?.getContext("2d");
@@ -135,8 +141,8 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     zoom.current = fit;
     panOffset.current = { x: 0, y: 0 };
     applyTransform();
-    onZoomChange?.(fit);
-  }, [width, height, applyTransform, onZoomChange]);
+    onZoomChangeRef.current?.(fit);
+  }, [width, height, applyTransform]);
 
   const resetZoom = useCallback(() => {
     fitToView();
@@ -364,7 +370,7 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 
       zoom.current = newZoom;
       applyTransform();
-      onZoomChange?.(newZoom);
+      onZoomChangeRef.current?.(newZoom);
     }
 
     cursor.addEventListener("mousedown", handleMouseDown);
@@ -389,7 +395,6 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     drawCursor,
     pushUndo,
     applyTransform,
-    onZoomChange,
   ]);
 
   // Keyboard: space for pan mode
