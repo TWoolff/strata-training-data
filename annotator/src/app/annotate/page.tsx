@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { Canvas, type CanvasHandle } from "@/components/Canvas";
 import { RegionPalette } from "@/components/RegionPalette";
 import { Toolbar } from "@/components/Toolbar";
+import { ProgressBar } from "@/components/ProgressBar";
+import { ToastContainer, showToast } from "@/components/Toast";
 import { REGIONS, regionByShortcut, type Region } from "@/lib/regions";
 
 type ImageData = {
@@ -33,6 +36,10 @@ export default function AnnotatePage() {
   const [currentImage, setCurrentImage] = useState<ImageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [annotationCount, setAnnotationCount] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [totalImages, setTotalImages] = useState(0);
+  const [pendingImages, setPendingImages] = useState(0);
+  const [totalAnnotations, setTotalAnnotations] = useState(0);
 
   const userName = useSyncExternalStore(
     () => () => {},
@@ -72,6 +79,40 @@ export default function AnnotatePage() {
     if (userId) fetchNextImage();
   }, [userId, fetchNextImage]);
 
+  // Fetch global stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats");
+      const data = await res.json();
+      setTotalImages(data.total ?? 0);
+      setPendingImages(data.pending ?? 0);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  // Fetch total annotation count across all users
+  const fetchTotalAnnotations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/leaderboard");
+      const data = await res.json();
+      const sum = (data.entries ?? []).reduce(
+        (acc: number, e: { annotated: number }) => acc + e.annotated,
+        0,
+      );
+      setTotalAnnotations(sum);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchStats();
+      fetchTotalAnnotations();
+    }
+  }, [userId, fetchStats, fetchTotalAnnotations]);
+
   // Submit annotation
   const handleSubmit = useCallback(async () => {
     if (!currentImage || !userId || !canvasRef.current) return;
@@ -94,13 +135,35 @@ export default function AnnotatePage() {
       const data = await res.json();
       if (data.success) {
         setAnnotationCount(data.count);
+        const newStreak = streak + 1;
+        setStreak(newStreak);
+
+        // Streak toasts
+        const MILESTONES = [50, 25, 10, 5];
+        const milestone = MILESTONES.find((m) => newStreak === m);
+        if (milestone) {
+          showToast(`${milestone} streak! You're on fire`);
+        } else if (newStreak === 1) {
+          showToast("Nice! 1 done");
+        } else {
+          showToast(`${newStreak} in a row!`);
+        }
+
+        // Speed toast
+        if (timeSpent <= 30 && timeSpent > 0) {
+          setTimeout(() => showToast(`Speed demon! Only ${timeSpent}s`), 300);
+        }
+
+        // Refresh stats
+        fetchStats();
+        fetchTotalAnnotations();
       }
     } catch (err) {
       console.error("Failed to submit annotation:", err);
     }
 
     fetchNextImage();
-  }, [currentImage, userId, fetchNextImage]);
+  }, [currentImage, userId, streak, fetchNextImage, fetchStats, fetchTotalAnnotations]);
 
   // Skip image
   const handleSkip = useCallback(() => {
@@ -192,11 +255,27 @@ export default function AnnotatePage() {
               {currentImage.dataset}/{currentImage.example_id}
             </span>
           )}
+          {totalImages > 0 && (
+            <ProgressBar
+              totalImages={totalImages}
+              pendingImages={pendingImages}
+              personalCount={annotationCount}
+            />
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-zinc-500">
             {userName}
           </span>
+          <span className="text-xs text-zinc-600">
+            {totalAnnotations} total
+          </span>
+          <Link
+            href="/leaderboard"
+            className="rounded-lg px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+          >
+            Leaderboard
+          </Link>
           <button
             onClick={handleShowOnboarding}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
@@ -279,6 +358,8 @@ export default function AnnotatePage() {
       {showOnboarding && (
         <OnboardingGuide onDismiss={handleDismissOnboarding} />
       )}
+
+      <ToastContainer />
     </div>
   );
 }
