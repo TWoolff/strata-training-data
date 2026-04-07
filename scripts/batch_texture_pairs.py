@@ -228,6 +228,12 @@ def main(argv: list[str] | None = None) -> None:
         help="Comma-separated partial view angles in degrees (default: '0' = front only)",
     )
     parser.add_argument(
+        "--name_filter",
+        type=str,
+        default=None,
+        help="Only process models whose path contains this string (e.g. 'Meshy_AI')",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable debug logging",
@@ -252,6 +258,12 @@ def main(argv: list[str] | None = None) -> None:
         pairs = find_textured_models(input_dir)
         logger.info("Found %d textured models in %s", len(pairs), input_dir)
         all_pairs.extend(pairs)
+
+    # Apply name filter
+    if args.name_filter:
+        before = len(all_pairs)
+        all_pairs = [(m, t) for m, t in all_pairs if args.name_filter in str(m)]
+        logger.info("Name filter '%s': %d → %d models", args.name_filter, before, len(all_pairs))
 
     if not all_pairs:
         logger.error("No textured model files found")
