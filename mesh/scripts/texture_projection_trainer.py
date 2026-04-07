@@ -315,7 +315,7 @@ def generate_uv_geometry_maps(
     bbox_range = bbox_max - bbox_min
     bbox_range[bbox_range < 1e-6] = 1.0  # avoid division by zero
 
-    # Second pass: rasterize each triangle in UV space
+    # Second pass: rasterize each triangle in UV space (vectorized)
     for mesh_obj in meshes:
         eval_obj = mesh_obj.evaluated_get(depsgraph)
         mesh_data = eval_obj.data
@@ -332,43 +332,72 @@ def generate_uv_geometry_maps(
             if len(verts) < 3:
                 continue
 
-            # World-space vertex positions and normals
             world_pos = [np.array(world_mat @ mesh_data.vertices[vi].co) for vi in verts]
             face_normal = np.array(normal_mat @ Vector(poly.normal))
             norm_len = np.linalg.norm(face_normal)
             if norm_len > 1e-8:
                 face_normal /= norm_len
 
-            # UV coordinates
             uv_coords = [np.array([uv_layer[li].uv[0], uv_layer[li].uv[1]]) for li in loop_indices]
 
-            # Fan-triangulate and rasterize each triangle
             for tri_idx in range(1, len(verts) - 1):
                 uv_a, uv_b, uv_c = uv_coords[0], uv_coords[tri_idx], uv_coords[tri_idx + 1]
                 wp_a, wp_b, wp_c = world_pos[0], world_pos[tri_idx], world_pos[tri_idx + 1]
 
-                # UV bounding box in texel coords
                 uv_pixels = np.array([uv_a, uv_b, uv_c]) * np.array([tex_w, tex_h])
                 min_u = max(0, int(np.floor(uv_pixels[:, 0].min())))
                 max_u = min(tex_w - 1, int(np.ceil(uv_pixels[:, 0].max())))
                 min_v = max(0, int(np.floor(uv_pixels[:, 1].min())))
                 max_v = min(tex_h - 1, int(np.ceil(uv_pixels[:, 1].max())))
 
-                for ty in range(min_v, max_v + 1):
-                    for tx in range(min_u, max_u + 1):
-                        p_uv = np.array([(tx + 0.5) / tex_w, (ty + 0.5) / tex_h])
-                        w0, w1, w2 = _barycentric_coords(p_uv, uv_a, uv_b, uv_c)
-                        if w0 < -1e-4 or w1 < -1e-4 or w2 < -1e-4:
-                            continue
+                n_u = max_u - min_u + 1
+                n_v = max_v - min_v + 1
+                if n_u <= 0 or n_v <= 0:
+                    continue
 
-                        # Interpolate world position
-                        world_p = w0 * wp_a + w1 * wp_b + w2 * wp_c
+                # Vectorized: build grid of texel centers
+                tx_range = (np.arange(min_u, max_u + 1) + 0.5) / tex_w
+                ty_range = (np.arange(min_v, max_v + 1) + 0.5) / tex_h
+                grid_u, grid_v = np.meshgrid(tx_range, ty_range)
+                points = np.stack([grid_u, grid_v], axis=-1)  # (n_v, n_u, 2)
 
-                        # UV origin at bottom-left, image array at top-left
-                        tex_y = tex_h - 1 - ty
-                        position[tex_y, tx] = world_p
-                        normal[tex_y, tx] = face_normal
-                        filled[tex_y, tx] = True
+                # Vectorized barycentric coords
+                v0 = uv_c - uv_a
+                v1 = uv_b - uv_a
+                v2 = points - uv_a
+
+                dot00 = np.dot(v0, v0)
+                dot01 = np.dot(v0, v1)
+                dot11 = np.dot(v1, v1)
+                dot02 = v2 @ v0
+                dot12 = v2 @ v1
+
+                denom = dot00 * dot11 - dot01 * dot01
+                if abs(denom) < 1e-12:
+                    continue
+
+                inv_denom = 1.0 / denom
+                u = (dot11 * dot02 - dot01 * dot12) * inv_denom
+                v = (dot00 * dot12 - dot01 * dot02) * inv_denom
+                w0 = 1.0 - u - v
+
+                inside = (w0 >= -1e-4) & (u >= -1e-4) & (v >= -1e-4)
+                vy, vx = np.where(inside)
+
+                tex_ys = tex_h - 1 - (vy + min_v)
+                tex_xs = vx + min_u
+                valid = (tex_ys >= 0) & (tex_ys < tex_h) & (tex_xs >= 0) & (tex_xs < tex_w)
+                tex_ys, tex_xs = tex_ys[valid], tex_xs[valid]
+                w0_v = w0[vy[valid], vx[valid]]
+                u_v = u[vy[valid], vx[valid]]
+                v_v = v[vy[valid], vx[valid]]
+
+                # Interpolate world position per texel
+                world_p = (w0_v[:, None] * wp_a + v_v[:, None] * wp_b + u_v[:, None] * wp_c)
+
+                position[tex_ys, tex_xs] = world_p
+                normal[tex_ys, tex_xs] = face_normal
+                filled[tex_ys, tex_xs] = True
 
     # Normalize position to [0, 1] using bounding box
     position_norm = np.zeros_like(position)
@@ -868,6 +897,78 @@ def generate_texture_pairs(
     return metadata
 
 
+def _rasterize_triangles_to_mask(
+    triangles_uv: np.ndarray,
+    tex_resolution: int,
+    mask: np.ndarray,
+) -> None:
+    """Vectorized UV triangle rasterization — marks visible texels in mask.
+
+    Args:
+        triangles_uv: (N, 3, 2) float array of UV triangle vertices.
+        tex_resolution: Texture resolution (square).
+        mask: (tex_h, tex_w) bool array, modified in-place.
+    """
+    if len(triangles_uv) == 0:
+        return
+
+    tex_h = tex_w = tex_resolution
+
+    # Convert UV [0,1] to pixel coords
+    tri_px = triangles_uv * np.array([tex_w, tex_h])  # (N, 3, 2)
+
+    for i in range(len(tri_px)):
+        a, b, c = tri_px[i]  # each (2,)
+        uv_a, uv_b, uv_c = triangles_uv[i]
+
+        min_u = max(0, int(np.floor(min(a[0], b[0], c[0]))))
+        max_u = min(tex_w - 1, int(np.ceil(max(a[0], b[0], c[0]))))
+        min_v = max(0, int(np.floor(min(a[1], b[1], c[1]))))
+        max_v = min(tex_h - 1, int(np.ceil(max(a[1], b[1], c[1]))))
+
+        n_u = max_u - min_u + 1
+        n_v = max_v - min_v + 1
+        if n_u <= 0 or n_v <= 0:
+            continue
+
+        # Build grid of texel centers in UV space
+        tx_range = (np.arange(min_u, max_u + 1) + 0.5) / tex_w
+        ty_range = (np.arange(min_v, max_v + 1) + 0.5) / tex_h
+        grid_u, grid_v = np.meshgrid(tx_range, ty_range)  # (n_v, n_u)
+        points = np.stack([grid_u, grid_v], axis=-1)  # (n_v, n_u, 2)
+
+        # Vectorized barycentric coords for all points at once
+        v0 = uv_c - uv_a
+        v1 = uv_b - uv_a
+        v2 = points - uv_a  # (n_v, n_u, 2)
+
+        dot00 = np.dot(v0, v0)
+        dot01 = np.dot(v0, v1)
+        dot11 = np.dot(v1, v1)
+        dot02 = v2 @ v0  # (n_v, n_u)
+        dot12 = v2 @ v1  # (n_v, n_u)
+
+        denom = dot00 * dot11 - dot01 * dot01
+        if abs(denom) < 1e-12:
+            continue
+
+        inv_denom = 1.0 / denom
+        u = (dot11 * dot02 - dot01 * dot12) * inv_denom
+        v = (dot00 * dot12 - dot01 * dot02) * inv_denom
+        w0 = 1.0 - u - v
+
+        # Inside triangle test
+        inside = (w0 >= -1e-4) & (u >= -1e-4) & (v >= -1e-4)
+
+        # Map to image coords (UV origin bottom-left, array origin top-left)
+        vy, vx = np.where(inside)
+        tex_ys = tex_h - 1 - (vy + min_v)
+        tex_xs = vx + min_u
+
+        valid = (tex_ys >= 0) & (tex_ys < tex_h) & (tex_xs >= 0) & (tex_xs < tex_w)
+        mask[tex_ys[valid], tex_xs[valid]] = True
+
+
 def compute_uv_visibility_mask(
     scene: bpy.types.Scene,
     meshes: list[bpy.types.Object],
@@ -878,7 +979,7 @@ def compute_uv_visibility_mask(
 
     For each angle, sets up a camera, determines face visibility via
     backface culling + ray casting, then rasterizes visible faces into
-    UV space. No rendering is performed.
+    UV space using vectorized numpy operations. No rendering is performed.
 
     Args:
         scene: Blender scene with character loaded.
@@ -902,7 +1003,9 @@ def compute_uv_visibility_mask(
         camera = setup_projection_camera(scene, meshes, float(angle))
         visibility = build_visibility_map(scene, camera, meshes)
 
-        # Rasterize visible faces into UV space
+        # Collect all visible triangles' UV coords
+        all_triangles: list[np.ndarray] = []
+
         for mesh_idx, mesh_obj in enumerate(meshes):
             eval_obj = mesh_obj.evaluated_get(depsgraph)
             mesh_data = eval_obj.data
@@ -926,25 +1029,15 @@ def compute_uv_visibility_mask(
 
                 # Fan-triangulate
                 for tri_idx in range(1, len(loop_indices) - 1):
-                    uv_a = uv_coords[0]
-                    uv_b = uv_coords[tri_idx]
-                    uv_c = uv_coords[tri_idx + 1]
+                    all_triangles.append(np.array([
+                        uv_coords[0],
+                        uv_coords[tri_idx],
+                        uv_coords[tri_idx + 1],
+                    ]))
 
-                    uv_pixels = np.array([uv_a, uv_b, uv_c]) * np.array([tex_w, tex_h])
-                    min_u = max(0, int(np.floor(uv_pixels[:, 0].min())))
-                    max_u = min(tex_w - 1, int(np.ceil(uv_pixels[:, 0].max())))
-                    min_v = max(0, int(np.floor(uv_pixels[:, 1].min())))
-                    max_v = min(tex_h - 1, int(np.ceil(uv_pixels[:, 1].max())))
-
-                    for ty in range(min_v, max_v + 1):
-                        for tx in range(min_u, max_u + 1):
-                            p_uv = np.array([(tx + 0.5) / tex_w, (ty + 0.5) / tex_h])
-                            w0, w1, w2 = _barycentric_coords(p_uv, uv_a, uv_b, uv_c)
-                            if w0 < -1e-4 or w1 < -1e-4 or w2 < -1e-4:
-                                continue
-                            # UV origin at bottom-left, image array at top-left
-                            tex_y = tex_h - 1 - ty
-                            visible[tex_y, tx] = True
+        if all_triangles:
+            triangles_uv = np.array(all_triangles)  # (N, 3, 2)
+            _rasterize_triangles_to_mask(triangles_uv, tex_resolution, visible)
 
         # Clean up camera
         cam_obj = bpy.data.objects.get("strata_proj_camera")
