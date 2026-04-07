@@ -868,6 +868,206 @@ def generate_texture_pairs(
     return metadata
 
 
+def compute_uv_visibility_mask(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+    angles: list[int],
+    tex_resolution: int = TEXTURE_RESOLUTION,
+) -> np.ndarray:
+    """Compute which UV texels are visible from given camera angles.
+
+    For each angle, sets up a camera, determines face visibility via
+    backface culling + ray casting, then rasterizes visible faces into
+    UV space. No rendering is performed.
+
+    Args:
+        scene: Blender scene with character loaded.
+        meshes: Character mesh objects.
+        angles: List of azimuth angles in degrees.
+        tex_resolution: UV map resolution.
+
+    Returns:
+        Binary visibility mask (tex_resolution, tex_resolution) uint8 — 255 where
+        at least one view angle can see that UV texel, 0 elsewhere.
+    """
+    tex_h = tex_w = tex_resolution
+    visible = np.zeros((tex_h, tex_w), dtype=bool)
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+
+    for mesh_obj in meshes:
+        ensure_uv_map(mesh_obj)
+
+    for angle in angles:
+        camera = setup_projection_camera(scene, meshes, float(angle))
+        visibility = build_visibility_map(scene, camera, meshes)
+
+        # Rasterize visible faces into UV space
+        for mesh_idx, mesh_obj in enumerate(meshes):
+            eval_obj = mesh_obj.evaluated_get(depsgraph)
+            mesh_data = eval_obj.data
+
+            if not mesh_data.uv_layers:
+                continue
+            uv_layer = mesh_data.uv_layers.active.data
+
+            for poly_idx, poly in enumerate(mesh_data.polygons):
+                if not visibility.get((mesh_idx, poly_idx), False):
+                    continue
+
+                loop_indices = list(poly.loop_indices)
+                if len(loop_indices) < 3:
+                    continue
+
+                uv_coords = [
+                    np.array([uv_layer[li].uv[0], uv_layer[li].uv[1]])
+                    for li in loop_indices
+                ]
+
+                # Fan-triangulate
+                for tri_idx in range(1, len(loop_indices) - 1):
+                    uv_a = uv_coords[0]
+                    uv_b = uv_coords[tri_idx]
+                    uv_c = uv_coords[tri_idx + 1]
+
+                    uv_pixels = np.array([uv_a, uv_b, uv_c]) * np.array([tex_w, tex_h])
+                    min_u = max(0, int(np.floor(uv_pixels[:, 0].min())))
+                    max_u = min(tex_w - 1, int(np.ceil(uv_pixels[:, 0].max())))
+                    min_v = max(0, int(np.floor(uv_pixels[:, 1].min())))
+                    max_v = min(tex_h - 1, int(np.ceil(uv_pixels[:, 1].max())))
+
+                    for ty in range(min_v, max_v + 1):
+                        for tx in range(min_u, max_u + 1):
+                            p_uv = np.array([(tx + 0.5) / tex_w, (ty + 0.5) / tex_h])
+                            w0, w1, w2 = _barycentric_coords(p_uv, uv_a, uv_b, uv_c)
+                            if w0 < -1e-4 or w1 < -1e-4 or w2 < -1e-4:
+                                continue
+                            # UV origin at bottom-left, image array at top-left
+                            tex_y = tex_h - 1 - ty
+                            visible[tex_y, tx] = True
+
+        # Clean up camera
+        cam_obj = bpy.data.objects.get("strata_proj_camera")
+        if cam_obj is not None:
+            bpy.data.objects.remove(cam_obj, do_unlink=True)
+
+    return (visible * 255).astype(np.uint8)
+
+
+def generate_pairs_from_existing_texture(
+    scene: bpy.types.Scene,
+    meshes: list[bpy.types.Object],
+    texture_path: Path,
+    output_dir: Path,
+    character_id: str,
+    *,
+    partial_angles: list[int] | None = None,
+    tex_resolution: int = TEXTURE_RESOLUTION,
+) -> dict[str, Any]:
+    """Generate training pairs using an existing texture file.
+
+    Instead of rendering the character from multiple views, loads the original
+    texture as the complete ground truth and computes a UV visibility mask from
+    the given partial view angles to create the partial texture and inpainting mask.
+
+    Args:
+        scene: Blender scene with character loaded.
+        meshes: Character mesh objects (must share the UV layout of texture_path).
+        texture_path: Path to the existing texture PNG.
+        output_dir: Root output directory.
+        character_id: Identifier for the character.
+        partial_angles: Azimuth angles for partial view (default: [0] = front only).
+        tex_resolution: Output UV texture resolution.
+
+    Returns:
+        Metadata dict with paths and statistics.
+    """
+    if partial_angles is None:
+        partial_angles = [0]
+
+    pair_dir = output_dir / f"{character_id}_pose_00"
+    pair_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Load existing texture as complete ground truth
+    logger.info("Loading existing texture: %s", texture_path)
+    complete_img = Image.open(texture_path).convert("RGBA")
+    if complete_img.size != (tex_resolution, tex_resolution):
+        complete_img = complete_img.resize((tex_resolution, tex_resolution), Image.BILINEAR)
+    complete_texture = np.array(complete_img)
+    complete_coverage = (complete_texture[:, :, 3] > 10).astype(np.uint8)
+
+    # 2. Compute UV visibility from partial view angles (no rendering)
+    logger.info(
+        "Computing UV visibility for %s from angles %s",
+        character_id,
+        partial_angles,
+    )
+    partial_vis = compute_uv_visibility_mask(
+        scene, meshes, partial_angles, tex_resolution
+    )
+
+    # 3. Create partial texture: keep only visible texels
+    partial_texture = complete_texture.copy()
+    not_visible = partial_vis == 0
+    partial_texture[not_visible] = 0
+    partial_coverage = (partial_vis > 0) & (complete_coverage > 0)
+
+    # 4. Inpainting mask: texels that have data in complete but not visible from partial
+    inpainting_mask = (complete_coverage > 0) & not_visible
+    inpainting_mask_uint8 = (inpainting_mask * 255).astype(np.uint8)
+
+    # 5. Generate UV geometry maps
+    logger.info("Generating UV geometry maps for %s", character_id)
+    position_map, normal_map = generate_uv_geometry_maps(
+        meshes, tex_resolution=tex_resolution
+    )
+
+    # 6. Save outputs
+    complete_path = pair_dir / "complete_texture.png"
+    partial_path = pair_dir / "partial_texture.png"
+    mask_path = pair_dir / "inpainting_mask.png"
+    position_path = pair_dir / "position_map.png"
+    normal_path = pair_dir / "normal_map.png"
+
+    Image.fromarray(complete_texture).save(complete_path)
+    Image.fromarray(partial_texture).save(partial_path)
+    Image.fromarray(inpainting_mask_uint8, mode="L").save(mask_path)
+    Image.fromarray(position_map).save(position_path)
+    Image.fromarray(normal_map).save(normal_path)
+
+    # 7. Statistics
+    total_texels = tex_resolution * tex_resolution
+    complete_pct = float(complete_coverage.sum()) / total_texels * 100
+    partial_pct = float(partial_coverage.sum()) / total_texels * 100
+    inpaint_pct = float(inpainting_mask.sum()) / total_texels * 100
+
+    metadata = {
+        "character_id": character_id,
+        "source_texture": str(texture_path),
+        "tex_resolution": tex_resolution,
+        "partial_angles": partial_angles,
+        "complete_coverage_pct": round(complete_pct, 2),
+        "partial_coverage_pct": round(partial_pct, 2),
+        "inpainting_pct": round(inpaint_pct, 2),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    metadata_path = pair_dir / "metadata.json"
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    logger.info(
+        "Pair saved: complete=%.1f%% partial=%.1f%% inpaint=%.1f%%",
+        complete_pct,
+        partial_pct,
+        inpaint_pct,
+    )
+
+    return metadata
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
