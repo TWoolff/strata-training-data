@@ -6,8 +6,10 @@ and projects the rendered colors onto UV texture maps.  Produces:
 - ``complete_texture.png`` — UV map composited from all 24 views (full coverage)
 - ``partial_texture.png`` — UV map from 3 views only (front, three-quarter, back)
 - ``inpainting_mask.png`` — Binary mask: 255 where texture is missing in partial
+- ``position_map.png`` — Per-texel 3D world position (RGB = XYZ, normalized [0,255])
+- ``normal_map.png`` — Per-texel surface normal (RGB = XYZ, remapped [-1,1]→[0,255])
 
-Training pair: (partial_texture, inpainting_mask) → complete_texture
+Training pair: (partial_texture, inpainting_mask, position_map, normal_map) → complete_texture
 
 Requires Blender 4.0+ (uses ``bpy`` for rendering and ray casting).
 """
@@ -264,6 +266,132 @@ def _barycentric_coords(
     return 1.0 - u - v, v, u
 
 
+def generate_uv_geometry_maps(
+    meshes: list[bpy.types.Object],
+    tex_resolution: int = TEXTURE_RESOLUTION,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate UV-space position and normal maps from mesh geometry.
+
+    For each texel in UV space, computes the corresponding 3D world position
+    and surface normal by rasterizing mesh triangles into UV space.
+
+    Args:
+        meshes: Character mesh objects (must have UV maps).
+        tex_resolution: Output map resolution (square).
+
+    Returns:
+        Tuple of (position_map, normal_map):
+        - position_map: (H, W, 3) uint8 — world XYZ normalized to [0, 255]
+        - normal_map: (H, W, 3) uint8 — surface normal remapped from [-1,1] to [0, 255]
+    """
+    tex_h = tex_w = tex_resolution
+    # Float buffers for accumulation
+    position = np.zeros((tex_h, tex_w, 3), dtype=np.float32)
+    normal = np.zeros((tex_h, tex_w, 3), dtype=np.float32)
+    filled = np.zeros((tex_h, tex_w), dtype=bool)
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+
+    # First pass: collect all world positions to compute bounding box
+    all_positions: list[Vector] = []
+    for mesh_obj in meshes:
+        eval_obj = mesh_obj.evaluated_get(depsgraph)
+        mesh_data = eval_obj.data
+        for v in mesh_data.vertices:
+            all_positions.append(eval_obj.matrix_world @ v.co)
+
+    if not all_positions:
+        logger.warning("No vertices found for geometry maps")
+        return (
+            np.zeros((tex_h, tex_w, 3), dtype=np.uint8),
+            np.full((tex_h, tex_w, 3), 128, dtype=np.uint8),
+        )
+
+    xs = [v.x for v in all_positions]
+    ys = [v.y for v in all_positions]
+    zs = [v.z for v in all_positions]
+    bbox_min = np.array([min(xs), min(ys), min(zs)], dtype=np.float32)
+    bbox_max = np.array([max(xs), max(ys), max(zs)], dtype=np.float32)
+    bbox_range = bbox_max - bbox_min
+    bbox_range[bbox_range < 1e-6] = 1.0  # avoid division by zero
+
+    # Second pass: rasterize each triangle in UV space
+    for mesh_obj in meshes:
+        eval_obj = mesh_obj.evaluated_get(depsgraph)
+        mesh_data = eval_obj.data
+
+        if not mesh_data.uv_layers:
+            continue
+        uv_layer = mesh_data.uv_layers.active.data
+        world_mat = eval_obj.matrix_world
+        normal_mat = world_mat.to_3x3()
+
+        for poly in mesh_data.polygons:
+            verts = list(poly.vertices)
+            loop_indices = list(poly.loop_indices)
+            if len(verts) < 3:
+                continue
+
+            # World-space vertex positions and normals
+            world_pos = [np.array(world_mat @ mesh_data.vertices[vi].co) for vi in verts]
+            face_normal = np.array(normal_mat @ Vector(poly.normal))
+            norm_len = np.linalg.norm(face_normal)
+            if norm_len > 1e-8:
+                face_normal /= norm_len
+
+            # UV coordinates
+            uv_coords = [np.array([uv_layer[li].uv[0], uv_layer[li].uv[1]]) for li in loop_indices]
+
+            # Fan-triangulate and rasterize each triangle
+            for tri_idx in range(1, len(verts) - 1):
+                uv_a, uv_b, uv_c = uv_coords[0], uv_coords[tri_idx], uv_coords[tri_idx + 1]
+                wp_a, wp_b, wp_c = world_pos[0], world_pos[tri_idx], world_pos[tri_idx + 1]
+
+                # UV bounding box in texel coords
+                uv_pixels = np.array([uv_a, uv_b, uv_c]) * np.array([tex_w, tex_h])
+                min_u = max(0, int(np.floor(uv_pixels[:, 0].min())))
+                max_u = min(tex_w - 1, int(np.ceil(uv_pixels[:, 0].max())))
+                min_v = max(0, int(np.floor(uv_pixels[:, 1].min())))
+                max_v = min(tex_h - 1, int(np.ceil(uv_pixels[:, 1].max())))
+
+                for ty in range(min_v, max_v + 1):
+                    for tx in range(min_u, max_u + 1):
+                        p_uv = np.array([(tx + 0.5) / tex_w, (ty + 0.5) / tex_h])
+                        w0, w1, w2 = _barycentric_coords(p_uv, uv_a, uv_b, uv_c)
+                        if w0 < -1e-4 or w1 < -1e-4 or w2 < -1e-4:
+                            continue
+
+                        # Interpolate world position
+                        world_p = w0 * wp_a + w1 * wp_b + w2 * wp_c
+
+                        # UV origin at bottom-left, image array at top-left
+                        tex_y = tex_h - 1 - ty
+                        position[tex_y, tx] = world_p
+                        normal[tex_y, tx] = face_normal
+                        filled[tex_y, tx] = True
+
+    # Normalize position to [0, 1] using bounding box
+    position_norm = np.zeros_like(position)
+    position_norm[filled] = (position[filled] - bbox_min) / bbox_range
+
+    # Remap normal from [-1, 1] to [0, 1]
+    normal_norm = np.zeros_like(normal)
+    normal_norm[filled] = normal[filled] * 0.5 + 0.5
+
+    # Convert to uint8
+    position_map = (np.clip(position_norm, 0, 1) * 255).astype(np.uint8)
+    normal_map = (np.clip(normal_norm, 0, 1) * 255).astype(np.uint8)
+
+    logger.info(
+        "Geometry maps: %d/%d texels filled (%.1f%%)",
+        int(filled.sum()),
+        tex_h * tex_w,
+        filled.sum() / (tex_h * tex_w) * 100,
+    )
+
+    return position_map, normal_map
+
+
 def project_view_to_uv(
     scene: bpy.types.Scene,
     camera: bpy.types.Object,
@@ -272,12 +400,18 @@ def project_view_to_uv(
     visibility: dict[tuple[int, int], bool],
     texture: np.ndarray,
     coverage: np.ndarray,
+    incidence_weight: np.ndarray | None = None,
 ) -> None:
     """Project a rendered camera view onto the UV texture map in-place.
 
     For each visible polygon, projects its vertices to screen space, samples
     the rendered image, and writes colors to the UV texture at the polygon's
     UV coordinates.
+
+    When *incidence_weight* is provided, texels are only overwritten if the
+    new view has a higher incidence weight (face more directly facing the
+    camera).  This prevents grazing-angle projections from overwriting
+    better front-facing data.
 
     Args:
         scene: Blender scene with the camera set.
@@ -288,10 +422,14 @@ def project_view_to_uv(
         texture: UV texture to fill, (tex_h, tex_w, 4) uint8. Modified in-place.
         coverage: Binary coverage array (tex_h, tex_w) uint8 — set to 255
             for texels that have been written. Modified in-place.
+        incidence_weight: Optional float32 array (tex_h, tex_w) tracking the
+            best incidence angle per texel.  Higher = more front-facing.
+            Modified in-place when provided.
     """
     render_h, render_w = rendered_image.shape[:2]
     tex_h, tex_w = texture.shape[:2]
     depsgraph = bpy.context.evaluated_depsgraph_get()
+    cam_pos = Vector(camera.location)
 
     for mesh_idx, mesh_obj in enumerate(meshes):
         eval_obj = mesh_obj.evaluated_get(depsgraph)
@@ -310,6 +448,14 @@ def project_view_to_uv(
 
             if len(verts) < 3:
                 continue
+
+            # Compute incidence angle for this face
+            face_center = eval_obj.matrix_world @ Vector(poly.center)
+            face_normal = (
+                eval_obj.matrix_world.to_3x3() @ Vector(poly.normal)
+            ).normalized()
+            view_dir = (cam_pos - face_center).normalized()
+            face_incidence = max(0.0, face_normal.dot(view_dir))
 
             # Get world-space vertex positions
             world_positions = [eval_obj.matrix_world @ mesh_data.vertices[vi].co for vi in verts]
@@ -353,6 +499,8 @@ def project_view_to_uv(
                     coverage,
                     tex_w,
                     tex_h,
+                    face_incidence=face_incidence,
+                    incidence_weight=incidence_weight,
                 )
 
 
@@ -370,12 +518,18 @@ def _rasterize_triangle_to_uv(
     coverage: np.ndarray,
     tex_w: int,
     tex_h: int,
+    face_incidence: float = 1.0,
+    incidence_weight: np.ndarray | None = None,
 ) -> None:
     """Rasterize a single triangle in UV space, sampling from the rendered image.
 
     For each texel inside the UV triangle, computes barycentric coordinates,
     maps to screen space via the same barycentrics, samples the rendered image,
     and writes to the texture.
+
+    When *incidence_weight* is provided, a texel is only written if *face_incidence*
+    exceeds the stored weight for that texel.  This ensures front-facing projections
+    take priority over grazing-angle ones.
     """
     # UV bounding box in texel coords
     uv_pixels = np.array([uv_a, uv_b, uv_c]) * np.array([tex_w, tex_h])
@@ -412,6 +566,14 @@ def _rasterize_triangle_to_uv(
                 if color[3] > 0:
                     # UV texture: origin at bottom-left, image array at top-left
                     tex_y = tex_h - 1 - ty
+
+                    # Incidence weighting: only overwrite if this view is
+                    # more front-facing than what was previously written.
+                    if incidence_weight is not None:
+                        if face_incidence <= incidence_weight[tex_y, tx]:
+                            continue
+                        incidence_weight[tex_y, tx] = face_incidence
+
                     texture[tex_y, tx] = color
                     coverage[tex_y, tx] = 255
 
@@ -479,11 +641,14 @@ def composite_texture_from_views(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Render from multiple angles and composite into a UV texture map.
 
+    Uses incidence-angle weighting so that front-facing projections take
+    priority over grazing-angle ones, producing sharper textures.
+
     For each angle:
     1. Set up camera at the given azimuth
     2. Render the color image
     3. Compute face visibility
-    4. Project rendered pixels onto UV space
+    4. Project rendered pixels onto UV space (weighted by incidence angle)
 
     Args:
         scene: Blender scene with character loaded and materials set.
@@ -499,6 +664,7 @@ def composite_texture_from_views(
     """
     texture = np.zeros((tex_resolution, tex_resolution, 4), dtype=np.uint8)
     coverage = np.zeros((tex_resolution, tex_resolution), dtype=np.uint8)
+    incidence_weight = np.zeros((tex_resolution, tex_resolution), dtype=np.float32)
 
     # Ensure all meshes have UV maps
     for mesh_obj in meshes:
@@ -522,7 +688,7 @@ def composite_texture_from_views(
         # Compute visibility
         visibility = build_visibility_map(scene, camera, meshes)
 
-        # Project onto UV
+        # Project onto UV with incidence-angle weighting
         project_view_to_uv(
             scene,
             camera,
@@ -531,6 +697,7 @@ def composite_texture_from_views(
             visibility,
             texture,
             coverage,
+            incidence_weight=incidence_weight,
         )
 
         # Clean up camera
@@ -644,16 +811,26 @@ def generate_texture_pairs(
     # 3. Compute inpainting mask
     inpainting_mask = compute_inpainting_mask(partial_coverage, complete_coverage)
 
-    # 4. Save outputs
+    # 4. Generate UV geometry maps (position + normal)
+    logger.info("Generating UV geometry maps for %s pose %d", character_id, pose_id)
+    position_map, normal_map = generate_uv_geometry_maps(
+        meshes, tex_resolution=tex_resolution
+    )
+
+    # 5. Save outputs
     complete_path = pair_dir / "complete_texture.png"
     partial_path = pair_dir / "partial_texture.png"
     mask_path = pair_dir / "inpainting_mask.png"
+    position_path = pair_dir / "position_map.png"
+    normal_path = pair_dir / "normal_map.png"
 
     Image.fromarray(complete_texture).save(complete_path)
     Image.fromarray(partial_texture).save(partial_path)
     Image.fromarray(inpainting_mask, mode="L").save(mask_path)
+    Image.fromarray(position_map).save(position_path)
+    Image.fromarray(normal_map).save(normal_path)
 
-    # 5. Compute statistics
+    # 6. Compute statistics
     complete_fill = float(np.count_nonzero(complete_coverage)) / complete_coverage.size
     partial_fill = float(np.count_nonzero(partial_coverage)) / partial_coverage.size
     mask_fill = float(np.count_nonzero(inpainting_mask)) / inpainting_mask.size
@@ -670,6 +847,8 @@ def generate_texture_pairs(
         "complete_texture": str(complete_path),
         "partial_texture": str(partial_path),
         "inpainting_mask": str(mask_path),
+        "position_map": str(position_path),
+        "normal_map": str(normal_path),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 

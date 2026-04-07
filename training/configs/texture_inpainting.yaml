@@ -1,8 +1,11 @@
-# Local config — texture inpainting U-Net (Model 5 — texture)
-# For 4070 Ti / local dev machines
+# Local config — ControlNet UV texture inpainting (Model 5)
+# For local dev machines (4070 Ti / Mac MPS)
+# NOTE: SD 1.5 Inpainting + ControlNet needs ~12GB VRAM minimum
+
 model:
-  in_channels: 5      # RGBA + observation mask
-  out_channels: 4     # RGBA
+  base_model: "runwayml/stable-diffusion-inpainting"
+  controlnet_channels: 6
+  freeze_sd: true
 
 data:
   dataset_dirs:
@@ -18,19 +21,18 @@ augmentation:
   random_mask_augmentation: true
 
 training:
-  batch_size: 2
+  batch_size: 1
+  gradient_accumulation: 4
   num_workers: 4
   epochs: 50
-  optimizer: "adam"
-  learning_rate: 2.0e-4
-  weight_decay: 1.0e-5
-  warmup_epochs: 3
-
-loss:
-  l1_weight: 1.0
-  perceptual_weight: 0.1
+  optimizer: "adamw"
+  learning_rate: 1.0e-5
+  weight_decay: 1.0e-2
+  mixed_precision: "fp16"
+  validate_every: 10
+  val_inference_steps: 10
 
 checkpointing:
-  save_dir: "./checkpoints/texture_inpainting"
+  save_dir: "./checkpoints/texture_inpainting_controlnet"
   early_stopping_patience: 15
   early_stopping_metric: "val/l1"

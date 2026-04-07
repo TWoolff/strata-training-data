@@ -1,9 +1,12 @@
-# Full A100 config — texture inpainting U-Net (Model 5 — texture)
-# All source data, full training run
-# Est. time: ~2-3h on A100
+# A100 config — ControlNet UV texture inpainting (Model 5)
+# Fine-tunes a ControlNet on SD 1.5 Inpainting for UV gap filling.
+# ControlNet is conditioned on UV position + normal maps (6 channels).
+# Est. time: ~4-6h on A100 40GB
+
 model:
-  in_channels: 5      # RGBA + observation mask
-  out_channels: 4     # RGBA
+  base_model: "runwayml/stable-diffusion-inpainting"
+  controlnet_channels: 6  # position_xyz (3) + normal_xyz (3)
+  freeze_sd: true
 
 data:
   dataset_dirs:
@@ -19,20 +22,18 @@ augmentation:
   random_mask_augmentation: true
 
 training:
-  batch_size: 16
+  batch_size: 2         # SD + ControlNet is memory-hungry (~20GB per batch)
+  gradient_accumulation: 8  # effective batch 16
   num_workers: 8
   epochs: 100
-  optimizer: "adam"
-  learning_rate: 4.0e-4
-  weight_decay: 1.0e-5
-  warmup_epochs: 5
-  mixed_precision: true
-
-loss:
-  l1_weight: 1.0
-  perceptual_weight: 0.1
+  optimizer: "adamw"
+  learning_rate: 1.0e-5
+  weight_decay: 1.0e-2
+  mixed_precision: "fp16"
+  validate_every: 5     # full inference validation every N epochs
+  val_inference_steps: 20
 
 checkpointing:
-  save_dir: "./checkpoints/texture_inpainting"
+  save_dir: "./checkpoints/texture_inpainting_controlnet"
   early_stopping_patience: 20
   early_stopping_metric: "val/l1"

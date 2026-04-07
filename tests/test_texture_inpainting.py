@@ -124,8 +124,14 @@ class TestTextureInpaintingDataset:
         )
         ds = TextureInpaintingDataset(config)
         sample = ds[0]
-        assert sample["image"].shape == (5, 512, 512)
-        assert sample["target"].shape == (4, 512, 512)
+        # New diffusion format: image=RGB(3), mask(1), control(6), target=RGB(3)
+        assert sample["image"].shape == (3, 512, 512)
+        assert sample["mask"].shape == (1, 512, 512)
+        assert sample["control"].shape == (6, 512, 512)
+        assert sample["target"].shape == (3, 512, 512)
+        # Legacy format still available
+        assert sample["legacy_input"].shape == (5, 512, 512)
+        assert sample["legacy_target"].shape == (4, 512, 512)
 
     def test_sample_range(self, texture_pairs: Path):
         from training.data.texture_inpainting_dataset import (
@@ -148,8 +154,8 @@ class TestTextureInpaintingDataset:
         assert sample["target"].min() >= 0.0
         assert sample["target"].max() <= 1.0
 
-    def test_observation_mask_channel(self, texture_pairs: Path):
-        """Channel 4 of image should be the observation mask (1=observed)."""
+    def test_mask_channel(self, texture_pairs: Path):
+        """Mask should be 0 where observed, 1 where inpainting needed."""
         from training.data.texture_inpainting_dataset import (
             TextureInpaintingDataset,
             TextureInpaintingDatasetConfig,
@@ -165,8 +171,12 @@ class TestTextureInpaintingDataset:
         )
         ds = TextureInpaintingDataset(config)
         sample = ds[0]
-        obs_mask = sample["image"][4]  # Channel 4 = observation mask
-        # Our test mask is all-zero (no inpainting needed), so obs should be all-1
+        mask = sample["mask"][0]  # [H, W]
+        # Our test mask is all-zero (no inpainting needed), so mask should be all-0
+        assert mask.min() == 0.0
+        assert mask.max() == 0.0
+        # Legacy format observation mask should be all-1 (inverted)
+        obs_mask = sample["legacy_input"][4]
         assert obs_mask.min() == 1.0
         assert obs_mask.max() == 1.0
 
