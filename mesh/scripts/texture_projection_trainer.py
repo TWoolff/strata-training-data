@@ -974,18 +974,22 @@ def compute_uv_visibility_mask(
     meshes: list[bpy.types.Object],
     angles: list[int],
     tex_resolution: int = TEXTURE_RESOLUTION,
+    fast: bool = True,
 ) -> np.ndarray:
     """Compute which UV texels are visible from given camera angles.
 
-    For each angle, sets up a camera, determines face visibility via
-    backface culling + ray casting, then rasterizes visible faces into
-    UV space using vectorized numpy operations. No rendering is performed.
+    For each angle, determines face visibility and rasterizes visible faces
+    into UV space using vectorized numpy operations. No rendering is performed.
 
     Args:
         scene: Blender scene with character loaded.
         meshes: Character mesh objects.
         angles: List of azimuth angles in degrees.
         tex_resolution: UV map resolution.
+        fast: If True, use backface-only test (no ray casting). Much faster
+              for dense meshes. Slightly overestimates visibility (includes
+              occluded but front-facing faces), which is acceptable for
+              training data.
 
     Returns:
         Binary visibility mask (tex_resolution, tex_resolution) uint8 — 255 where
@@ -1000,8 +1004,13 @@ def compute_uv_visibility_mask(
         ensure_uv_map(mesh_obj)
 
     for angle in angles:
-        camera = setup_projection_camera(scene, meshes, float(angle))
-        visibility = build_visibility_map(scene, camera, meshes)
+        az_rad = radians(float(angle))
+        # Camera looks from +Y toward origin, rotated by azimuth
+        cam_dir = Vector((-sin(az_rad), cos(az_rad), 0)).normalized()
+
+        if not fast:
+            camera = setup_projection_camera(scene, meshes, float(angle))
+            visibility = build_visibility_map(scene, camera, meshes)
 
         # Collect all visible triangles' UV coords
         all_triangles: list[np.ndarray] = []
@@ -1013,10 +1022,17 @@ def compute_uv_visibility_mask(
             if not mesh_data.uv_layers:
                 continue
             uv_layer = mesh_data.uv_layers.active.data
+            normal_mat = eval_obj.matrix_world.to_3x3()
 
             for poly_idx, poly in enumerate(mesh_data.polygons):
-                if not visibility.get((mesh_idx, poly_idx), False):
-                    continue
+                if fast:
+                    # Backface test only: face normal must oppose camera direction
+                    face_normal_world = (normal_mat @ Vector(poly.normal)).normalized()
+                    if face_normal_world.dot(cam_dir) >= 0:
+                        continue  # back-facing
+                else:
+                    if not visibility.get((mesh_idx, poly_idx), False):
+                        continue
 
                 loop_indices = list(poly.loop_indices)
                 if len(loop_indices) < 3:
@@ -1027,7 +1043,6 @@ def compute_uv_visibility_mask(
                     for li in loop_indices
                 ]
 
-                # Fan-triangulate
                 for tri_idx in range(1, len(loop_indices) - 1):
                     all_triangles.append(np.array([
                         uv_coords[0],
@@ -1039,10 +1054,10 @@ def compute_uv_visibility_mask(
             triangles_uv = np.array(all_triangles)  # (N, 3, 2)
             _rasterize_triangles_to_mask(triangles_uv, tex_resolution, visible)
 
-        # Clean up camera
-        cam_obj = bpy.data.objects.get("strata_proj_camera")
-        if cam_obj is not None:
-            bpy.data.objects.remove(cam_obj, do_unlink=True)
+        if not fast:
+            cam_obj = bpy.data.objects.get("strata_proj_camera")
+            if cam_obj is not None:
+                bpy.data.objects.remove(cam_obj, do_unlink=True)
 
     return (visible * 255).astype(np.uint8)
 
@@ -1056,6 +1071,7 @@ def generate_pairs_from_existing_texture(
     *,
     partial_angles: list[int] | None = None,
     tex_resolution: int = TEXTURE_RESOLUTION,
+    skip_geometry: bool = False,
 ) -> dict[str, Any]:
     """Generate training pairs using an existing texture file.
 
@@ -1109,11 +1125,16 @@ def generate_pairs_from_existing_texture(
     inpainting_mask = (complete_coverage > 0) & not_visible
     inpainting_mask_uint8 = (inpainting_mask * 255).astype(np.uint8)
 
-    # 5. Generate UV geometry maps
-    logger.info("Generating UV geometry maps for %s", character_id)
-    position_map, normal_map = generate_uv_geometry_maps(
-        meshes, tex_resolution=tex_resolution
-    )
+    # 5. Generate UV geometry maps (skip for speed — dataset falls back to zeros)
+    if skip_geometry:
+        logger.info("Skipping geometry maps for %s (fast mode)", character_id)
+        position_map = np.zeros((tex_resolution, tex_resolution, 3), dtype=np.uint8)
+        normal_map = np.full((tex_resolution, tex_resolution, 3), 128, dtype=np.uint8)
+    else:
+        logger.info("Generating UV geometry maps for %s", character_id)
+        position_map, normal_map = generate_uv_geometry_maps(
+            meshes, tex_resolution=tex_resolution
+        )
 
     # 6. Save outputs
     complete_path = pair_dir / "complete_texture.png"
