@@ -211,14 +211,14 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     img.src = segUrl;
   }, [segUrl, width, height, notifyUndoRedo]);
 
-  // Convert canvas coordinates from mouse event
+  // Convert client coordinates to canvas coordinates
   const canvasCoords = useCallback(
-    (e: MouseEvent): { x: number; y: number } | null => {
+    (clientX: number, clientY: number): { x: number; y: number } | null => {
       const canvas = maskCanvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / (rect.width / width);
-      const y = (e.clientY - rect.top) / (rect.height / height);
+      const x = (clientX - rect.left) / (rect.width / width);
+      const y = (clientY - rect.top) / (rect.height / height);
       return { x, y };
     },
     [width, height],
@@ -276,22 +276,21 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     const cursor = cursorCanvasRef.current;
     if (!cursor) return;
 
+    // --- Mouse handlers ---
+
     function handleMouseDown(e: MouseEvent) {
       if (e.button === 1 || (e.button === 0 && spaceDown.current)) {
-        // Middle click or space+left click = pan
         isPanning.current = true;
         lastPos.current = { x: e.clientX, y: e.clientY };
         e.preventDefault();
         return;
       }
       if (e.button === 2) {
-        // Right click = eyedropper
         e.preventDefault();
         return;
       }
       if (e.button === 0) {
-        // Left click = paint
-        const pos = canvasCoords(e);
+        const pos = canvasCoords(e.clientX, e.clientY);
         if (!pos) return;
         pushUndo();
         isPainting.current = true;
@@ -301,7 +300,7 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
     }
 
     function handleMouseMove(e: MouseEvent) {
-      const pos = canvasCoords(e);
+      const pos = canvasCoords(e.clientX, e.clientY);
 
       if (isPanning.current && lastPos.current) {
         panOffset.current.x += e.clientX - lastPos.current.x;
@@ -325,7 +324,6 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 
     function handleMouseUp(e: MouseEvent) {
       if (e.button === 2) {
-        // Eyedropper on right-click release
         e.preventDefault();
         return;
       }
@@ -336,8 +334,7 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
 
     function handleContextMenu(e: MouseEvent) {
       e.preventDefault();
-      // Eyedropper: pick region from mask canvas
-      const pos = canvasCoords(e);
+      const pos = canvasCoords(e.clientX, e.clientY);
       if (!pos) return;
       const ctx = maskCanvasRef.current?.getContext("2d");
       if (!ctx) return;
@@ -345,7 +342,6 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       const key = (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
       const regionId = COLOR_TO_ID.get(key);
       if (regionId !== undefined) {
-        // Dispatch custom event for the page to handle
         cursor!.dispatchEvent(
           new CustomEvent("regionpick", { detail: regionId, bubbles: true }),
         );
@@ -357,7 +353,6 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       const newZoom = Math.max(0.25, Math.min(10, zoom.current * delta));
 
-      // Zoom toward cursor position
       const container = containerRef.current;
       if (container) {
         const rect = container.getBoundingClientRect();
@@ -373,12 +368,119 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       onZoomChangeRef.current?.(newZoom);
     }
 
+    // --- Touch handlers ---
+
+    const touchStartDist = { current: 0 };
+    const touchStartZoom = { current: 1 };
+
+    function getTouchDist(a: Touch, b: Touch) {
+      const dx = a.clientX - b.clientX;
+      const dy = a.clientY - b.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function getTouchMid(a: Touch, b: Touch) {
+      return {
+        x: (a.clientX + b.clientX) / 2,
+        y: (a.clientY + b.clientY) / 2,
+      };
+    }
+
+    function handleTouchStart(e: TouchEvent) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const pos = canvasCoords(t.clientX, t.clientY);
+        if (!pos) return;
+        pushUndo();
+        isPainting.current = true;
+        paintAt(pos.x, pos.y);
+        lastPos.current = pos;
+      } else if (e.touches.length === 2) {
+        isPainting.current = false;
+        isPanning.current = true;
+        touchStartDist.current = getTouchDist(e.touches[0], e.touches[1]);
+        touchStartZoom.current = zoom.current;
+        const mid = getTouchMid(e.touches[0], e.touches[1]);
+        lastPos.current = { x: mid.x, y: mid.y };
+      }
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+      e.preventDefault();
+      if (e.touches.length === 1 && isPainting.current) {
+        const t = e.touches[0];
+        const pos = canvasCoords(t.clientX, t.clientY);
+        if (!pos) return;
+        if (lastPos.current) {
+          paintLine(lastPos.current.x, lastPos.current.y, pos.x, pos.y);
+        } else {
+          paintAt(pos.x, pos.y);
+        }
+        lastPos.current = pos;
+      } else if (e.touches.length === 2 && isPanning.current) {
+        const dist = getTouchDist(e.touches[0], e.touches[1]);
+        const mid = getTouchMid(e.touches[0], e.touches[1]);
+
+        // Pinch zoom
+        const newZoom = Math.max(
+          0.25,
+          Math.min(10, touchStartZoom.current * (dist / touchStartDist.current)),
+        );
+
+        // Pan
+        if (lastPos.current) {
+          const container = containerRef.current;
+          if (container) {
+            const rect = container.getBoundingClientRect();
+            const cx = mid.x - rect.left;
+            const cy = mid.y - rect.top;
+            const scale = newZoom / zoom.current;
+            panOffset.current.x = cx - scale * (cx - panOffset.current.x);
+            panOffset.current.y = cy - scale * (cy - panOffset.current.y);
+          }
+          panOffset.current.x += mid.x - lastPos.current.x;
+          panOffset.current.y += mid.y - lastPos.current.y;
+        }
+
+        zoom.current = newZoom;
+        lastPos.current = { x: mid.x, y: mid.y };
+        applyTransform();
+        onZoomChangeRef.current?.(newZoom);
+      }
+    }
+
+    function handleTouchEnd(e: TouchEvent) {
+      if (e.touches.length === 0) {
+        isPainting.current = false;
+        isPanning.current = false;
+        lastPos.current = null;
+      } else if (e.touches.length === 1 && isPanning.current) {
+        // Went from 2 fingers to 1 — start painting with remaining finger
+        isPanning.current = false;
+        const t = e.touches[0];
+        const pos = canvasCoords(t.clientX, t.clientY);
+        if (pos) {
+          pushUndo();
+          isPainting.current = true;
+          paintAt(pos.x, pos.y);
+          lastPos.current = pos;
+        }
+      }
+    }
+
+    // --- Attach listeners ---
+
     cursor.addEventListener("mousedown", handleMouseDown);
     cursor.addEventListener("mousemove", handleMouseMove);
     cursor.addEventListener("mouseup", handleMouseUp);
     cursor.addEventListener("mouseleave", handleMouseUp);
     cursor.addEventListener("contextmenu", handleContextMenu);
     cursor.addEventListener("wheel", handleWheel, { passive: false });
+    cursor.addEventListener("touchstart", handleTouchStart, { passive: false });
+    cursor.addEventListener("touchmove", handleTouchMove, { passive: false });
+    cursor.addEventListener("touchend", handleTouchEnd);
+    cursor.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
       cursor.removeEventListener("mousedown", handleMouseDown);
@@ -387,6 +489,10 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
       cursor.removeEventListener("mouseleave", handleMouseUp);
       cursor.removeEventListener("contextmenu", handleContextMenu);
       cursor.removeEventListener("wheel", handleWheel);
+      cursor.removeEventListener("touchstart", handleTouchStart);
+      cursor.removeEventListener("touchmove", handleTouchMove);
+      cursor.removeEventListener("touchend", handleTouchEnd);
+      cursor.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [
     canvasCoords,
@@ -459,8 +565,7 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-hidden bg-zinc-950"
-      style={{ cursor: "none" }}
+      className="relative flex-1 overflow-hidden bg-zinc-950 cursor-none md:cursor-none"
     >
       <div
         data-canvas-inner=""
@@ -487,12 +592,13 @@ export const Canvas = forwardRef<CanvasHandle, Props>(function Canvas(
           className="absolute inset-0"
           style={{ opacity: overlayOpacity }}
         />
-        {/* Cursor: brush preview */}
+        {/* Cursor: brush preview + touch/mouse interaction target */}
         <canvas
           ref={cursorCanvasRef}
           width={width}
           height={height}
           className="absolute inset-0"
+          style={{ touchAction: "none" }}
         />
       </div>
     </div>

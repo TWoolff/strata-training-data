@@ -31,8 +31,8 @@ export default function AnnotatePage() {
   const [activeRegion, setActiveRegion] = useState<Region>(REGIONS[1]); // head
   const [erasing, setErasing] = useState(false);
   const prevRegionRef = useRef<Region>(REGIONS[1]);
-  const [brushSize, setBrushSize] = useState(15);
-  const [overlayOpacity, setOverlayOpacity] = useState(0.4);
+  const [brushSize, setBrushSize] = useState(10);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [zoom, setZoom] = useState(1);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -274,27 +274,29 @@ export default function AnnotatePage() {
   return (
     <div className="flex flex-col" style={{ height: "100dvh" }}>
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between border-b border-zinc-800 px-3 py-2 md:px-4">
+        <div className="flex items-center gap-2 md:gap-3">
           <h1 className="text-sm font-semibold text-zinc-50">Strata Label</h1>
           {currentImage && (
-            <span className="text-xs text-zinc-500">
+            <span className="hidden text-xs text-zinc-500 md:inline">
               {currentImage.dataset}/{currentImage.example_id}
             </span>
           )}
           {totalImages > 0 && (
-            <ProgressBar
-              totalImages={totalImages}
-              pendingImages={pendingImages}
-              personalCount={annotationCount}
-            />
+            <div className="hidden md:block">
+              <ProgressBar
+                totalImages={totalImages}
+                pendingImages={pendingImages}
+                personalCount={annotationCount}
+              />
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500">
+          <span className="hidden text-xs text-zinc-500 md:inline">
             {userName}
           </span>
-          <span className="text-xs text-zinc-600">
+          <span className="hidden text-xs text-zinc-600 md:inline">
             {totalAnnotations} total
           </span>
           {hasReviewKey && (
@@ -328,7 +330,7 @@ export default function AnnotatePage() {
       </header>
 
       {/* Main content: Canvas + Palette */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0 overflow-hidden md:flex-row">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <span className="text-sm text-zinc-500">Loading...</span>

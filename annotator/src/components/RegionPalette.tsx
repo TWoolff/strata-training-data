@@ -19,43 +19,71 @@ const GROUPS: { label: string; ids: number[] }[] = [
 
 export function RegionPalette({ activeRegion, onRegionChange }: Props) {
   return (
-    <div className="flex w-48 flex-col gap-3 overflow-y-auto border-l border-zinc-800 bg-zinc-900 p-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Regions
-      </h3>
-      {GROUPS.map((group) => (
-        <div key={group.label}>
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-600">
-            {group.label}
+    <>
+      {/* Desktop: vertical sidebar */}
+      <div className="hidden md:flex w-48 flex-col gap-3 overflow-y-auto border-l border-zinc-800 bg-zinc-900 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Regions
+        </h3>
+        {GROUPS.map((group) => (
+          <div key={group.label}>
+            <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-600">
+              {group.label}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {group.ids.map((id) => {
+                const region = REGIONS[id];
+                const isActive = activeRegion.id === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => onRegionChange(region)}
+                    className={`flex items-center gap-2 rounded px-2 py-1 text-left text-xs transition-colors ${
+                      isActive
+                        ? "bg-zinc-700 text-zinc-100"
+                        : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    }`}
+                  >
+                    <span
+                      className="inline-block h-3 w-3 shrink-0 rounded-sm border border-zinc-600"
+                      style={{ backgroundColor: regionCss(region) }}
+                    />
+                    <span className="flex-1 truncate">{region.name}</span>
+                    <kbd className="rounded bg-zinc-800 px-1 font-mono text-[10px] text-zinc-500">
+                      {region.shortcut}
+                    </kbd>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-col gap-0.5">
-            {group.ids.map((id) => {
-              const region = REGIONS[id];
-              const isActive = activeRegion.id === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => onRegionChange(region)}
-                  className={`flex items-center gap-2 rounded px-2 py-1 text-left text-xs transition-colors ${
-                    isActive
-                      ? "bg-zinc-700 text-zinc-100"
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                  }`}
-                >
-                  <span
-                    className="inline-block h-3 w-3 shrink-0 rounded-sm border border-zinc-600"
-                    style={{ backgroundColor: regionCss(region) }}
-                  />
-                  <span className="flex-1 truncate">{region.name}</span>
-                  <kbd className="rounded bg-zinc-800 px-1 font-mono text-[10px] text-zinc-500">
-                    {region.shortcut}
-                  </kbd>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Mobile: horizontal scrollable strip */}
+      <div className="flex md:hidden items-center gap-1 overflow-x-auto border-t border-zinc-800 bg-zinc-900 px-2 py-1.5">
+        {GROUPS.flatMap((group) =>
+          group.ids.map((id) => {
+            const region = REGIONS[id];
+            const isActive = activeRegion.id === id;
+            return (
+              <button
+                key={id}
+                onClick={() => onRegionChange(region)}
+                className={`shrink-0 rounded-full p-0.5 transition-colors ${
+                  isActive ? "ring-2 ring-zinc-300" : ""
+                }`}
+                title={region.name}
+              >
+                <span
+                  className="block h-6 w-6 rounded-full border border-zinc-600"
+                  style={{ backgroundColor: regionCss(region) }}
+                />
+              </button>
+            );
+          }),
+        )}
+      </div>
+    </>
   );
 }

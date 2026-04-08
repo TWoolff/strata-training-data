@@ -36,25 +36,25 @@ export function Toolbar({
   annotationCount,
 }: Props) {
   return (
-    <div className="flex items-center gap-4 border-t border-zinc-800 bg-zinc-900 px-4 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-3 py-2 md:gap-4 md:px-4">
       {/* Brush size */}
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500">Brush</label>
+      <div className="flex items-center gap-1.5 md:gap-2">
+        <label className="hidden text-xs text-zinc-500 md:inline">Brush</label>
         <input
           type="range"
           min={2}
           max={50}
           value={brushSize}
           onChange={(e) => onBrushSizeChange(Number(e.target.value))}
-          className="w-20 accent-zinc-400"
+          className="w-16 accent-zinc-400 md:w-20"
         />
         <span className="w-6 text-right font-mono text-xs text-zinc-400">
           {brushSize}
         </span>
       </div>
 
-      {/* Overlay opacity */}
-      <div className="flex items-center gap-2">
+      {/* Overlay opacity — hidden on mobile */}
+      <div className="hidden items-center gap-2 md:flex">
         <label className="text-xs text-zinc-500">Overlay</label>
         <input
           type="range"
@@ -82,14 +82,14 @@ export function Toolbar({
         Eraser
       </button>
 
-      <div className="h-4 w-px bg-zinc-700" />
+      <div className="hidden h-4 w-px bg-zinc-700 md:block" />
 
       {/* Undo/Redo */}
       <button
         onClick={onUndo}
         disabled={!canUndo}
         className="rounded px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-30 disabled:hover:bg-transparent"
-        title="Undo (Ctrl+Z)"
+        title="Undo"
       >
         Undo
       </button>
@@ -97,15 +97,14 @@ export function Toolbar({
         onClick={onRedo}
         disabled={!canRedo}
         className="rounded px-2 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-30 disabled:hover:bg-transparent"
-        title="Redo (Ctrl+Shift+Z)"
+        title="Redo"
       >
         Redo
       </button>
 
-      <div className="h-4 w-px bg-zinc-700" />
-
-      {/* Zoom */}
-      <div className="flex items-center gap-2">
+      {/* Zoom — hidden on mobile (use pinch instead) */}
+      <div className="hidden h-4 w-px bg-zinc-700 md:block" />
+      <div className="hidden items-center gap-2 md:flex">
         <span className="font-mono text-xs text-zinc-500">
           {Math.round(zoom * 100)}%
         </span>
@@ -120,12 +119,11 @@ export function Toolbar({
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Annotation count */}
-      <span className="text-xs text-zinc-500">
+      {/* Annotation count — hidden on mobile */}
+      <span className="hidden text-xs text-zinc-500 md:inline">
         {annotationCount} annotated
       </span>
-
-      <div className="h-4 w-px bg-zinc-700" />
+      <div className="hidden h-4 w-px bg-zinc-700 md:block" />
 
       {/* Skip / Submit */}
       <button
