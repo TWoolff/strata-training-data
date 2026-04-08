@@ -22,6 +22,7 @@ function formatTime(seconds: number): string {
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<"all" | "week">("all");
 
   const userId = useSyncExternalStore(
     () => () => {},
@@ -29,9 +30,10 @@ export default function LeaderboardPage() {
     () => null,
   );
 
-  async function fetchLeaderboard() {
+  async function fetchLeaderboard(s: "all" | "week" = scope) {
     try {
-      const res = await fetch("/api/leaderboard");
+      const params = s === "week" ? "?scope=week" : "";
+      const res = await fetch(`/api/leaderboard${params}`);
       const data = await res.json();
       setEntries(data.entries ?? []);
     } catch (err) {
@@ -42,17 +44,42 @@ export default function LeaderboardPage() {
   }
 
   useEffect(() => {
-    fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 30000);
+    setLoading(true);
+    fetchLeaderboard(scope);
+    const interval = setInterval(() => fetchLeaderboard(scope), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [scope]);
 
   const currentUserId = userId ? Number(userId) : null;
 
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
-        <h1 className="text-sm font-semibold text-zinc-50">Leaderboard</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-sm font-semibold text-zinc-50">Leaderboard</h1>
+          <div className="flex rounded-lg border border-zinc-700 text-xs">
+            <button
+              onClick={() => setScope("all")}
+              className={`rounded-l-lg px-3 py-1 transition-colors ${
+                scope === "all"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              All time
+            </button>
+            <button
+              onClick={() => setScope("week")}
+              className={`rounded-r-lg px-3 py-1 transition-colors ${
+                scope === "week"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              This week
+            </button>
+          </div>
+        </div>
         <Link
           href="/annotate"
           className="rounded-lg px-3 py-1 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"

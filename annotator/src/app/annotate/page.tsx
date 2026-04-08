@@ -40,9 +40,15 @@ export default function AnnotatePage() {
   const [loading, setLoading] = useState(true);
   const [annotationCount, setAnnotationCount] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [dailyStreak, setDailyStreak] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
+  const [approvalRate, setApprovalRate] = useState<number | null>(null);
   const [totalImages, setTotalImages] = useState(0);
   const [pendingImages, setPendingImages] = useState(0);
   const [totalAnnotations, setTotalAnnotations] = useState(0);
+
+  const DAILY_GOAL = 10;
+  const bestTimeRef = useRef<number>(Infinity);
 
   const userName = useSyncExternalStore(
     () => () => {},
@@ -90,17 +96,24 @@ export default function AnnotatePage() {
     if (userId) fetchNextImage();
   }, [userId, fetchNextImage]);
 
-  // Fetch global stats
+  // Fetch global + personal stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/stats");
+      const params = userId ? `?user_id=${userId}` : "";
+      const res = await fetch(`/api/stats${params}`);
       const data = await res.json();
       setTotalImages(data.total ?? 0);
       setPendingImages(data.pending ?? 0);
+      if (data.personal) {
+        setDailyStreak(data.personal.streak ?? 0);
+        setTodayCount(data.personal.today ?? 0);
+        setApprovalRate(data.personal.approval_rate);
+        setAnnotationCount(data.personal.annotated ?? 0);
+      }
     } catch {
       // silent
     }
-  }, []);
+  }, [userId]);
 
   // Fetch total annotation count across all users
   const fetchTotalAnnotations = useCallback(async () => {
@@ -147,22 +160,45 @@ export default function AnnotatePage() {
       const data = await res.json();
       if (data.success) {
         setAnnotationCount(data.count);
+        setTodayCount(data.today ?? todayCount + 1);
+        setDailyStreak(data.streak ?? dailyStreak);
+
         const newStreak = streak + 1;
         setStreak(newStreak);
 
-        // Streak toasts
-        const MILESTONES = [50, 25, 10, 5];
-        const milestone = MILESTONES.find((m) => newStreak === m);
-        if (milestone) {
-          showToast(`${milestone} streak! You're on fire`);
-        } else if (newStreak === 1) {
-          showToast("Nice! 1 done");
+        // Lifetime milestones
+        const LIFETIME = [100, 50, 10, 1];
+        const lifetimeMilestone = LIFETIME.find((m) => data.count === m);
+        if (lifetimeMilestone === 1) {
+          showToast("Welcome to the team!");
+        } else if (lifetimeMilestone) {
+          showToast(`${lifetimeMilestone} annotations! You're a legend`);
         } else {
-          showToast(`${newStreak} in a row!`);
+          // Session streak toasts
+          const SESSION_MILESTONES = [50, 25, 10, 5];
+          const milestone = SESSION_MILESTONES.find((m) => newStreak === m);
+          if (milestone) {
+            showToast(`${milestone} streak! You're on fire`);
+          } else if (newStreak === 1) {
+            showToast("Nice! 1 done");
+          } else {
+            showToast(`${newStreak} in a row!`);
+          }
         }
 
-        // Speed toast
-        if (timeSpent <= 30 && timeSpent > 0) {
+        // Daily goal celebration
+        const newToday = data.today ?? todayCount + 1;
+        if (newToday === DAILY_GOAL) {
+          setTimeout(() => showToast("Daily goal reached! You're amazing"), 400);
+        }
+
+        // Speed toast / personal best
+        if (timeSpent > 0 && timeSpent < bestTimeRef.current) {
+          bestTimeRef.current = timeSpent;
+          if (data.count > 1) {
+            setTimeout(() => showToast(`New personal best! ${timeSpent}s`), 300);
+          }
+        } else if (timeSpent <= 30 && timeSpent > 0) {
           setTimeout(() => showToast(`Speed demon! Only ${timeSpent}s`), 300);
         }
 
@@ -175,7 +211,7 @@ export default function AnnotatePage() {
     }
 
     fetchNextImage();
-  }, [userId, streak, fetchNextImage, fetchStats, fetchTotalAnnotations]);
+  }, [userId, streak, todayCount, dailyStreak, fetchNextImage, fetchStats, fetchTotalAnnotations]);
 
   // Skip image
   const handleSkip = useCallback(() => {
@@ -277,6 +313,25 @@ export default function AnnotatePage() {
       <header className="flex items-center justify-between border-b border-zinc-800 px-3 py-2 md:px-4">
         <div className="flex items-center gap-2 md:gap-3">
           <h1 className="text-sm font-semibold text-zinc-50">Strata Label</h1>
+          {dailyStreak > 0 && (
+            <span className="text-xs text-orange-400" title={`${dailyStreak} day streak`}>
+              {dailyStreak}d
+            </span>
+          )}
+          {todayCount > 0 && (
+            <span className={`text-xs ${todayCount >= DAILY_GOAL ? "text-green-400" : "text-zinc-400"}`}
+              title={`${todayCount}/${DAILY_GOAL} today`}
+            >
+              {todayCount}/{DAILY_GOAL}
+            </span>
+          )}
+          {approvalRate !== null && (
+            <span className={`hidden text-xs md:inline ${
+              approvalRate >= 80 ? "text-green-400" : approvalRate >= 50 ? "text-yellow-400" : "text-red-400"
+            }`} title={`${approvalRate}% approval rate`}>
+              {approvalRate}%
+            </span>
+          )}
           {currentImage && (
             <span className="hidden text-xs text-zinc-500 md:inline">
               {currentImage.dataset}/{currentImage.example_id}
@@ -337,15 +392,42 @@ export default function AnnotatePage() {
           </div>
         ) : !currentImage ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="text-3xl">&#10003;</div>
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="text-4xl">&#127881;</div>
               <h2 className="text-lg font-semibold text-zinc-200">
                 All caught up!
               </h2>
+              <div className="flex gap-6 text-center">
+                {annotationCount > 0 && (
+                  <div>
+                    <div className="text-2xl font-bold text-zinc-100">{annotationCount}</div>
+                    <div className="text-xs text-zinc-500">annotated</div>
+                  </div>
+                )}
+                {approvalRate !== null && (
+                  <div>
+                    <div className={`text-2xl font-bold ${
+                      approvalRate >= 80 ? "text-green-400" : approvalRate >= 50 ? "text-yellow-400" : "text-red-400"
+                    }`}>{approvalRate}%</div>
+                    <div className="text-xs text-zinc-500">approved</div>
+                  </div>
+                )}
+                {dailyStreak > 0 && (
+                  <div>
+                    <div className="text-2xl font-bold text-orange-400">{dailyStreak}</div>
+                    <div className="text-xs text-zinc-500">day streak</div>
+                  </div>
+                )}
+              </div>
               <p className="max-w-sm text-sm text-zinc-500">
-                No pending images to annotate. Check back later or ask an admin
-                to add more images.
+                No pending images. Check back later or ask an admin to add more.
               </p>
+              <Link
+                href="/leaderboard"
+                className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
+              >
+                View leaderboard
+              </Link>
             </div>
           </div>
         ) : (

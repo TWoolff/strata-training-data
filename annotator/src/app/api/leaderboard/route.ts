@@ -10,9 +10,16 @@ async function ensureSchema() {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await ensureSchema();
+
+    const { searchParams } = new URL(request.url);
+    const scope = searchParams.get("scope"); // "week" or default all-time
+
+    const dateFilter = scope === "week"
+      ? `AND a.created_at >= datetime('now', '-7 days')`
+      : "";
 
     const result = await execute(
       `SELECT
@@ -25,7 +32,7 @@ export async function GET() {
            ELSE 0
          END as avg_time
        FROM users u
-       LEFT JOIN annotations a ON a.user_id = u.id
+       LEFT JOIN annotations a ON a.user_id = u.id ${dateFilter}
        LEFT JOIN reviews r ON r.annotation_id = a.id
        GROUP BY u.id
        HAVING COUNT(a.id) > 0

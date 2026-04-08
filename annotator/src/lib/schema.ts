@@ -33,6 +33,12 @@ const SCHEMA_SQL = [
     notes TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
+  `CREATE TABLE IF NOT EXISTS user_streaks (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    current_streak INTEGER DEFAULT 0,
+    longest_streak INTEGER DEFAULT 0,
+    last_active_date TEXT
+  )`,
 ];
 
 /** Create all tables if they don't exist. */
