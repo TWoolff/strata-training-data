@@ -257,6 +257,8 @@ def validate(
     total_ssim = 0.0
     n_batches = 0
 
+    weight_dtype = next(vae.parameters()).dtype
+
     for batch in loader:
         target_rgb = batch["target"].to(device)
         partial_rgb = batch["image"].to(device)
@@ -266,16 +268,17 @@ def validate(
         bsz = target_rgb.shape[0]
         encoder_hidden_states = empty_embeds.expand(bsz, -1, -1)
 
-        # Encode partial image and target
-        partial_norm = partial_rgb * 2.0 - 1.0
+        # Encode partial image (cast to model dtype for fp16 VAE)
+        partial_norm = (partial_rgb * 2.0 - 1.0).to(dtype=weight_dtype)
         partial_latents = vae.encode(partial_norm).latent_dist.mean * vae.config.scaling_factor
         mask_latent = F.interpolate(mask, size=partial_latents.shape[2:], mode="nearest")
 
-        # Resize control
+        # Resize control and cast to model dtype
         control_resized = F.interpolate(
             control, size=(target_rgb.shape[2], target_rgb.shape[3]),
             mode="bilinear", align_corners=False,
-        )
+        ).to(dtype=weight_dtype)
+        mask_latent = mask_latent.to(dtype=weight_dtype)
 
         # Start from random noise
         latents = torch.randn_like(partial_latents)
