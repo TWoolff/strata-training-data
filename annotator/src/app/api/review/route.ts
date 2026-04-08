@@ -184,6 +184,43 @@ export async function GET(request: Request) {
 }
 
 /**
+ * PATCH /api/review — update an annotation's mask data (reviewer correction).
+ * Body: { annotation_id, mask_data }
+ */
+export async function PATCH(request: Request) {
+  try {
+    if (!checkAuth(request)) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await ensureSchema();
+
+    const body = await request.json();
+    const { annotation_id, mask_data } = body;
+
+    if (!annotation_id || !mask_data) {
+      return Response.json(
+        { error: "annotation_id and mask_data are required" },
+        { status: 400 },
+      );
+    }
+
+    await execute(
+      `UPDATE annotations SET mask_data = :mask_data WHERE id = :annotation_id`,
+      {
+        mask_data: String(mask_data),
+        annotation_id: Number(annotation_id),
+      },
+    );
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("PATCH /api/review error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
  * POST /api/review — save a review decision.
  * Body: { annotation_id, approved (boolean), notes? (string) }
  * Or batch: { annotation_ids: number[], approved (boolean), notes? }

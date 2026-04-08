@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { REGIONS } from "@/lib/regions";
+import { REGIONS, type Region } from "@/lib/regions";
+import { Canvas, type CanvasHandle } from "@/components/Canvas";
+import { RegionPalette } from "@/components/RegionPalette";
 
 type AnnotationSummary = {
   annotation_id: number;
@@ -158,6 +160,13 @@ function ReviewPageInner() {
   const [diffOverlay, setDiffOverlay] = useState<string | null>(null);
   const [changedPixels, setChangedPixels] = useState(0);
 
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [activeRegion, setActiveRegion] = useState<Region>(REGIONS[1]);
+  const [brushSize, setBrushSize] = useState(10);
+  const [saving, setSaving] = useState(false);
+  const editCanvasRef = useRef<CanvasHandle>(null);
+
   // Batch selection
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -271,7 +280,50 @@ function ReviewPageInner() {
   const closeDetail = useCallback(() => {
     setDetailIndex(null);
     setDetail(null);
+    setEditing(false);
   }, []);
+
+  // Save corrected mask from edit mode
+  const saveCorrection = useCallback(async () => {
+    if (!detail || !editCanvasRef.current) return;
+    const maskData = editCanvasRef.current.getMaskAsGrayscalePng();
+    if (!maskData) return;
+
+    setSaving(true);
+    try {
+      const params = reviewKey.current ? `?key=${encodeURIComponent(reviewKey.current)}` : "";
+      const res = await fetch(`/api/review${params}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          annotation_id: detail.annotation_id,
+          mask_data: maskData,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Update local detail with new mask and refresh overlays
+        setDetail((prev) => prev ? { ...prev, mask_data: maskData } : prev);
+        setEditing(false);
+
+        // Recompute overlays with the corrected mask
+        const w = detail.width || 512;
+        const h = detail.height || 512;
+        const [origGray, corrGray] = await Promise.all([
+          decodeGrayscalePng(detail.seg_url, w, h),
+          decodeGrayscalePng(maskData, w, h),
+        ]);
+        setCorrectedOverlay(renderColoredMask(corrGray, w, h));
+        const diff = renderDiffMask(origGray, corrGray, w, h);
+        setDiffOverlay(diff.dataUrl);
+        setChangedPixels(diff.changedCount);
+      }
+    } catch (err) {
+      console.error("Failed to save correction:", err);
+    } finally {
+      setSaving(false);
+    }
+  }, [detail]);
 
   // Review action (approve/reject)
   const reviewAction = useCallback(
@@ -361,13 +413,16 @@ function ReviewPageInner() {
         return;
       }
 
-      if (detailIndex !== null) {
+      if (detailIndex !== null && !editing) {
         if (e.key === "a") {
           e.preventDefault();
           reviewAction(true);
         } else if (e.key === "r") {
           e.preventDefault();
           reviewAction(false);
+        } else if (e.key === "e") {
+          e.preventDefault();
+          setEditing(true);
         } else if (e.key === "s" || e.key === "Escape") {
           e.preventDefault();
           closeDetail();
@@ -378,12 +433,15 @@ function ReviewPageInner() {
           e.preventDefault();
           navigateDetail(-1);
         }
+      } else if (editing && e.key === "Escape") {
+        e.preventDefault();
+        setEditing(false);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [detailIndex, reviewAction, closeDetail, navigateDetail]);
+  }, [detailIndex, editing, reviewAction, closeDetail, navigateDetail]);
 
   // Toggle selection
   function toggleSelect(annotationId: number) {
@@ -450,10 +508,10 @@ function ReviewPageInner() {
         <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-2">
           <div className="flex items-center gap-3">
             <button
-              onClick={closeDetail}
+              onClick={editing ? () => setEditing(false) : closeDetail}
               className="rounded-lg px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             >
-              Back to grid
+              {editing ? "Back to review" : "Back to grid"}
             </button>
             {detail && (
               <span className="text-xs text-zinc-500">
@@ -470,131 +528,195 @@ function ReviewPageInner() {
               {detailIndex + 1} / {annotations.length}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-xs text-zinc-600">
-            <kbd className="rounded border border-zinc-700 px-1.5 py-0.5">a</kbd>
-            <span>approve</span>
-            <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">r</kbd>
-            <span>reject</span>
-            <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">s</kbd>
-            <span>back</span>
-            <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">&larr;&rarr;</kbd>
-            <span>navigate</span>
-          </div>
+          {!editing && (
+            <div className="flex items-center gap-1 text-xs text-zinc-600">
+              <kbd className="rounded border border-zinc-700 px-1.5 py-0.5">a</kbd>
+              <span>approve</span>
+              <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">r</kbd>
+              <span>reject</span>
+              <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">e</kbd>
+              <span>edit</span>
+              <kbd className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5">&larr;&rarr;</kbd>
+              <span>navigate</span>
+            </div>
+          )}
         </header>
 
-        {/* Three-panel comparison */}
-        <div className="flex flex-1 items-center justify-center gap-4 overflow-auto p-4">
-          {detailLoading ? (
-            <span className="text-sm text-zinc-500">Loading...</span>
-          ) : detail ? (
-            <>
-              {/* Panel 1: Original + pseudo-label overlay */}
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-medium text-zinc-400">
-                  Original (pseudo-label)
-                </span>
-                <div
-                  className="relative border border-zinc-800"
-                  style={{ width: 320, height: 320 }}
-                >
-                  <img
-                    src={detail.image_url}
-                    alt="Character"
-                    className="absolute inset-0 h-full w-full object-contain"
-                    crossOrigin="anonymous"
-                  />
-                  {originalOverlay && (
-                    <img
-                      src={originalOverlay}
-                      alt="Pseudo-label overlay"
-                      className="absolute inset-0 h-full w-full object-contain opacity-50"
-                    />
-                  )}
-                </div>
-              </div>
+        {editing && detail ? (
+          <>
+            {/* Edit mode: Canvas + RegionPalette */}
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden md:flex-row">
+              <Canvas
+                ref={editCanvasRef}
+                imageUrl={detail.image_url}
+                segUrl={detail.mask_data}
+                width={detail.width || 512}
+                height={detail.height || 512}
+                activeRegion={activeRegion}
+                brushSize={brushSize}
+                overlayOpacity={0.5}
+              />
+              <RegionPalette
+                activeRegion={activeRegion}
+                onRegionChange={setActiveRegion}
+              />
+            </div>
 
-              {/* Panel 2: Original + corrected overlay */}
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-medium text-zinc-400">
-                  Corrected (annotator)
+            {/* Edit toolbar */}
+            <div className="flex items-center justify-center gap-3 border-t border-zinc-800 px-4 py-2">
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-zinc-500">Brush</label>
+                <input
+                  type="range"
+                  min={2}
+                  max={50}
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number(e.target.value))}
+                  className="w-20 accent-zinc-400"
+                />
+                <span className="w-6 text-right font-mono text-xs text-zinc-400">
+                  {brushSize}
                 </span>
-                <div
-                  className="relative border border-zinc-800"
-                  style={{ width: 320, height: 320 }}
-                >
-                  <img
-                    src={detail.image_url}
-                    alt="Character"
-                    className="absolute inset-0 h-full w-full object-contain"
-                    crossOrigin="anonymous"
-                  />
-                  {correctedOverlay && (
-                    <img
-                      src={correctedOverlay}
-                      alt="Corrected overlay"
-                      className="absolute inset-0 h-full w-full object-contain opacity-50"
-                    />
-                  )}
-                </div>
               </div>
+              <div className="flex-1" />
+              <button
+                onClick={() => setEditing(false)}
+                className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveCorrection}
+                disabled={saving}
+                className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save correction"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Three-panel comparison */}
+            <div className="flex flex-1 items-center justify-center gap-4 overflow-auto p-4">
+              {detailLoading ? (
+                <span className="text-sm text-zinc-500">Loading...</span>
+              ) : detail ? (
+                <>
+                  {/* Panel 1: Original + pseudo-label overlay */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-400">
+                      Original (pseudo-label)
+                    </span>
+                    <div
+                      className="relative border border-zinc-800"
+                      style={{ width: 320, height: 320 }}
+                    >
+                      <img
+                        src={detail.image_url}
+                        alt="Character"
+                        className="absolute inset-0 h-full w-full object-contain"
+                        crossOrigin="anonymous"
+                      />
+                      {originalOverlay && (
+                        <img
+                          src={originalOverlay}
+                          alt="Pseudo-label overlay"
+                          className="absolute inset-0 h-full w-full object-contain opacity-50"
+                        />
+                      )}
+                    </div>
+                  </div>
 
-              {/* Panel 3: Diff */}
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-medium text-zinc-400">
-                  Diff ({changedPixels.toLocaleString()} px changed)
-                </span>
-                <div
-                  className="relative border border-zinc-800"
-                  style={{ width: 320, height: 320 }}
-                >
-                  <img
-                    src={detail.image_url}
-                    alt="Character"
-                    className="absolute inset-0 h-full w-full object-contain opacity-30"
-                    crossOrigin="anonymous"
-                  />
-                  {diffOverlay && (
-                    <img
-                      src={diffOverlay}
-                      alt="Diff overlay"
-                      className="absolute inset-0 h-full w-full object-contain"
-                    />
-                  )}
-                </div>
-              </div>
-            </>
-          ) : null}
-        </div>
+                  {/* Panel 2: Original + corrected overlay */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-400">
+                      Corrected (annotator)
+                    </span>
+                    <div
+                      className="relative border border-zinc-800"
+                      style={{ width: 320, height: 320 }}
+                    >
+                      <img
+                        src={detail.image_url}
+                        alt="Character"
+                        className="absolute inset-0 h-full w-full object-contain"
+                        crossOrigin="anonymous"
+                      />
+                      {correctedOverlay && (
+                        <img
+                          src={correctedOverlay}
+                          alt="Corrected overlay"
+                          className="absolute inset-0 h-full w-full object-contain opacity-50"
+                        />
+                      )}
+                    </div>
+                  </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center justify-center gap-3 border-t border-zinc-800 px-4 py-3">
-          <button
-            onClick={() => navigateDetail(-1)}
-            disabled={detailIndex === 0}
-            className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 disabled:opacity-30"
-          >
-            Prev
-          </button>
-          <button
-            onClick={() => reviewAction(false)}
-            className="rounded-lg bg-red-600/80 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-500"
-          >
-            Reject
-          </button>
-          <button
-            onClick={() => reviewAction(true)}
-            className="rounded-lg bg-green-600/80 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-500"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() => navigateDetail(1)}
-            disabled={detailIndex === annotations.length - 1}
-            className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 disabled:opacity-30"
-          >
-            Next
-          </button>
-        </div>
+                  {/* Panel 3: Diff */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-400">
+                      Diff ({changedPixels.toLocaleString()} px changed)
+                    </span>
+                    <div
+                      className="relative border border-zinc-800"
+                      style={{ width: 320, height: 320 }}
+                    >
+                      <img
+                        src={detail.image_url}
+                        alt="Character"
+                        className="absolute inset-0 h-full w-full object-contain opacity-30"
+                        crossOrigin="anonymous"
+                      />
+                      {diffOverlay && (
+                        <img
+                          src={diffOverlay}
+                          alt="Diff overlay"
+                          className="absolute inset-0 h-full w-full object-contain"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-center gap-3 border-t border-zinc-800 px-4 py-3">
+              <button
+                onClick={() => navigateDetail(-1)}
+                disabled={detailIndex === 0}
+                className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 disabled:opacity-30"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => reviewAction(false)}
+                className="rounded-lg bg-red-600/80 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-500"
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-lg bg-zinc-700 px-4 py-1.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-600"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => reviewAction(true)}
+                className="rounded-lg bg-green-600/80 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-500"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => navigateDetail(1)}
+                disabled={detailIndex === annotations.length - 1}
+                className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 disabled:opacity-30"
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
