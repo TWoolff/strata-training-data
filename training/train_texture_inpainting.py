@@ -182,9 +182,10 @@ def train_one_epoch(
         )
 
         with torch.amp.autocast("cuda", enabled=use_amp):
-            # ControlNet forward
+            # ControlNet forward (same 9-channel input as UNet since it was
+            # initialized from the inpainting UNet)
             down_block_res_samples, mid_block_res_sample = controlnet(
-                noisy_latents,
+                unet_input,
                 timesteps,
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=control_resized,
