@@ -509,8 +509,6 @@ def main() -> None:
                 controlnet.save_pretrained(str(save_dir / "best"))
                 logger.info("  New best val/l1: %.4f — saved to %s", best_val_l1, save_dir / "best")
 
-            # Clean up validation pipeline
-            del val_pipe, val_controlnet
             torch.cuda.empty_cache() if device.type == "cuda" else None
 
         # TensorBoard
