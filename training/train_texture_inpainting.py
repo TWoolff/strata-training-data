@@ -287,23 +287,25 @@ def validate(
             t_batch = t.expand(bsz)
             unet_input = torch.cat([latents, mask_latent, partial_latents], dim=1)
 
-            down_samples, mid_sample = controlnet(
-                unet_input, t_batch,
-                encoder_hidden_states=encoder_hidden_states,
-                controlnet_cond=control_resized,
-                return_dict=False,
-            )
-            noise_pred = unet(
-                unet_input, t_batch,
-                encoder_hidden_states=encoder_hidden_states,
-                down_block_additional_residuals=down_samples,
-                mid_block_additional_residual=mid_sample,
-            ).sample
+            with torch.amp.autocast("cuda"):
+                down_samples, mid_sample = controlnet(
+                    unet_input, t_batch,
+                    encoder_hidden_states=encoder_hidden_states,
+                    controlnet_cond=control_resized,
+                    return_dict=False,
+                )
+                noise_pred = unet(
+                    unet_input, t_batch,
+                    encoder_hidden_states=encoder_hidden_states,
+                    down_block_additional_residuals=down_samples,
+                    mid_block_additional_residual=mid_sample,
+                ).sample
 
-            latents = val_scheduler.step(noise_pred, t, latents).prev_sample
+            latents = val_scheduler.step(noise_pred.float(), t, latents).prev_sample
 
         # Decode
-        decoded = vae.decode(latents / vae.config.scaling_factor).sample
+        with torch.amp.autocast("cuda"):
+            decoded = vae.decode(latents / vae.config.scaling_factor).sample
         pred_rgb = (decoded * 0.5 + 0.5).clamp(0, 1)
 
         # Pixel preservation compositing
