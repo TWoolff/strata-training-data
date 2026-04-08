@@ -226,64 +226,100 @@ def train_one_epoch(
 
 @torch.no_grad()
 def validate(
-    pipe,
+    controlnet,
+    unet,
+    vae,
+    text_encoder,
+    tokenizer,
+    noise_scheduler,
     loader: DataLoader,
     device: torch.device,
     num_inference_steps: int = 20,
 ) -> dict[str, float]:
-    """Validate by running full inference on val set and measuring reconstruction."""
+    """Validate by running manual denoising loop and measuring reconstruction.
+
+    Uses a manual loop instead of the diffusers pipeline because the SD
+    Inpainting ControlNet expects 9-channel input (same as the UNet).
+    """
+    controlnet.eval()
+
+    # Empty text embedding
+    tok = tokenizer("", return_tensors="pt", padding="max_length",
+                    max_length=tokenizer.model_max_length, truncation=True)
+    empty_embeds = text_encoder(tok.input_ids.to(device))[0]
+
+    # Set up scheduler for inference
+    from diffusers import DDIMScheduler
+    val_scheduler = DDIMScheduler.from_config(noise_scheduler.config)
+    val_scheduler.set_timesteps(num_inference_steps, device=device)
+
     total_l1 = 0.0
     total_ssim = 0.0
     n_batches = 0
 
     for batch in loader:
-        target_rgb = batch["target"].to(device)    # [B, 3, H, W]
-        partial_rgb = batch["image"].to(device)     # [B, 3, H, W]
-        mask = batch["mask"].to(device)             # [B, 1, H, W]
-        control = batch["control"].to(device)       # [B, 6, H, W]
+        target_rgb = batch["target"].to(device)
+        partial_rgb = batch["image"].to(device)
+        mask = batch["mask"].to(device)
+        control = batch["control"].to(device)
 
-        # Run inference one sample at a time (pipeline expects PIL)
-        import numpy as np
-        from PIL import Image as PILImage
+        bsz = target_rgb.shape[0]
+        encoder_hidden_states = empty_embeds.expand(bsz, -1, -1)
 
-        preds = []
-        for i in range(partial_rgb.shape[0]):
-            rgb_np = (partial_rgb[i].permute(1, 2, 0).cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
-            mask_np = (mask[i, 0].cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
-            ctrl_np = (control[i, :3].permute(1, 2, 0).cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
+        # Encode partial image and target
+        partial_norm = partial_rgb * 2.0 - 1.0
+        partial_latents = vae.encode(partial_norm).latent_dist.mean * vae.config.scaling_factor
+        mask_latent = F.interpolate(mask, size=partial_latents.shape[2:], mode="nearest")
 
-            result = pipe(
-                prompt="",
-                image=PILImage.fromarray(rgb_np),
-                mask_image=PILImage.fromarray(mask_np),
-                control_image=PILImage.fromarray(ctrl_np),
-                num_inference_steps=num_inference_steps,
-                guidance_scale=1.0,  # No CFG for validation speed
-            ).images[0]
+        # Resize control
+        control_resized = F.interpolate(
+            control, size=(target_rgb.shape[2], target_rgb.shape[3]),
+            mode="bilinear", align_corners=False,
+        )
 
-            pred_arr = np.array(result).astype(np.float32) / 255.0
-            pred_t = torch.from_numpy(pred_arr).permute(2, 0, 1).to(device)
+        # Start from random noise
+        latents = torch.randn_like(partial_latents)
 
-            # Pixel preservation compositing
-            mask_i = mask[i].expand(3, -1, -1)
-            final = partial_rgb[i] * (1 - mask_i) + pred_t * mask_i
-            preds.append(final)
+        for t in val_scheduler.timesteps:
+            t_batch = t.expand(bsz)
+            unet_input = torch.cat([latents, mask_latent, partial_latents], dim=1)
 
-        pred_batch = torch.stack(preds)
+            down_samples, mid_sample = controlnet(
+                unet_input, t_batch,
+                encoder_hidden_states=encoder_hidden_states,
+                controlnet_cond=control_resized,
+                return_dict=False,
+            )
+            noise_pred = unet(
+                unet_input, t_batch,
+                encoder_hidden_states=encoder_hidden_states,
+                down_block_additional_residuals=down_samples,
+                mid_block_additional_residual=mid_sample,
+            ).sample
+
+            latents = val_scheduler.step(noise_pred, t, latents).prev_sample
+
+        # Decode
+        decoded = vae.decode(latents / vae.config.scaling_factor).sample
+        pred_rgb = (decoded * 0.5 + 0.5).clamp(0, 1)
+
+        # Pixel preservation compositing
+        mask_3ch = mask.expand(-1, 3, -1, -1)
+        final = partial_rgb * (1 - mask_3ch) + pred_rgb * mask_3ch
 
         # Metrics on inpainted regions only
-        mask_3ch = mask.expand(-1, 3, -1, -1)
-        masked_pred = pred_batch * mask_3ch
+        masked_pred = final * mask_3ch
         masked_target = target_rgb * mask_3ch
         mask_sum = mask_3ch.sum().clamp(min=1.0)
 
         l1 = (masked_pred - masked_target).abs().sum() / mask_sum
-        ssim_val = _ssim(pred_batch, target_rgb)
+        ssim_val = _ssim(final, target_rgb)
 
         total_l1 += l1.item()
         total_ssim += ssim_val.item()
         n_batches += 1
 
+    controlnet.train()
     d = max(n_batches, 1)
     return {
         "val/l1": total_l1 / d,
@@ -332,7 +368,6 @@ def main() -> None:
         AutoencoderKL,
         ControlNetModel,
         DDPMScheduler,
-        StableDiffusionControlNetInpaintPipeline,
         UNet2DConditionModel,
     )
     from transformers import CLIPTextModel, CLIPTokenizer
@@ -451,19 +486,11 @@ def main() -> None:
         # Validate periodically (full inference is slow)
         val_metrics = {}
         if (epoch + 1) % validate_every == 0 and len(val_ds) > 0:
-            # Build pipeline for validation inference
-            val_controlnet = ControlNetModel.from_config(controlnet.config)
-            val_controlnet.load_state_dict(controlnet.state_dict())
-            val_controlnet = val_controlnet.to(device, dtype=weight_dtype)
-
-            val_pipe = StableDiffusionControlNetInpaintPipeline.from_pretrained(
-                sd_model_id,
-                controlnet=val_controlnet,
-                torch_dtype=weight_dtype,
-            ).to(device)
-            val_pipe.set_progress_bar_config(disable=True)
-
-            val_metrics = validate(val_pipe, val_loader, device, num_inference_steps=val_steps)
+            val_metrics = validate(
+                controlnet, unet, vae, text_encoder, tokenizer,
+                noise_scheduler, val_loader, device,
+                num_inference_steps=val_steps,
+            )
 
             logger.info(
                 "  val/l1=%.4f | val/ssim=%.4f",
