@@ -60,7 +60,7 @@ export function RegionPalette({ activeRegion, onRegionChange }: Props) {
         ))}
       </div>
 
-      {/* Mobile: horizontal scrollable strip */}
+      {/* Mobile: horizontal scrollable strip with labels */}
       <div className="flex md:hidden items-center gap-1 overflow-x-auto border-t border-zinc-800 bg-zinc-900 px-2 py-1.5">
         {GROUPS.flatMap((group) =>
           group.ids.map((id) => {
@@ -70,15 +70,21 @@ export function RegionPalette({ activeRegion, onRegionChange }: Props) {
               <button
                 key={id}
                 onClick={() => onRegionChange(region)}
-                className={`shrink-0 rounded-full p-0.5 transition-colors ${
-                  isActive ? "ring-2 ring-zinc-300" : ""
+                className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-1 transition-colors ${
+                  isActive
+                    ? "bg-zinc-700 ring-1 ring-zinc-400"
+                    : "bg-zinc-800"
                 }`}
-                title={region.name}
               >
                 <span
-                  className="block h-6 w-6 rounded-full border border-zinc-600"
+                  className="block h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-600"
                   style={{ backgroundColor: regionCss(region) }}
                 />
+                <span className={`whitespace-nowrap text-[10px] ${
+                  isActive ? "text-zinc-100" : "text-zinc-400"
+                }`}>
+                  {region.name}
+                </span>
               </button>
             );
           }),
