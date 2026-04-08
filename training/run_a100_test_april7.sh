@@ -60,7 +60,7 @@ echo ""
 
 # Install See-Through dependencies
 echo "[1.1] Installing See-Through dependencies..."
-pip install -q einops kornia omegaconf psd-tools 2>&1 | tail -3
+pip install -q einops kornia omegaconf psd-tools pycocotools natsort 2>&1 | tail -3
 
 # Clone See-Through repo
 if [[ ! -d /workspace/see-through ]]; then
@@ -107,12 +107,13 @@ image_dir = Path('data_cloud/gemini_benchmark')
 output_dir = Path('output/seethrough_test')
 output_dir.mkdir(parents=True, exist_ok=True)
 
-images = sorted(image_dir.glob('*.png'))
+images = sorted([p for p in image_dir.glob('*.png') if not p.name.startswith('._')])
 print(f'Found {len(images)} benchmark images')
 
 # Import See-Through inference
 os.chdir('/workspace/see-through/common')
 from utils.inference_utils import apply_layerdiff, apply_marigold, further_extr
+os.chdir('/workspace/strata-training-data')
 
 save_dir = str(output_dir)
 total_start = time.time()
