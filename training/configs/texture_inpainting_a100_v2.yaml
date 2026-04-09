@@ -1,0 +1,38 @@
+# A100 config v2 — ControlNet UV texture inpainting
+# 4,135 pairs (Meshy front/side/back + 100Avatars), 100 epochs
+# Est. time: ~3-4h on A100 40GB
+
+model:
+  base_model: "runwayml/stable-diffusion-inpainting"
+  controlnet_channels: 6  # position_xyz (3) + normal_xyz (3)
+  freeze_sd: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/texture_pairs_all"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: true
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1}
+  random_mask_augmentation: true
+
+training:
+  batch_size: 4           # More data → can increase batch size
+  gradient_accumulation: 4  # effective batch 16
+  num_workers: 8
+  epochs: 100
+  optimizer: "adamw"
+  learning_rate: 1.0e-5
+  weight_decay: 1.0e-2
+  mixed_precision: "fp16"
+  validate_every: 5       # full inference validation every N epochs
+  val_inference_steps: 20
+
+checkpointing:
+  save_dir: "./checkpoints/texture_inpainting_controlnet"
+  early_stopping_patience: 20
+  early_stopping_metric: "val/l1"
