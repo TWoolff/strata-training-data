@@ -100,20 +100,34 @@ Use a **trimap** state per UV texel: `generated` (projected from artist view), `
 
 ## Model Targets & Current Scores
 
-Goal: uploaded 2D character illustrations look natural from all generated angles when rigged and posed.
+**Goal:** Uploaded 2D character illustrations look natural from all generated angles when rigged and posed. Users should not see segmentation errors, missing body parts, or jarring texture seams.
 
-| # | Task | Current | New Model | Status |
-|---|------|---------|-----------|--------|
-| 1 | **Segmentation** | 0.6485 mIoU (DeepLabV3+) | **SAM 3** fine-tune | Training overnight (loss 787→399) |
-| 2 | **3D Mesh** | None (U-Net was blurry) | **SAM 3D Objects** | Validated on bear chef — works! |
-| 3 | **Skeleton** | 0.00121 offset (MobileNetV3) | **SAM 3D Body** / ViTPose++ | Tested — good on humanoid |
-| 4 | **Texture** | N/A | Multi-view projection + inpaint | New pipeline concept |
-| 5 | **Weights** | 0.0215 MAE (MLP) | Puppeteer / current | Study Puppeteer architecture |
+| # | Model | Current Score | Ship Target | Stretch Goal | Key User-Visible Issue If Bad |
+|---|-------|--------------|-------------|--------------|-------------------------------|
+| 1 | **Segmentation** | 0.6485 mIoU | **0.75 mIoU** | 0.80 mIoU | Background fringe around edges, bg between legs, character parts deleted |
+| 2 | **Joint Refinement** | 0.00121 offset | **0.0005 offset** | 0.0003 | Joints misplaced → limbs bend at wrong points |
+| 3 | **Weight Prediction** | 0.0215 MAE | **0.01 MAE** | 0.005 | Mesh deformation artifacts when character is posed |
+| 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | **0.002 val/l1** | 0.001 | Visible seams or artifacts where character was removed from background |
+| 5 | **Texture Inpainting** (UV) | 0.152 val/l1 | **0.08 val/l1** | 0.05 | Back/sides of 3D character look wrong — color mismatch, broken patterns |
+| 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR materials | Character looks like a flat card instead of 3D, or geometry is wrong |
 
-**Priority order (April 5, 2026):**
-1. **Wait for Dr. Li's training code (April 12)** — THE endgame for seg. Take her SAM-HQ encoder, replace with our 22-class anatomy heads, fine-tune on our data.
-2. **SAM 3D Objects for 3D mesh** — validated on bear chef. Need to fix kaolin dep on A100 and test multi-view input for better depth.
-3. **Multi-view texture pipeline** — project front+side onto SAM 3D mesh, inpaint gaps.
+### What "ship quality" means per model
+
+1. **Segmentation (0.75 mIoU):** Clean boundaries on illustrated characters. No background fringe, correct separation of limbs from negative space, thin accessories preserved. The #1 user complaint today is background artifacts — this is the highest-impact model to improve.
+2. **Joint Refinement (0.0005):** Joints land on the correct anatomical positions. Small offset errors are invisible after weight smoothing. Current model is close to ship quality.
+3. **Weight Prediction (0.01 MAE):** Smooth deformation without discontinuities. Laplacian smoothing post-processing (already in Strata) compensates for small errors. Needs improvement but not blocking.
+4. **Inpainting (0.002):** Seamless background fill after character removal. Current model is near ship quality for simple backgrounds. Complex scenes need work.
+5. **Texture Inpainting (0.08):** Back and sides of 3D character have plausible colors/patterns that match the front. Doesn't need to be pixel-perfect — just consistent style. Currently training ControlNet on SD 1.5 Inpainting with UV geometry conditioning.
+6. **3D Mesh (clean geometry):** SAM 3D Objects produces the geometry. We discard its blurry textures and project the artist's original illustration instead. Ship quality = geometry matches the character silhouette, no obvious holes or artifacts.
+
+### Priority Order (April 9, 2026)
+
+1. **Segmentation** — Dr. Li's SAM-HQ encoder + our 22-class heads (training code April 12). Biggest user-visible impact.
+2. **Texture Inpainting** — Add geometry maps (generating now), retrain. Currently 0.152, need 0.08.
+3. **3D Mesh** — SAM 3D Objects validated. Needs A100 integration test + texture projection pipeline.
+4. **Joint Refinement** — ViTPose++ fine-tune. Current model is functional.
+5. **Weight Prediction** — Study Puppeteer architecture. Current model is functional.
+6. **Inpainting** — Low priority. Current model works for most cases.
 4. **TRELLIS.2** — MIT licensed backup 3D. Needs DINOv3 + RMBG HF access.
 5. **SAM 3D Body anatomy labels** — pipeline built but labels don't help training (see learnings below).
 
