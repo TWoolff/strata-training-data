@@ -12,7 +12,7 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 2 | **Joint Refinement** | 0.00121 offset | **0.0005** | 0.0003 | Joints misplaced → limbs bend wrong |
 | 3 | **Weight Prediction** | 0.0215 MAE | **0.01** | 0.005 | Mesh deformation artifacts when posed |
 | 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | **0.002** | 0.001 | Visible seams where character removed |
-| 5 | **Texture Inpainting** (UV) | 0.152 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
+| 5 | **Texture Inpainting** (UV) | 0.1497 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
 ### Priority Order (April 9, 2026)
@@ -115,7 +115,7 @@ rclone copy ./output/ hetzner:strata-training-data/output/ --transfers 32 --chec
 
 Tars in `tars/` prefix: humanrig (16.8G), humanrig_posed (12G), meshy_cc0_textured_restructured (2.8G), flux_diverse_clean (300M), sora_diverse (380M), gemini_li_converted (223M), vroid_cc0 (203M), cvat_annotated (9M), soft_targets_precomputed (1.9G), demo_back_view_pairs (3.4G).
 
-Texture inpainting tars in root: texture_pairs_front (2.9G), texture_pairs_side (2.8G), texture_pairs_back (2.8G), texture_pairs_100avatars (113M). Total ~4,135 pairs.
+Texture inpainting tars in root: texture_pairs_front (4.9G, with geometry maps), texture_pairs_side (2.8G), texture_pairs_back (2.8G), texture_pairs_100avatars (113M). Total ~4,135 pairs.
 
 Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use this file.
 
@@ -139,10 +139,10 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 - Class 20 remapped to background (unused by rigging pipeline).
 - A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
 
-**Texture Inpainting (run 2, ~0.152 val/l1):**
+**Texture Inpainting (best: run 3, 0.1497 val/l1):**
 - ControlNet on SD 1.5 Inpainting, 9-channel input (noisy latent + mask + partial).
-- 500 pairs → 0.1509. 2,891 pairs → 0.152 (different val set). More data helps but slowly.
-- Geometry maps (position + normal) currently placeholders — regenerating now. Expected to be biggest improvement.
+- Run 1: 500 pairs → 0.1509. Run 2: 2,891 pairs → 0.1520. Run 3: 2,891 pairs, 100 epochs → **0.1497**.
+- Geometry maps (position + normal) now generated for all 1,244 front pairs. Expected to be biggest next improvement.
 - Manual denoising loop needed for validation (diffusers pipeline incompatible with 9-ch ControlNet).
 - Use `torch.amp.autocast` for mixed fp16/fp32 validation.
 
