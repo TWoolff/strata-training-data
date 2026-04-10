@@ -174,7 +174,7 @@ def process_character(
             character_id=character_id,
             partial_angles=partial_angles,
             tex_resolution=tex_resolution,
-            skip_geometry=True,
+            skip_geometry=False,
         )
         metadata["status"] = "success"
         metadata["source_file"] = str(model_path)
