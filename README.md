@@ -1,4 +1,4 @@
-# Anime Character AI Training Data
+# Illustrated Character AI Training Data
 
 Pipeline for generating labeled training data for 6 ONNX AI models that understand 2D illustrated characters — segmenting body regions, predicting skeleton joints, estimating skinning weights, inpainting occluded regions, and synthesizing novel views.
 
