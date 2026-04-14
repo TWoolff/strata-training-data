@@ -47,7 +47,8 @@ def load_image(path: Path, mode: str = "RGB", size: int = 512) -> torch.Tensor:
 @torch.no_grad()
 def inpaint(
     controlnet, unet, vae, text_encoder, tokenizer, scheduler,
-    partial_rgb, mask, control, device, num_inference_steps=30,
+    partial_rgb, mask, control, device,
+    num_inference_steps=30, prompt="", guidance_scale=1.0,
 ):
     """Run manual denoising loop matching the validate() function."""
     weight_dtype = next(vae.parameters()).dtype
@@ -57,10 +58,16 @@ def inpaint(
     mask = mask.unsqueeze(0).to(device)
     control = control.unsqueeze(0).to(device)
 
-    # Empty text embedding
-    tok = tokenizer("", return_tensors="pt", padding="max_length",
+    # Text embedding (supports style prompt)
+    tok = tokenizer(prompt, return_tensors="pt", padding="max_length",
                     max_length=tokenizer.model_max_length, truncation=True)
     encoder_hidden_states = text_encoder(tok.input_ids.to(device))[0]
+
+    # For CFG: also encode empty prompt for unconditional path
+    if guidance_scale > 1.0:
+        uncond_tok = tokenizer("", return_tensors="pt", padding="max_length",
+                               max_length=tokenizer.model_max_length, truncation=True)
+        uncond_embeds = text_encoder(uncond_tok.input_ids.to(device))[0]
 
     # Encode partial image
     partial_norm = (partial_rgb * 2.0 - 1.0).to(dtype=weight_dtype)
@@ -90,12 +97,30 @@ def inpaint(
                 controlnet_cond=control_resized,
                 return_dict=False,
             )
-            noise_pred = unet(
+            noise_pred_cond = unet(
                 unet_input, t_batch,
                 encoder_hidden_states=encoder_hidden_states,
                 down_block_additional_residuals=down_samples,
                 mid_block_additional_residual=mid_sample,
             ).sample
+
+            if guidance_scale > 1.0:
+                # Unconditional pass for classifier-free guidance
+                down_u, mid_u = controlnet(
+                    unet_input, t_batch,
+                    encoder_hidden_states=uncond_embeds,
+                    controlnet_cond=control_resized,
+                    return_dict=False,
+                )
+                noise_pred_uncond = unet(
+                    unet_input, t_batch,
+                    encoder_hidden_states=uncond_embeds,
+                    down_block_additional_residuals=down_u,
+                    mid_block_additional_residual=mid_u,
+                ).sample
+                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+            else:
+                noise_pred = noise_pred_cond
 
         latents = scheduler.step(noise_pred.float(), t, latents).prev_sample
 
@@ -128,6 +153,10 @@ def main():
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--keep_alpha", action="store_true",
                         help="Preserve alpha channel from partial texture")
+    parser.add_argument("--prompt", type=str, default="",
+                        help="Style prompt for SD 1.5 (e.g. 'watercolor painting, starry fur, dark blue cat')")
+    parser.add_argument("--guidance_scale", type=float, default=1.0,
+                        help="Classifier-free guidance scale (1.0 = disabled, 7.5 = strong)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -178,10 +207,14 @@ def main():
     # Combine position + normal into 6-channel control
     control = torch.cat([position, normal], dim=0)
 
-    logger.info("Running inpainting (%d steps)...", args.steps)
+    logger.info("Running inpainting (%d steps, prompt=%r, cfg=%.1f)...",
+                args.steps, args.prompt, args.guidance_scale)
     result = inpaint(
         controlnet, unet, vae, text_encoder, tokenizer, scheduler,
-        partial_rgb, mask, control, device, num_inference_steps=args.steps,
+        partial_rgb, mask, control, device,
+        num_inference_steps=args.steps,
+        prompt=args.prompt,
+        guidance_scale=args.guidance_scale,
     )
 
     # Save (1024 res for use with mesh)
