@@ -67,6 +67,7 @@ class TextureInpaintingDatasetConfig:
         }
     )
     random_mask_augmentation: bool = True
+    require_real_geometry: bool = False
 
     @classmethod
     def from_dict(cls, d: dict) -> TextureInpaintingDatasetConfig:
@@ -87,6 +88,7 @@ class TextureInpaintingDatasetConfig:
             vertical_flip=aug.get("vertical_flip", True),
             color_jitter=aug.get("color_jitter", {}),
             random_mask_augmentation=aug.get("random_mask_augmentation", True),
+            require_real_geometry=data.get("require_geometry_maps", False),
         )
 
 
@@ -135,10 +137,22 @@ class TextureInpaintingDataset(torch.utils.data.Dataset):
                     and (child / "complete_texture.png").exists()
                     and (child / "inpainting_mask.png").exists()
                 ):
-                    has_geo = (
-                        (child / "position_map.png").exists()
-                        and (child / "normal_map.png").exists()
-                    )
+                    pos_path = child / "position_map.png"
+                    norm_path = child / "normal_map.png"
+                    has_geo = pos_path.exists() and norm_path.exists()
+                    # Check for real (non-placeholder) geometry maps
+                    if has_geo and self.config.require_real_geometry:
+                        try:
+                            import numpy as _np
+                            arr = _np.array(Image.open(pos_path))
+                            # Placeholder maps are all zeros; real ones have variance
+                            if arr.max() < 10 or arr.std() < 5:
+                                has_geo = False
+                        except Exception:
+                            has_geo = False
+                    # Skip if real geometry is required but missing
+                    if self.config.require_real_geometry and not has_geo:
+                        continue
                     all_examples.append((child, has_geo))
 
         if not all_examples:

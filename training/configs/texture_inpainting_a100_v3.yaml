@@ -1,0 +1,42 @@
+# A100 config v3 — ControlNet UV texture inpainting with real geometry maps
+# 1,244 front pairs WITH real geometry maps (position + normal)
+# Starting from v2 checkpoint (0.1497 val/l1) to leverage existing training
+# Est. time: ~2-3h on A100 40GB
+
+model:
+  base_model: "runwayml/stable-diffusion-inpainting"
+  controlnet_channels: 6  # position_xyz (3) + normal_xyz (3)
+  freeze_sd: true
+  # Resume from v2 checkpoint (downloaded from bucket)
+  controlnet_init: "./checkpoints_prev/controlnet"
+
+data:
+  dataset_dirs:
+    - "./data_cloud/texture_pairs_front"  # only front pairs (have real geometry)
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  require_geometry_maps: true  # skip pairs without real maps
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: false  # don't flip vertically — breaks position map semantics
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1}
+  random_mask_augmentation: true
+
+training:
+  batch_size: 4
+  gradient_accumulation: 4  # effective batch 16
+  num_workers: 8
+  epochs: 50              # less than v2 since we start from a trained checkpoint
+  optimizer: "adamw"
+  learning_rate: 5.0e-6   # lower LR since we're fine-tuning
+  weight_decay: 1.0e-2
+  mixed_precision: "fp16"
+  validate_every: 3       # check progress more often
+  val_inference_steps: 20
+
+checkpointing:
+  save_dir: "./checkpoints/texture_inpainting_controlnet_v3"
+  early_stopping_patience: 10
+  early_stopping_metric: "val/l1"
