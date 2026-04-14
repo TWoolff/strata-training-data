@@ -202,19 +202,23 @@ class TextureInpaintingDataset(torch.utils.data.Dataset):
         has_geo = self._has_geometry_maps[idx]
         res = self.config.resolution
 
-        # Load images
-        partial = Image.open(example_dir / "partial_texture.png").convert("RGBA")
-        complete = Image.open(example_dir / "complete_texture.png").convert("RGBA")
-        mask = Image.open(example_dir / "inpainting_mask.png").convert("L")
+        try:
+            # Load images
+            partial = Image.open(example_dir / "partial_texture.png").convert("RGBA")
+            complete = Image.open(example_dir / "complete_texture.png").convert("RGBA")
+            mask = Image.open(example_dir / "inpainting_mask.png").convert("L")
 
-        # Load geometry maps if available
-        if has_geo:
-            position = Image.open(example_dir / "position_map.png").convert("RGB")
-            normal = Image.open(example_dir / "normal_map.png").convert("RGB")
-        else:
-            # Fallback: zero position, neutral normal (pointing up)
-            position = Image.new("RGB", partial.size, (0, 0, 0))
-            normal = Image.new("RGB", partial.size, (128, 128, 255))
+            # Load geometry maps if available
+            if has_geo:
+                position = Image.open(example_dir / "position_map.png").convert("RGB")
+                normal = Image.open(example_dir / "normal_map.png").convert("RGB")
+            else:
+                position = Image.new("RGB", partial.size, (0, 0, 0))
+                normal = Image.new("RGB", partial.size, (128, 128, 255))
+        except (OSError, ValueError) as e:
+            # Corrupted PNG — skip to next example
+            logger.warning("Failed to load %s (%s) — skipping to next example", example_dir, e)
+            return self.__getitem__((idx + 1) % len(self.examples))
 
         # Resize to training resolution
         if partial.size != (res, res):
