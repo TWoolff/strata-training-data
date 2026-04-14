@@ -12,7 +12,7 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 2 | **Joint Refinement** | 0.00121 offset | **0.0005** | 0.0003 | Joints misplaced → limbs bend wrong |
 | 3 | **Weight Prediction** | 0.0215 MAE | **0.01** | 0.005 | Mesh deformation artifacts when posed |
 | 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | **0.002** | 0.001 | Visible seams where character removed |
-| 5 | **Texture Inpainting** (UV) | 0.1497 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
+| 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
 ### Priority Order (April 9, 2026)
@@ -139,12 +139,20 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 - Class 20 remapped to background (unused by rigging pipeline).
 - A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
 
-**Texture Inpainting (best: run 3, 0.1497 val/l1):**
+**Texture Inpainting (best: run 4 / v3, 0.1282 val/l1):**
 - ControlNet on SD 1.5 Inpainting, 9-channel input (noisy latent + mask + partial).
-- Run 1: 500 pairs → 0.1509. Run 2: 2,891 pairs → 0.1520. Run 3: 2,891 pairs, 100 epochs → **0.1497**.
-- Geometry maps (position + normal) now generated for all 1,244 front pairs. Expected to be biggest next improvement.
+- Run 1: 500 pairs → 0.1509. Run 2: 2,891 pairs → 0.1520. Run 3: 2,891 pairs, 100 epochs → 0.1497.
+- **Run 4 (v3): 1,244 pairs WITH real geometry maps, fine-tuned from v3 → 0.1282 val/l1, 0.418 SSIM.** −14% L1, +6% SSIM. Geometry maps are the biggest single lever.
+- Single-view "hero" pipeline confirmed: 1 illustration → SAM 3D mesh → auto-detect camera angle → project illustration → ControlNet inpaint gaps. Cleaner UX than asking for multi-view input.
 - Manual denoising loop needed for validation (diffusers pipeline incompatible with 9-ch ControlNet).
 - Use `torch.amp.autocast` for mixed fp16/fp32 validation.
+
+**Pipeline experiment (lichtung cat, April 14):**
+- SAM 3D Objects mesh + 1 watercolor cat illustration → silhouette-IoU search found best camera angle (72°, IoU 0.77).
+- Hero view projects pixel-perfect for ~30% of UV. Rest needs inpainting.
+- Multi-view (front/back) approach failed — Gemini-generated views don't match mesh from "true" front/back angles.
+- TPS landmark-based warping helps but needs 20+ landmarks per view to be useful.
+- Conclusion: single-view + strong inpainting is the best UX. ControlNet v3 (geometry-aware) is the next step.
 
 **3D Reconstruction:**
 - U-Net view synthesis deprecated (blurry). SHARP abandoned (research-only license).
