@@ -15,14 +15,27 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
-### Priority Order (April 9, 2026)
+### Priority Order (April 14, 2026)
 
-1. **Segmentation** — Dr. Li's SAM-HQ encoder + our 22-class heads (training code April 12). #1 user complaint.
-2. **Texture Inpainting** — ControlNet on SD 1.5 Inpainting. Training now with 4K pairs. Adding geometry maps next.
+1. **Segmentation** — Dr. Li's See-Through training code **released April 14**. Plan: take her SAM-HQ encoder, replace 19 clothing heads with our 22 anatomy heads, fine-tune. #1 user complaint.
+2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: **test StyleTex** (SIGGRAPH 2024, Apache 2.0) — SDS-based style transfer from reference image. Pretrained, no data collection needed.
 3. **3D Mesh** — SAM 3D Objects validated. Needs integration + texture projection pipeline.
 4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional.
 5. **Weight Prediction** — Study Puppeteer architecture. Current model functional.
 6. **Inpainting** — Low priority. Current model works for most cases.
+
+### Next A100 Runs Queued
+
+**Run A: StyleTex test on lichtung cat (~1.5 hrs)**
+- `training/run_styletex_test.sh` — clones StyleTex, SDS optimize UV texture with illustration as style reference
+- Goal: see if style-aware texture generation solves watercolor cat problem
+- Storage: 40 GB | Time: 45-75 min
+
+**Run B: Dr. Li SAM-HQ seg fine-tune (timing TBD, code just released)**
+- Fetch her training pipeline from see-through repo (v3 training scripts released April 14)
+- Replace 19 clothing class heads with our 22 anatomy heads
+- Train on our existing seg data with her encoder
+- Expected: 0.65 → 0.72-0.78 mIoU
 
 ## Model Strategy
 
@@ -152,7 +165,9 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 - Hero view projects pixel-perfect for ~30% of UV. Rest needs inpainting.
 - Multi-view (front/back) approach failed — Gemini-generated views don't match mesh from "true" front/back angles.
 - TPS landmark-based warping helps but needs 20+ landmarks per view to be useful.
-- Conclusion: single-view + strong inpainting is the best UX. ControlNet v3 (geometry-aware) is the next step.
+- Single-view + strong inpainting is the best UX.
+- **v3 ControlNet failed on illustrated style**: Meshy-trained model produced dark solid fill, not watercolor. Empty-prompt training means text prompts + CFG have no effect. Need style-aware approach.
+- **Next attempt: StyleTex** — takes illustration as style reference, explicitly decouples style from content via CLIP manipulation.
 
 **3D Reconstruction:**
 - U-Net view synthesis deprecated (blurry). SHARP abandoned (research-only license).
