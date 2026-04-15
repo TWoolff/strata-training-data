@@ -188,8 +188,9 @@ for ex_dir in data_root.rglob("*"):
         except Exception:
             pass
 
-    # Character ID is the parent dir of the pose, or the pose dir itself
-    char_id = ex_dir.parent.name
+    # Character ID is the example dir name itself (deterministic per example)
+    # Our data layout: <dataset>/<example_name>/image.png
+    char_id = ex_dir.name
     all_examples.append((str(img), char_id))
 
 # Split: use frozen if available, else random 90/10
@@ -308,7 +309,7 @@ gradient_accumulation_steps: 16
 
 # ---- Mixed precision / perf ----
 mixed_precision: bf16
-gradient_checkpointing: true
+gradient_checkpointing: false  # Not implemented in upstream train_partseg.py
 allow_tf32: true
 enable_xformers_memory_efficient_attention: false
 
