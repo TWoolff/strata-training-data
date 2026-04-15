@@ -82,6 +82,15 @@ TARS=(
 )
 
 for TAR in "${TARS[@]}"; do
+    # Derive extracted dir name from tar filename (strip .tar)
+    EXTRACTED="${TAR%.tar}"
+    if [[ -d "/workspace/seg_data/$EXTRACTED" ]]; then
+        N=$(find "/workspace/seg_data/$EXTRACTED" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | head -1)
+        if [[ -n "$N" ]]; then
+            echo "  $EXTRACTED already extracted — skipping"
+            continue
+        fi
+    fi
     if [[ ! -f "/workspace/seg_data/$TAR" ]]; then
         echo "  Downloading $TAR..."
         rclone copyto "hetzner:strata-training-data/tars/$TAR" \
