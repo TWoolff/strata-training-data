@@ -22,7 +22,7 @@
 set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="./logs/seethrough_seg_${TIMESTAMP}"
+LOG_DIR="/workspace/logs/seethrough_seg_${TIMESTAMP}"
 mkdir -p "$LOG_DIR"
 
 echo "============================================"
@@ -146,25 +146,32 @@ echo "[4/5] Building config + dataset list..."
 # We need to create symlinks or a manifest.
 
 python3 << 'PYEOF'
-import os
+import os, random
 from pathlib import Path
 import json
 
 data_root = Path("/workspace/seg_data")
-train_list = []
-val_list = []
+all_examples = []
 
-# Load frozen val/test splits
+# Load frozen val/test splits (if present)
 splits_file = data_root / "frozen_val_test.json"
+val_chars = set()
+test_chars = set()
 if splits_file.exists():
-    splits = json.loads(splits_file.read_text())
-    val_chars = set(splits.get("val", []))
-    test_chars = set(splits.get("test", []))
-else:
-    val_chars = set()
-    test_chars = set()
+    try:
+        splits = json.loads(splits_file.read_text())
+        # splits may be dict with val/test keys, or nested
+        for k in ("val", "val_chars", "validation"):
+            if k in splits:
+                val_chars = set(splits[k])
+        for k in ("test", "test_chars"):
+            if k in splits:
+                test_chars = set(splits[k])
+    except Exception as e:
+        print(f"Warning: could not parse splits: {e}")
 
 # Walk all example dirs that have image.png + segmentation.png
+# Data layout: <dataset>/<char_id>/<pose_id>/image.png+segmentation.png
 for ex_dir in data_root.rglob("*"):
     if not ex_dir.is_dir():
         continue
@@ -177,82 +184,156 @@ for ex_dir in data_root.rglob("*"):
     faceseg = ex_dir / "image_faceseg.png"
     if not faceseg.exists():
         try:
-            faceseg.symlink_to("segmentation.png")
+            os.symlink("segmentation.png", faceseg)
         except Exception:
             pass
 
+    # Character ID is the parent dir of the pose, or the pose dir itself
     char_id = ex_dir.parent.name
-    if char_id in val_chars:
-        val_list.append(str(img))
-    elif char_id in test_chars:
-        continue  # held-out
-    else:
-        train_list.append(str(img))
+    all_examples.append((str(img), char_id))
+
+# Split: use frozen if available, else random 90/10
+train_list = []
+val_list = []
+if val_chars or test_chars:
+    for img, char in all_examples:
+        if char in test_chars:
+            continue
+        elif char in val_chars:
+            val_list.append(img)
+        else:
+            train_list.append(img)
+else:
+    # No frozen splits available — do random 95/5 by character
+    unique_chars = sorted({c for _, c in all_examples})
+    random.seed(42)
+    random.shuffle(unique_chars)
+    n_val = max(100, int(len(unique_chars) * 0.05))
+    val_char_set = set(unique_chars[:n_val])
+    for img, char in all_examples:
+        if char in val_char_set:
+            val_list.append(img)
+        else:
+            train_list.append(img)
 
 train_txt = data_root / "train.txt"
 val_txt = data_root / "val.txt"
 train_txt.write_text("\n".join(train_list) + "\n")
 val_txt.write_text("\n".join(val_list) + "\n")
-print(f"Train: {len(train_list)} images")
-print(f"Val:   {len(val_list)} images")
+print(f"Total:  {len(all_examples)} images across {len({c for _,c in all_examples})} characters")
+print(f"Train:  {len(train_list)} images")
+print(f"Val:    {len(val_list)} images")
 PYEOF
 
-# Generate config override
+# Generate full config — flat structure matching train_partseg.py argparse schema
 cat > /workspace/seethrough_strata_config.yaml << 'YAML_EOF'
-# 22-class anatomy fine-tune on Dr. Li's SAM-HQ encoder
-# Strata schema — replaces 19-class clothing heads
+seed: 42
 
-tag_list:
-  - background
-  - head
-  - neck
-  - chest
-  - spine
-  - hips
-  - shoulder_l
-  - upper_arm_l
-  - forearm_l
-  - hand_l
-  - shoulder_r
-  - upper_arm_r
-  - forearm_r
-  - hand_r
-  - upper_leg_l
-  - lower_leg_l
-  - foot_l
-  - upper_leg_r
-  - lower_leg_r
-  - foot_r
-  - accessory
-  - hair_back
-
+# ---- Model ----
 model_args:
-  model_type: b_hq           # ViT-B HQ — fits A100 40GB
-  class_num: 22              # our anatomy schema
-  fix_img_en: true           # freeze encoder (the asset we want)
+  model_type: b_hq
+  class_num: 22
+  fix_img_en: true
   fix_prompt_en: true
-  fix_mask_de: false         # train decoder from scratch
-  sam_checkpoint: /workspace/weights/sam_hq_vit_b.pth
+  fix_mask_de: false
 
-dataset:
-  train_list: /workspace/seg_data/train.txt
-  val_list: /workspace/seg_data/val.txt
+# SAM-HQ checkpoint for encoder init (auto-downloaded by sam_model_registry)
+init_from_ckpt: /workspace/weights/sam_hq_vit_b.pth
+
+# ---- Dataset ----
+dataset_args:
+  src_list:
+    - sample_list: /workspace/seg_data/train.txt
+  class_num: 22
   target_size: 1024
-  label_suffix: _faceseg.png
+  random_flip: 0.5
+  random_crop: 0.3
+  random_crop_ratio: 0.3
+  random_hsv: 0.25
+  random_downscale: 0.0
+  tag_list:
+    - background
+    - head
+    - neck
+    - chest
+    - spine
+    - hips
+    - shoulder_l
+    - upper_arm_l
+    - forearm_l
+    - hand_l
+    - shoulder_r
+    - upper_arm_r
+    - forearm_r
+    - hand_r
+    - upper_leg_l
+    - lower_leg_l
+    - foot_l
+    - upper_leg_r
+    - lower_leg_r
+    - foot_r
+    - accessory
+    - hair_back
 
-training:
-  learning_rate: 1.0e-4
-  lr_scheduler: constant_with_warmup
-  lr_warmup_steps: 500
-  train_batch_size: 1
-  gradient_accumulation_steps: 16   # effective batch 16
-  mixed_precision: bf16
-  loss_type: samhq                  # BCE + Dice
-  max_train_steps: 8000
-  save_steps: 1000
-  validate_steps: 500
+valset_args:
+  src_list:
+    - sample_list: /workspace/seg_data/val.txt
+  class_num: 22
+  target_size: 1024
 
+# ---- Optimizer ----
+optimizer: adamw
+optimizer_args:
+  betas: [0.9, 0.999]
+  weight_decay: 0.01
+  eps: 1.0e-08
+use_8bit_adam: false
+
+# ---- Loss ----
+loss_type: samhq
+
+# ---- LR schedule ----
+learning_rate: 1.0e-4
+scale_lr: false
+lr_scheduler: constant_with_warmup
+lr_warmup_steps: 500
+lr_scheduler_step_rules: null
+max_grad_norm: 1.0
+
+# ---- Training length ----
+num_train_epochs: 200
+max_train_steps: 8000
+train_batch_size: 1
+gradient_accumulation_steps: 16
+
+# ---- Mixed precision / perf ----
+mixed_precision: bf16
+gradient_checkpointing: true
+allow_tf32: true
+enable_xformers_memory_efficient_attention: false
+
+# ---- Dataloader ----
+dataloader_num_workers: 4
+
+# ---- Logging / checkpointing ----
 output_dir: /workspace/seethrough_checkpoints
+logging_dir: logs
+report_to: tensorboard
+tracker_project_name: strata_partseg
+tracker_init_kwargs: null
+checkpointing_steps: 1000
+checkpoints_total_limit: 5
+resume_from_checkpoint: null
+
+# ---- Validation / visualization ----
+validation_steps: 1000
+val_batch_size: 1
+val_mask_thr: 0.0
+visualization_steps: 500
+max_visualize_samples: 8
+
+# ---- Distributed (single GPU) ----
+local_rank: 0
 YAML_EOF
 
 # ---------------------------------------------------------------------------
@@ -262,7 +343,8 @@ echo ""
 echo "[5/5] Training (max 8000 steps, ~4-6 hrs)..."
 
 cd /workspace/see-through
-python3 training/train/train_partseg.py \
+accelerate launch --num_processes 1 --mixed_precision bf16 \
+    training/train/train_partseg.py \
     --config /workspace/seethrough_strata_config.yaml \
     2>&1 | tee "$LOG_DIR/train.log"
 
