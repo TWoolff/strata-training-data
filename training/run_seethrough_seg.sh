@@ -246,9 +246,11 @@ model_args:
   fix_img_en: true
   fix_prompt_en: true
   fix_mask_de: false
+  sam_checkpoint: /workspace/weights/sam_hq_vit_b.pth
 
-# SAM-HQ checkpoint for encoder init (auto-downloaded by sam_model_registry)
-init_from_ckpt: /workspace/weights/sam_hq_vit_b.pth
+# Don't set init_from_ckpt — triggers meta-tensor randn re-init dtype mismatch
+# for missing (decoder) keys. sam_checkpoint in model_args loads encoder weights
+# directly during model build, leaving decoder as fresh init (no re-init needed).
 
 # ---- Dataset ----
 dataset_args:
