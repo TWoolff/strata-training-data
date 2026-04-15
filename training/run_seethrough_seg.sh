@@ -82,23 +82,20 @@ TARS=(
 )
 
 for TAR in "${TARS[@]}"; do
-    # Derive extracted dir name from tar filename (strip .tar)
     EXTRACTED="${TAR%.tar}"
-    if [[ -d "/workspace/seg_data/$EXTRACTED" ]]; then
-        N=$(find "/workspace/seg_data/$EXTRACTED" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | head -1)
-        if [[ -n "$N" ]]; then
-            echo "  $EXTRACTED already extracted — skipping"
-            continue
-        fi
+    # Skip if directory exists and is non-empty
+    if [[ -d "/workspace/seg_data/$EXTRACTED" ]] && [[ -n "$(ls -A "/workspace/seg_data/$EXTRACTED" 2>/dev/null)" ]]; then
+        echo "  $EXTRACTED already extracted — skipping"
+        continue
     fi
     if [[ ! -f "/workspace/seg_data/$TAR" ]]; then
         echo "  Downloading $TAR..."
         rclone copyto "hetzner:strata-training-data/tars/$TAR" \
-            "/workspace/seg_data/$TAR" --no-check-dest -P 2>&1 | tail -3
+            "/workspace/seg_data/$TAR" --no-check-dest -P 2>&1 | tail -3 || true
     fi
     echo "  Extracting $TAR..."
-    tar xf "/workspace/seg_data/$TAR" -C /workspace/seg_data/
-    rm "/workspace/seg_data/$TAR"
+    tar xf "/workspace/seg_data/$TAR" -C /workspace/seg_data/ || true
+    rm -f "/workspace/seg_data/$TAR"
 done
 
 # Download frozen val/test splits
