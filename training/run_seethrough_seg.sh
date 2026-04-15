@@ -331,7 +331,7 @@ report_to: tensorboard
 tracker_project_name: strata_partseg
 tracker_init_kwargs: null
 checkpointing_steps: 1000
-checkpoints_total_limit: 5
+checkpoints_total_limit: null  # null avoids upstream bug with .pt file naming
 resume_from_checkpoint: null
 
 # ---- Validation / visualization ----
@@ -350,6 +350,10 @@ YAML_EOF
 # ---------------------------------------------------------------------------
 echo ""
 echo "[5/5] Training (max 8000 steps, ~4-6 hrs)..."
+
+# Clean up any stale .pt files in checkpoints dir that would trip the upstream
+# checkpoint parser (which expects names like 'checkpoint-<N>' not 'checkpoint-<N>.pt')
+find /workspace/seethrough_checkpoints -maxdepth 1 -name 'checkpoint-*.pt' -delete 2>/dev/null || true
 
 cd /workspace/see-through
 accelerate launch --num_processes 1 --mixed_precision bf16 \
