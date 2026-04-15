@@ -15,27 +15,66 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
-### Priority Order (April 14, 2026)
+### Priority Order (April 15, 2026)
 
-1. **Segmentation** — Dr. Li's See-Through training code **released April 14**. Plan: take her SAM-HQ encoder, replace 19 clothing heads with our 22 anatomy heads, fine-tune. #1 user complaint.
-2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: **test StyleTex** (SIGGRAPH 2024, Apache 2.0) — SDS-based style transfer from reference image. Pretrained, no data collection needed.
-3. **3D Mesh** — SAM 3D Objects validated. Needs integration + texture projection pipeline.
-4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional.
-5. **Weight Prediction** — Study Puppeteer architecture. Current model functional.
-6. **Inpainting** — Low priority. Current model works for most cases.
+1. **Segmentation** — See-Through SAM-HQ fine-tune **attempted April 15 — underperformed (plateaued at ~0.29 val mIoU, below 0.6485 baseline)**. Next: expand illustrated training data via See-Through pseudo-labeling pipeline, retrain DeepLabV3+ with Run 20 config.
+2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: test StyleTex (SIGGRAPH 2024, Apache 2.0) or generate style-diverse training pairs.
+3. **3D Mesh** — SAM 3D Objects validated + single-view projection pipeline built. Works end-to-end for PBR-style characters. Needs better texture inpainting for illustrated styles.
+4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional (0.00121 offset).
+5. **Weight Prediction** — Study Puppeteer architecture. Current model functional (0.0215 MAE).
+6. **Inpainting** (2D bg) — Low priority. User complaint is actually about segmentation quality (see #1), not inpainting quality.
+
+### April 15 SAM-HQ Seg Run — What We Learned
+
+Ran Dr. Li's V3 training pipeline with her SAM-HQ ViT-B encoder frozen, fresh 22-class decoder, 8000 steps. Trajectory:
+
+| Step | val/mIoU |
+|------|----------|
+| 1000 | 0.198 |
+| 2000 | 0.223 |
+| 3000 | 0.239 |
+| 4000 | 0.269 |
+| 5000 | 0.288 |
+
+Killed at step ~5500. Linear extrapolation: ~0.35 at step 8000 — still far below Run 20's 0.6485. Lessons:
+- Her encoder was pretrained for clothing/style boundaries, not anatomy — may need unfreezing to adapt
+- Decoder from scratch at 8K steps is cold-start; needs 20K+ for meaningful learning
+- Multiple bugs in upstream V3 code required patches (gradient_checkpointing, checkpoint_total_limit, dataset_seg exceptions, resume_from_checkpoint unimplemented)
+
+**Decision:** abandon this approach for now. Focus on expanding data + leveraging See-Through via *pseudo-labeling* (not encoder fine-tune).
+
+### Path to Ship Quality (revised plan)
+
+**Seg → 0.75 mIoU:**
+1. Generate 1-2K new illustrated characters via Gemini (prompts in `.claude/prd/gemini_prompts.md`, 200 self-contained prompts + generator script)
+2. Run See-Through on them → convert layers to 22-class via `scripts/convert_seethrough_to_seg.py` (validates and uses her strong illustrated-char boundaries as pseudo-labels)
+3. Quality filter (`scripts/filter_seg_quality.py`)
+4. Retrain Run 20 config (boundary softening + DeepLabV3+) with expanded data
+5. Per-class boundary softening (radius=1 for thin classes, radius=3 for large)
+6. Bootstrap loop: stronger model → more quality-passing pseudo-labels → retrain
+
+**Texture Inpainting → 0.08 val/l1 + style-consistent:**
+1. Option A: test StyleTex (queued, `training/run_styletex_test.sh`) — SDS-based, pretrained
+2. Option B: generate style-diverse training data (watercolor, anime, hand-painted textures via NPR shaders on Meshy chars or Gemini img2img)
+3. Option C: consider SDXL Inpainting or Flux Fill as base model (richer priors)
+4. Add perceptual loss (LPIPS) on decoded output — current MSE-on-noise doesn't optimize for visual coherence
+
+**3D Mesh:**
+- Current pipeline works. Needs better inpainting to unlock illustrated-style workflows.
+- Long-term: fine-tune TRELLIS.2 on our characters if SAM 3D quality plateaus
 
 ### Next A100 Runs Queued
 
-**Run A: StyleTex test on lichtung cat (~1.5 hrs)**
-- `training/run_styletex_test.sh` — clones StyleTex, SDS optimize UV texture with illustration as style reference
-- Goal: see if style-aware texture generation solves watercolor cat problem
-- Storage: 40 GB | Time: 45-75 min
+**Run A: Expanded seg training (highest priority)**
+- Needs: 500-1000 new Gemini characters → pseudo-labeled via See-Through → quality filtered
+- Local prep: ~2 days generation + pseudo-label conversion
+- A100 run: retrain DeepLabV3+ with expanded data, 6-8 hrs
+- Expected: 0.65 → 0.70-0.75 mIoU
 
-**Run B: Dr. Li SAM-HQ seg fine-tune (timing TBD, code just released)**
-- Fetch her training pipeline from see-through repo (v3 training scripts released April 14)
-- Replace 19 clothing class heads with our 22 anatomy heads
-- Train on our existing seg data with her encoder
-- Expected: 0.65 → 0.72-0.78 mIoU
+**Run B: StyleTex test on lichtung cat (~1.5 hrs)**
+- `training/run_styletex_test.sh` ready
+- 0-shot inference, no new training
+- Tests whether style-aware texture transfer works for illustrated characters
 
 ## Model Strategy
 
@@ -147,8 +186,10 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 - Softening hurts thin regions (neck, accessory). Exclude or reduce radius for small regions.
 - Clothing-based labels (SAM, Dr. Li's 19-class) don't help — anatomy ≠ clothing.
 - SAM 3D Body labels don't help — body mesh ≠ clothing silhouette.
+- **SAM-HQ encoder fine-tune (Apr 15) underperformed** — frozen encoder + fresh decoder plateaued ~0.29 at step 5500. Encoder was trained for clothing boundaries, not anatomy.
 - Bootstrapping loop works: stronger model → better pseudo-labels → better model.
-- More illustrated data = best lever for diversity. Pseudo-label ceiling at ~2K chars.
+- **More illustrated data = best lever.** 200+ Gemini prompts in `.claude/prd/gemini_prompts.md` + generator script.
+- **See-Through is useful as pseudo-labeler** (convert_seethrough_to_seg.py), not as a trainable model.
 - Class 20 remapped to background (unused by rigging pipeline).
 - A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
 
@@ -185,6 +226,7 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 | 20 | **0.6485** | Boundary softening (radius=2) |
 | 21 | 0.6361 | Re-pseudo-label, no softening |
 | 22/22b | 0.56-0.59 | SAM labels — don't help |
+| SAM-HQ (Apr 15) | ~0.29 (killed at step 5500) | Li's encoder frozen + fresh 22-class decoder — plateaued below baseline |
 
 Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100_run20.yaml`.
 
