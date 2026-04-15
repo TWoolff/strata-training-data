@@ -355,6 +355,35 @@ echo "[5/5] Training (max 8000 steps, ~4-6 hrs)..."
 # checkpoint parser (which expects names like 'checkpoint-<N>' not 'checkpoint-<N>.pt')
 find /workspace/seethrough_checkpoints -maxdepth 1 -name 'checkpoint-*.pt' -delete 2>/dev/null || true
 
+# Patch dataset_seg.py: its get_sample catches exceptions but then accesses
+# uninitialized `masks` when loading fails. Wrap in retry-next-index logic.
+python3 << 'PYEOF'
+import re
+from pathlib import Path
+path = Path("/workspace/see-through/training/train/dataset_seg.py")
+content = path.read_text()
+
+# If already patched, skip
+if "# strata-patch: safe fallback" in content:
+    print("dataset_seg.py already patched")
+else:
+    # Replace the get_sample method's body so that on any exception we return
+    # the next valid sample instead of crashing on UnboundLocalError(masks)
+    patched = content.replace(
+        "def __getitem__(self, index):\n        return self.get_sample(index)",
+        """def __getitem__(self, index):
+        # strata-patch: safe fallback — retry next index on any exception
+        for attempt in range(5):
+            try:
+                return self.get_sample((index + attempt) % len(self))
+            except Exception as e:
+                print(f"Skipping bad sample at idx={index+attempt}: {e}")
+        raise RuntimeError(f"Could not load any sample starting from idx={index}")""",
+    )
+    path.write_text(patched)
+    print("Patched dataset_seg.py to skip corrupted samples")
+PYEOF
+
 cd /workspace/see-through
 accelerate launch --num_processes 1 --mixed_precision bf16 \
     training/train/train_partseg.py \
