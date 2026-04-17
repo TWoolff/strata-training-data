@@ -1,0 +1,55 @@
+# A100 config v4 — ControlNet UV texture inpainting with LPIPS perceptual loss
+#
+# Key change from v3: add x_0-decoded LPIPS to the training loss alongside MSE.
+# v3's pure MSE-on-noise doesn't optimize for visual coherence; LPIPS directly
+# penalizes perceptual drift, which is the dominant failure on illustrated
+# styles (lichtung cat).
+#
+# Resume from v3 best checkpoint (val/l1 = 0.1282). Selection and early-stop
+# on val/lpips (lower is better) rather than val/l1.
+# Est. time: ~2.5-3h on A100 40GB
+
+model:
+  base_model: "runwayml/stable-diffusion-inpainting"
+  controlnet_channels: 6  # position_xyz (3) + normal_xyz (3)
+  freeze_sd: true
+  controlnet_init: "./checkpoints_prev/controlnet"  # v3 best
+
+data:
+  dataset_dirs:
+    - "./data_cloud/texture_pairs_front"
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  require_geometry_maps: true
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: false
+  color_jitter: {brightness: 0.1, contrast: 0.1, saturation: 0.1}
+  random_mask_augmentation: true
+
+training:
+  batch_size: 4
+  gradient_accumulation: 4           # effective batch 16
+  num_workers: 8
+  epochs: 50
+  optimizer: "adamw"
+  learning_rate: 2.5e-6              # lower than v3 — fine-tuning with new loss
+  weight_decay: 1.0e-2
+  mixed_precision: "fp16"
+  validate_every: 3
+  val_inference_steps: 20
+
+loss:
+  # LPIPS-heavy combination. MSE retains a numerical floor (noise-prediction
+  # consistency) while LPIPS drives visual coherence. LPIPS only fires at
+  # low-noise timesteps (< 50% of diffusion range) where x_0 prediction is
+  # stable — see train_one_epoch for the gating logic.
+  mse_weight: 0.1
+  lpips_weight: 0.9
+
+checkpointing:
+  save_dir: "./checkpoints/texture_inpainting_controlnet_v4"
+  early_stopping_patience: 10
+  early_stopping_metric: "val/lpips"

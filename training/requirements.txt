@@ -20,6 +20,7 @@ pyyaml>=6.0.1
 numpy>=1.24.0
 Pillow>=10.0.0
 opencv-python>=4.8.0
+scipy>=1.11.0  # scipy.ndimage (boundary softening), scipy.io (Pascal-Part .mat parsing)
 
 # Surface normals (Marigold)
 diffusers>=0.28.0

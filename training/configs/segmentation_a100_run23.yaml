@@ -1,0 +1,69 @@
+# Run 23 seg — Anatomy-pretrained ResNet-50 backbone (Pascal-Person-Part init)
+#
+# Key change from run 20:
+#   - Backbone switched mobilenet_v3_large → resnet50
+#   - Backbone init from Stage A Pascal-Person-Part pretrain (real-human anatomy
+#     priors) instead of ImageNet. ImageNet pretrain disabled.
+#   - Epochs 20 → 15 (better init should converge faster; also tight budget)
+#   - Same boundary softening, same data mix, same frozen val/test split
+#
+# Expected: Run 20 baseline 0.6485 mIoU. If anatomy init is the missing lever,
+# expect 0.66–0.70. Otherwise we learn cheaply and pivot to data expansion.
+
+model:
+  backbone: "resnet50"
+  num_classes: 22
+  pretrained_backbone: false                              # anatomy init overrides ImageNet
+  backbone_weights_path: "./checkpoints/anatomy_init/backbone.pth"
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/vroid_cc0"
+    - "./data_cloud/meshy_cc0_restructured"
+    - "./data_cloud/gemini_li_converted"
+    - "./data_cloud/cvat_annotated"
+    - "./data_cloud/sora_diverse"
+    - "./data_cloud/flux_diverse_clean"
+  frozen_splits_file: "./data_cloud/frozen_val_test.json"
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0
+    sora_diverse: 4.0
+    gemini_li_converted: 3.0
+    flux_diverse_clean: 2.5
+    vroid_cc0: 2.5
+    meshy_cc0_restructured: 1.5
+    humanrig: 0.5
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 12                                          # resnet50 is bigger than mobilenet
+  num_workers: 8
+  epochs: 15
+  optimizer: "adamw"
+  learning_rate: 1.0e-5
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 1                                        # small warmup since head is fresh
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.2
+  normals_weight: 0.2
+  confidence_weight: 0.1
+  label_smoothing: 0.0
+  boundary_softening_radius: 2
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation_run23"
+  early_stopping_patience: 8
+  early_stopping_metric: "val/miou"

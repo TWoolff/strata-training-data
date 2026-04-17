@@ -499,7 +499,16 @@ def train(config: dict, resume_path: str | None = None, args: argparse.Namespace
     num_classes = model_cfg.get("num_classes", 22)
     pretrained = model_cfg.get("pretrained_backbone", True)
     backbone = model_cfg.get("backbone", "mobilenet_v3_large")
-    model = SegmentationModel(num_classes=num_classes, pretrained_backbone=pretrained, backbone=backbone)
+    backbone_weights_path = model_cfg.get("backbone_weights_path")
+    # CLI flag overrides config
+    if getattr(args, "backbone_weights", None):
+        backbone_weights_path = args.backbone_weights
+    model = SegmentationModel(
+        num_classes=num_classes,
+        pretrained_backbone=pretrained,
+        backbone=backbone,
+        backbone_weights_path=backbone_weights_path,
+    )
     model = model.to(device)
 
     # ---- Class weights ----
@@ -667,6 +676,12 @@ def main() -> None:
         "--reset-epochs",
         action="store_true",
         help="Reset epoch counter to 0 when resuming (treat as fresh run with pretrained weights)",
+    )
+    parser.add_argument(
+        "--backbone-weights",
+        type=str,
+        default=None,
+        help="Path to a backbone state_dict to load after construction (overrides config.model.backbone_weights_path)",
     )
     args = parser.parse_args()
 

@@ -129,10 +129,23 @@ class _EfficientNetBackbone(nn.Module):
 
 
 def _build_backbone_and_classifier(
-    backbone_name: str, num_classes: int, pretrained_backbone: bool,
+    backbone_name: str,
+    num_classes: int,
+    pretrained_backbone: bool,
+    backbone_weights_path: str | None = None,
 ) -> tuple[nn.Module, nn.Module]:
-    """Build backbone + segmentation classifier for the given backbone name."""
-    weights_backbone = "IMAGENET1K_V1" if pretrained_backbone else None
+    """Build backbone + segmentation classifier for the given backbone name.
+
+    If ``backbone_weights_path`` is provided, the torchvision ImageNet init is
+    skipped and the backbone ``state_dict`` is loaded from the given file
+    after construction (see ``SegmentationModel.__init__``).
+    """
+    # When loading external weights, skip torchvision's ImageNet init to avoid a
+    # pointless download that will be overwritten.
+    if backbone_weights_path is not None:
+        weights_backbone = None
+    else:
+        weights_backbone = "IMAGENET1K_V1" if pretrained_backbone else None
 
     if backbone_name == "mobilenet_v3_large":
         base = deeplabv3_mobilenet_v3_large(
@@ -185,6 +198,7 @@ class SegmentationModel(nn.Module):
         num_classes: int = NUM_CLASSES,
         pretrained_backbone: bool = True,
         backbone: str = "mobilenet_v3_large",
+        backbone_weights_path: str | None = None,
     ) -> None:
         super().__init__()
         self.num_classes = num_classes
@@ -192,7 +206,22 @@ class SegmentationModel(nn.Module):
 
         self.backbone, self.classifier = _build_backbone_and_classifier(
             backbone, num_classes, pretrained_backbone,
+            backbone_weights_path=backbone_weights_path,
         )
+
+        # Load external backbone weights after torchvision construction.
+        # strict=False tolerates minor key differences (e.g. buffers) and lets
+        # this work with partial state_dicts that contain only backbone keys.
+        if backbone_weights_path is not None:
+            state = torch.load(backbone_weights_path, map_location="cpu")
+            # Accept either a raw state_dict or {"backbone": state_dict, ...}
+            if isinstance(state, dict) and "backbone" in state and isinstance(state["backbone"], dict):
+                state = state["backbone"]
+            missing, unexpected = self.backbone.load_state_dict(state, strict=False)
+            logger.info(
+                "Loaded backbone weights from %s (missing=%d, unexpected=%d)",
+                backbone_weights_path, len(missing), len(unexpected),
+            )
 
         # Determine backbone output channels via dry run
         backbone_channels = self._detect_backbone_channels()

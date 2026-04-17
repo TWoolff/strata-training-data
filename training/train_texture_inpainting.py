@@ -67,6 +67,49 @@ class PerceptualLoss(torch.nn.Module):
         return F.l1_loss(self.vgg(self._normalize(pred)), self.vgg(self._normalize(target)))
 
 
+class LPIPSLoss(torch.nn.Module):
+    """Multi-scale LPIPS-style perceptual loss using frozen VGG16.
+
+    L1 distance on features extracted at three depths (ReLU1_2, ReLU2_2,
+    ReLU3_4) weighted toward deeper layers. ImageNet-normalized inputs.
+    Use for both a training signal (combined with MSE on noise) and as a
+    validation metric (``val/lpips``).
+    """
+
+    def __init__(self, device: torch.device) -> None:
+        super().__init__()
+        from torchvision.models import vgg16
+
+        vgg = vgg16(weights="IMAGENET1K_V1").features.to(device)
+        vgg.eval()
+        for p in vgg.parameters():
+            p.requires_grad = False
+        # ReLU1_2 ends at features[3], ReLU2_2 at features[8], ReLU3_4 at features[17].
+        self.slice1 = torch.nn.Sequential(*list(vgg.children())[:4])
+        self.slice2 = torch.nn.Sequential(*list(vgg.children())[4:9])
+        self.slice3 = torch.nn.Sequential(*list(vgg.children())[9:18])
+
+        self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        # Weights sum to 1; deeper layers carry more signal.
+        self.w1, self.w2, self.w3 = 0.1, 0.3, 0.6
+
+    def _normalize(self, x: torch.Tensor) -> torch.Tensor:
+        return (x[:, :3] - self.mean) / self.std
+
+    def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        p = self._normalize(pred)
+        t = self._normalize(target)
+        f1p = self.slice1(p); f1t = self.slice1(t)
+        f2p = self.slice2(f1p); f2t = self.slice2(f1t)
+        f3p = self.slice3(f2p); f3t = self.slice3(f2t)
+        return (
+            self.w1 * F.l1_loss(f1p, f1t)
+            + self.w2 * F.l1_loss(f2p, f2t)
+            + self.w3 * F.l1_loss(f3p, f3t)
+        )
+
+
 # ---------------------------------------------------------------------------
 # SSIM metric
 # ---------------------------------------------------------------------------
@@ -121,14 +164,26 @@ def train_one_epoch(
     device: torch.device,
     weight_dtype: torch.dtype,
     scaler: torch.amp.GradScaler | None,
+    lpips_loss: torch.nn.Module | None = None,
+    mse_weight: float = 1.0,
+    lpips_weight: float = 0.0,
 ) -> dict[str, float]:
-    """Train ControlNet for one epoch using diffusion denoising loss."""
+    """Train ControlNet for one epoch using diffusion denoising loss.
+
+    When ``lpips_weight > 0`` and ``lpips_loss`` is provided, adds an x_0-based
+    LPIPS perceptual term (gated to low-noise timesteps for stable x_0 prediction).
+    Falls back to pure MSE on noise when lpips_weight == 0 (backward compat).
+    """
     controlnet.train()
     unet.eval()
 
     total_loss = 0.0
+    total_mse = 0.0
+    total_lpips = 0.0
     n_batches = 0
+    n_lpips_applied = 0  # batches where LPIPS fired (low-noise timesteps present)
     use_amp = scaler is not None
+    use_lpips = lpips_weight > 0.0 and lpips_loss is not None
 
     # Empty text embedding (we don't use text prompts — geometry conditions everything)
     empty_tokens = tokenizer(
@@ -202,7 +257,28 @@ def train_one_epoch(
             ).sample
 
             # Diffusion denoising loss (predict noise)
-            loss = F.mse_loss(noise_pred, noise)
+            mse_loss = F.mse_loss(noise_pred, noise)
+
+            # Optional: x_0-decoded LPIPS for visual coherence on illustrated
+            # styles. Gradients flow back through frozen VAE to noise_pred.
+            lpips_val = torch.zeros((), device=device, dtype=mse_loss.dtype)
+            if use_lpips:
+                alpha_bar = noise_scheduler.alphas_cumprod.to(device, dtype=noise_pred.dtype)
+                alpha_bar_t = alpha_bar[timesteps].view(-1, 1, 1, 1)
+                # x_0 estimate: (x_t - sqrt(1-a_bar) * eps_pred) / sqrt(a_bar)
+                x_0_latents = (noisy_latents - torch.sqrt(1.0 - alpha_bar_t) * noise_pred) / torch.sqrt(alpha_bar_t)
+                # Gate to low-noise timesteps where x_0 prediction is reliable.
+                max_t = noise_scheduler.config.num_train_timesteps
+                low_noise = timesteps < (max_t // 2)
+                if low_noise.any():
+                    sel = x_0_latents[low_noise] / vae.config.scaling_factor
+                    decoded = vae.decode(sel.to(dtype=weight_dtype)).sample
+                    pred_rgb = (decoded * 0.5 + 0.5).clamp(0, 1).float()
+                    tgt_rgb = target_rgb[low_noise].float()
+                    lpips_val = lpips_loss(pred_rgb, tgt_rgb)
+                    n_lpips_applied += 1
+
+            loss = mse_weight * mse_loss + lpips_weight * lpips_val
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -214,9 +290,20 @@ def train_one_epoch(
             optimizer.step()
 
         total_loss += loss.item()
+        total_mse += float(mse_loss.detach())
+        if use_lpips:
+            total_lpips += float(lpips_val.detach())
         n_batches += 1
 
-    return {"train/loss": total_loss / max(n_batches, 1)}
+    d = max(n_batches, 1)
+    metrics: dict[str, float] = {
+        "train/loss": total_loss / d,
+        "train/mse": total_mse / d,
+    }
+    if use_lpips:
+        metrics["train/lpips"] = total_lpips / d
+        metrics["train/lpips_applied_frac"] = n_lpips_applied / d
+    return metrics
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +322,7 @@ def validate(
     loader: DataLoader,
     device: torch.device,
     num_inference_steps: int = 20,
+    lpips_loss: torch.nn.Module | None = None,
 ) -> dict[str, float]:
     """Validate by running manual denoising loop and measuring reconstruction.
 
@@ -255,6 +343,7 @@ def validate(
 
     total_l1 = 0.0
     total_ssim = 0.0
+    total_lpips = 0.0
     n_batches = 0
 
     weight_dtype = next(vae.parameters()).dtype
@@ -322,14 +411,19 @@ def validate(
 
         total_l1 += l1.item()
         total_ssim += ssim_val.item()
+        if lpips_loss is not None:
+            total_lpips += float(lpips_loss(final.float(), target_rgb.float()))
         n_batches += 1
 
     controlnet.train()
     d = max(n_batches, 1)
-    return {
+    metrics = {
         "val/l1": total_l1 / d,
         "val/ssim": total_ssim / d,
     }
+    if lpips_loss is not None:
+        metrics["val/lpips"] = total_lpips / d
+    return metrics
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +448,9 @@ def main() -> None:
     train_cfg = cfg.get("training", {})
     model_cfg = cfg.get("model", {})
     ckpt_cfg = cfg.get("checkpointing", {})
+    loss_cfg = cfg.get("loss", {})
+    mse_weight = float(loss_cfg.get("mse_weight", 1.0))
+    lpips_weight = float(loss_cfg.get("lpips_weight", 0.0))
 
     device = torch.device(
         "cuda"
@@ -409,6 +506,14 @@ def main() -> None:
     trainable_params = sum(p.numel() for p in controlnet.parameters() if p.requires_grad)
     logger.info("ControlNet trainable parameters: %s", f"{trainable_params:,}")
 
+    # --- LPIPS perceptual loss (always instantiated so val/lpips is reported) ---
+    lpips_module = LPIPSLoss(device).to(device)
+    logger.info(
+        "Loss weights — mse=%.3f, lpips=%.3f%s",
+        mse_weight, lpips_weight,
+        " (val/lpips reported as metric only)" if lpips_weight == 0 else "",
+    )
+
     # --- Dataset ---
     ds_config = TextureInpaintingDatasetConfig.from_dict(cfg)
 
@@ -447,7 +552,8 @@ def main() -> None:
     save_dir.mkdir(parents=True, exist_ok=True)
 
     es_patience = ckpt_cfg.get("early_stopping_patience", 20)
-    early_stopping = EarlyStopping(patience=es_patience, metric_name="val/l1", mode="min")
+    es_metric = ckpt_cfg.get("early_stopping_metric", "val/l1")
+    early_stopping = EarlyStopping(patience=es_patience, metric_name=es_metric, mode="min")
 
     # --- TensorBoard ---
     try:
@@ -460,7 +566,7 @@ def main() -> None:
     epochs = train_cfg.get("epochs", 100)
     validate_every = train_cfg.get("validate_every", 5)
     val_steps = train_cfg.get("val_inference_steps", 20)
-    best_val_l1 = float("inf")
+    best_metric = float("inf")
 
     for epoch in range(epochs):
         # Cosine LR schedule
@@ -481,6 +587,9 @@ def main() -> None:
             device=device,
             weight_dtype=weight_dtype,
             scaler=scaler,
+            lpips_loss=lpips_module,
+            mse_weight=mse_weight,
+            lpips_weight=lpips_weight,
         )
 
         logger.info(
@@ -495,19 +604,25 @@ def main() -> None:
                 controlnet, unet, vae, text_encoder, tokenizer,
                 noise_scheduler, val_loader, device,
                 num_inference_steps=val_steps,
+                lpips_loss=lpips_module,
             )
 
             logger.info(
-                "  val/l1=%.4f | val/ssim=%.4f",
+                "  val/l1=%.4f | val/ssim=%.4f | val/lpips=%.4f",
                 val_metrics["val/l1"],
                 val_metrics["val/ssim"],
+                val_metrics.get("val/lpips", float("nan")),
             )
 
-            # Save best
-            if val_metrics["val/l1"] < best_val_l1:
-                best_val_l1 = val_metrics["val/l1"]
+            # Save best according to configured early_stopping_metric
+            current = val_metrics.get(es_metric)
+            if current is not None and current < best_metric:
+                best_metric = current
                 controlnet.save_pretrained(str(save_dir / "best"))
-                logger.info("  New best val/l1: %.4f — saved to %s", best_val_l1, save_dir / "best")
+                logger.info(
+                    "  New best %s: %.4f — saved to %s",
+                    es_metric, best_metric, save_dir / "best",
+                )
 
             torch.cuda.empty_cache() if device.type == "cuda" else None
 
@@ -528,7 +643,7 @@ def main() -> None:
     if tb_writer is not None:
         tb_writer.close()
 
-    logger.info("Training complete. Best val/l1: %.4f", best_val_l1)
+    logger.info("Training complete. Best %s: %.4f", es_metric, best_metric)
     logger.info("Best checkpoint: %s", save_dir / "best")
 
 
