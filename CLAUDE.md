@@ -15,9 +15,9 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
-### Priority Order (April 15, 2026)
+### Priority Order (April 21, 2026)
 
-1. **Segmentation** — See-Through SAM-HQ fine-tune **attempted April 15 — underperformed (plateaued at ~0.29 val mIoU, below 0.6485 baseline)**. Next: expand illustrated training data via See-Through pseudo-labeling pipeline, retrain DeepLabV3+ with Run 20 config.
+1. **Segmentation** — Run 20 baseline (0.6485) still best. Four rounds of pseudo-label-based data expansion (Runs 24-27) all failed to beat it, including See-Through SAM with Dr. Li's joint-based converter. **Pseudo-labeling is exhausted as a lever for this task.** Currently running **Run 23** (ResNet-50 + Pascal-Person-Part anatomy-pretrained backbone) — architectural experiment, orthogonal to label quality. If flat, next lever is CVAT hand-labels on illustrated chars (slow but real GT).
 2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: test StyleTex (SIGGRAPH 2024, Apache 2.0) or generate style-diverse training pairs.
 3. **3D Mesh** — SAM 3D Objects validated + single-view projection pipeline built. Works end-to-end for PBR-style characters. Needs better texture inpainting for illustrated styles.
 4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional (0.00121 offset).
@@ -43,15 +43,31 @@ Killed at step ~5500. Linear extrapolation: ~0.35 at step 8000 — still far bel
 
 **Decision:** abandon this approach for now. Focus on expanding data + leveraging See-Through via *pseudo-labeling* (not encoder fine-tune).
 
-### Path to Ship Quality (revised plan)
+### April 20-21 Pseudo-label Experiments — What We Learned (Runs 24-27)
+
+Added 3,207 new illustrated chars to gemini_diverse, tried 4 different pseudo-label sources:
+
+| Run | gemini_diverse labels | Val mIoU @ e19 | Notes |
+|-----|------------------------|----------------|-------|
+| 24 | Run 20 self-distill, wt 3.5, softening off, **meshy tar misnamed so missing** | broken | pipeline bug + softening off |
+| 25 | Run 20 self-distill, wt 2.0, softening on, meshy restored | **0.5965** | ~= Run 20 baseline |
+| 26 | See-Through SAM, naive L/R+vertical heuristic converter | 0.5471 | worse |
+| 27 | See-Through SAM → Dr. Li PNG format → convert_with_joints | 0.5664 | worse than 25 |
+
+**Conclusions:**
+- **Data expansion via pseudo-labeling has not beaten Run 20 for this task.** Period.
+- See-Through+Li labels pass quality filter at 4× the rate of Run 20 self-distill (5.2% rejected vs 23.2% for sora_diverse), but the model trained on them performs *worse*. Quality filter checks shape, not pixel correctness — labels can be well-formed yet mislocalized.
+- **Noisy-but-spatially-correct beats well-formed-but-mislocalized.** Run 20's self-distill labels at least put regions in the right neighborhood.
+- See-Through SAM's 19 clothing classes don't cleanly map to our 22 anatomy classes even with joint-based splits: the knee-at-joint-midpoint assumption breaks for dynamic poses, joints model trained on 3D-rendered chars mis-localizes on stylized art.
+- **Boundary softening (radius=2) remains the single biggest lever** (+8.8% mIoU). Run 24 disabled it by accident and that alone cost ~0.05 mIoU.
+
+### Path to Ship Quality (revised plan — April 21)
 
 **Seg → 0.75 mIoU:**
-1. Generate 1-2K new illustrated characters via Gemini (prompts in `.claude/prd/gemini_prompts.md`, 200 self-contained prompts + generator script)
-2. Run See-Through on them → convert layers to 22-class via `scripts/convert_seethrough_to_seg.py` (validates and uses her strong illustrated-char boundaries as pseudo-labels)
-3. Quality filter (`scripts/filter_seg_quality.py`)
-4. Retrain Run 20 config (boundary softening + DeepLabV3+) with expanded data
-5. Per-class boundary softening (radius=1 for thin classes, radius=3 for large)
-6. Bootstrap loop: stronger model → more quality-passing pseudo-labels → retrain
+1. **Run 23 (in progress)** — ResNet-50 + Pascal-Person-Part anatomy-pretrained backbone. Architectural experiment, orthogonal to label quality. Could break the mobilenet ceiling.
+2. If Run 23 flat → **CVAT hand-labels** on 200-500 illustrated chars. Real GT. Slow (~2 days of human work) but the only path that consistently moves the needle when pseudo-labeling plateaus.
+3. Per-class boundary softening (radius=1 for thin classes, radius=3 for large) — still untried lever on top of Run 20's radius=2.
+4. Skip: more pseudo-labeling (Run 20 self-distill or See-Through). We've tested this with 4 label sources and all are ≤ Run 20 baseline.
 
 **Texture Inpainting → 0.08 val/l1 + style-consistent:**
 1. Option A: test StyleTex (queued, `training/run_styletex_test.sh`) — SDS-based, pretrained
@@ -65,11 +81,15 @@ Killed at step ~5500. Linear extrapolation: ~0.35 at step 8000 — still far bel
 
 ### Next A100 Runs Queued
 
-**Run A: Expanded seg training (highest priority)**
-- Needs: 500-1000 new Gemini characters → pseudo-labeled via See-Through → quality filtered
-- Local prep: ~2 days generation + pseudo-label conversion
-- A100 run: retrain DeepLabV3+ with expanded data, 6-8 hrs
-- Expected: 0.65 → 0.70-0.75 mIoU
+**Run 23: ResNet-50 + Pascal-Person-Part anatomy pretrain (RUNNING April 21)**
+- `training/run_a100_run23_combined.sh` on main
+- 6-8 hrs on A100
+- Hypothesis: architectural change (backbone + anatomy priors) breaks pseudo-label ceiling
+- Result will determine whether next lever is more architecture or CVAT hand-labels
+
+**Run A (ABANDONED, April 21): Expanded seg training via See-Through pseudo-labels**
+- 4 rounds of pseudo-label experiments (Runs 24-27) all underperformed Run 20 baseline
+- Don't retry this lever. See "April 20-21 Pseudo-label Experiments" above.
 
 **Run B: StyleTex test on lichtung cat (~1.5 hrs)**
 - `training/run_styletex_test.sh` ready
@@ -183,15 +203,15 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 
 **Segmentation (best: run 20, 0.6485 mIoU):**
 - Boundary label softening = biggest lever (+8.8% mIoU). Precompute as `.npz` files.
-- Softening hurts thin regions (neck, accessory). Exclude or reduce radius for small regions.
+- Softening hurts thin regions (neck, accessory). Exclude or reduce radius for small regions (`SOFTENING_EXCLUDE_CLASSES = {2, 21}` auto-excludes).
 - Clothing-based labels (SAM, Dr. Li's 19-class) don't help — anatomy ≠ clothing.
 - SAM 3D Body labels don't help — body mesh ≠ clothing silhouette.
 - **SAM-HQ encoder fine-tune (Apr 15) underperformed** — frozen encoder + fresh decoder plateaued ~0.29 at step 5500. Encoder was trained for clothing boundaries, not anatomy.
-- Bootstrapping loop works: stronger model → better pseudo-labels → better model.
-- **More illustrated data = best lever.** 200+ Gemini prompts in `.claude/prd/gemini_prompts.md` + generator script.
-- **See-Through is useful as pseudo-labeler** (convert_seethrough_to_seg.py), not as a trainable model.
+- **Pseudo-label data expansion is exhausted (Apr 20-21, Runs 24-27).** Tried Run 20 self-distill, naive 19→22 heuristic converter, and See-Through SAM + Dr. Li's joint-based converter. All ≤ Run 20 baseline. Quality filter checks shape (region count, area ratios), not spatial correctness — well-formed labels can still be mislocalized. **Don't retry this lever.** Next cheap architectural experiment: Run 23 (ResNet-50 + Pascal-Person-Part pretrain). If flat, move to CVAT hand-labels.
+- Bootstrapping loop DOES work when teacher was trained on aligned data (GT-based teacher on 3D-rendered data expanding to more rendered data). Does NOT work for cross-domain transfer (3D-trained teacher on illustrated data).
 - Class 20 remapped to background (unused by rigging pipeline).
 - A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
+- **`gemini_li_converted` was Dr. Li's 694 *hand-labeled* examples through `convert_li_labels.py` with joints.** That's real GT, not pseudo-labels — it had weight 3.0 in Run 20 for a reason. Pseudo-labels from See-Through SAM do not substitute for hand labels.
 
 **Texture Inpainting (best: run 4 / v3, 0.1282 val/l1):**
 - ControlNet on SD 1.5 Inpainting, 9-channel input (noisy latent + mask + partial).
@@ -227,6 +247,11 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 | 21 | 0.6361 | Re-pseudo-label, no softening |
 | 22/22b | 0.56-0.59 | SAM labels — don't help |
 | SAM-HQ (Apr 15) | ~0.29 (killed at step 5500) | Li's encoder frozen + fresh 22-class decoder — plateaued below baseline |
+| 24 (Apr 21) | broken | +gemini_diverse (3207 new), Run 20 self-distill labels, softening OFF by mistake, meshy tar name wrong → missing |
+| 25 (Apr 21) | ~0.60-0.61 (killed) | Same data, softening back on, meshy restored, lower LR on resume — ~= Run 20 |
+| 26 (Apr 21) | 0.5471 @ e19 | See-Through SAM + naive L/R+vertical heuristic converter — worse |
+| 27 (Apr 21) | 0.5664 @ e19 | See-Through SAM → Dr. Li PNG format → `convert_with_joints` — still worse than Run 20 |
+| 23 (Apr 21, running) | TBD | ResNet-50 + Pascal-Person-Part anatomy pretrain — architectural experiment |
 
 Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100_run20.yaml`.
 
@@ -236,12 +261,18 @@ Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100
 
 ## Bootstrapping Loop
 
-Model → pseudo-label new data → quality filter → retrain. Each cycle improves both.
+Model → pseudo-label new data → quality filter → retrain. **Works only when teacher was trained on data aligned with the new data's domain** (e.g., GT-trained teacher bootstrapping more of the same rendered data). **Does NOT work for cross-domain** (Run 20 trained mostly on 3D-rendered chars pseudo-labeling illustrated chars → Runs 24-27 all underperformed, April 2026).
 
 ```bash
 python scripts/ingest_gemini.py --input-dir /path/to/raw --output-dir /path/to/preprocessed --no-seg --only-new
 # Then pseudo-label + quality filter + train on A100 (handled by run scripts)
 ```
+
+## Pipeline Hygiene (Apr 21)
+
+- **Archive `.pt` checkpoints to bucket, not just `.onnx`.** Joints `.pt` was missing from bucket for months; only `joint_refinement.onnx` was archived. Recovered from `/Volumes/TAMWoolff/data/checkpoints/joints/best.pt` on April 21 and uploaded to `checkpoints_joints/best.pt`. Fix: after every training run, `rclone copy best.pt` to `checkpoints_<run>/` before destroying the A100.
+- **`ingest_gemini.py` should run joints inference by default** when given a joints checkpoint, so new gemini_diverse never ships without `joints.json`. Currently it only does seg pseudo-labels.
+- **Tar names matter.** Run 24 script referenced `meshy_cc0_restructured.tar` which doesn't exist (actual name: `meshy_cc0_textured_restructured.tar`) and silently trained without 15K Meshy examples. Pre-flight should verify tar download succeeded before extracting.
 
 ## Strata Post-Processing (in `../strata/`)
 
