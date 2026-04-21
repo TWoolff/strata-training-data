@@ -15,9 +15,9 @@ Blender-based pipeline that generates labeled training data for Strata's 6 ONNX 
 | 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
 | 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
 
-### Priority Order (April 21, 2026)
+### Priority Order (April 21, 2026 — end of day)
 
-1. **Segmentation** — Run 20 baseline (0.6485) still best. Four rounds of pseudo-label-based data expansion (Runs 24-27) all failed to beat it, including See-Through SAM with Dr. Li's joint-based converter. **Pseudo-labeling is exhausted as a lever for this task.** Currently running **Run 23** (ResNet-50 + Pascal-Person-Part anatomy-pretrained backbone) — architectural experiment, orthogonal to label quality. If flat, next lever is CVAT hand-labels on illustrated chars (slow but real GT).
+1. **Segmentation** — Run 20 baseline (0.6485) still best. Four rounds of pseudo-label-based data expansion (Runs 24-27) all failed to beat it, including See-Through SAM with Dr. Li's joint-based converter. Architectural experiment (Run 23: ResNet-50 + Pascal-Person-Part pretrain) **also failed** at 0.3819 — same "adjacent-domain priors don't transfer to illustrated chars" lesson as the April 15 SAM-HQ fine-tune. **Both major cheap levers are exhausted.** Remaining options: (a) **Run 28 tomorrow** — clean retest of gemini_diverse under Run 20 hyperparams (the data-expansion experiment confounded by Runs 25/27's wrong LR/epochs). (b) **CVAT hand-labels** — 300-500 illustrated chars annotated by hand, convert via convert_li_labels.py (how cvat_annotated wt 10.0 and gemini_li_converted wt 3.0 were built). ~2 days human work, real GT, highest signal-to-noise we have. (c) Accept Run 20 as ship baseline, pivot to **Texture Inpainting** where there's clearer headroom.
 2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: test StyleTex (SIGGRAPH 2024, Apache 2.0) or generate style-diverse training pairs.
 3. **3D Mesh** — SAM 3D Objects validated + single-view projection pipeline built. Works end-to-end for PBR-style characters. Needs better texture inpainting for illustrated styles.
 4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional (0.00121 offset).
@@ -43,23 +43,32 @@ Killed at step ~5500. Linear extrapolation: ~0.35 at step 8000 — still far bel
 
 **Decision:** abandon this approach for now. Focus on expanding data + leveraging See-Through via *pseudo-labeling* (not encoder fine-tune).
 
-### April 20-21 Pseudo-label Experiments — What We Learned (Runs 24-27)
+### April 20-21 Experiments — What We Learned (Runs 23-27, ~$25-30 A100)
 
-Added 3,207 new illustrated chars to gemini_diverse, tried 4 different pseudo-label sources:
+Five runs, no wins. Root causes identified after the fact.
 
-| Run | gemini_diverse labels | Val mIoU @ e19 | Notes |
-|-----|------------------------|----------------|-------|
-| 24 | Run 20 self-distill, wt 3.5, softening off, **meshy tar misnamed so missing** | broken | pipeline bug + softening off |
-| 25 | Run 20 self-distill, wt 2.0, softening on, meshy restored | **0.5965** | ~= Run 20 baseline |
-| 26 | See-Through SAM, naive L/R+vertical heuristic converter | 0.5471 | worse |
-| 27 | See-Through SAM → Dr. Li PNG format → convert_with_joints | 0.5664 | worse than 25 |
+| Run | Experiment | Val mIoU | Root cause of failure |
+|-----|------------|----------|----------------------|
+| 24 | +gemini_diverse wt 3.5, softening OFF (bug), meshy tar missing (bug) | broken | pipeline bugs |
+| 25 | +gemini_diverse wt 2.0, softening ON, **LR 5e-6 (half of Run 20), 12 epochs (60% of Run 20)** | 0.5965 @ e19 (killed) | confounded experiment — hyperparams changed alongside data |
+| 26 | See-Through SAM + naive L/R+vertical heuristic converter | 0.5471 @ e19 | naive converter drops hair_back, bad splits |
+| 27 | See-Through SAM + Dr. Li converter + joints | 0.5664 @ e19 (killed) | inherited Run 25's hyperparams; noisy→mislocalized labels under reduced LR/epochs |
+| 23 | ResNet-50 + Pascal-Person-Part pretrain (architectural) | 0.3819 @ e13 (killed) | adjacent-domain priors don't transfer; severe overfitting (train 0.12, val 0.35) |
 
 **Conclusions:**
-- **Data expansion via pseudo-labeling has not beaten Run 20 for this task.** Period.
-- See-Through+Li labels pass quality filter at 4× the rate of Run 20 self-distill (5.2% rejected vs 23.2% for sora_diverse), but the model trained on them performs *worse*. Quality filter checks shape, not pixel correctness — labels can be well-formed yet mislocalized.
-- **Noisy-but-spatially-correct beats well-formed-but-mislocalized.** Run 20's self-distill labels at least put regions in the right neighborhood.
-- See-Through SAM's 19 clothing classes don't cleanly map to our 22 anatomy classes even with joint-based splits: the knee-at-joint-midpoint assumption breaks for dynamic poses, joints model trained on 3D-rendered chars mis-localizes on stylized art.
+- **Confounded experiments are worse than no experiment.** Run 25 changed LR 1e-5→5e-6 and epochs 20→12 *at the same time* as adding gemini_diverse. All later runs inherited those wrong hyperparams. We never cleanly tested whether gemini_diverse helps. Run 28 (queued tomorrow) fixes this.
+- **Adjacent-domain pretraining doesn't transfer to illustrated chars.** Confirmed twice: SAM-HQ encoder (April 15, plateaued 0.29), ResNet-50 + Pascal-Person-Part (April 21, plateaued 0.38). Real human photos and Live2D anime don't bridge the stylized-char distribution gap.
+- See-Through+Li labels pass quality filter at 4× the rate of Run 20 self-distill (5.2% vs 23% rejected), but **well-formed ≠ correct.** Quality filter checks shape, not pixel localization. Noisy-but-spatially-correct > well-formed-but-mislocalized.
 - **Boundary softening (radius=2) remains the single biggest lever** (+8.8% mIoU). Run 24 disabled it by accident and that alone cost ~0.05 mIoU.
+- **The reproduction check is cheap and must come first.** Should have run Run 20's config verbatim on current code before stacking 4 experiments on top. Would have saved ~$15.
+
+### April 21 Pipeline Hygiene Rules (lessons from $25-30 of debugging)
+
+1. **One variable per experiment.** If changing data, keep hyperparams. If changing architecture, keep data and hyperparams.
+2. **Reproduction check before any new experiment.** Shortest possible run (~1 hr) reproducing a known baseline on current code/data/deps. If that doesn't land, debug before spending more.
+3. **Pre-flight tar integrity.** A silent tar-not-found (e.g., Run 24's `meshy_cc0_restructured.tar` vs actual `meshy_cc0_textured_restructured.tar`) costs a full run. Verify sizes and names.
+4. **Ctrl+C, never Ctrl+Z.** Suspended pipe-with-tee jobs leave zombie CUDA contexts that take 30 min to untangle on a live A100.
+5. **Archive .pt with .onnx every time.** Joints .pt was missing from bucket for months. Recovered from HD April 21.
 
 ### Path to Ship Quality (revised plan — April 21)
 
@@ -251,7 +260,7 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 | 25 (Apr 21) | ~0.60-0.61 (killed) | Same data, softening back on, meshy restored, lower LR on resume — ~= Run 20 |
 | 26 (Apr 21) | 0.5471 @ e19 | See-Through SAM + naive L/R+vertical heuristic converter — worse |
 | 27 (Apr 21) | 0.5664 @ e19 | See-Through SAM → Dr. Li PNG format → `convert_with_joints` — still worse than Run 20 |
-| 23 (Apr 21, running) | TBD | ResNet-50 + Pascal-Person-Part anatomy pretrain — architectural experiment |
+| 23 (Apr 21) | **0.3819 (killed e13/15)** | ResNet-50 + Pascal-Person-Part pretrain — severe overfitting (train 0.12, val 0.35), plateau, LR exhausted. −0.27 vs Run 20. |
 
 Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100_run20.yaml`.
 
