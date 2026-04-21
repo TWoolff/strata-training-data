@@ -1,0 +1,74 @@
+# Run 28 seg — CLEAN test: does gemini_diverse help under Run 20 hyperparams?
+#
+# Runs 24-27 all underperformed because I confounded the data-expansion experiment
+# with hyperparameter changes. Specifically:
+#   - Run 25/27 used learning_rate 5.0e-6 (half of Run 20's 1.0e-5)
+#   - Run 25/27 used epochs 12 (60% of Run 20's 20)
+# I reasoned "resuming from a good ckpt needs smaller LR", but Run 20 *also* resumed
+# (from Run 19) and still used full 1e-5 × 20 epochs. That's the mistake.
+#
+# Run 28 is Run 20's config verbatim + gemini_diverse (pseudo-labeled with Run 20
+# self-distillation, same source used in Run 25). If this beats 0.6485, gemini_diverse
+# genuinely helps. If it matches, gemini_diverse is neutral. If it drops, gemini_diverse
+# hurts even under proper training.
+#
+# Expected: ≥ 0.6485 (optimistic), 0.62-0.65 (neutral), < 0.62 (hurts).
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/vroid_cc0"
+    - "./data_cloud/meshy_cc0_restructured"
+    - "./data_cloud/gemini_li_converted"
+    - "./data_cloud/cvat_annotated"
+    - "./data_cloud/sora_diverse"
+    - "./data_cloud/flux_diverse_clean"
+    - "./data_cloud/gemini_diverse"       # only addition vs Run 20
+  frozen_splits_file: "./data_cloud/frozen_val_test.json"
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0
+    sora_diverse: 4.0
+    gemini_li_converted: 3.0
+    flux_diverse_clean: 2.5
+    vroid_cc0: 2.5
+    gemini_diverse: 2.0                   # conservative weight for pseudo-labeled data
+    meshy_cc0_textured: 1.5
+    humanrig: 0.5
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 16
+  num_workers: 8
+  epochs: 20                              # NOT 12 — match Run 20 exactly
+  optimizer: "adamw"
+  learning_rate: 1.0e-5                   # NOT 5e-6 — match Run 20 exactly
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 0
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.2
+  normals_weight: 0.2
+  confidence_weight: 0.1
+  label_smoothing: 0.0
+  boundary_softening_radius: 2            # Run 20's +8.8% lever
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 10
+  early_stopping_metric: "val/miou"
