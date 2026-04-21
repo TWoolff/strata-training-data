@@ -1,0 +1,79 @@
+# Run 25 seg — Fix Run 24 regression (boundary softening + lower weight for noisy pseudo-labels)
+#
+# Diagnosis of Run 24 (0.5618 val mIoU, -0.055 vs Run 20):
+#   1. boundary_softening_radius was 0 — Run 20's biggest lever (+8.8% mIoU)
+#      was accidentally disabled (inherited from Run 21 config).
+#   2. gemini_diverse weight was 3.5 — noisy pseudo-labels (Run 20 on
+#      illustrated styles) dominated gradients.
+#   3. --reset-epochs restarted LR from top, partially overwriting Run 20
+#      warm-start weights.
+#
+# Run 25 fixes (one variable at a time is impossible here — all three are
+# clearly wrong, so fixing together):
+#   - boundary_softening_radius: 0 → 2  (neck/hair_back auto-excluded in code)
+#   - gemini_diverse weight: 3.5 → 2.0
+#   - Keep resume from Run 20 checkpoint, but do NOT --reset-epochs
+#     (scheduler continues from low LR)
+#   - epochs: 20 → 12 (warm-start should converge fast; save A100 budget)
+#
+# Expected: ≥ Run 20 baseline 0.6485 if gemini_diverse is net-positive,
+# otherwise ≈ Run 20 (since softening + low LR preserves run20 behavior).
+
+model:
+  backbone: "mobilenet_v3_large"
+  num_classes: 22
+  pretrained_backbone: true
+
+data:
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/vroid_cc0"
+    - "./data_cloud/meshy_cc0_restructured"
+    - "./data_cloud/gemini_li_converted"
+    - "./data_cloud/cvat_annotated"
+    - "./data_cloud/sora_diverse"
+    - "./data_cloud/flux_diverse_clean"
+    - "./data_cloud/gemini_diverse"
+  frozen_splits_file: "./data_cloud/frozen_val_test.json"
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0
+    sora_diverse: 4.0
+    gemini_li_converted: 3.0
+    flux_diverse_clean: 2.5
+    vroid_cc0: 2.5
+    gemini_diverse: 2.0
+    meshy_cc0_textured: 1.5
+    humanrig: 0.5
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  batch_size: 16
+  num_workers: 4
+  epochs: 12
+  optimizer: "adamw"
+  learning_rate: 5.0e-6
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 0
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.2
+  normals_weight: 0.2
+  confidence_weight: 0.1
+  label_smoothing: 0.0
+  boundary_softening_radius: 2
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 6
+  early_stopping_metric: "val/miou"
