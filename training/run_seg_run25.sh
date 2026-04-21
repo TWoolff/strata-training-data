@@ -50,6 +50,20 @@ if [ ! -f "$RUN20_CKPT" ]; then
 fi
 echo "  OK: Run 20 checkpoint"
 
+# Bug fix: Run 24 script had wrong tar name (meshy_cc0_restructured.tar instead
+# of meshy_cc0_textured_restructured.tar) — silently failed, so Run 24 trained
+# WITHOUT 15K meshy examples. Download it now if missing.
+if [ ! -d "./data_cloud/meshy_cc0_restructured" ] || [ -z "$(ls ./data_cloud/meshy_cc0_restructured/ 2>/dev/null | head -1)" ]; then
+    echo "  meshy_cc0_restructured missing — downloading meshy_cc0_textured_restructured.tar..."
+    mkdir -p data/tars
+    rclone copy hetzner:strata-training-data/tars/meshy_cc0_textured_restructured.tar \
+        ./data/tars/ --transfers 32 --fast-list -P
+    tar xf ./data/tars/meshy_cc0_textured_restructured.tar -C ./data_cloud/
+    rm -f ./data/tars/meshy_cc0_textured_restructured.tar
+    MESHY_COUNT=$(ls -d ./data_cloud/meshy_cc0_restructured/*/ 2>/dev/null | wc -l | tr -d ' ')
+    echo "  meshy_cc0_restructured: $MESHY_COUNT examples (restored — was missing from Run 24)"
+fi
+
 for ds in humanrig vroid_cc0 meshy_cc0_restructured gemini_li_converted cvat_annotated sora_diverse flux_diverse_clean gemini_diverse; do
     if [ ! -d "./data_cloud/$ds" ] || [ -z "$(ls ./data_cloud/$ds/ 2>/dev/null | head -1)" ]; then
         echo "  FAIL: ./data_cloud/$ds missing or empty"
