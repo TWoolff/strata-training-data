@@ -1,62 +1,51 @@
 #!/usr/bin/env python3
-"""Pseudo-label illustrated characters with See-Through SAM body parsing model.
+"""Pseudo-label illustrated characters with See-Through SAM, convert via Dr. Li pipeline.
 
-Runs Dr. Chengze Li's See-Through SAM-HQ body-parsing model (19 clothing
-classes, Apache-2.0, HuggingFace ``24yearsold/l2d_sam_iter2``) on a directory
-of Strata-format example dirs and converts the 19-class output to our 22-class
-anatomy schema. Writes ``segmentation.png`` in each example dir.
+Runs Dr. Chengze Li's See-Through SAM body-parsing model (19 clothing classes,
+Apache-2.0, HuggingFace ``24yearsold/l2d_sam_iter2``) on a directory of
+Strata-format example dirs, then delegates the 19→22 class conversion to
+``scripts.convert_li_labels`` — the same code that produced
+``gemini_li_converted`` (Run 20's most heavily-weighted illustrated dataset).
 
-Why this exists
+Why this layout
 ---------------
-The original Run A plan was to run See-Through's full LayerDiff pipeline to
-produce layer PNGs, then convert via ``scripts/convert_seethrough_to_seg.py``.
-LayerDiff is diffusion-based (~60-90s/image) and does not fit the A100 budget
-for 3K+ images. The SAM body-parsing model is ~1s/image and outputs 19 semantic
-classes directly — this script maps those to our 22 anatomy classes using the
-same split heuristics as ``convert_seethrough_to_seg.py``'s unsplit-layer
-fallbacks.
+Run 24/25 regressed because pseudo-labels came from Run 20 itself (classic
+self-distillation ceiling). Run 26 v1 tried naive L/R + vertical splits to
+convert See-Through's 19 clothing classes to our 22 anatomy classes and
+regressed even harder — the heuristic splits introduced too much systematic
+error (e.g., legwear 50/50 puts the knee boundary at mid-leg when it actually
+sits ~60-70% down).
+
+Dr. Li's ``convert_li_labels.py`` already does this conversion properly:
+- uses joint positions when joints.json is present (anatomically correct)
+- falls back to body-proportion heuristics (~70% knee, face-center midline,
+  bbox-derived shoulder width) when joints are unavailable
+- recovers the hair_back class by splitting hair at face-bottom
+
+This script reuses those code paths directly, so our pseudo-labels get the
+same conversion quality as Dr. Li's hand-labels.
 
 Usage
 -----
 ::
 
+    # On A100:
     export SEETHROUGH_ROOT=/workspace/see-through
+
+    # (Optional) run joints inference first for anatomically-correct splits:
+    python3 scripts/run_joints_inference.py \\
+        --input-dir ./data_cloud/gemini_diverse \\
+        --checkpoint checkpoints/joints/run20_best.pt \\
+        --device cuda
+
+    # Pseudo-label with See-Through SAM + joint-based conversion:
     python3 scripts/seethrough_sam_to_seg.py \\
-        --input-dir /workspace/data_cloud/gemini_diverse \\
+        --input-dir ./data_cloud/gemini_diverse \\
         --checkpoint /workspace/weights/li_sam_iter2.pt \\
         --device cuda
 
-Input layout: ``<input-dir>/<char>/image.png`` (+ optional fg_mask.png for alpha).
-Output: writes ``<char>/segmentation.png`` (uint8, 0-21) and updates
-``metadata.json`` with ``segmentation_source: "seethrough_sam_v2"``.
-
-19 → 22 class mapping
----------------------
-SAM outputs per-pixel argmax over:
-    0=hair, 1=headwear, 2=face, 3=eyes, 4=eyewear, 5=ears, 6=earwear,
-    7=nose, 8=mouth, 9=neck, 10=neckwear, 11=topwear, 12=handwear,
-    13=bottomwear, 14=legwear, 15=footwear, 16=tail, 17=wings, 18=objects
-
-Our 22 anatomy classes:
-    0=bg, 1=head, 2=neck, 3=chest, 4=spine, 5=hips,
-    6-9=shoulder/upper_arm/forearm/hand_l, 10-13=same_r,
-    14-16=upper_leg/lower_leg/foot_l, 17-19=same_r,
-    20=accessory, 21=hair_back
-
-Mapping:
-- hair, face, eyes, eyewear, ears, earwear, nose, mouth → head (1)
-  (See-Through doesn't distinguish front/back hair; all hair → head)
-- headwear, neckwear, tail, wings, objects → accessory (20)
-- neck → neck (2)
-- topwear → split vertically → chest (3) / spine (4)
-- bottomwear → hips (5)
-- handwear → split L/R by center of mass → each side split into 3
-  vertical bands (40%/35%/25%) → upper_arm, forearm, hand
-- legwear → split L/R → each side split 50/50 → upper_leg, lower_leg
-- footwear → split L/R → foot_l, foot_r
-
-Shoulder classes (6, 10) are not generated explicitly — upper_arm spans the
-region a shoulder would occupy. Quality filter's min-regions=4 is safely met.
+Writes ``segmentation.png`` (uint8 0-21), ``li_label.png`` (Dr. Li's 19-class
+format, saved for auditing), ``confidence.png``, and updates ``metadata.json``.
 """
 
 from __future__ import annotations
@@ -72,17 +61,18 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-logger = logging.getLogger(__name__)
+# Project-relative imports so convert_li_labels is reachable
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-# -------------------------------------------------------------------------
-# 22-class anatomy IDs
-# -------------------------------------------------------------------------
-BG, HEAD, NECK, CHEST, SPINE, HIPS = 0, 1, 2, 3, 4, 5
-SHOULDER_L, UPPER_ARM_L, FOREARM_L, HAND_L = 6, 7, 8, 9
-SHOULDER_R, UPPER_ARM_R, FOREARM_R, HAND_R = 10, 11, 12, 13
-UPPER_LEG_L, LOWER_LEG_L, FOOT_L = 14, 15, 16
-UPPER_LEG_R, LOWER_LEG_R, FOOT_R = 17, 18, 19
-ACCESSORY, HAIR_BACK = 20, 21
+from scripts.convert_li_labels import (  # noqa: E402
+    convert_with_heuristics,
+    convert_with_joints,
+    load_joints,
+)
+
+logger = logging.getLogger(__name__)
 
 REGION_NAMES = [
     "background", "head", "neck", "chest", "spine", "hips",
@@ -93,160 +83,75 @@ REGION_NAMES = [
     "accessory", "hair_back",
 ]
 
-# See-Through SAM output channels (VALID_BODY_PARTS_V2)
-SEETHROUGH_IDX = {
-    "hair": 0, "headwear": 1, "face": 2, "eyes": 3, "eyewear": 4,
-    "ears": 5, "earwear": 6, "nose": 7, "mouth": 8,
-    "neck": 9, "neckwear": 10, "topwear": 11, "handwear": 12,
-    "bottomwear": 13, "legwear": 14, "footwear": 15,
-    "tail": 16, "wings": 17, "objects": 18,
-}
+# See-Through SAM output channels (VALID_BODY_PARTS_V2) mapped to Dr. Li's pixel values.
+# Order matters: earlier classes win when multiple channels fire at the same pixel
+# (we write highest-confidence-first, then skip pixels already claimed).
+# Values match Dr. Li's PNG encoding: 0, 10, 20, ..., 180; 255 = background.
+SEETHROUGH_CHANNELS = [
+    ("hair",       0,    0),   # (name, channel_idx, li_pixel_value)
+    ("headwear",   1,   10),
+    ("face",       2,   20),
+    ("eyes",       3,   30),
+    ("eyewear",    4,   40),
+    ("ears",       5,   50),
+    ("earwear",    6,   60),
+    ("nose",       7,   70),
+    ("mouth",      8,   80),
+    ("neck",       9,   90),
+    ("neckwear",  10,  100),
+    ("topwear",   11,  110),
+    ("handwear",  12,  120),
+    ("bottomwear",13,  130),
+    ("legwear",   14,  140),
+    ("footwear",  15,  150),
+    ("tail",      16,  160),
+    ("wings",     17,  170),
+    ("objects",   18,  180),
+]
+
+# Channels with higher semantic priority are written first so that, e.g., face
+# (class 20) overrides the overlapping hair (class 0) region when both fire.
+# Priority order: small/specific → large/covering.
+PRIORITY_ORDER = [
+    "nose", "mouth", "eyes", "eyewear", "earwear", "ears",  # face details
+    "face",
+    "neckwear", "neck",
+    "headwear",
+    "handwear", "footwear",
+    "topwear", "bottomwear", "legwear",
+    "hair",                                                   # large background of head
+    "tail", "wings", "objects",
+]
+_NAME_TO_CHANNEL = {name: (idx, val) for name, idx, val in SEETHROUGH_CHANNELS}
 
 
-# -------------------------------------------------------------------------
-# Mask splitting helpers
-# -------------------------------------------------------------------------
-def _split_lr(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Split a binary mask into left and right halves by horizontal center-of-mass."""
-    if not mask.any():
-        return mask.copy(), mask.copy()
-    ys, xs = np.where(mask)
-    cx = int(xs.mean())
-    left = mask.copy()
-    right = mask.copy()
-    left[:, cx:] = False
-    right[:, :cx] = False
-    return left, right
-
-
-def _split_arm(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Split a single arm mask top-down: upper_arm (40%) / forearm (35%) / hand (25%)."""
-    if not mask.any():
-        return mask.copy(), mask.copy(), mask.copy()
-    ys, _ = np.where(mask)
-    y_min, y_max = int(ys.min()), int(ys.max())
-    h = max(y_max - y_min, 1)
-    t_u = y_min + int(h * 0.40)
-    t_f = y_min + int(h * 0.75)
-    upper = mask.copy(); upper[t_u:, :] = False
-    fore = mask.copy(); fore[:t_u, :] = False; fore[t_f:, :] = False
-    hand = mask.copy(); hand[:t_f, :] = False
-    return upper, fore, hand
-
-
-def _split_leg(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Split a single leg mask top-down: upper_leg (50%) / lower_leg (50%)."""
-    if not mask.any():
-        return mask.copy(), mask.copy()
-    ys, _ = np.where(mask)
-    y_min, y_max = int(ys.min()), int(ys.max())
-    h = max(y_max - y_min, 1)
-    t_mid = y_min + h // 2
-    upper = mask.copy(); upper[t_mid:, :] = False
-    lower = mask.copy(); lower[:t_mid, :] = False
-    return upper, lower
-
-
-def _split_topwear(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Split torso top 50% → chest, bottom 50% → spine."""
-    if not mask.any():
-        return mask.copy(), mask.copy()
-    ys, _ = np.where(mask)
-    y_min, y_max = int(ys.min()), int(ys.max())
-    h = max(y_max - y_min, 1)
-    t_mid = y_min + h // 2
-    chest = mask.copy(); chest[t_mid:, :] = False
-    spine = mask.copy(); spine[:t_mid, :] = False
-    return chest, spine
-
-
-# -------------------------------------------------------------------------
-# 19-class See-Through output → 22-class anatomy seg
-# -------------------------------------------------------------------------
-def convert_seethrough_sam_to_22class(
-    class_masks: np.ndarray, alpha: np.ndarray, threshold: float = 0.0,
-) -> np.ndarray:
-    """Convert 19-channel See-Through SAM logits to a single 22-class mask.
+def build_li_mask(class_logits: np.ndarray, alpha: np.ndarray) -> np.ndarray:
+    """Build a Dr-Li-format 19-class mask from See-Through SAM logits.
 
     Args:
-        class_masks: ``[19, H, W]`` float (logits) or bool (thresholded).
-        alpha: ``[H, W]`` uint8 — non-zero where character pixels live.
-        threshold: logit threshold for binarization (ignored if class_masks is bool).
+        class_logits: ``[19, H, W]`` float32 logits.
+        alpha: ``[H, W]`` uint8 — foreground mask from the image alpha channel.
 
     Returns:
-        ``[H, W]`` uint8 segmentation with IDs 0-21.
+        ``[H, W]`` uint8 with Li pixel values (0, 10, ..., 180; 255 = background).
     """
-    if class_masks.dtype != np.bool_:
-        binary = class_masks > threshold
-    else:
-        binary = class_masks
-    H, W = binary.shape[1:]
-    seg = np.zeros((H, W), dtype=np.uint8)
+    H, W = class_logits.shape[1:]
+    li = np.full((H, W), 255, dtype=np.uint8)  # start as background
     fg = alpha > 10
-
-    def write(mask: np.ndarray, class_id: int) -> None:
-        """Paint ``class_id`` where mask is True, seg is still 0, and pixel is foreground."""
-        if not mask.any():
-            return
-        idx = mask & (seg == 0) & fg
-        seg[idx] = class_id
-
-    # Depth order: head components first (highest), then accessories, clothing, body.
-    # Inside each tier, prioritize smaller/more specific regions.
-
-    # Head (face/eyes/nose/mouth/ears paint over hair in overlap regions)
-    for tag in ("face", "eyes", "eyewear", "ears", "earwear", "nose", "mouth", "hair"):
-        write(binary[SEETHROUGH_IDX[tag]], HEAD)
-
-    # Neck
-    write(binary[SEETHROUGH_IDX["neck"]], NECK)
-
-    # Accessories (headwear, neckwear, tail, wings, objects)
-    for tag in ("headwear", "neckwear", "tail", "wings", "objects"):
-        write(binary[SEETHROUGH_IDX[tag]], ACCESSORY)
-
-    # Topwear → chest + spine (vertical split)
-    chest, spine = _split_topwear(binary[SEETHROUGH_IDX["topwear"]])
-    write(chest, CHEST)
-    write(spine, SPINE)
-
-    # Bottomwear → hips
-    write(binary[SEETHROUGH_IDX["bottomwear"]], HIPS)
-
-    # Handwear → L/R + upper_arm/forearm/hand per side
-    hw = binary[SEETHROUGH_IDX["handwear"]]
-    hw_l, hw_r = _split_lr(hw)
-    ul, fl, hl = _split_arm(hw_l)
-    ur, fr, hr = _split_arm(hw_r)
-    write(ul, UPPER_ARM_L); write(fl, FOREARM_L); write(hl, HAND_L)
-    write(ur, UPPER_ARM_R); write(fr, FOREARM_R); write(hr, HAND_R)
-
-    # Legwear → L/R + upper_leg/lower_leg per side
-    lw = binary[SEETHROUGH_IDX["legwear"]]
-    lw_l, lw_r = _split_lr(lw)
-    ul_l, ll_l = _split_leg(lw_l)
-    ul_r, ll_r = _split_leg(lw_r)
-    write(ul_l, UPPER_LEG_L); write(ll_l, LOWER_LEG_L)
-    write(ul_r, UPPER_LEG_R); write(ll_r, LOWER_LEG_R)
-
-    # Footwear → L/R
-    fw = binary[SEETHROUGH_IDX["footwear"]]
-    fw_l, fw_r = _split_lr(fw)
-    write(fw_l, FOOT_L)
-    write(fw_r, FOOT_R)
-
-    return seg
+    binary = class_logits > 0.0  # [19, H, W] bool
+    for name in PRIORITY_ORDER:
+        ch_idx, li_val = _NAME_TO_CHANNEL[name]
+        mask = binary[ch_idx] & (li == 255) & fg
+        if mask.any():
+            li[mask] = li_val
+    return li
 
 
 # -------------------------------------------------------------------------
-# Model setup — inlined so this script can run standalone with see-through on PYTHONPATH
+# Model setup
 # -------------------------------------------------------------------------
 def _build_seethrough_model(checkpoint_path: Path, device: str = "cuda"):
-    """Load See-Through SAM body-parsing model.
-
-    Expects ``see-through`` repo cloned and ``see-through/common`` on ``sys.path``.
-    See README for setup: ``git clone https://github.com/shitagaki-lab/see-through``.
-    """
+    """Load See-Through SAM body-parsing model (Dr. Li's checkpoint-18000.pt)."""
     seethrough_root = Path(os.environ.get("SEETHROUGH_ROOT", "/workspace/see-through"))
     if not seethrough_root.exists():
         raise FileNotFoundError(
@@ -268,8 +173,8 @@ def _build_seethrough_model(checkpoint_path: Path, device: str = "cuda"):
         download_from_hf=False,
         model_args=dict(
             class_num=19,
-            # Li's checkpoint-18000.pt is trained on ViT-H HQ (hidden=1280).
-            # Using b_hq (hidden=768) fails with shape mismatches on every block.
+            # Li's checkpoint-18000.pt is ViT-H HQ (hidden=1280); b_hq would
+            # size-mismatch on every encoder block.
             model_type="h_hq",
             fix_img_en=True,
             fix_prompt_en=True,
@@ -298,63 +203,74 @@ def _maybe_download_checkpoint(local_path: Path) -> Path:
 
 
 # -------------------------------------------------------------------------
-# Main ingestion loop
+# Per-example loop
 # -------------------------------------------------------------------------
-def process_example(
-    example_dir: Path, model, device: str,
-) -> tuple[bool, int, float]:
-    """Run See-Through SAM on one example and write segmentation.png.
-
-    Returns (success, num_regions, mean_confidence).
+def process_example(example_dir: Path, model, device: str) -> tuple[bool, int, float, bool]:
+    """Run See-Through SAM on one example, then Dr. Li conversion. Returns
+    ``(success, num_regions, mean_confidence, used_joints)``.
     """
-    import torch  # local import so the converter unit-tests don't need torch
+    import torch
 
     image_path = example_dir / "image.png"
     if not image_path.exists():
-        return False, 0, 0.0
+        return False, 0, 0.0, False
 
     img_rgba = Image.open(image_path).convert("RGBA")
     img_np = np.array(img_rgba)
     alpha = img_np[:, :, 3]
-    # See-Through expects RGB (composited onto white or black — we use black to preserve edges)
     rgb = img_np[:, :, :3].copy()
-    rgb[alpha < 10] = 0
+    rgb[alpha < 10] = 0  # composite onto black to preserve edges
 
     with torch.inference_mode():
-        preds = model.inference(rgb)[0]  # [19, H, W] logits (torch tensor)
-        class_masks = (preds > 0).to(device="cpu", dtype=torch.bool).numpy()
-        # Confidence per pixel = max logit across classes (sigmoid would be nicer but this is fast)
+        preds = model.inference(rgb)[0]  # [19, H, W] torch tensor logits
+        class_logits_np = preds.to(device="cpu", dtype=torch.float32).numpy()
         max_logit = preds.max(dim=0).values.to(device="cpu", dtype=torch.float32).numpy()
-        # Squash to [0,1] for reporting
-        confidence = 1.0 / (1.0 + np.exp(-max_logit))
 
-    seg = convert_seethrough_sam_to_22class(class_masks, alpha)
+    # Step 1: build Li-format 19-class mask (same encoding as Dr. Li's hand labels)
+    li_mask = build_li_mask(class_logits_np, alpha)
 
-    # Zero out non-foreground pixels (defensive)
+    # Step 2: Dr. Li's 19→22 conversion (joints if available, else body-proportion heuristics)
+    joints = load_joints(example_dir / "joints.json")
+    if joints:
+        # Scale joints if label resolution differs from image (same as convert_li_labels.main())
+        src_w, src_h = img_rgba.size
+        lbl_h, lbl_w = li_mask.shape
+        if (src_w, src_h) != (lbl_w, lbl_h):
+            joints = {
+                name: (int(pos[0] * lbl_w / src_w), int(pos[1] * lbl_h / src_h))
+                for name, pos in joints.items()
+            }
+        seg = convert_with_joints(li_mask, joints)
+        used_joints = True
+    else:
+        seg = convert_with_heuristics(li_mask)
+        used_joints = False
+
     fg_mask = alpha >= 10
     seg[~fg_mask] = 0
 
-    # Mean confidence over foreground pixels
+    # Confidence map: sigmoid of max logit (per-pixel) for downstream filtering/review
+    confidence = 1.0 / (1.0 + np.exp(-max_logit))
+    confidence[~fg_mask] = 0.0
     mean_conf = float(confidence[fg_mask].mean()) if fg_mask.any() else 0.0
 
     unique_regions = sorted(int(v) for v in np.unique(seg) if v > 0)
     region_names = [REGION_NAMES[r] for r in unique_regions]
 
     Image.fromarray(seg).save(example_dir / "segmentation.png")
-
-    # Save confidence map for downstream review
+    # Save the intermediate Li-format label for auditing / re-conversion
+    Image.fromarray(li_mask, mode="L").save(example_dir / "li_label.png")
     conf_uint8 = (confidence * 255).clip(0, 255).astype(np.uint8)
-    conf_uint8[~fg_mask] = 0
     Image.fromarray(conf_uint8).save(example_dir / "confidence.png")
 
-    # Update metadata
     meta_path = example_dir / "metadata.json"
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     else:
         meta = {"id": example_dir.name}
     meta["has_segmentation_mask"] = True
-    meta["segmentation_source"] = "seethrough_sam_v2"
+    meta["segmentation_source"] = "seethrough_sam_li_converted"
+    meta["segmentation_conversion"] = "joint_based" if used_joints else "heuristic"
     meta["seg_mean_confidence"] = round(mean_conf, 4)
     meta["seg_num_regions"] = len(unique_regions)
     meta["seg_regions"] = region_names
@@ -367,22 +283,22 @@ def process_example(
         encoding="utf-8",
     )
 
-    return True, len(unique_regions), mean_conf
+    return True, len(unique_regions), mean_conf, used_joints
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Pseudo-label with See-Through SAM body parsing model.",
+        description="Pseudo-label with See-Through SAM and Dr. Li's converter.",
     )
     parser.add_argument("--input-dir", type=Path, required=True,
-                        help="Dir of Strata-format examples: <input>/<char>/image.png")
+                        help="Strata-format examples: <input>/<char>/image.png")
     parser.add_argument("--checkpoint", type=Path,
                         default=Path("/workspace/weights/li_sam_iter2.pt"),
                         help="Path to checkpoint-18000.pt. Auto-downloads from HF if missing.")
     parser.add_argument("--device", default="cuda",
                         help="torch device (cuda / cpu / mps)")
     parser.add_argument("--only-missing", action="store_true",
-                        help="Skip examples whose segmentation_source is already seethrough_sam_v2")
+                        help="Skip examples whose segmentation_source is already seethrough_sam_li_converted")
     parser.add_argument("--limit", type=int, default=None,
                         help="Process at most N examples (debug)")
     args = parser.parse_args()
@@ -409,14 +325,13 @@ def main() -> int:
 
     skipped = 0
     if args.only_missing:
-        pre = len(examples)
         filtered = []
         for d in examples:
             meta = d / "metadata.json"
             if meta.exists():
                 try:
                     m = json.loads(meta.read_text(encoding="utf-8"))
-                    if m.get("segmentation_source") == "seethrough_sam_v2":
+                    if m.get("segmentation_source") == "seethrough_sam_li_converted":
                         skipped += 1
                         continue
                 except Exception:
@@ -428,16 +343,19 @@ def main() -> int:
     if args.limit is not None:
         examples = examples[: args.limit]
 
-    ok = 0
-    fail = 0
+    ok = fail = joint_count = heuristic_count = 0
     total_conf = 0.0
     start = time.monotonic()
     for i, ex in enumerate(examples):
         try:
-            success, n_regions, mean_conf = process_example(ex, model, args.device)
+            success, n_regions, mean_conf, used_joints = process_example(ex, model, args.device)
             if success:
                 ok += 1
                 total_conf += mean_conf
+                if used_joints:
+                    joint_count += 1
+                else:
+                    heuristic_count += 1
             else:
                 fail += 1
         except Exception as e:
@@ -449,11 +367,14 @@ def main() -> int:
             speed = (i + 1) / elapsed if elapsed > 0 else 0
             avg_conf = total_conf / max(ok, 1)
             logger.info(
-                "Progress: %d/%d (%.2f img/s, %d ok, %d fail, mean conf %.3f)",
-                i + 1, len(examples), speed, ok, fail, avg_conf,
+                "Progress: %d/%d (%.2f img/s, %d ok [%d joint, %d heuristic], %d fail, mean conf %.3f)",
+                i + 1, len(examples), speed, ok, joint_count, heuristic_count, fail, avg_conf,
             )
 
-    logger.info("Done. %d succeeded, %d failed, %d skipped.", ok, fail, skipped)
+    logger.info(
+        "Done. %d succeeded (%d joint-based, %d heuristic), %d failed, %d skipped.",
+        ok, joint_count, heuristic_count, fail, skipped,
+    )
     return 0 if fail == 0 else 2
 
 
