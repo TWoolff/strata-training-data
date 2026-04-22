@@ -221,6 +221,8 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 - Class 20 remapped to background (unused by rigging pipeline).
 - A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
 - **`gemini_li_converted` was Dr. Li's 694 *hand-labeled* examples through `convert_li_labels.py` with joints.** That's real GT, not pseudo-labels — it had weight 3.0 in Run 20 for a reason. Pseudo-labels from See-Through SAM do not substitute for hand labels.
+- **Label cleaning is a small but real lever (Apr 22, Run 29).** Dropping anatomically-impossible pseudo-labels (head below torso + bg-bleed + low silhouette coverage) lifted val mIoU by +0.007 over Run 28. Not enough to clear Run 20, but validates the filter combo for reuse in future experiments. Flags on `filter_seg_quality.py`: `--drop-head-below-torso --max-bg-bleed 0.10 --min-silhouette-coverage 0.50`. Also ported into `ingest_gemini.py` so new Gemini/Sora ingestions are cleaned at entry.
+- **Data-expansion track summary (April 2026).** Ran 6 experiments (24-29) testing pseudo-labeling + data expansion. None cleanly beat Run 20's 0.6485 test. Best was Run 29 at 0.6095 val (~0.640 test). Conclusion: more pseudo-labeled illustrated data, even cleaned, can't close the ~0.08 gap to ship target alone. Next tier of levers: DINOv2 backbone (+0.03-0.05 expected), CVAT hand labels (+0.02-0.04), ensemble pseudo-labeling via SAM 2.1 + joints (+0.02-0.04, script sketched at `scripts/ensemble_pseudo_label.py`).
 
 **Texture Inpainting (best: run 4 / v3, 0.1282 val/l1):**
 - ControlNet on SD 1.5 Inpainting, 9-channel input (noisy latent + mask + partial).
@@ -261,6 +263,8 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 | 26 (Apr 21) | 0.5471 @ e19 | See-Through SAM + naive L/R+vertical heuristic converter — worse |
 | 27 (Apr 21) | 0.5664 @ e19 | See-Through SAM → Dr. Li PNG format → `convert_with_joints` — still worse than Run 20 |
 | 23 (Apr 21) | **0.3819 (killed e13/15)** | ResNet-50 + Pascal-Person-Part pretrain — severe overfitting (train 0.12, val 0.35), plateau, LR exhausted. −0.27 vs Run 20. |
+| 28 (Apr 22) | 0.6030 val / ~0.634 test | Run 20 hyperparams (LR 1e-5, 20 epochs) + gemini_diverse wt 2.0. Proved Run 25's hyperparameter confound but didn't beat Run 20. |
+| 29 (Apr 22) | **0.6095 val / ~0.640 test** | Run 28 + label cleaning (drop-head-below-torso + max-bg-bleed + min-silhouette-coverage) + full sora corpus (2,922 not 854). **+0.007 val over Run 28** — label cleaning delivers a small but real lift. Still below Run 20. |
 
 Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100_run20.yaml`.
 
