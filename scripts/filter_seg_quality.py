@@ -48,6 +48,17 @@ REGION_NAMES = {
 TORSO_REGIONS = {3, 4, 5}  # chest, spine, hips
 HEAD_REGION = 1
 
+# Paired L/R region IDs for asymmetry check
+LR_PAIRS = [
+    (6, 10),   # shoulder_l/r
+    (7, 11),   # upper_arm_l/r
+    (8, 12),   # forearm_l/r
+    (9, 13),   # hand_l/r
+    (14, 17),  # upper_leg_l/r
+    (15, 18),  # lower_leg_l/r
+    (16, 19),  # foot_l/r
+]
+
 
 # ---------------------------------------------------------------------------
 # Mask discovery
@@ -98,6 +109,8 @@ def check_mask(
     max_single_region: float = 0.70,
     min_foreground: float = 0.05,
     skip_anatomy: bool = False,
+    drop_head_below_torso: bool = False,
+    max_lr_asymmetry: float | None = None,
 ) -> list[str]:
     """Check a single segmentation mask against quality criteria.
 
@@ -107,6 +120,14 @@ def check_mask(
         skip_anatomy: If True, skip missing_head/missing_torso checks.
             Use for GT data where masks are known-correct but poses may
             legitimately hide the head or torso from certain angles.
+        drop_head_below_torso: If True, reject examples where the head's
+            centroid sits below the torso's vertical median (an anatomically
+            impossible label, typically indicates a flipped / bad pseudo-label).
+            Audit on flux_diverse_clean (Apr 22) found 15% of examples fail this.
+        max_lr_asymmetry: If set, reject examples where any paired L/R class
+            has |area_l - area_r| / max(area_l, area_r) > this value. Use 0.85
+            or higher — 92% of hand labels pass 0.70 because many characters
+            are drawn in 3/4 view with one side mostly hidden.
     """
     reasons: list[str] = []
 
@@ -142,8 +163,8 @@ def check_mask(
         reasons.append(f"too_few_regions({n_regions})")
 
     # --- Required regions (skip for GT posed data) ---
+    unique_set = set(unique_regions.tolist())
     if not skip_anatomy:
-        unique_set = set(unique_regions.tolist())
         if HEAD_REGION not in unique_set:
             reasons.append("missing_head")
         if not unique_set & TORSO_REGIONS:
@@ -158,6 +179,35 @@ def check_mask(
         if region_ratio > max_single_region:
             name = REGION_NAMES.get(rid, str(rid))
             reasons.append(f"single_region_dominates({name}={region_ratio:.0%})")
+
+    # --- Head-below-torso (anatomically impossible, strong signal of bad label) ---
+    if drop_head_below_torso and HEAD_REGION in unique_set and (unique_set & TORSO_REGIONS):
+        head_ys, _ = np.where(arr == HEAD_REGION)
+        torso_ys = np.concatenate([
+            np.where(arr == c)[0] for c in TORSO_REGIONS if c in unique_set
+        ])
+        if len(head_ys) > 0 and len(torso_ys) > 0:
+            head_cy = float(head_ys.mean())
+            torso_median_y = float(np.median(torso_ys))
+            if head_cy >= torso_median_y:
+                reasons.append(f"head_below_torso(head_y={head_cy:.0f},torso_med={torso_median_y:.0f})")
+
+    # --- L/R asymmetry (one side of the body vastly larger than the other) ---
+    # Only fires when BOTH sides are labeled — one-sided characters (3/4 view,
+    # occluded limbs) are a separate "missing class" issue, not asymmetry.
+    if max_lr_asymmetry is not None:
+        for left_id, right_id in LR_PAIRS:
+            al = int(counts[left_id])
+            ar = int(counts[right_id])
+            if al == 0 or ar == 0:
+                continue  # one side missing — not an asymmetry issue
+            m = max(al, ar)
+            asym = abs(al - ar) / m
+            if asym > max_lr_asymmetry:
+                ln = REGION_NAMES.get(left_id, str(left_id))
+                rn = REGION_NAMES.get(right_id, str(right_id))
+                reasons.append(f"lr_asymmetry({ln}/{rn}={asym:.0%})")
+                break  # One pair is enough to reject
 
     return reasons
 
@@ -320,6 +370,20 @@ def main(argv: list[str] | None = None) -> None:
         help="Skip missing_head/missing_torso checks (for GT posed data).",
     )
     parser.add_argument(
+        "--drop-head-below-torso",
+        action="store_true",
+        help="Reject examples where the head centroid sits below the torso median "
+             "y-position (anatomically impossible; ~15%% of flux_diverse_clean fails this).",
+    )
+    parser.add_argument(
+        "--max-lr-asymmetry",
+        type=float,
+        default=None,
+        help="Reject examples where any paired L/R class has "
+             "|area_l - area_r| / max(area_l, area_r) > this value. Suggested: 0.90 "
+             "(many illustrated characters are drawn in 3/4 view so 0.70 is too tight).",
+    )
+    parser.add_argument(
         "--max-rejected-grid",
         type=int,
         default=50,
@@ -356,6 +420,8 @@ def main(argv: list[str] | None = None) -> None:
                 max_single_region=args.max_single_region,
                 min_foreground=args.min_foreground,
                 skip_anatomy=args.skip_anatomy,
+                drop_head_below_torso=args.drop_head_below_torso,
+                max_lr_asymmetry=args.max_lr_asymmetry,
             )
             if reasons:
                 rejected[full_key] = reasons
