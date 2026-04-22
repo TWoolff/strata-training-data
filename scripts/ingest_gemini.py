@@ -185,6 +185,104 @@ def run_pseudo_labels(
     return confidence_scores
 
 
+def run_quality_filter(
+    output_dir: Path,
+    *,
+    drop_rejected: bool = False,
+    drop_head_below_torso: bool = True,
+    max_bg_bleed: float = 0.10,
+    min_silhouette_coverage: float = 0.50,
+) -> dict[str, list[str]]:
+    """Step 3: Apply validated quality filters to pseudo-labeled examples.
+
+    Uses the same checks as ``scripts/filter_seg_quality.check_mask`` — the
+    combination validated on April 22 against the hand-labeled control
+    (gemini_li_converted rejects ~4.5%, bad pseudo-labels 10-18%):
+
+    - default: min_regions=4, max_single_region=0.70, min_foreground=0.05,
+      missing_head, missing_torso
+    - head_below_torso: anatomically impossible (15% of flux_diverse_clean)
+    - bg_bleed: labels painted outside character silhouette
+    - silhouette_coverage: labels cover too little of character
+
+    If drop_rejected, failing examples are removed entirely from output_dir.
+    Otherwise they stay on disk but have `quality_filter_reasons` appended
+    to their metadata.json (and `quality_filter_passed: false`).
+    """
+    from scripts.filter_seg_quality import check_mask
+
+    examples = sorted(
+        d for d in output_dir.iterdir()
+        if d.is_dir() and (d / "segmentation.png").exists()
+    )
+
+    rejected: dict[str, list[str]] = {}
+    passed = 0
+    for ex in examples:
+        seg_path = ex / "segmentation.png"
+        reasons = check_mask(
+            seg_path,
+            min_regions=4,
+            max_single_region=0.70,
+            min_foreground=0.05,
+            skip_anatomy=False,
+            drop_head_below_torso=drop_head_below_torso,
+            max_bg_bleed=max_bg_bleed,
+            min_silhouette_coverage=min_silhouette_coverage,
+        )
+
+        # Always stamp metadata with filter outcome
+        meta_path = ex / "metadata.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        else:
+            meta = {"id": ex.name, "source": "gemini_diverse"}
+        meta["quality_filter_passed"] = not reasons
+        if reasons:
+            meta["quality_filter_reasons"] = reasons
+        else:
+            meta.pop("quality_filter_reasons", None)
+        meta_path.write_text(
+            json.dumps(meta, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+        if reasons:
+            rejected[ex.name] = reasons
+            if drop_rejected:
+                import shutil
+                shutil.rmtree(ex)
+        else:
+            passed += 1
+
+    total = passed + len(rejected)
+    logger.info(
+        "Quality filter: %d passed, %d rejected (%.1f%%)%s",
+        passed, len(rejected),
+        (len(rejected) / total * 100) if total > 0 else 0.0,
+        " — deleted from disk" if drop_rejected else " — marked in metadata",
+    )
+
+    # Save summary for downstream consumers
+    summary = {
+        "total": total,
+        "passed": passed,
+        "rejected": len(rejected),
+        "drop_rejected": drop_rejected,
+        "thresholds": {
+            "drop_head_below_torso": drop_head_below_torso,
+            "max_bg_bleed": max_bg_bleed,
+            "min_silhouette_coverage": min_silhouette_coverage,
+        },
+        "rejected_examples": rejected,
+    }
+    (output_dir / "ingest_quality_filter.json").write_text(
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8",
+    )
+
+    return rejected
+
+
 def print_quality_report(
     confidence_scores: dict[str, float],
     output_dir: Path,
@@ -276,6 +374,20 @@ def main() -> None:
         "--no-seg", action="store_true",
         help="Skip pseudo-labeling (ingest only, no checkpoint needed)",
     )
+    parser.add_argument(
+        "--no-quality-filter", action="store_true",
+        help="Skip the post-pseudo-label quality filter step. By default, ingested "
+             "examples go through the same validated filter combo as Run 29 "
+             "(drop-head-below-torso + max-bg-bleed + min-silhouette-coverage). "
+             "Failing examples get quality_filter_passed=false in metadata; add "
+             "--drop-rejected to delete them from disk instead.",
+    )
+    parser.add_argument(
+        "--drop-rejected", action="store_true",
+        help="When quality filter flags an example, delete its directory entirely. "
+             "Without this flag, failing examples stay on disk with a metadata marker "
+             "so you can audit / recover them.",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -300,13 +412,23 @@ def main() -> None:
         logger.error("Run with --no-seg to skip pseudo-labeling, or provide a valid checkpoint.")
         sys.exit(1)
 
-    print("\n[2/2] Running segmentation pseudo-labels...")
+    print("\n[2/3] Running segmentation pseudo-labels...")
     confidence_scores = run_pseudo_labels(
         args.output_dir, args.checkpoint, only_new=args.only_new,
     )
 
-    # Step 3: Quality report
+    # Step 3: Confidence-based quality report (printed + saved)
     print_quality_report(confidence_scores, args.output_dir)
+
+    # Step 4: Anatomy/spatial quality filter (validated April 22 combo)
+    if not args.no_quality_filter:
+        print("\n[3/3] Running anatomy/spatial quality filter...")
+        run_quality_filter(
+            args.output_dir,
+            drop_rejected=args.drop_rejected,
+        )
+    else:
+        print("\n[3/3] Quality filter skipped (--no-quality-filter).")
 
     elapsed = time.monotonic() - start
     print(f"\nTotal elapsed: {elapsed:.1f}s")
