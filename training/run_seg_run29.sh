@@ -87,6 +87,27 @@ download_if_missing "meshy_cc0_textured_restructured.tar" "./data_cloud/meshy_cc
 download_if_missing "gemini_li_converted.tar" "./data_cloud/gemini_li_converted"
 download_if_missing "cvat_annotated.tar" "./data_cloud/cvat_annotated"
 download_if_missing "sora_diverse.tar" "./data_cloud/sora_diverse"
+# Incremental sora tars merged into the same dir (added after Run 20 baseline).
+# If the base tar was already extracted, these add the ~1,613 newer chars from
+# Runs 21-22. Without them sora_diverse drops to 854 examples vs Run 20's 2,467.
+if [ -d "./data_cloud/sora_diverse" ]; then
+    SORA_COUNT=$(ls -d ./data_cloud/sora_diverse/*/ 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$SORA_COUNT" -lt 2000 ]; then
+        echo "  sora_diverse only has $SORA_COUNT examples — adding sora_diverse_new tars..."
+        mkdir -p data/tars
+        for t in sora_diverse_new.tar sora_diverse_new2.tar; do
+            rclone copy "hetzner:strata-training-data/tars/$t" ./data/tars/ --transfers 32 --fast-list -P 2>&1 | tail -2 || true
+            if [ -f "./data/tars/$t" ]; then
+                tar xf "./data/tars/$t" -C ./data_cloud/sora_diverse/ --strip-components=1 2>/dev/null || \
+                    tar xf "./data/tars/$t" -C ./data_cloud/ 2>/dev/null || true
+                rm -f "./data/tars/$t"
+            fi
+        done
+        echo "  sora_diverse now: $(ls -d ./data_cloud/sora_diverse/*/ | wc -l | tr -d ' ') examples"
+        # Force quality filter re-run on sora since composition changed
+        rm -f ./data_cloud/sora_diverse/quality_filter.json
+    fi
+fi
 download_if_missing "flux_diverse_clean.tar" "./data_cloud/flux_diverse_clean"
 download_if_missing "gemini_diverse.tar" "./data_cloud/gemini_diverse"
 
