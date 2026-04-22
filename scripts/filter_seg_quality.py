@@ -102,6 +102,40 @@ def discover_masks(data_dir: Path) -> list[tuple[str, Path]]:
 # Quality checks
 # ---------------------------------------------------------------------------
 
+def count_connected_components(mask: np.ndarray) -> int:
+    """4-connected component count via iterative flood fill (no scipy dep)."""
+    if not mask.any():
+        return 0
+    seen = np.zeros_like(mask, dtype=bool)
+    H, W = mask.shape
+    count = 0
+    ys, xs = np.where(mask)
+    for y0, x0 in zip(ys.tolist(), xs.tolist()):
+        if seen[y0, x0]:
+            continue
+        count += 1
+        stack = [(y0, x0)]
+        while stack:
+            y, x = stack.pop()
+            if y < 0 or y >= H or x < 0 or x >= W:
+                continue
+            if seen[y, x] or not mask[y, x]:
+                continue
+            seen[y, x] = True
+            stack.append((y + 1, x)); stack.append((y - 1, x))
+            stack.append((y, x + 1)); stack.append((y, x - 1))
+    return count
+
+
+def load_reference_class_sizes(path: Path) -> dict[int, dict[str, float]] | None:
+    """Load class size reference JSON produced by compute_class_size_reference.py."""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text())
+    # JSON keys are strings; convert back to int
+    return {int(k): v for k, v in data.get("classes", {}).items()}
+
+
 def check_mask(
     mask_path: Path,
     *,
@@ -111,6 +145,11 @@ def check_mask(
     skip_anatomy: bool = False,
     drop_head_below_torso: bool = False,
     max_lr_asymmetry: float | None = None,
+    max_disconn_per_class: int | None = None,
+    max_bg_bleed: float | None = None,
+    min_silhouette_coverage: float | None = None,
+    class_size_ref: dict[int, dict[str, float]] | None = None,
+    class_size_sigma: float = 3.0,
 ) -> list[str]:
     """Check a single segmentation mask against quality criteria.
 
@@ -208,6 +247,72 @@ def check_mask(
                 rn = REGION_NAMES.get(right_id, str(right_id))
                 reasons.append(f"lr_asymmetry({ln}/{rn}={asym:.0%})")
                 break  # One pair is enough to reject
+
+    # --- Per-class disconnected-component count (scattered/fragmented labels) ---
+    if max_disconn_per_class is not None:
+        for rid in range(1, 22):
+            if counts[rid] == 0:
+                continue
+            n_blobs = count_connected_components(arr == rid)
+            if n_blobs > max_disconn_per_class:
+                name = REGION_NAMES.get(rid, str(rid))
+                reasons.append(f"disconn_blobs({name}={n_blobs})")
+                break  # One offender is enough
+
+    # --- Background/foreground bleed: seg painted where image alpha is zero ---
+    # Needs image.png alongside segmentation.png. Compares fg_mask vs alpha.
+    if max_bg_bleed is not None or min_silhouette_coverage is not None:
+        img_path = mask_path.parent / "image.png"
+        alpha_path = mask_path.parent / "fg_mask.png"
+        alpha = None
+        if alpha_path.is_file():
+            try:
+                alpha_img = Image.open(alpha_path).convert("L")
+                alpha = np.asarray(alpha_img, dtype=np.uint8) > 10
+            except Exception:
+                alpha = None
+        if alpha is None and img_path.is_file():
+            try:
+                img_rgba = Image.open(img_path).convert("RGBA")
+                alpha = np.asarray(img_rgba)[:, :, 3] > 10
+            except Exception:
+                alpha = None
+
+        if alpha is not None and alpha.shape == arr.shape:
+            if max_bg_bleed is not None:
+                # fraction of labeled pixels that fall OUTSIDE the character silhouette
+                bleed_px = int(np.logical_and(fg_mask, ~alpha).sum())
+                bleed_frac = bleed_px / fg_pixels if fg_pixels > 0 else 0.0
+                if bleed_frac > max_bg_bleed:
+                    reasons.append(f"bg_bleed({bleed_frac:.1%})")
+
+            if min_silhouette_coverage is not None:
+                alpha_pixels = int(alpha.sum())
+                if alpha_pixels > 0:
+                    covered = int(np.logical_and(alpha, fg_mask).sum())
+                    coverage = covered / alpha_pixels
+                    if coverage < min_silhouette_coverage:
+                        reasons.append(f"low_coverage({coverage:.1%})")
+
+    # --- Class size outlier vs reference distribution (gemini_li hand labels) ---
+    if class_size_ref is not None:
+        for rid in range(1, 22):
+            if counts[rid] == 0:
+                continue
+            ref = class_size_ref.get(rid)
+            if not ref:
+                continue
+            mean, std = ref.get("mean", 0.0), ref.get("std", 0.0)
+            if std <= 0:
+                continue
+            area_frac = counts[rid] / fg_pixels
+            z = abs(area_frac - mean) / std
+            if z > class_size_sigma:
+                name = REGION_NAMES.get(rid, str(rid))
+                reasons.append(
+                    f"class_size_outlier({name}={area_frac:.2f}, z={z:.1f})"
+                )
+                break  # One outlier is enough
 
     return reasons
 
@@ -384,6 +489,43 @@ def main(argv: list[str] | None = None) -> None:
              "(many illustrated characters are drawn in 3/4 view so 0.70 is too tight).",
     )
     parser.add_argument(
+        "--max-disconn-per-class",
+        type=int,
+        default=None,
+        help="Reject if any single class has more than N disconnected blobs. "
+             "Suggested: 3. Catches scattered/fragmented labels.",
+    )
+    parser.add_argument(
+        "--max-bg-bleed",
+        type=float,
+        default=None,
+        help="Reject if fraction of labeled pixels falling in image's background "
+             "(alpha=0) exceeds this. Requires image.png or fg_mask.png alongside. "
+             "Suggested: 0.10.",
+    )
+    parser.add_argument(
+        "--min-silhouette-coverage",
+        type=float,
+        default=None,
+        help="Reject if the fraction of character silhouette (alpha>0) pixels that "
+             "are labeled as non-bg is below this. Suggested: 0.60. Catches labelers "
+             "that segmented only part of the character.",
+    )
+    parser.add_argument(
+        "--class-size-ref",
+        type=Path,
+        default=None,
+        help="Path to class_size_reference.json (built by scripts/compute_class_size_reference.py "
+             "on gemini_li_converted). Rejects examples where any class area is > "
+             "--class-size-sigma standard deviations from the reference mean.",
+    )
+    parser.add_argument(
+        "--class-size-sigma",
+        type=float,
+        default=3.0,
+        help="Sigma threshold for --class-size-ref check (default 3.0).",
+    )
+    parser.add_argument(
         "--max-rejected-grid",
         type=int,
         default=50,
@@ -401,6 +543,14 @@ def main(argv: list[str] | None = None) -> None:
     rejected: dict[str, list[str]] = {}
     rejected_for_grid: list[tuple[str, Path, list[str]]] = []
     per_dataset: dict[str, dict[str, int]] = {}
+
+    # Load class size reference once if provided
+    class_size_ref = None
+    if args.class_size_ref is not None:
+        class_size_ref = load_reference_class_sizes(args.class_size_ref)
+        if class_size_ref is None:
+            logger.warning("Could not load class-size reference %s — check ignored",
+                           args.class_size_ref)
 
     t0 = time.monotonic()
 
@@ -422,6 +572,11 @@ def main(argv: list[str] | None = None) -> None:
                 skip_anatomy=args.skip_anatomy,
                 drop_head_below_torso=args.drop_head_below_torso,
                 max_lr_asymmetry=args.max_lr_asymmetry,
+                max_disconn_per_class=args.max_disconn_per_class,
+                max_bg_bleed=args.max_bg_bleed,
+                min_silhouette_coverage=args.min_silhouette_coverage,
+                class_size_ref=class_size_ref,
+                class_size_sigma=args.class_size_sigma,
             )
             if reasons:
                 rejected[full_key] = reasons

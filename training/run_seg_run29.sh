@@ -147,14 +147,26 @@ for ds_dir in ./data_cloud/humanrig ./data_cloud/vroid_cc0 ./data_cloud/meshy_cc
         2>&1 | tee -a "$LOG_DIR/quality_filter.log"
 done
 
-# Pseudo-labeled / hand-labeled illustrated datasets — apply all checks
+# Pseudo-labeled / hand-labeled illustrated datasets — apply validated checks.
+# Combination tested against hand-labeled control on April 22:
+#   - --drop-head-below-torso: +0.3% on hand labels, +15% on flux (catches flipped heads)
+#   - --max-bg-bleed 0.10:     +0.4% on hand labels, small on pseudo (catches labels
+#                              painted into image background)
+#   - --min-silhouette-coverage 0.50: +1.7% on hand labels, ~3% on pseudo (catches
+#                              incomplete silhouettes)
+# Combined hand-label rejection: ~4.5% — acceptable baseline for good data.
+# Dropped as validated: --max-disconn-per-class (hand labels legitimately have
+# many blobs due to converter aggregation), --class-size-ref (picks up distribution
+# shift not individual outliers).
 for ds_dir in ./data_cloud/gemini_li_converted ./data_cloud/cvat_annotated ./data_cloud/sora_diverse ./data_cloud/flux_diverse_clean ./data_cloud/gemini_diverse; do
     ds_name=$(basename "$ds_dir")
-    echo "  $ds_name (illustrated, full filter + drop-head-below-torso)..."
+    echo "  $ds_name (illustrated, validated filter combo)..."
     python3 scripts/filter_seg_quality.py \
         --data-dirs "$ds_dir" \
         --min-regions 4 --max-single-region 0.70 --min-foreground 0.05 \
         --drop-head-below-torso \
+        --max-bg-bleed 0.10 \
+        --min-silhouette-coverage 0.50 \
         2>&1 | tee -a "$LOG_DIR/quality_filter.log"
 done
 echo ""
