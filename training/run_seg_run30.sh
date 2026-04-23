@@ -136,8 +136,21 @@ print(f'SAM 2.1 large weights ready at $SAM2_CKPT')
 "
 fi
 export SAM2_CHECKPOINT="$SAM2_CKPT"
-export SAM2_CONFIG=sam2.1_hiera_l.yaml
-echo "  OK: SAM 2.1 ready"
+# Config must be a path relative to the sam2 package root, not just the
+# filename. Otherwise Hydra's "pkg://sam2" provider can't resolve it.
+export SAM2_CONFIG=configs/sam2.1/sam2.1_hiera_l.yaml
+
+# Verify SAM 2.1 actually loads before starting the ensemble — it's cheap
+# and saves us from discovering the failure mid-run after hours of work.
+if ! python3 -c "
+from sam2.build_sam import build_sam2
+build_sam2('$SAM2_CONFIG', '$SAM2_CKPT', device='cuda')
+print('SAM 2.1 loaded OK')
+" 2>&1 | tee -a "$LOG_DIR/sam_load_check.log" | grep -q "loaded OK"; then
+    echo "  WARN: SAM 2.1 load test failed. Ensemble will fall back to TTA + joints only."
+else
+    echo "  OK: SAM 2.1 ready and loads correctly"
+fi
 echo ""
 
 # ---------------------------------------------------------------------------
