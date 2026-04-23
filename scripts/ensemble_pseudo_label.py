@@ -74,6 +74,44 @@ REGION_NAMES = [
 # -------------------------------------------------------------------------
 # Step 1: TTA ensemble on Run 20 seg
 # -------------------------------------------------------------------------
+def _predict_logits(
+    model,
+    image_rgb: np.ndarray,
+    device: str,
+    resolution: int = 512,
+) -> np.ndarray:
+    """Run Run 20 seg and return softmax probabilities [C, H_in, W_in].
+
+    Matches the inference pattern from ``run_seg_enrich.predict_segmentation``
+    (no ImageNet normalization, PIL.resize before numpy conversion) so the
+    resulting probability maps are directly comparable to the baseline
+    pseudo-labels produced during Runs 20-29.
+    """
+    H_in, W_in = image_rgb.shape[:2]
+    img_pil = Image.fromarray(image_rgb).convert("RGB").resize(
+        (resolution, resolution), Image.BILINEAR,
+    )
+    img_arr = np.array(img_pil, dtype=np.float32) / 255.0
+    tensor = torch.from_numpy(img_arr.transpose(2, 0, 1)).unsqueeze(0).to(device)
+    with torch.inference_mode():
+        logits = model(tensor)["segmentation"]          # [1, C, H_res, W_res]
+        probs = torch.softmax(logits, dim=1)[0]          # [C, H_res, W_res]
+    probs_np = probs.float().cpu().numpy()
+    # Resize probabilities back to original input resolution
+    if probs_np.shape[1] != H_in or probs_np.shape[2] != W_in:
+        resized = np.zeros((probs_np.shape[0], H_in, W_in), dtype=np.float32)
+        for c in range(probs_np.shape[0]):
+            resized[c] = np.array(
+                Image.fromarray(probs_np[c]).resize((W_in, H_in), Image.BILINEAR),
+            )
+        probs_np = resized
+    return probs_np
+
+
+# Class index pairs that should swap under horizontal flip (character's left ↔ right)
+LR_CLASS_SWAP = [(6, 10), (7, 11), (8, 12), (9, 13), (14, 17), (15, 18), (16, 19)]
+
+
 def run20_tta_predict(
     model,
     image_rgb: np.ndarray,
@@ -83,74 +121,45 @@ def run20_tta_predict(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run Run 20 seg with 4-view TTA. Returns (class_probs [C,H,W], confidence [H,W]).
 
-    Views: identity, horizontal flip, +5° rotate, -5° rotate.
-    Probabilities averaged after un-transforming back to image space.
+    Views: identity, horizontal flip, +5° rotate, -5° rotate. Predictions from
+    each view are un-transformed to original image space, L/R class channels
+    swapped where needed (horizontal flip), then averaged.
     """
-    from run_seg_enrich import predict_segmentation  # existing inference helper
-    from PIL import Image as PILImage
-
-    def _predict_probs(img_np: np.ndarray) -> np.ndarray:
-        """Run Run 20 and return softmax probabilities [C, H, W]."""
-        # predict_segmentation returns (mask, draw_order, confidence) but we want
-        # the raw probabilities. Assume model.forward returns logits; re-call.
-        img_pil = PILImage.fromarray(img_np).convert("RGBA")
-        import torchvision.transforms.functional as TF
-        img_tensor = TF.to_tensor(img_pil.convert("RGB")).unsqueeze(0).to(device)
-        img_tensor = TF.resize(img_tensor, [resolution, resolution])
-        with torch.inference_mode():
-            logits = model(img_tensor)["segmentation"]  # [1, C, H, W]
-            probs = torch.softmax(logits, dim=1)[0]  # [C, H, W]
-        return probs.cpu().numpy()
-
     H, W = image_rgb.shape[:2]
-    prob_sum = None
+    prob_sum = _predict_logits(model, image_rgb, device, resolution)  # View 1
 
-    # View 1: identity
-    probs = _predict_probs(image_rgb)
-    prob_sum = probs.copy()
-
-    # View 2: horizontal flip — flip image, flip probs back, remap L/R classes
+    # View 2: horizontal flip — flip image, flip probs back, swap L/R channels
     flipped = np.ascontiguousarray(image_rgb[:, ::-1])
-    probs_flip = _predict_probs(flipped)[:, :, ::-1]
-    # Swap L/R class channels (seg indices 6↔10, 7↔11, 8↔12, 9↔13, 14↔17, 15↔18, 16↔19)
+    probs_flip = _predict_logits(model, flipped, device, resolution)[:, :, ::-1]
     lr_swap = list(range(22))
-    for l, r in [(6,10),(7,11),(8,12),(9,13),(14,17),(15,18),(16,19)]:
-        lr_swap[l], lr_swap[r] = lr_swap[r], lr_swap[l]
+    for left, right in LR_CLASS_SWAP:
+        lr_swap[left], lr_swap[right] = lr_swap[right], lr_swap[left]
     probs_flip = probs_flip[lr_swap]
-    prob_sum += probs_flip
+    prob_sum = prob_sum + probs_flip
 
     # Views 3+4: rotate ±5°
     for angle in (5, -5):
-        img_pil = Image.fromarray(image_rgb).rotate(angle, resample=Image.BILINEAR, expand=False)
-        rotated = np.array(img_pil)
-        probs_r = _predict_probs(rotated)  # [C, H_rot, W_rot]
-        # Rotate probs back by -angle
-        C = probs_r.shape[0]
+        rotated = np.array(
+            Image.fromarray(image_rgb).rotate(angle, resample=Image.BILINEAR, expand=False),
+        )
+        probs_r = _predict_logits(model, rotated, device, resolution)
+        # Rotate probability maps back by -angle
         probs_back = np.zeros_like(probs_r)
-        for c in range(C):
+        for c in range(probs_r.shape[0]):
             probs_back[c] = np.array(
-                Image.fromarray(probs_r[c]).rotate(-angle, resample=Image.BILINEAR, expand=False)
+                Image.fromarray(probs_r[c]).rotate(-angle, resample=Image.BILINEAR, expand=False),
             )
-        prob_sum += probs_back
+        prob_sum = prob_sum + probs_back
 
     prob_avg = prob_sum / 4.0
-
-    # Resize back to input resolution if different
-    if prob_avg.shape[1] != H or prob_avg.shape[2] != W:
-        resized = np.zeros((prob_avg.shape[0], H, W), dtype=np.float32)
-        for c in range(prob_avg.shape[0]):
-            resized[c] = np.array(
-                Image.fromarray(prob_avg[c]).resize((W, H), Image.BILINEAR)
-            )
-        prob_avg = resized
 
     # Mask out background (alpha=0) regions
     fg = alpha > 10
     prob_avg[:, ~fg] = 0
-    prob_avg[0, ~fg] = 1.0  # background class = 1 outside char
+    prob_avg[0, ~fg] = 1.0  # assert background class outside char
 
-    # Confidence = max class probability
-    confidence = prob_avg.max(axis=0)
+    # Confidence = max class probability at each pixel
+    confidence = prob_avg.max(axis=0).astype(np.float32)
 
     return prob_avg, confidence
 
@@ -274,28 +283,41 @@ def load_sam2(checkpoint_path: str, config_path: str, device: str):
 def process_example(
     example_dir: Path,
     seg_model,
-    sam_generator,
+    sam_generator,  # may be None for --no-sam mode
     device: str,
-) -> tuple[bool, float, bool]:
+) -> tuple[bool, float, bool, list[str]]:
     image_path = example_dir / "image.png"
     if not image_path.exists():
-        return False, 0.0, False
+        return False, 0.0, False, []
 
     img_rgba = Image.open(image_path).convert("RGBA")
     img_np = np.array(img_rgba)
     alpha = img_np[:, :, 3]
     image_rgb = img_np[:, :, :3]
 
-    # Step 1: TTA ensemble
-    probs, confidence = run20_tta_predict(seg_model, image_rgb, alpha, device)
+    components: list[str] = []
 
-    # Step 2: SAM refinement
-    sam_masks = sam2_automatic_masks(sam_generator, image_rgb)
-    seg = refine_with_sam(probs, sam_masks, alpha)
+    # Step 1: TTA ensemble (always on)
+    probs, confidence = run20_tta_predict(seg_model, image_rgb, alpha, device)
+    components.append("run20_tta")
+
+    # Step 2: SAM refinement (optional — skipped if no SAM installed)
+    if sam_generator is not None:
+        try:
+            sam_masks = sam2_automatic_masks(sam_generator, image_rgb)
+            seg = refine_with_sam(probs, sam_masks, alpha)
+            components.append("sam2.1_refine")
+        except Exception as e:
+            logger.warning("SAM refinement failed on %s: %s — falling back to TTA argmax",
+                           example_dir.name, e)
+            seg = probs.argmax(axis=0).astype(np.uint8)
+            seg[alpha < 10] = 0
+    else:
+        seg = probs.argmax(axis=0).astype(np.uint8)
+        seg[alpha < 10] = 0
 
     # Step 3: Joints correction (if joints.json present)
     joints = load_joints(example_dir / "joints.json")
-    used_joints = False
     if joints:
         src_w, src_h = img_rgba.size
         lbl_h, lbl_w = seg.shape
@@ -305,7 +327,7 @@ def process_example(
                 for n, p in joints.items()
             }
         seg = apply_joints_correction(seg, joints)
-        used_joints = True
+        components.append("joints_correct")
 
     # Save
     Image.fromarray(seg).save(example_dir / "segmentation.png")
@@ -322,13 +344,14 @@ def process_example(
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {"id": example_dir.name}
     meta["has_segmentation_mask"] = True
     meta["segmentation_source"] = "ensemble_v1"
-    meta["ensemble_components"] = ["run20_tta", "sam2.1_refine"] + (["joints_correct"] if used_joints else [])
+    meta["ensemble_components"] = components
     meta["seg_mean_confidence"] = round(mean_conf, 4)
     meta["seg_num_regions"] = len(unique_regions)
     meta["seg_regions"] = [REGION_NAMES[r] for r in unique_regions]
     meta_path.write_text(json.dumps(meta, indent=2) + "\n")
 
-    return True, mean_conf, used_joints
+    used_joints = "joints_correct" in components
+    return True, mean_conf, used_joints, components
 
 
 def main() -> int:
@@ -338,6 +361,9 @@ def main() -> int:
                    help="Run 20 seg checkpoint (.pt)")
     p.add_argument("--sam-checkpoint", default=os.environ.get("SAM2_CHECKPOINT", ""))
     p.add_argument("--sam-config", default=os.environ.get("SAM2_CONFIG", "sam2.1_hiera_l.yaml"))
+    p.add_argument("--no-sam", action="store_true",
+                   help="Skip SAM 2.1 refinement step. Uses TTA + joints only. "
+                        "Useful for local sanity-checking or if SAM install fails.")
     p.add_argument("--device", default="cuda")
     p.add_argument("--only-missing", action="store_true",
                    help="Skip examples whose segmentation_source is already ensemble_v1")
@@ -350,15 +376,22 @@ def main() -> int:
         logger.error("input-dir not found: %s", args.input_dir)
         return 1
 
-    if not args.sam_checkpoint:
-        logger.error("SAM 2.1 checkpoint required. Set SAM2_CHECKPOINT env or --sam-checkpoint.")
-        return 1
-
     logger.info("Loading Run 20 seg model...")
     seg_model = load_run20_seg(args.seg_checkpoint, args.device)
 
-    logger.info("Loading SAM 2.1 mask generator...")
-    sam_gen = load_sam2(args.sam_checkpoint, args.sam_config, args.device)
+    sam_gen = None
+    if args.no_sam:
+        logger.info("--no-sam set: running TTA + joints only (no SAM refinement)")
+    elif not args.sam_checkpoint:
+        logger.warning("No SAM 2.1 checkpoint provided — running TTA + joints only. "
+                       "Set SAM2_CHECKPOINT or --sam-checkpoint to enable full ensemble.")
+    else:
+        try:
+            logger.info("Loading SAM 2.1 mask generator...")
+            sam_gen = load_sam2(args.sam_checkpoint, args.sam_config, args.device)
+        except Exception as e:
+            logger.error("Failed to load SAM 2.1: %s — continuing without it.", e)
+            sam_gen = None
 
     examples = sorted(
         d for d in args.input_dir.iterdir()
@@ -383,7 +416,7 @@ def main() -> int:
 
     for i, ex in enumerate(examples):
         try:
-            success, mc, used_joints = process_example(ex, seg_model, sam_gen, args.device)
+            success, mc, used_joints, _ = process_example(ex, seg_model, sam_gen, args.device)
             if success:
                 ok += 1
                 conf_sum += mc
