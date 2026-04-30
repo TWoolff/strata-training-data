@@ -8,6 +8,13 @@ Per advisor meeting at Erhvervhus Sjælland: **focus on shipping v1 (2D rigging 
 
 **v1 product = 2D character → rigged + animated 2D mesh, exported to GLB/Spine/JSON.** No 3D mesh generation, no UV texture inpainting in v1. Those become v2 work after funding.
 
+### April 30, 2026 — Run 31 results + Run 20 shipped
+
+- **Run 31 (DINOv2-base backbone) killed at epoch 5.** Trajectory was 0.30 → 0.38 → 0.39 → 0.41 → 0.42 with val_loss already turning upward (overfit). Linear extrapolation: ~0.50 at epoch 20 — far below Run 20's 0.6485. Cost: ~$1.50.
+- **Architecture lever now exhausted.** Run 23 (ResNet-50 + Pascal-Person-Part) plateaued 0.38, Run 31 (DINOv2 + ASPP) plateaued 0.42. Combined with data-expansion exhaustion (Runs 24-30), no remaining cheap lever. **Run 20 is the seg ceiling.**
+- **Run 20 ONNX exported and bundled in Strata.** Strata previously shipped a Mar 18 model (pre-Run 20). Now ships Run 20 (0.6485 mIoU). File at `../strata/src-tauri/models/segmentation.onnx`. Old model backed up locally. ONNX uploaded to bucket at `models/onnx_run20_seg/segmentation_run20.onnx`.
+- **AI work for v1 essentially done.** No more seg training. Move to UX polish + beta recruitment per the v1 ship checklist.
+
 ### v1 Active Models
 
 | # | Model | Current | Ship Target | Critical for v1? |

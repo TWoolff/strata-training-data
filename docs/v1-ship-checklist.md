@@ -27,13 +27,15 @@
 
 ## Status — AI Models (training-data repo)
 
-### Segmentation — `0.6485 mIoU` (Run 20)
+### Segmentation — `0.6485 mIoU` (Run 20) — **SHIPPED**
 
-- [x] Run 20 baseline shipped
+- [x] Run 20 baseline established
 - [x] Boundary softening tuned
 - [x] Strata post-processing improvements (confidence-gated cleanup, bilinear upscaling, small-component removal)
-- [ ] One more run targeting 0.68-0.70 (Run 28/29 in flight as of April 22)
-- [ ] **Decision after current run:** accept current best, stop new training, focus on Strata UX
+- [x] Run 28/29/30 (data expansion + label cleaning + ensemble pseudo-labels) — all underperformed Run 20
+- [x] Run 31 (DINOv2 backbone) — killed at epoch 5, didn't beat Run 20
+- [x] **Run 20 exported to ONNX + bundled in Strata** (April 30, 2026)
+- [x] Decision: stop seg training. Architecture and data-expansion levers both exhausted.
 
 ### Joint Refinement — `0.00121 offset`
 
@@ -185,3 +187,5 @@ Candidates ranked by likelihood to pay:
 - **April 22, 2026:** Pivot to v1-only focus. Defer all 3D / texture inpainting work. Per Erhvervhus Sjælland advisor.
 - **April 22, 2026:** Seg target relaxed from 0.75 → 0.70. Run 28/29 is the final seg attempt for v1.
 - **April 22, 2026:** Stop work on StyleTex test, geometry maps, SAM 3D integration.
+- **April 30, 2026:** Run 31 (DINOv2 backbone) killed at epoch 5 (~$1.50). Architecture lever confirmed exhausted. Run 20 (0.6485) is the final ship checkpoint.
+- **April 30, 2026:** Run 20 exported to ONNX (`segmentation_run20.onnx`, 67.8 MB) and bundled in Strata, replacing the Mar 18 model. Old model backed up locally as `.run18-pre-run20-backup`. AI work for v1 considered complete — focus 100% on Strata UX, beta recruitment, and fundraising prep.
