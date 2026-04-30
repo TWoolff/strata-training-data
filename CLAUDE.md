@@ -1,21 +1,71 @@
 # Strata Synthetic Data Pipeline
 
-Blender-based pipeline that generates labeled training data for Strata's 6 ONNX AI models. Runs independently of the Strata codebase.
+Blender-based pipeline that generates labeled training data for Strata's ONNX AI models. Runs independently of the Strata codebase.
 
-## Model Targets & Current Scores
+## Strategic Direction (April 22, 2026)
 
-**Goal:** Uploaded 2D character illustrations look natural from all generated angles when rigged and posed.
+Per advisor meeting at Erhvervhus Sjælland: **focus on shipping v1 (2D rigging + animation), defer v2 (3D)**. Investor signal is "users + LOIs" not "model performance."
 
-| # | Model | Current | Ship Target | Stretch | Key Issue If Bad |
-|---|-------|---------|-------------|---------|------------------|
-| 1 | **Segmentation** | 0.6485 mIoU | **0.75** | 0.80 | Background fringe, bg between legs, character parts deleted |
-| 2 | **Joint Refinement** | 0.00121 offset | **0.0005** | 0.0003 | Joints misplaced → limbs bend wrong |
-| 3 | **Weight Prediction** | 0.0215 MAE | **0.01** | 0.005 | Mesh deformation artifacts when posed |
-| 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | **0.002** | 0.001 | Visible seams where character removed |
-| 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | **0.08** | 0.05 | Back/sides of 3D char look wrong |
-| 6 | **3D Mesh** | Blurry (old U-Net) | **Clean geometry** | PBR | Character looks flat, geometry wrong |
+**v1 product = 2D character → rigged + animated 2D mesh, exported to GLB/Spine/JSON.** No 3D mesh generation, no UV texture inpainting in v1. Those become v2 work after funding.
 
-### Priority Order (April 21, 2026 — end of day)
+### v1 Active Models
+
+| # | Model | Current | Ship Target | Critical for v1? |
+|---|-------|---------|-------------|------------------|
+| 1 | **Segmentation** | 0.6485 mIoU | **0.70 (relaxed)** | ✅ Yes — drives anatomy regions for skinning |
+| 2 | **Joint Refinement** | 0.00121 offset | **0.0005** | ✅ Yes — bone placement |
+| 3 | **Weight Prediction** | 0.0215 MAE | **0.01** | ✅ Yes — skinning weights for 2D mesh deform |
+| 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | Already ships | ✅ Yes — but already good enough |
+
+**Seg target relaxed from 0.75 → 0.70.** Run 20 baseline (0.6485) gets us close to ship quality with Strata's post-processing improvements (confidence-gated cleanup, bilinear logit upscaling, small component removal). Push to 0.70 if cheap, accept 0.65 + post-processing if not.
+
+### Deferred Models (v2, post-funding)
+
+| # | Model | Status | Why Deferred |
+|---|-------|--------|--------------|
+| 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | Only matters if 3D works |
+| 6 | **3D Mesh** | Validated but slow pipeline | v2 — deeper engineering than v1 fundraising window allows |
+
+### v1 Ship Checklist
+
+**AI work (limited scope):**
+- [x] Joint model functional (0.00121 offset)
+- [x] Weight model functional (0.0215 MAE)
+- [x] 2D inpainting model functional
+- [ ] One more seg run to push 0.65 → 0.68-0.72 (Run 28/29 already in flight)
+- [ ] Bundle current best models as ONNX in Strata desktop
+
+**Strata desktop pipeline (the real work):**
+- [ ] Import flow: drag-drop illustration → segmentation → preview
+- [ ] Auto-skeleton placement preview + editor (already built per memory)
+- [ ] Weight painting fallback when AI weights are bad
+- [ ] Pose / animate UI (existing)
+- [ ] Export GLB/Spine JSON (existing)
+- [ ] First-run experience: model download, sample character
+- [ ] Error handling for non-character images, weird poses, transparent failures
+
+**Validation:**
+- [ ] 5-10 beta testers from target group
+- [ ] Watch them use the app, capture friction points
+- [ ] Demo videos of complete workflows (import → animated)
+- [ ] Letters of Intent from 2-3 professionals
+
+**Time allocation (per advisor):**
+- 20% AI — finish current seg run, no new texture/3D work
+- 40% Strata UX polish
+- 30% user research + beta recruitment
+- 10% fundraising prep
+
+### Priority Order (April 22, 2026 — v1 pivot)
+
+1. **Strata UX/UI work** — the bottleneck for funding is "professionals using it" not "better models"
+2. **Recruit beta testers** — pick a target group (2D animators? indie game devs? VTuber riggers?), find 5-10
+3. **Segmentation** — finish Run 28/29, accept whatever lands. Stop after one more attempt.
+4. **Joint / Weight refinement** — only if specific failure modes block the v1 demo
+5. ~~Texture Inpainting~~ — DEFERRED to v2
+6. ~~3D Mesh~~ — DEFERRED to v2
+
+### Historical Run Notes (v2 work, kept for reference)
 
 1. **Segmentation** — Run 20 baseline (0.6485) still best. Four rounds of pseudo-label-based data expansion (Runs 24-27) all failed to beat it, including See-Through SAM with Dr. Li's joint-based converter. Architectural experiment (Run 23: ResNet-50 + Pascal-Person-Part pretrain) **also failed** at 0.3819 — same "adjacent-domain priors don't transfer to illustrated chars" lesson as the April 15 SAM-HQ fine-tune. **Both major cheap levers are exhausted.** Remaining options: (a) **Run 28 tomorrow** — clean retest of gemini_diverse under Run 20 hyperparams (the data-expansion experiment confounded by Runs 25/27's wrong LR/epochs). (b) **CVAT hand-labels** — 300-500 illustrated chars annotated by hand, convert via convert_li_labels.py (how cvat_annotated wt 10.0 and gemini_li_converted wt 3.0 were built). ~2 days human work, real GT, highest signal-to-noise we have. (c) Accept Run 20 as ship baseline, pivot to **Texture Inpainting** where there's clearer headroom.
 2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: test StyleTex (SIGGRAPH 2024, Apache 2.0) or generate style-diverse training pairs.
