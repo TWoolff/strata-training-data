@@ -2,187 +2,34 @@
 
 Blender-based pipeline that generates labeled training data for Strata's ONNX AI models. Runs independently of the Strata codebase.
 
-## Strategic Direction (April 22, 2026)
+## Strategic Direction
 
-Per advisor meeting at Erhvervhus Sjælland: **focus on shipping v1 (2D rigging + animation), defer v2 (3D)**. Investor signal is "users + LOIs" not "model performance."
+Per advisor at Erhvervhus Sjælland: **focus on shipping v1 (2D rigging + animation), defer v2 (3D)**. Investor signal is "users + LOIs" not model performance.
 
-**v1 product = 2D character → rigged + animated 2D mesh, exported to GLB/Spine/JSON.** No 3D mesh generation, no UV texture inpainting in v1. Those become v2 work after funding.
+**v1 product = 2D character → rigged + animated 2D mesh, exported to GLB/Spine/JSON.** No 3D mesh generation, no UV texture inpainting in v1.
 
-### April 30, 2026 — Run 31 results + Run 20 shipped
+**Status (April 30, 2026): AI work for v1 is done.** Run 20 (0.6485 mIoU) is bundled in Strata. Architecture lever exhausted (Run 23 + Run 31 both failed). Data-expansion lever exhausted (Runs 24-30 all underperformed Run 20). See `docs/run-history.md` for the detailed record.
 
-- **Run 31 (DINOv2-base backbone) killed at epoch 5.** Trajectory was 0.30 → 0.38 → 0.39 → 0.41 → 0.42 with val_loss already turning upward (overfit). Linear extrapolation: ~0.50 at epoch 20 — far below Run 20's 0.6485. Cost: ~$1.50.
-- **Architecture lever now exhausted.** Run 23 (ResNet-50 + Pascal-Person-Part) plateaued 0.38, Run 31 (DINOv2 + ASPP) plateaued 0.42. Combined with data-expansion exhaustion (Runs 24-30), no remaining cheap lever. **Run 20 is the seg ceiling.**
-- **Run 20 ONNX exported and bundled in Strata.** Strata previously shipped a Mar 18 model (pre-Run 20). Now ships Run 20 (0.6485 mIoU). File at `../strata/src-tauri/models/segmentation.onnx`. Old model backed up locally. ONNX uploaded to bucket at `models/onnx_run20_seg/segmentation_run20.onnx`.
-- **AI work for v1 essentially done.** No more seg training. Move to UX polish + beta recruitment per the v1 ship checklist.
+**Next focus areas (per `docs/v1-ship-checklist.md`):**
+- Strata desktop UX polish (40% of time)
+- Beta tester recruitment + user research (30%)
+- Fundraising prep — demo videos, LOIs, pitch material (10%)
+- AI work only if specific failure modes block the v1 demo (20%)
 
-### v1 Active Models
+## v1 Active Models
 
-| # | Model | Current | Ship Target | Critical for v1? |
-|---|-------|---------|-------------|------------------|
-| 1 | **Segmentation** | 0.6485 mIoU | **0.70 (relaxed)** | ✅ Yes — drives anatomy regions for skinning |
-| 2 | **Joint Refinement** | 0.00121 offset | **0.0005** | ✅ Yes — bone placement |
-| 3 | **Weight Prediction** | 0.0215 MAE | **0.01** | ✅ Yes — skinning weights for 2D mesh deform |
-| 4 | **Inpainting** (2D bg) | 0.0028 val/l1 | Already ships | ✅ Yes — but already good enough |
+| # | Model | Current | Ship Target | v1? |
+|---|-------|---------|-------------|-----|
+| 1 | **Segmentation** | 0.6485 mIoU | 0.70 (relaxed) | ✅ shipped |
+| 2 | **Joint Refinement** | 0.00121 offset | 0.0005 | ✅ shipped |
+| 3 | **Weight Prediction** | 0.0215 MAE | 0.01 | ✅ shipped |
+| 4 | **2D Inpainting** (bg) | 0.0028 val/l1 | already ships | ✅ shipped |
 
-**Seg target relaxed from 0.75 → 0.70.** Run 20 baseline (0.6485) gets us close to ship quality with Strata's post-processing improvements (confidence-gated cleanup, bilinear logit upscaling, small component removal). Push to 0.70 if cheap, accept 0.65 + post-processing if not.
+Seg target relaxed 0.75 → 0.70 because Strata's post-processing improvements (confidence-gated cleanup, bilinear logit upscaling, small-component removal) compensate for a chunk of the gap. Run 20 + post-processing is the actual user experience.
 
-### Deferred Models (v2, post-funding)
-
-| # | Model | Status | Why Deferred |
-|---|-------|--------|--------------|
-| 5 | **Texture Inpainting** (UV) | 0.1282 val/l1 | Only matters if 3D works |
-| 6 | **3D Mesh** | Validated but slow pipeline | v2 — deeper engineering than v1 fundraising window allows |
-
-### v1 Ship Checklist
-
-**AI work (limited scope):**
-- [x] Joint model functional (0.00121 offset)
-- [x] Weight model functional (0.0215 MAE)
-- [x] 2D inpainting model functional
-- [ ] One more seg run to push 0.65 → 0.68-0.72 (Run 28/29 already in flight)
-- [ ] Bundle current best models as ONNX in Strata desktop
-
-**Strata desktop pipeline (the real work):**
-- [ ] Import flow: drag-drop illustration → segmentation → preview
-- [ ] Auto-skeleton placement preview + editor (already built per memory)
-- [ ] Weight painting fallback when AI weights are bad
-- [ ] Pose / animate UI (existing)
-- [ ] Export GLB/Spine JSON (existing)
-- [ ] First-run experience: model download, sample character
-- [ ] Error handling for non-character images, weird poses, transparent failures
-
-**Validation:**
-- [ ] 5-10 beta testers from target group
-- [ ] Watch them use the app, capture friction points
-- [ ] Demo videos of complete workflows (import → animated)
-- [ ] Letters of Intent from 2-3 professionals
-
-**Time allocation (per advisor):**
-- 20% AI — finish current seg run, no new texture/3D work
-- 40% Strata UX polish
-- 30% user research + beta recruitment
-- 10% fundraising prep
-
-### Priority Order (April 22, 2026 — v1 pivot)
-
-1. **Strata UX/UI work** — the bottleneck for funding is "professionals using it" not "better models"
-2. **Recruit beta testers** — pick a target group (2D animators? indie game devs? VTuber riggers?), find 5-10
-3. **Segmentation** — finish Run 28/29, accept whatever lands. Stop after one more attempt.
-4. **Joint / Weight refinement** — only if specific failure modes block the v1 demo
-5. ~~Texture Inpainting~~ — DEFERRED to v2
-6. ~~3D Mesh~~ — DEFERRED to v2
-
-### Historical Run Notes (v2 work, kept for reference)
-
-1. **Segmentation** — Run 20 baseline (0.6485) still best. Four rounds of pseudo-label-based data expansion (Runs 24-27) all failed to beat it, including See-Through SAM with Dr. Li's joint-based converter. Architectural experiment (Run 23: ResNet-50 + Pascal-Person-Part pretrain) **also failed** at 0.3819 — same "adjacent-domain priors don't transfer to illustrated chars" lesson as the April 15 SAM-HQ fine-tune. **Both major cheap levers are exhausted.** Remaining options: (a) **Run 28 tomorrow** — clean retest of gemini_diverse under Run 20 hyperparams (the data-expansion experiment confounded by Runs 25/27's wrong LR/epochs). (b) **CVAT hand-labels** — 300-500 illustrated chars annotated by hand, convert via convert_li_labels.py (how cvat_annotated wt 10.0 and gemini_li_converted wt 3.0 were built). ~2 days human work, real GT, highest signal-to-noise we have. (c) Accept Run 20 as ship baseline, pivot to **Texture Inpainting** where there's clearer headroom.
-2. **Texture Inpainting** — v3 ControlNet at 0.1282 val/l1 but fails on illustrated styles (lichtung cat test). Next: test StyleTex (SIGGRAPH 2024, Apache 2.0) or generate style-diverse training pairs.
-3. **3D Mesh** — SAM 3D Objects validated + single-view projection pipeline built. Works end-to-end for PBR-style characters. Needs better texture inpainting for illustrated styles.
-4. **Joint Refinement** — ViTPose++ fine-tune. Current model functional (0.00121 offset).
-5. **Weight Prediction** — Study Puppeteer architecture. Current model functional (0.0215 MAE).
-6. **Inpainting** (2D bg) — Low priority. User complaint is actually about segmentation quality (see #1), not inpainting quality.
-
-### April 15 SAM-HQ Seg Run — What We Learned
-
-Ran Dr. Li's V3 training pipeline with her SAM-HQ ViT-B encoder frozen, fresh 22-class decoder, 8000 steps. Trajectory:
-
-| Step | val/mIoU |
-|------|----------|
-| 1000 | 0.198 |
-| 2000 | 0.223 |
-| 3000 | 0.239 |
-| 4000 | 0.269 |
-| 5000 | 0.288 |
-
-Killed at step ~5500. Linear extrapolation: ~0.35 at step 8000 — still far below Run 20's 0.6485. Lessons:
-- Her encoder was pretrained for clothing/style boundaries, not anatomy — may need unfreezing to adapt
-- Decoder from scratch at 8K steps is cold-start; needs 20K+ for meaningful learning
-- Multiple bugs in upstream V3 code required patches (gradient_checkpointing, checkpoint_total_limit, dataset_seg exceptions, resume_from_checkpoint unimplemented)
-
-**Decision:** abandon this approach for now. Focus on expanding data + leveraging See-Through via *pseudo-labeling* (not encoder fine-tune).
-
-### April 20-21 Experiments — What We Learned (Runs 23-27, ~$25-30 A100)
-
-Five runs, no wins. Root causes identified after the fact.
-
-| Run | Experiment | Val mIoU | Root cause of failure |
-|-----|------------|----------|----------------------|
-| 24 | +gemini_diverse wt 3.5, softening OFF (bug), meshy tar missing (bug) | broken | pipeline bugs |
-| 25 | +gemini_diverse wt 2.0, softening ON, **LR 5e-6 (half of Run 20), 12 epochs (60% of Run 20)** | 0.5965 @ e19 (killed) | confounded experiment — hyperparams changed alongside data |
-| 26 | See-Through SAM + naive L/R+vertical heuristic converter | 0.5471 @ e19 | naive converter drops hair_back, bad splits |
-| 27 | See-Through SAM + Dr. Li converter + joints | 0.5664 @ e19 (killed) | inherited Run 25's hyperparams; noisy→mislocalized labels under reduced LR/epochs |
-| 23 | ResNet-50 + Pascal-Person-Part pretrain (architectural) | 0.3819 @ e13 (killed) | adjacent-domain priors don't transfer; severe overfitting (train 0.12, val 0.35) |
-
-**Conclusions:**
-- **Confounded experiments are worse than no experiment.** Run 25 changed LR 1e-5→5e-6 and epochs 20→12 *at the same time* as adding gemini_diverse. All later runs inherited those wrong hyperparams. We never cleanly tested whether gemini_diverse helps. Run 28 (queued tomorrow) fixes this.
-- **Adjacent-domain pretraining doesn't transfer to illustrated chars.** Confirmed twice: SAM-HQ encoder (April 15, plateaued 0.29), ResNet-50 + Pascal-Person-Part (April 21, plateaued 0.38). Real human photos and Live2D anime don't bridge the stylized-char distribution gap.
-- See-Through+Li labels pass quality filter at 4× the rate of Run 20 self-distill (5.2% vs 23% rejected), but **well-formed ≠ correct.** Quality filter checks shape, not pixel localization. Noisy-but-spatially-correct > well-formed-but-mislocalized.
-- **Boundary softening (radius=2) remains the single biggest lever** (+8.8% mIoU). Run 24 disabled it by accident and that alone cost ~0.05 mIoU.
-- **The reproduction check is cheap and must come first.** Should have run Run 20's config verbatim on current code before stacking 4 experiments on top. Would have saved ~$15.
-
-### April 21 Pipeline Hygiene Rules (lessons from $25-30 of debugging)
-
-1. **One variable per experiment.** If changing data, keep hyperparams. If changing architecture, keep data and hyperparams.
-2. **Reproduction check before any new experiment.** Shortest possible run (~1 hr) reproducing a known baseline on current code/data/deps. If that doesn't land, debug before spending more.
-3. **Pre-flight tar integrity.** A silent tar-not-found (e.g., Run 24's `meshy_cc0_restructured.tar` vs actual `meshy_cc0_textured_restructured.tar`) costs a full run. Verify sizes and names.
-4. **Ctrl+C, never Ctrl+Z.** Suspended pipe-with-tee jobs leave zombie CUDA contexts that take 30 min to untangle on a live A100.
-5. **Archive .pt with .onnx every time.** Joints .pt was missing from bucket for months. Recovered from HD April 21.
-
-### Path to Ship Quality (revised plan — April 21)
-
-**Seg → 0.75 mIoU:**
-1. **Run 23 (in progress)** — ResNet-50 + Pascal-Person-Part anatomy-pretrained backbone. Architectural experiment, orthogonal to label quality. Could break the mobilenet ceiling.
-2. If Run 23 flat → **CVAT hand-labels** on 200-500 illustrated chars. Real GT. Slow (~2 days of human work) but the only path that consistently moves the needle when pseudo-labeling plateaus.
-3. Per-class boundary softening (radius=1 for thin classes, radius=3 for large) — still untried lever on top of Run 20's radius=2.
-4. Skip: more pseudo-labeling (Run 20 self-distill or See-Through). We've tested this with 4 label sources and all are ≤ Run 20 baseline.
-
-**Texture Inpainting → 0.08 val/l1 + style-consistent:**
-1. Option A: test StyleTex (queued, `training/run_styletex_test.sh`) — SDS-based, pretrained
-2. Option B: generate style-diverse training data (watercolor, anime, hand-painted textures via NPR shaders on Meshy chars or Gemini img2img)
-3. Option C: consider SDXL Inpainting or Flux Fill as base model (richer priors)
-4. Add perceptual loss (LPIPS) on decoded output — current MSE-on-noise doesn't optimize for visual coherence
-
-**3D Mesh:**
-- Current pipeline works. Needs better inpainting to unlock illustrated-style workflows.
-- Long-term: fine-tune TRELLIS.2 on our characters if SAM 3D quality plateaus
-
-### Next A100 Runs Queued
-
-**Run 23: ResNet-50 + Pascal-Person-Part anatomy pretrain (RUNNING April 21)**
-- `training/run_a100_run23_combined.sh` on main
-- 6-8 hrs on A100
-- Hypothesis: architectural change (backbone + anatomy priors) breaks pseudo-label ceiling
-- Result will determine whether next lever is more architecture or CVAT hand-labels
-
-**Run A (ABANDONED, April 21): Expanded seg training via See-Through pseudo-labels**
-- 4 rounds of pseudo-label experiments (Runs 24-27) all underperformed Run 20 baseline
-- Don't retry this lever. See "April 20-21 Pseudo-label Experiments" above.
-
-**Run B: StyleTex test on lichtung cat (~1.5 hrs)**
-- `training/run_styletex_test.sh` ready
-- 0-shot inference, no new training
-- Tests whether style-aware texture transfer works for illustrated characters
-
-## Model Strategy
-
-Strata's unique value: combining 3D reconstruction with illustrated character understanding for animation-ready rigging.
-
-| # | Task | New Model | License | Status |
-|---|------|-------|---------|--------|
-| 1 | **Segmentation** | Dr. Li's SAM-HQ encoder + our 22-class decoder | Apache 2.0 | Training code April 12 |
-| 2 | **3D Mesh** | SAM 3D Objects | SAM License (commercial OK) | Validated |
-| 3 | **Skeleton** | SAM 3D Body / ViTPose++ | SAM / Apache 2.0 | Tested — good on humanoid |
-| 4 | **Texture** | Multi-view projection + ControlNet inpainting | Our code | Training now |
-| 5 | **Weights** | Puppeteer / current MLP | TBD | Study architecture |
-| 6 | **Backup 3D** | TRELLIS.2 (4B params, MIT) | MIT | Needs HF access |
-
-**New Strata Pipeline (vision):**
-1. User imports front view illustration
-2. SAM 3D Objects → 3D mesh geometry (discard blurry texture)
-3. Project artist's illustration onto mesh (pixel-perfect where visible)
-4. Optional side/back views → more coverage
-5. ControlNet inpaints remaining UV gaps (~10-30% of surface)
-6. Segmentation → anatomy regions, SAM 3D Body → skeleton, weight prediction
-7. Export rigged, textured, animatable 3D character
+**Deferred to v2 (post-funding):**
+- Texture Inpainting (UV) — best 0.1282 val/l1 with geometry maps; fails on illustrated styles
+- 3D Mesh — SAM 3D Objects validated, single-view projection pipeline built, needs better inpainting
 
 ## 22-Class Anatomy Schema
 
@@ -200,7 +47,7 @@ Strata's unique value: combining 3D reconstruction with illustrated character un
 | 9 | hand_l | 20 | accessory |
 | 10 | shoulder_r | 21 | hair_back |
 
-Maps directly to skeleton bones — each class = one bone's influence zone. Dr. Li's 19-class schema is clothing-based (topwear, legwear) and cannot drive animation.
+Maps directly to skeleton bones — each class = one bone's influence zone. Class 20 (accessory) is remapped to background in the dataset loader (unused by rigging pipeline). Dr. Li's 19-class clothing schema (topwear, legwear) cannot drive animation — that's why we have our own.
 
 ## Project Layout
 
@@ -232,32 +79,28 @@ blender --background --python run_pipeline.py -- \
 
 Requires Blender 4.0+/5.0+. Orthographic camera, 512×512, transparent bg, 22 Emission materials for seg masks.
 
+## Storage & Bucket
+
+- **Hetzner bucket** (`strata-training-data` at `fsn1.your-objectstorage.com`) — training-ready output only
+- **External HD** (`/Volumes/TAMWoolff/data/`) — raw source data, never delete originals
+- **Local SSD** — avoid large datasets
+
+```bash
+# Always use `rclone copy` (never `sync`, never `aws s3 sync`)
+rclone copy ./output/ hetzner:strata-training-data/output/ --transfers 32 --checkers 64 --fast-list --size-only -P
+```
+
+Inventory of bucket contents and frozen val/test splits is in `docs/run-history.md`.
+
 ## Asset Sources & Licensing
 
 Only CC0, CC-BY, CC-BY-SA. **Never CC-NC.**
 
 **Prohibited:** Mixamo (Adobe ToS), Live2D (proprietary), ArtStation/curated_diverse (no AI permission), CartoonSegmentation (no license).
 
-## Storage & Bucket
-
-- **Hetzner bucket** (`strata-training-data` at `fsn1.your-objectstorage.com`) — training-ready output only
-- **External HD** (`/Volumes/TAMWoolff/data/`) — raw source data, never delete originals
-- **Local SSD** — avoid large datasets
-- **Always use `rclone copy`** (never `sync`, never `aws s3 sync`)
-
-```bash
-rclone copy ./output/ hetzner:strata-training-data/output/ --transfers 32 --checkers 64 --fast-list --size-only -P
-```
-
-### Key Bucket Contents
-
-Tars in `tars/` prefix: humanrig (16.8G), humanrig_posed (12G), meshy_cc0_textured_restructured (2.8G), flux_diverse_clean (300M), sora_diverse (380M), gemini_li_converted (223M), vroid_cc0 (203M), cvat_annotated (9M), soft_targets_precomputed (1.9G), demo_back_view_pairs (3.4G).
-
-Texture inpainting tars in root: texture_pairs_front (4.9G, with geometry maps), texture_pairs_side (2.8G), texture_pairs_back (2.8G), texture_pairs_100avatars (113M). Total ~4,135 pairs.
-
-Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use this file.
-
 ## A100 Training Workflow
+
+If we ever return to training (post-funding, post-v1):
 
 1. Prep locally → upload to bucket → push code
 2. Spin up A100 → `cloud_setup.sh lean`
@@ -265,88 +108,22 @@ Frozen val/test splits: `data_cloud/frozen_val_test.json`. All runs must use thi
 4. Destroy instance
 5. Download checkpoints to Mac → benchmark
 
-## Key Learnings
-
-**Segmentation (best: run 20, 0.6485 mIoU):**
-- Boundary label softening = biggest lever (+8.8% mIoU). Precompute as `.npz` files.
-- Softening hurts thin regions (neck, accessory). Exclude or reduce radius for small regions (`SOFTENING_EXCLUDE_CLASSES = {2, 21}` auto-excludes).
-- Clothing-based labels (SAM, Dr. Li's 19-class) don't help — anatomy ≠ clothing.
-- SAM 3D Body labels don't help — body mesh ≠ clothing silhouette.
-- **SAM-HQ encoder fine-tune (Apr 15) underperformed** — frozen encoder + fresh decoder plateaued ~0.29 at step 5500. Encoder was trained for clothing boundaries, not anatomy.
-- **Pseudo-label data expansion is exhausted (Apr 20-21, Runs 24-27).** Tried Run 20 self-distill, naive 19→22 heuristic converter, and See-Through SAM + Dr. Li's joint-based converter. All ≤ Run 20 baseline. Quality filter checks shape (region count, area ratios), not spatial correctness — well-formed labels can still be mislocalized. **Don't retry this lever.** Next cheap architectural experiment: Run 23 (ResNet-50 + Pascal-Person-Part pretrain). If flat, move to CVAT hand-labels.
-- Bootstrapping loop DOES work when teacher was trained on aligned data (GT-based teacher on 3D-rendered data expanding to more rendered data). Does NOT work for cross-domain transfer (3D-trained teacher on illustrated data).
-- Class 20 remapped to background (unused by rigging pipeline).
-- A100 is 40GB. Batch 16 for soft targets. Use frozen val/test splits.
-- **`gemini_li_converted` was Dr. Li's 694 *hand-labeled* examples through `convert_li_labels.py` with joints.** That's real GT, not pseudo-labels — it had weight 3.0 in Run 20 for a reason. Pseudo-labels from See-Through SAM do not substitute for hand labels.
-- **Label cleaning is a small but real lever (Apr 22, Run 29).** Dropping anatomically-impossible pseudo-labels (head below torso + bg-bleed + low silhouette coverage) lifted val mIoU by +0.007 over Run 28. Not enough to clear Run 20, but validates the filter combo for reuse in future experiments. Flags on `filter_seg_quality.py`: `--drop-head-below-torso --max-bg-bleed 0.10 --min-silhouette-coverage 0.50`. Also ported into `ingest_gemini.py` so new Gemini/Sora ingestions are cleaned at entry.
-- **Data-expansion track summary (April 2026).** Ran 6 experiments (24-29) testing pseudo-labeling + data expansion. None cleanly beat Run 20's 0.6485 test. Best was Run 29 at 0.6095 val (~0.640 test). Conclusion: more pseudo-labeled illustrated data, even cleaned, can't close the ~0.08 gap to ship target alone. Next tier of levers: DINOv2 backbone (+0.03-0.05 expected), CVAT hand labels (+0.02-0.04), ensemble pseudo-labeling via SAM 2.1 + joints (+0.02-0.04, script sketched at `scripts/ensemble_pseudo_label.py`).
-
-**Texture Inpainting (best: run 4 / v3, 0.1282 val/l1):**
-- ControlNet on SD 1.5 Inpainting, 9-channel input (noisy latent + mask + partial).
-- Run 1: 500 pairs → 0.1509. Run 2: 2,891 pairs → 0.1520. Run 3: 2,891 pairs, 100 epochs → 0.1497.
-- **Run 4 (v3): 1,244 pairs WITH real geometry maps, fine-tuned from v3 → 0.1282 val/l1, 0.418 SSIM.** −14% L1, +6% SSIM. Geometry maps are the biggest single lever.
-- Single-view "hero" pipeline confirmed: 1 illustration → SAM 3D mesh → auto-detect camera angle → project illustration → ControlNet inpaint gaps. Cleaner UX than asking for multi-view input.
-- Manual denoising loop needed for validation (diffusers pipeline incompatible with 9-ch ControlNet).
-- Use `torch.amp.autocast` for mixed fp16/fp32 validation.
-
-**Pipeline experiment (lichtung cat, April 14):**
-- SAM 3D Objects mesh + 1 watercolor cat illustration → silhouette-IoU search found best camera angle (72°, IoU 0.77).
-- Hero view projects pixel-perfect for ~30% of UV. Rest needs inpainting.
-- Multi-view (front/back) approach failed — Gemini-generated views don't match mesh from "true" front/back angles.
-- TPS landmark-based warping helps but needs 20+ landmarks per view to be useful.
-- Single-view + strong inpainting is the best UX.
-- **v3 ControlNet failed on illustrated style**: Meshy-trained model produced dark solid fill, not watercolor. Empty-prompt training means text prompts + CFG have no effect. Need style-aware approach.
-- **Next attempt: StyleTex** — takes illustration as style reference, explicitly decouples style from content via CLIP manipulation.
-
-**3D Reconstruction:**
-- U-Net view synthesis deprecated (blurry). SHARP abandoned (research-only license).
-- SAM 3D Objects = primary 3D mesh source. TRELLIS.2 (MIT) = backup.
-- Texture from artist's illustration projected onto mesh. AI only fills gaps.
-
-## Segmentation Run History
-
-| Run | mIoU | Key change |
-|-----|------|-----------|
-| 8 | 0.4721 | Bootstrapping loop validated |
-| 13a | 0.5425 | +toon_pseudo |
-| 16 | 0.5808 | Frozen val deployed |
-| 18 | 0.5750 | True baseline with frozen val |
-| 20 | **0.6485** | Boundary softening (radius=2) |
-| 21 | 0.6361 | Re-pseudo-label, no softening |
-| 22/22b | 0.56-0.59 | SAM labels — don't help |
-| SAM-HQ (Apr 15) | ~0.29 (killed at step 5500) | Li's encoder frozen + fresh 22-class decoder — plateaued below baseline |
-| 24 (Apr 21) | broken | +gemini_diverse (3207 new), Run 20 self-distill labels, softening OFF by mistake, meshy tar name wrong → missing |
-| 25 (Apr 21) | ~0.60-0.61 (killed) | Same data, softening back on, meshy restored, lower LR on resume — ~= Run 20 |
-| 26 (Apr 21) | 0.5471 @ e19 | See-Through SAM + naive L/R+vertical heuristic converter — worse |
-| 27 (Apr 21) | 0.5664 @ e19 | See-Through SAM → Dr. Li PNG format → `convert_with_joints` — still worse than Run 20 |
-| 23 (Apr 21) | **0.3819 (killed e13/15)** | ResNet-50 + Pascal-Person-Part pretrain — severe overfitting (train 0.12, val 0.35), plateau, LR exhausted. −0.27 vs Run 20. |
-| 28 (Apr 22) | 0.6030 val / ~0.634 test | Run 20 hyperparams (LR 1e-5, 20 epochs) + gemini_diverse wt 2.0. Proved Run 25's hyperparameter confound but didn't beat Run 20. |
-| 29 (Apr 22) | **0.6095 val / ~0.640 test** | Run 28 + label cleaning (drop-head-below-torso + max-bg-bleed + min-silhouette-coverage) + full sora corpus (2,922 not 854). **+0.007 val over Run 28** — label cleaning delivers a small but real lift. Still below Run 20. |
-
-Best: **Run 20** (0.6485 test mIoU). Config: `training/configs/segmentation_a100_run20.yaml`.
+**Pipeline hygiene rules** (read before any new run): see `docs/run-history.md` § "April 21 Pipeline Hygiene Rules". Most important: one variable per experiment, reproduction check first, archive `.pt` with `.onnx`, never `pkill -f python3`.
 
 ## Quality Filter
 
-`scripts/filter_seg_quality.py`: `--min-regions 4`, `--max-single-region 0.70`, `--min-foreground 0.05`. Checks `missing_head` and `missing_torso`.
+`scripts/filter_seg_quality.py` flags: `--min-regions 4`, `--max-single-region 0.70`, `--min-foreground 0.05`. Plus the validated cheap-win flags from Run 29: `--drop-head-below-torso --max-bg-bleed 0.10 --min-silhouette-coverage 0.50`. Also ported into `ingest_gemini.py` so new ingestions are cleaned at entry.
 
-## Bootstrapping Loop
+## Bootstrapping Loop (caveat)
 
-Model → pseudo-label new data → quality filter → retrain. **Works only when teacher was trained on data aligned with the new data's domain** (e.g., GT-trained teacher bootstrapping more of the same rendered data). **Does NOT work for cross-domain** (Run 20 trained mostly on 3D-rendered chars pseudo-labeling illustrated chars → Runs 24-27 all underperformed, April 2026).
+Model → pseudo-label new data → quality filter → retrain.
 
-```bash
-python scripts/ingest_gemini.py --input-dir /path/to/raw --output-dir /path/to/preprocessed --no-seg --only-new
-# Then pseudo-label + quality filter + train on A100 (handled by run scripts)
-```
-
-## Pipeline Hygiene (Apr 21)
-
-- **Archive `.pt` checkpoints to bucket, not just `.onnx`.** Joints `.pt` was missing from bucket for months; only `joint_refinement.onnx` was archived. Recovered from `/Volumes/TAMWoolff/data/checkpoints/joints/best.pt` on April 21 and uploaded to `checkpoints_joints/best.pt`. Fix: after every training run, `rclone copy best.pt` to `checkpoints_<run>/` before destroying the A100.
-- **`ingest_gemini.py` should run joints inference by default** when given a joints checkpoint, so new gemini_diverse never ships without `joints.json`. Currently it only does seg pseudo-labels.
-- **Tar names matter.** Run 24 script referenced `meshy_cc0_restructured.tar` which doesn't exist (actual name: `meshy_cc0_textured_restructured.tar`) and silently trained without 15K Meshy examples. Pre-flight should verify tar download succeeded before extracting.
+**Works only when teacher domain matches student domain** (e.g., GT-trained teacher bootstrapping more rendered data). Does **not** work for cross-domain transfer (Run 20 trained mostly on 3D-rendered chars pseudo-labeling illustrated chars → Runs 24-27 all underperformed). See `docs/run-history.md` for the full evidence.
 
 ## Strata Post-Processing (in `../strata/`)
 
-6 improvements in segmentation.rs, joints.rs, weights.rs:
+Six improvements live in Strata's `segmentation.rs`, `joints.rs`, `weights.rs` that compensate for model imperfection without retraining:
+
 1. Alpha-aware preprocessing (composite RGBA onto black)
 2. Confidence-gated seg cleanup (<0.4 → 5×5 majority, remove <16px components)
 3. Bilinear logit upscaling (interpolate logits then argmax)
@@ -354,9 +131,17 @@ python scripts/ingest_gemini.py --input-dir /path/to/raw --output-dir /path/to/p
 5. Adaptive joint offset cap (15% of bbox, clamped [0.02, 0.10])
 6. Confidence-weighted MLP/heat blending for weights
 
+These are why we can ship Run 20 (0.6485 mIoU) instead of needing to push the model to 0.75.
+
 ## Later — Post Launch
 
 - Interactive view correction paint tool
 - Blueprint marketplace
-- InnoFounder application (August 2026, 430K DKK)
+- InnoFounder application (August 2026, 430K DKK grant)
 - PreSeed Ventures / Accelerace / byFounders for investment
+
+---
+
+For the historical record of what's been tried and learned, see:
+- `docs/run-history.md` — every training run, why it failed, what to revisit post-funding
+- `docs/v1-ship-checklist.md` — the active v1 work plan, time allocation, decision log
