@@ -141,7 +141,8 @@ model = SegmentationModel(num_classes=22, backbone='dinov2_base', pretrained_bac
 n_params = sum(p.numel() for p in model.parameters())
 n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f'Model built: {n_params/1e6:.1f}M total, {n_trainable/1e6:.1f}M trainable')
-# Forward pass
+# Forward pass — use eval mode for bs=1 (BatchNorm in ASPP needs bs>1 in train mode)
+model.eval()
 x = torch.randn(1, 3, 512, 512)
 with torch.no_grad():
     out = model(x)
