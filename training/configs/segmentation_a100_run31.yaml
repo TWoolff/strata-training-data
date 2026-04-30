@@ -1,0 +1,83 @@
+# Run 31 seg — DINOv2-base backbone (architectural experiment)
+#
+# Only variable changed vs Run 20: backbone swap from mobilenet_v3_large to
+# DINOv2 ViT-B/14. Everything else (data, weights, augmentation, loss,
+# training schedule) matches Run 20 to isolate the architectural effect.
+#
+# Hypothesis: DINOv2's self-supervised universal features (LVD-142M, no
+# domain bias) transfer better to illustrated characters than ImageNet-
+# pretrained CNN backbones. Unlike Run 23 (ResNet-50 + Pascal-Person-Part)
+# which failed because human-photo priors don't transfer to stylized chars,
+# DINOv2 was trained on diverse image types — more chance of useful priors.
+#
+# Expected lift: +0.03-0.05 test mIoU over Run 20 (0.6485). Target: 0.68+ test.
+#
+# Cost: ~$5-7 on A100 40GB (8 hrs at $0.6/hr). Within v1 budget.
+#
+# Run 31 uses Run 20's exact data and weights — no ensemble pseudo-labels,
+# no Run 28/29/30 modifications. Pure A/B test of the backbone swap.
+
+model:
+  backbone: "dinov2_base"  # ViT-B/14, 86M params, ~768 output channels at H/14
+  num_classes: 22
+  pretrained_backbone: true  # Loads facebook/dinov2-base from HuggingFace
+
+data:
+  # Run 20 dataset mix — no gemini_diverse / sora_diverse since those were
+  # added later and didn't help (Runs 24-30). Pure Run 20 data.
+  dataset_dirs:
+    - "./data_cloud/humanrig"
+    - "./data_cloud/vroid_cc0"
+    - "./data_cloud/meshy_cc0_restructured"
+    - "./data_cloud/gemini_li_converted"
+    - "./data_cloud/cvat_annotated"
+    - "./data_cloud/sora_diverse"
+    - "./data_cloud/flux_diverse_clean"
+  frozen_splits_file: "./data_cloud/frozen_val_test.json"
+  quality_filter: true
+  resolution: 512
+  split_seed: 42
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  dataset_weights:
+    cvat_annotated: 10.0
+    sora_diverse: 4.0
+    gemini_li_converted: 3.0
+    flux_diverse_clean: 2.5
+    vroid_cc0: 2.5
+    meshy_cc0_textured: 1.5
+    humanrig: 0.5
+
+augmentation:
+  horizontal_flip: true
+  color_jitter: {brightness: 0.3, contrast: 0.3, saturation: 0.3, hue: 0.1}
+  random_rotation: 15
+  random_scale: [0.85, 1.15]
+
+training:
+  # Reduced batch size — DINOv2 ViT-B is bigger than mobilenet (86M vs 5M params).
+  # 1024×1024 input would OOM at bs=16 on 40GB. At 512×512 we can fit more.
+  # If OOM occurs at bs=8, drop to bs=4 + grad_accum=2.
+  batch_size: 8
+  gradient_accumulation: 2  # Effective batch 16 (matches Run 20)
+  num_workers: 8
+  epochs: 20
+  optimizer: "adamw"
+  # ViT backbones typically benefit from slightly lower LR than CNNs to avoid
+  # disturbing the pretrained features. Run 20 used 1.0e-5; we use 5.0e-6.
+  learning_rate: 5.0e-6
+  weight_decay: 1.0e-4
+  scheduler: "cosine"
+  warmup_epochs: 1  # Add a warmup for the new randomly-initialized classifier head
+
+loss:
+  segmentation_weight: 1.0
+  depth_weight: 0.2
+  normals_weight: 0.2
+  confidence_weight: 0.1
+  label_smoothing: 0.0
+  boundary_softening_radius: 2  # Run 20's biggest lever, kept at radius=2
+
+checkpointing:
+  save_dir: "./checkpoints/segmentation"
+  early_stopping_patience: 10
+  early_stopping_metric: "val/miou"

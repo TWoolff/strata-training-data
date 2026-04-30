@@ -46,6 +46,7 @@ SUPPORTED_BACKBONES = {
     "resnet50",
     "resnet101",
     "efficientnet_b3",
+    "dinov2_base",
 }
 
 
@@ -128,6 +129,64 @@ class _EfficientNetBackbone(nn.Module):
         return {"out": out}
 
 
+class _DINOv2Backbone(nn.Module):
+    """Wrap a DINOv2 ViT-B/14 as a 2D feature backbone.
+
+    DINOv2 outputs a sequence of patch tokens; we reshape to a 2D feature
+    grid `[B, 768, H/14, W/14]` for the segmentation classifier.
+
+    At 512×512 input, output is `[B, 768, 36, 36]` (with last_layer hidden_size=768).
+    The DeepLab classifier head + ASPP upsamples back to input resolution.
+    """
+
+    PATCH_SIZE = 14
+    HIDDEN_DIM = 768  # ViT-B
+
+    def __init__(self, pretrained: bool = True) -> None:
+        super().__init__()
+        from transformers import AutoModel
+
+        if pretrained:
+            self.model = AutoModel.from_pretrained("facebook/dinov2-base")
+        else:
+            from transformers import AutoConfig
+            cfg = AutoConfig.from_pretrained("facebook/dinov2-base")
+            self.model = AutoModel.from_config(cfg)
+
+        # Disable masking (which would zero out parts of input — unsupervised pretrain artifact)
+        self.model.config.use_mask_token = False
+
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+        # DINOv2 expects DINOv2-normalized inputs (ImageNet mean/std).
+        # Pad input to a multiple of 14 (the patch size) so we don't drop edge pixels.
+        b, c, h, w = x.shape
+        ph = (self.PATCH_SIZE - h % self.PATCH_SIZE) % self.PATCH_SIZE
+        pw = (self.PATCH_SIZE - w % self.PATCH_SIZE) % self.PATCH_SIZE
+        if ph or pw:
+            x = F.pad(x, (0, pw, 0, ph), mode="reflect")
+
+        # Forward through DINOv2 — outputs hidden states of shape [B, 1+N, D]
+        # where 1 is the CLS token and N = (h_p * w_p) is the patch grid.
+        outputs = self.model(pixel_values=x)
+        last_hidden = outputs.last_hidden_state  # [B, 1+N, D]
+        patches = last_hidden[:, 1:, :]  # drop CLS token → [B, N, D]
+
+        # Reshape to 2D grid
+        h_p = (h + ph) // self.PATCH_SIZE
+        w_p = (w + pw) // self.PATCH_SIZE
+        feat = patches.transpose(1, 2).reshape(b, self.HIDDEN_DIM, h_p, w_p)
+
+        # Crop back to unpadded grid size if padding was added
+        if ph or pw:
+            h_unpad = h // self.PATCH_SIZE
+            w_unpad = w // self.PATCH_SIZE
+            # If H/14 is not exact, keep the padded grid (the classifier upsamples anyway)
+            if h_unpad > 0 and w_unpad > 0:
+                feat = feat[:, :, :max(h_unpad, 1) + 1, :max(w_unpad, 1) + 1]
+
+        return {"out": feat}
+
+
 def _build_backbone_and_classifier(
     backbone_name: str,
     num_classes: int,
@@ -180,6 +239,20 @@ def _build_backbone_and_classifier(
         )
         return backbone, classifier
 
+    if backbone_name == "dinov2_base":
+        backbone = _DINOv2Backbone(pretrained=pretrained_backbone)
+        # DINOv2-base outputs 768 channels at H/14 spatial resolution
+        # Smaller atrous rates than mobilenet/resnet because the input feature map
+        # is already lower-resolution (e.g., 36x36 from 512x512 input vs 64x64 from
+        # mobilenet). Large dilations would skip past the feature grid.
+        classifier = nn.Sequential(
+            OrderedDict([
+                ("aspp", _ASPP(_DINOv2Backbone.HIDDEN_DIM, atrous_rates=(2, 4, 6), out_ch=256)),
+                ("conv", nn.Conv2d(256, num_classes, 1)),
+            ])
+        )
+        return backbone, classifier
+
     raise ValueError(f"Unsupported backbone: {backbone_name!r}. Choose from {SUPPORTED_BACKBONES}")
 
 
@@ -190,7 +263,8 @@ class SegmentationModel(nn.Module):
         num_classes: Number of segmentation classes (default 22).
         pretrained_backbone: Use ImageNet-pretrained backbone weights.
         backbone: Backbone architecture name. One of:
-            ``mobilenet_v3_large``, ``resnet50``, ``resnet101``, ``efficientnet_b3``.
+            ``mobilenet_v3_large``, ``resnet50``, ``resnet101``,
+            ``efficientnet_b3``, ``dinov2_base``.
     """
 
     def __init__(
